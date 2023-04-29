@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ResourcesInfo } from '$features';
 
+  import UpgradesWidget from '$features/upgrades';
   import BuildingsWidget from '$features/buildings';
 </script>
 
@@ -12,6 +13,7 @@
 <main>
   <div class="container">
     <BuildingsWidget />
+    <UpgradesWidget />
   </div>
 </main>
 <footer>
