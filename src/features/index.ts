@@ -1,4 +1,4 @@
-import ResourcesInfo from 'resources-info.svelte';
+import ResourcesInfo from './resources-info.svelte';
 
 export {
   ResourcesInfo,

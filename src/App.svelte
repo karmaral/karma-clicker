@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ResourcesInfo } from '$features';
 
+  import MainAction from '$features/main-action.svelte';
   import UpgradesWidget from '$features/upgrades';
   import BuildingsWidget from '$features/buildings';
 </script>
@@ -12,6 +13,7 @@
 </header>
 <main>
   <div class="container">
+    <MainAction />
     <BuildingsWidget />
     <UpgradesWidget />
   </div>
