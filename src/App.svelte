@@ -1,6 +1,7 @@
 <script lang="ts">
   import { ResourcesInfo } from '$features';
 
+  import IncarnationCycle from '$features/incarnation-period';
   import MainAction from '$features/main-action.svelte';
   import UpgradesWidget from '$features/upgrades';
   import BuildingsWidget from '$features/buildings';
@@ -19,6 +20,7 @@
   </div>
 </main>
 <footer>
+  <IncarnationCycle />
 </footer>
 
 <style>
