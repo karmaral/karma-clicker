@@ -14,9 +14,13 @@
     "allowJs": true,
     "checkJs": true,
     "isolatedModules": true,
+    "baseUrl": ".",
     "paths": {
       "$features": ["src/features/index.ts"],
-      "$features/*": ["src/features/*"]
+      "$features/*": ["src/features/*"],
+      "$lib/*": ["src/lib/*"],
+      "$types": ["src/lib/types.d.ts"],
+      "$data/*": ["src/data/*"]
 
     }
   },
