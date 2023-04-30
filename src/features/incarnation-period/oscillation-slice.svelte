@@ -2,19 +2,22 @@
   import WaveSlot from './wave-slot.svelte';
   import { compoundScale } from '$lib/utils';
 
+  export let index: number;
   export let multiplier: number = .5;
   export let initialAmount = 10;
 
   const slots = ['high', 'mid', 'low', 'mid'];
-  
 
 </script>
 
 <div class="oscillation-slice">
-  {#each slots as s, i}
-    {@const min = i ? compoundScale(initialAmount, i, multiplier) : 0}
-    {@const max = compoundScale(initialAmount, i + 1, multiplier)}
-    <WaveSlot type={s} {min} {max} />
+  {#each slots as type, i}
+    {@const times = (i + 1) * (index + 1) }
+    {@const firstParent = index === 0 }
+    {@const firstSlot = i === 0 }
+    {@const min = (firstParent && firstSlot) ? 0 : compoundScale(initialAmount, (i * index), multiplier)}
+    {@const max = compoundScale(initialAmount, times, multiplier)}
+    <WaveSlot {type} {min} {max} />
   {/each}
 </div>
 

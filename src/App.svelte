@@ -5,7 +5,9 @@
   import UpgradesWidget from '$features/upgrades';
   import BuildingsWidget from '$features/buildings';
   import { BuildingManager } from '$lib/managers';
+
   BuildingManager.unlock('main_action');
+
 </script>
 
 <svelte:head>
@@ -20,13 +22,18 @@
 </header>
 <main>
   <div class="container">
-    <MainAction />
+    <div class="incarnation">
+      <MainAction />
+      <IncarnationCycle />
+    </div>
     <BuildingsWidget />
-    <UpgradesWidget />
+
+    <div class="upgrades">
+      <UpgradesWidget />
+    </div>
   </div>
 </main>
 <footer>
-  <IncarnationCycle />
 </footer>
 
 <style>
@@ -38,17 +45,30 @@
     flex-direction: column;
     padding: 1em;
     align-items: center;
+    width: 80%
   }
   main {
     flex-grow: 1;
     justify-content: flex-start;
-  }
-  footer {
-    flex-direction: row;
+    width: 80%;
+    position: relative;
+    overflow: hidden;
   }
   .container {
     display: flex;
+    justify-content: center;
     gap: 1em;
     flex-wrap: wrap;
+    height: 100%;
+    width: 100%;
+  }
+  .container > div {
+    display: flex;
+    flex-direction: column;
+    flex-basis: calc(33% - 1em);
+  }
+  footer {
+    flex-direction: row;
+    width: 80%
   }
 </style>

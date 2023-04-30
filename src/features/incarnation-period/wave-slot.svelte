@@ -1,7 +1,7 @@
 <script lang="ts">
   import { karma } from '$lib/resources';
   import { ProgressRing } from '$features/ui';
-  import { numberFormat, withinRange } from '$lib/utils';
+  import { formatNumber, withinRange } from '$lib/utils';
 
   export let type: 'low' | 'mid' | 'high' = 'high';
   export let min: number;
@@ -15,13 +15,16 @@
     return progress % 100;
   }
   $: progress = calcProgress($karma.total);
-
   $: active = withinRange($karma.total, min, max);
+
+  $: label = formatNumber(max, false);
+  $: small = label.length > 6;
+  
 
 </script>
 
 <div 
-  class="period-slot {type}"
+  class="wave-slot {type}"
   class:active
   style:--progress={progress}
 >
@@ -30,35 +33,40 @@
   </div>
   <div class="progress-counter">
     <div class="progress-bar"></div>
-    <span>{numberFormat.format(max)}</span>
+    <span class:small>{label}</span>
   </div>
   
 </div>
 
 <style>
-  .period-slot {
+  .wave-slot {
     flex-grow: 1;
     display: flex;
     justify-content: center;
     position: relative;
+    padding-block: 2em;
+    border-right: 1px solid hsl(0 0% 0% / .3);
   }
-  .period-slot.mid {
+  :global(.oscillation-slice:last-child) .wave-slot:last-child {
+    border: none;
+  }
+  .wave-slot.mid {
     align-items: center;
   }
-  .period-slot.low {
+  .wave-slot.low {
     align-items: flex-end;
-  }
-  .active .point {
-    box-shadow: 0 0 2px 2px black;
   }
   .point-wrap {
     position: relative;
   }
   .point {
-    background: hsl(0 0% 0% / 50%);
     height: 1em;
     width: 1em;
     border-radius: 50%;
+    border: 2px solid hsl(0 0% 0% / 15%);
+  }
+  .active .point {
+    background: hsl(0 0% 0% / 50%);
   }
   .progress-counter {
     width: 100%;
@@ -83,6 +91,10 @@
     width: 100%;
     font-size: .8em;
     line-height: 1;
+  }
+  
+  .progress-counter .small {
+    font-size: .7em;
   }
 
 </style>
