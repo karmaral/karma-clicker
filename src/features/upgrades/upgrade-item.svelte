@@ -84,6 +84,8 @@
     border: 1px solid hsl(0 0% 0% / 15%);
     padding: 1em;
     font-size: .7em;
+    flex-grow: 1;
+    flex-basis: calc(50% - var(--gap));
   }
   .item::before {
     content: attr(data-type);

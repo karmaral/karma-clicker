@@ -5,6 +5,7 @@
   const id = 'main_action';
 
   $: building = BuildingManager.getBuilding(id);
+  $: unitYield = $building.production[building.data.yield_type];
 
 
   function addExperience() {

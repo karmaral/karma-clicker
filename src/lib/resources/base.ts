@@ -35,9 +35,9 @@ export default class Resource {
     const changeDetail = { amount: this.#amount };
     const totalDetail = { total: this.#total };
     const addDetail = { added: amt };
-    this.runCallbacks('change', changeDetail);
-    this.runCallbacks('total', totalDetail);
-    this.runCallbacks('add', addDetail);
+    this.#runCallbacks('change', changeDetail);
+    this.#runCallbacks('total', totalDetail);
+    this.#runCallbacks('add', addDetail);
   }
   remove(n: number) {
     const amt = Number(n.toFixed(2));
@@ -47,16 +47,12 @@ export default class Resource {
     });
     const changeDetail = { amount: this.#amount };
     const removeDetail = { removed: amt };
-    this.runCallbacks('change', changeDetail);
-    this.runCallbacks('remove', removeDetail);
+    this.#runCallbacks('change', changeDetail);
+    this.#runCallbacks('remove', removeDetail);
   }
 
-  get amount() {
-    return this.#amount;
-  }
-  get total() {
-    return this.#total;
-  }
+  get amount() { return this.#amount; }
+  get total() { return this.#total; }
 
   addListener(identifier: string, fn: (detail?: Record<string, unknown>) => void) {
     this.#listeners[identifier].push(fn);
@@ -64,7 +60,7 @@ export default class Resource {
   removeListener(identifier: string, fn: (detail?: Record<string, unknown>) => void) {
     this.#listeners[identifier] = this.#listeners[identifier].filter(callback => callback !== fn);
   }
-  private runCallbacks(identifier: string, detail?: Record<string, unknown>) {
+  #runCallbacks(identifier: string, detail?: Record<string, unknown>) {
     if (identifier in this.#listeners) {
       this.#listeners[identifier].forEach(callback => callback(detail));
     }

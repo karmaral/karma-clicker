@@ -5,18 +5,23 @@ export interface UpgradeData {
   title: string;
   description: string;
   effect: string;
-  unlocks_at: number;
+  effect_target?: ResourceType;
   unlock_type: ResourceType;
+  unlocks_at: number;
   cost?: number;
   cost_type?: ResourceType
 }
-export interface ItemData {
-  upgrade_cost: number[];
-  yield_multiplier: number;
-  cost_multiplier: number;
-  cost: number;
-  duration: number;
-  duration_reduction: number;
+export interface BuildingData {
+  upgrade_cost?: number[];
+  cost?: number;
+  cost_type?: ResourceType;
+  cost_multiplier?: number;
+  yield_type: ResourceType;
+  yield_unit: number;
+  yield_multiplier?: number;
+  quantity?: number;
+  duration?: number;
+  duration_reduction?: number;
 }
 export interface ItemTextData {
   title: string;

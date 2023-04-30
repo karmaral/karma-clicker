@@ -35,6 +35,14 @@ class ResourceManager {
     const $res = get(this.#resources[type]);
     return $res.amount;
   }
+  has(type: ResourceType, amount?: number) {
+    if (!amount) {
+      // check if resource unlocked
+       return;
+    }
+    return this.getAmount(type) >= amount;
+  }
+  
 
   add(type: ResourceType, amount: number, origin?: string) {
     if (!Boolean(type in this.#resources)) return;
@@ -42,7 +50,8 @@ class ResourceManager {
 
     let y = 1;
     if (origin) {
-      y = EffectManager.get(origin, 'unitYield') as number;
+      // or whatever effects come up
+      y = EffectManager.get(origin, 'multiplier') as number;
     }
     return $res.add(amount * y);
   }

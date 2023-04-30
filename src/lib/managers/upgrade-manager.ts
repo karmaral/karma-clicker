@@ -1,6 +1,7 @@
 import { type Readable, writable } from 'svelte/store';
+import type { ResourceType } from '$types';
 import data from '$data/upgrades';
-import { ResourceManager, EffectManager } from '$lib/managers';
+import { ResourceManager, EffectManager, BuildingManager } from '$lib/managers';
 
 const upgradeMap = {};
 Object.keys(data).forEach(name => {
@@ -72,12 +73,36 @@ class UpgradeManager {
       return self;
     });
 
-    const { effect } = item;
+    const { effect, effect_target } = item;
     if (effect) {
-      EffectManager.addEffect(target, effect);
+      this.#handleEffect(target, effect, effect_target);
+    }
+    // run callback?
+  }
+  #handleEffect(target: string, effect: string, effectTarget?: ResourceType) {
+    if (!Boolean(target in this.#upgrades)) return;
+
+    switch (effect) {
+      case 'unlock':
+        return BuildingManager.unlock(target);
+      case 'autonomy':
+        return BuildingManager.getBuilding(target).toggleAutonomy(true);
+      default: break;
     }
 
-    // run callback?
+    const building = BuildingManager.getBuilding(target);
+    if (effect.includes('unitYield')) {
+      if (effectTarget) {
+        const unitYield = building.production[effectTarget];
+        const value = eval(effect);
+        building.updateProduction(effectTarget, value);
+      }
+
+      const types = Object.keys(building.production);
+
+    }
+
+    
   }
 }
 

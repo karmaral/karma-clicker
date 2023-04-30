@@ -6,7 +6,7 @@
 
 </script>
 
-<div class="unlocks">
+<div class="upgrades-widget">
   <div class="container">
     <ul>
       {#each upgradeKeys as target, i (target)}
@@ -23,21 +23,24 @@
 </div>
 
 <style>
-  .unlocks {
+  .upgrades-widget {
     display: flex;
     flex-direction: column;
   }
   ul {
+    --gap: .5em;
     margin: 0;
     padding: 0;
     display: flex;
-    gap: .5em;
-    flex-direction: column;
-      list-style: none;
+    gap: var(--gap);
+    flex-direction: row;
+    flex-wrap: wrap;
+    list-style: none;
   }
   .separator {
-    margin-block: .3em;
+    margin-block: 1em;
     height: 1px;
     background-color: gainsboro;
+    flex-basis: 100%
   }
 </style>
