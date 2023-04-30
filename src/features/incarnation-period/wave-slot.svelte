@@ -1,6 +1,5 @@
 <script lang="ts">
   import { karma } from '$lib/resources';
-  import { ProgressRing } from '$features/ui';
   import { formatNumber, withinRange } from '$lib/utils';
 
   export let type: 'low' | 'mid' | 'high' = 'high';
