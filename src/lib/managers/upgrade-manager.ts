@@ -81,6 +81,7 @@ class UpgradeManager {
   }
   #handleEffect(target: string, effect: string, effectTarget?: ResourceType) {
     if (!Boolean(target in this.#upgrades)) return;
+    const building = BuildingManager.getBuilding(target);
 
     switch (effect) {
       case 'unlock':
@@ -90,16 +91,12 @@ class UpgradeManager {
       default: break;
     }
 
-    const building = BuildingManager.getBuilding(target);
     if (effect.includes('unitYield')) {
       if (effectTarget) {
         const unitYield = building.production[effectTarget];
-        const value = eval(effect);
+        const value = eval(effect.replace('unitYield', String(unitYield)));
         building.updateProduction(effectTarget, value);
       }
-
-      const types = Object.keys(building.production);
-
     }
 
     
