@@ -4,6 +4,8 @@
   import MainAction from '$features/main-action.svelte';
   import UpgradesWidget from '$features/upgrades';
   import BuildingsWidget from '$features/buildings';
+  import { BuildingManager } from '$lib/managers';
+  BuildingManager.unlock('main_action');
 </script>
 
 <svelte:head>

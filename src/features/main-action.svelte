@@ -1,24 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { ResourceManager, EffectManager } from '$lib/managers';
-  import type { UpgradeData } from '$lib/types';
-  import upgradeData from '$data/upgrades';
+  import { ResourceManager, BuildingManager } from '$lib/managers';
 
-  const origin = 'main_action';
-  const data: UpgradeData[] = upgradeData[origin];
+  const id = 'main_action';
 
-  // $: valueYield = mainUpgrades.reduce((prev, current) => {
-  //   const item = data.find(itm => itm.id === current);
-  //   if (item) {
-  //     return eval(item.effect.replace('valueYield', prev));
-  //   }
-  // }, 1);
+  $: building = BuildingManager.getBuilding(id);
 
-  // let unitYield = 1;
-  $: unitYield = $EffectManager.effects[origin]['unitYield']
 
   function addExperience() {
-    ResourceManager.add('experience', 1, origin);
+    building.queueAction();
   }
 
   onMount(() => {
@@ -26,18 +16,12 @@
       ResourceManager.add('karma', detail.added / 3);
       // could have a passThrough = true arg that skips the multiplier effects
     };
-    const effectListener = (detail) => {
-      // const { target } = detail;
-      // unitYield = EffectManager.get(target, 'unitYield');
-
-    };
-    EffectManager.addListener('add', effectListener);
     ResourceManager.addListener('experience', 'add', listener);
   });
 </script>
 
 
-<div class="main-action">
+<div class="main-action-widget">
   <div class="container">
     <button class="planet" on:click={addExperience}>
       Incarnate
@@ -47,6 +31,9 @@
 </div>
 
 <style>
+  .main-action-widget {
+    flex-grow: 1;
+  }
   .container {
     display: flex;
     align-items: center;
@@ -71,9 +58,9 @@
   button:active {
     background: hsl(0 0% 20%);
     box-shadow:
-      inset 0 1em 1em -.3em hsl(0 0% 0% / 10%),
+      inset 0 1em 1em 0 hsl(0 0% 0% / 10%),
       0 0 0 5px hsl(0 0% 50%);
-    transition: box-shadow .13s ease-out, border ease-out .15s;
+    transition: box-shadow .13s ease-out;
   }
 
 </style>

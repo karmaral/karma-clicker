@@ -1,132 +1,35 @@
 <script lang="ts">
-  import { tick } from 'svelte';
+  import { onMount } from 'svelte';
   import { karma } from '$lib/resources';
-  import { ResourceManager } from '$lib/managers';
-  import { entities } from '$lib/stores';
   import { formatRounded, formatNumber } from '$lib/utils';
-  import type { ItemData, ItemTextData } from '$types';
+  import type { ItemTextData } from '$types';
+  import { BuildingManager } from '$lib/managers';
+  import type Building from '$lib/buildings/base';
 
-  export let data: ItemData;
+  export let building: Building;
+  export let id: string;
   export let textData: ItemTextData;
-
-  export let onAction = () => void 0;
-  export let onLevelIncrease = () => void 0;
   
-  $: currentLevel = $entities['basic'].level;
-  $: quantity = $entities['basic'].quantity;
-  $: valueYield = $entities['basic'].valueYield;
-  $: duration = $entities['basic'].duration;
+
+  $: ({ level, quantity, duration, levelProgress, autonomous, inProgress } = $building);
 
   $: durationLabel = `${formatRounded(duration / 1000)}s`;
+  $: activeCost = $building.getCost(buyMode === 1 ? 1 : 10);
+  $: continuous = duration < 50;
 
   let buyMode: 1 | 10 = 1;
   // let actionRing: HTMLDivElement;
 
-  function calcLevelProgress(currentQ: number) {
-    const from = currentLevel > 0 
-      ? data.upgrade_cost[currentLevel - 1]
-      : 0;
-    const next = data.upgrade_cost[currentLevel];
-    const q = currentQ;
-    if (!next) return 100;
-
-    const progress = (q - from) / (next - from) * 100;
-    console.log({progress, q, from, next });
-    return progress % 100;
-  }
-  $: levelProgress = calcLevelProgress(quantity);
-
   let progressElem: HTMLDivElement;
-  let inProgress = false;
-
-  let isAutonomous = false;
-  function toggleAuto(e: PointerEvent) {
-    isAutonomous = !isAutonomous;
-    if (isAutonomous) {
-      queueAction();
-    }
-  }
-
-  function cost(n: number) {
-    const q = n + (quantity ?? 3) - 1;
-    return data.cost * (1 + data.cost_multiplier) ** (q - 1);
-  }
-  let costSingle = data.cost;
-  let costTen = cost(10);
-
-  $: if (quantity) {
-    costSingle = cost(1);
-    costTen = cost(10);
-  }
-
-  $: activeCost = buyMode === 1 ? costSingle : costTen;
-
 
   function purchaseQuantity(n = 1) {
-    let c = cost(n);
-    if (c > $karma.amount) return;
-    ResourceManager.remove('karma', c);
-    increaseQuantity(n);
+    BuildingManager.purchase(id, n);
   }
-
-  async function increaseQuantity(n = 1) {
-    if (typeof quantity === 'undefined') return;
-
-    entities.update(prev => ({
-      ...prev,
-      basic: {
-        ...prev.basic,
-        quantity: prev.basic.quantity + n, 
-      },
-    }));
-
-    while (quantity >= data.upgrade_cost[currentLevel]) {
-      increaseLevel();
-      await tick();
-
-      if (currentLevel >= data.upgrade_cost.length) {
-        break;
-      }
-    }
-  }
-
-  function increaseLevel() {
-    entities.update(prev => ({
-      ...prev,
-      basic: {
-        ...prev.basic,
-        level: prev.basic.level + 1,
-        valueYield: prev.basic.valueYield + prev.basic.valueYield * data.yield_multiplier,
-        duration: prev.basic.duration - prev.basic.duration * data.duration_reduction,
-      }
-    }));
-    console.log({currentLevel, duration, valueYield });
-    onLevelIncrease();
-  }
-
-  function addKarma() {
-    const val = valueYield * quantity;
-    const amt = Number(val.toFixed(val < 100 ? 2 : 1));
-    ResourceManager.add('karma', amt);
-  }
-
-  function executeAction() {
-    addKarma();
-    onAction();
-    inProgress = false;
-
-    if (isAutonomous) {
-      queueAction();
-    }
-  }
-
   function queueAction() {
-    inProgress = true;
-    animateProgress();
-    setTimeout(executeAction, duration);
+    building.queueAction();
   }
 
-  async function animateProgress() {
+  async function animateProgress(duration: number) {
     if (!progressElem) return;
 
     const animation = progressElem.animate(
@@ -141,6 +44,14 @@
     await animation.finished;
   }
 
+  onMount(() => {
+    const queueListener = (detail) => {
+      if (!continuous) {
+        animateProgress(detail.duration);
+      }
+    };
+    building.addListener('queue', queueListener);
+  });
 </script>
 
 <div class="item">
@@ -148,12 +59,17 @@
     <div class="title">{quantity} {textData.title}</div>
     <div class="description">{textData.description}</div>
   </div>
-  <div class="time-counter">
-    <div bind:this={progressElem} class="time-progress"></div>
+  <div class="time-counter" 
+    class:continuous 
+    style:--duration={`${duration * 10000}ms`}
+  >
+    <div bind:this={progressElem} 
+      class="time-progress" 
+    ></div>
     <span class="time-label">{durationLabel}</span>
   </div> 
   <div class="level">
-    {currentLevel}
+    {level}
     <div class="level-wrap">
       <span class="quantity-label">{quantity}</span>
       <div class="level-counter" style:--progress={levelProgress}>
@@ -176,15 +92,17 @@
   <div class="actions">
     <button class="btn-action" 
       on:click={queueAction} 
-      disabled={isAutonomous || inProgress || !quantity}
+      disabled={autonomous || inProgress || !quantity}
     >
       Incarnate
     </button>
-    <button on:click={toggleAuto}
-      disabled={!quantity}
-    >
-      Autonomous <input type="checkbox" checked={isAutonomous}>
-    </button>
+    <div class="autonomy">
+      {#if autonomous}
+        Autonomous <input type="checkbox" checked={autonomous}>
+      {:else}
+        Manual
+      {/if}
+    </div>
   </div>
 </div>
 
@@ -208,6 +126,18 @@
   .time-counter {
     position: relative;
     border: 1px solid hsl(0 0% 0% / .1);
+  }
+  .time-counter.continuous {
+    animation: continuousProgress linear infinite;
+    animation-duration: var(--duration, 10000ms);
+    --color: hsl(0 0% 0% / .1);
+    --color2: hsl(0 0% 0% / .15);
+    background: repeating-linear-gradient(to right, var(--color) 0%, var(--color2) 30%, var(--color2) 70%, var(--color) 100%);
+    background-size: 25%;
+  }
+  @keyframes continuousProgress {
+    0%   { background-position:  100%; }
+    100% { background-position: -100%; }
   }
   .time-progress {
     height: 1.4em;
@@ -282,7 +212,15 @@
     font-weight: bolder;
     flex-grow: 1;
   }
+  .autonomy {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: .3em 1em;
+    gap: .3em;
+  }
   input[type="checkbox"] {
+    pointer-events: none;
     accent-color: black;
   }
 
