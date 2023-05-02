@@ -1,11 +1,11 @@
-import { type Readable, writable } from 'svelte/store';
+import { type Readable, writable, readonly } from 'svelte/store';
 import type { BuildingData, ResourceType } from '$types';
 import { ResourceManager } from '$lib/managers';
 
 export default class Building {
   subscribe: Readable<this>['subscribe'];
-  set: (value: this) => void;
-  update: (updater: (value: this) => this) => void;
+  #set: (value: this) => void;
+  #update: (updater: (value: this) => this) => void;
   #listeners: Record<string, Array<(detail: Record<string, unknown>) => void>>;
 
   #id: string;
@@ -21,10 +21,12 @@ export default class Building {
   #production: Partial<Record<ResourceType, number>> = {};
 
   constructor(id: string, initData: BuildingData) {
-    const { subscribe, set, update } = writable(this);
+    const store = writable(this);
+    const { set, update } = store;
+    const { subscribe } = readonly(store);
+    this.#set = set;
+    this.#update = update;
     this.subscribe = subscribe;
-    this.set = set;
-    this.update = update;
 
     this.#id = id;
     this.#data = initData;
@@ -49,7 +51,7 @@ export default class Building {
   add(n: number) {
     const amt = Math.trunc(n);
 
-    this.update((self: typeof this) =>  {
+    this.#update((self: typeof this) =>  {
       self.#quantity += amt;
       self.#total += amt;
       self.#levelProgress = self.#calcLevelProgress();
@@ -68,7 +70,7 @@ export default class Building {
   remove(n: number) {
     const amt = Math.trunc(n);
 
-    this.update((self: typeof this) =>  {
+    this.#update((self: typeof this) =>  {
       self.#quantity -= amt;
       return self;
     });
@@ -92,7 +94,7 @@ export default class Building {
     }
   }
   #increaseLevel() {
-    this.update((self: typeof this) => {
+    this.#update((self: typeof this) => {
       const unitYield = self.unitYield;
       const duration = self.duration;
       const { yield_multiplier, duration_reduction } = this.#data;
@@ -107,7 +109,7 @@ export default class Building {
   }
 
   queueAction() {
-    this.update((self: typeof this) => {
+    this.#update((self: typeof this) => {
       this.#inProgress = true;
       return self;
     });
@@ -127,7 +129,7 @@ export default class Building {
     this.#addResources();
     this.#runCallbacks('action');
 
-    this.update((self: typeof this) => {
+    this.#update((self: typeof this) => {
       this.#inProgress = false;
       return self;
     });
@@ -145,7 +147,7 @@ export default class Building {
     });
   }
   toggleAutonomy(value?: boolean) {
-    this.update((self: typeof this) => {
+    this.#update((self: typeof this) => {
       self.#autonomous = value ?? !self.#autonomous;
       return self;
     });
@@ -155,7 +157,7 @@ export default class Building {
   }
   updateProduction(target: ResourceType, value: number) {
     if (!Boolean(target in this.#production)) return;
-    this.update((self: typeof this) => {
+    this.#update((self: typeof this) => {
       self.#production[target] = value;
       return self;
     });

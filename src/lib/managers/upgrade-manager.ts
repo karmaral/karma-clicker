@@ -1,4 +1,4 @@
-import { type Readable, writable } from 'svelte/store';
+import { type Readable, writable, readonly } from 'svelte/store';
 import type { ResourceType } from '$types';
 import data from '$data/upgrades';
 import { ResourceManager, EffectManager, BuildingManager } from '$lib/managers';
@@ -13,15 +13,17 @@ Object.keys(data).forEach(name => {
 
 class UpgradeManager {
   subscribe: Readable<this>['subscribe'];
-  set: (value: this) => void;
-  update: (updater: (value: this) => this) => void;
+  #set: (value: this) => void;
+  #update: (updater: (value: this) => this) => void;
   #upgrades: Record<string, string[]> = {};
 
   constructor() {
-    const { subscribe, set, update } = writable(this);
+    const store = writable(this);
+    const { subscribe } = readonly(store);
+    const { set, update } = store;
     this.subscribe = subscribe;
-    this.set = set;
-    this.update = update;
+    this.#set = set;
+    this.#update = update;
     Object.keys(data).forEach(name => {
       this.#upgrades[name] = [];
     });
@@ -68,7 +70,7 @@ class UpgradeManager {
     const item = upgradeMap[target][id];
     if (!item) return;
 
-    this.update((self: typeof this) => {
+    this.#update((self: typeof this) => {
       self.#upgrades[target].push(id);
       return self;
     });

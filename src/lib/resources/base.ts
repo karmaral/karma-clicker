@@ -1,18 +1,20 @@
-import { type Readable, writable } from 'svelte/store';
+import { type Readable, writable, readonly } from 'svelte/store';
 
 export default class Resource {
   subscribe: Readable<this>['subscribe'];
-  set: (value: this) => void;
-  update: (updater: (value: this) => this) => void;
+  #set: (value: this) => void;
+  #update: (updater: (value: this) => this) => void;
   #listeners: Record<string, Array<(detail: Record<string, unknown>) => void>>;
   #amount: number = 0;
   #total: number = 0;
 
   constructor(initialAmount = 0) {
-    const { subscribe, set, update } = writable(this);
+    const store = writable(this);
+    const { subscribe } = readonly(store);
+    const { set, update } = store;
     this.subscribe = subscribe;
-    this.set = set;
-    this.update = update;
+    this.#set = set;
+    this.#update = update;
 
     this.#amount = initialAmount;
     this.#total = initialAmount;
@@ -26,7 +28,7 @@ export default class Resource {
 
   add(n: number) {
     const amt = Number(n.toFixed(2));
-    this.update((self: typeof this) =>  {
+    this.#update((self: typeof this) =>  {
       self.#amount += amt;
       self.#total += amt;
       return self;
@@ -41,7 +43,7 @@ export default class Resource {
   }
   remove(n: number) {
     const amt = Number(n.toFixed(2));
-    this.update((self: typeof this) =>  {
+    this.#update((self: typeof this) =>  {
       self.#amount -= amt;
       return self;
     });
@@ -66,7 +68,3 @@ export default class Resource {
     }
   }
 }
-
-
-
-

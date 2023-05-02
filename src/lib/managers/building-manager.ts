@@ -1,4 +1,4 @@
-import { type Readable, writable, get } from 'svelte/store';
+import { type Readable, writable, readonly } from 'svelte/store';
 import Building from '$lib/buildings/base';
 import { ResourceManager } from '.';
 
@@ -6,17 +6,19 @@ import data from '$data/buildings';
 
 class BuildingManager {
   subscribe: Readable<this>['subscribe'];
-  set: (value: this) => void;
-  update: (updater: (value: this) => this) => void;
+  #set: (value: this) => void;
+  #update: (updater: (value: this) => this) => void;
 
   #buildings: Record<string, Building> = {};
   #data: Record<string, string>
   // #effects: Record<string, string[]> = {};
   constructor() {
-    const { subscribe, set, update } = writable(this);
+    const store = writable(this);
+    const { subscribe } = readonly(store);
+    const { set, update } = store;
     this.subscribe = subscribe;
-    this.set = set;
-    this.update = update;
+    this.#set = set;
+    this.#update = update;
   }
 
   purchase(target: string, quantity = 1) {
@@ -37,7 +39,7 @@ class BuildingManager {
     if (!Boolean(target in data)) return;
     if (Boolean(target in this.#buildings)) return;
     const item = data[target];
-    this.update((self: typeof this) => {
+    this.#update((self: typeof this) => {
       self.#buildings[target] = new Building(target, item);
       return self;
     });
@@ -48,7 +50,7 @@ class BuildingManager {
     const building = this.#buildings[target];
     building.add(quantity);
 
-    // this.update((self: typeof this) => {
+    // this.#update((self: typeof this) => {
     //   self.#buildings[target].push(id);
     //   return self;
     // });

@@ -1,4 +1,4 @@
-import { type Readable, type Writable, writable, get } from 'svelte/store';
+import { type Readable, type Writable, writable, readonly, get } from 'svelte/store';
 import { experience, karma } from '$lib/resources';
 import type { ResourceType } from '$types';
 import type Resource from '$lib/resources/base';
@@ -6,15 +6,18 @@ import { EffectManager } from '.';
 
 class ResourceManager {
   subscribe: Readable<this>['subscribe'];
-  set: (value: this) => void;
-  update: (updater: (value: this) => this) => void;
+  #set: (value: this) => void;
+  #update: (updater: (value: this) => this) => void;
   #resources: Record<string, Resource>;
   #effects: Record<string, string[]> = {};
   constructor() {
-    const { subscribe, set, update } = writable(this);
+    const store = writable(this);
+    const { subscribe } = readonly(store);
+    const { set, update } = store;
     this.subscribe = subscribe;
-    this.set = set;
-    this.update = update;
+    this.#set = set;
+    this.#update = update;
+
     this.#resources = {
       'experience': experience,
       'karma': karma,

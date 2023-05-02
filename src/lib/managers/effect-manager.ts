@@ -1,18 +1,19 @@
-import { type Readable, writable } from 'svelte/store';
+import { type Readable, writable, readonly } from 'svelte/store';
 import data from '$data/upgrades';
 
 class EffectManager {
   subscribe: Readable<this>['subscribe'];
-  set: (value: this) => void;
-  update: (updater: (value: this) => this) => void;
-  #effects: Record<string, Record<string, number>> = {};
+  #set: (value: this) => void;
+  #update: (updater: (value: this) => this) => void;
   #listeners: Record<string, Array<(detail: Record<string, unknown>) => void>>;
 
   constructor() {
-    const { subscribe, set, update } = writable(this);
+    const store = writable(this);
+    const { subscribe } = readonly(store);
+    const { set, update } = store;
     this.subscribe = subscribe;
-    this.set = set;
-    this.update = update;
+    this.#set = set;
+    this.#update = update;
 
     this.#listeners = {
       'add': [],
