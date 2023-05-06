@@ -4,7 +4,7 @@ export interface UpgradeData {
   id: string;
   title: string;
   description: string;
-  effect: string;
+  effect: string | string[];
   effect_target?: ResourceType;
   unlock_type: ResourceType;
   unlocks_at: number;

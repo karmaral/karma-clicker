@@ -1,3 +1,4 @@
+import { tick } from 'svelte';
 import { type Readable, writable, readonly } from 'svelte/store';
 import type { ResourceType } from '$types';
 import data from '$data/upgrades';
@@ -79,17 +80,26 @@ class UpgradeManager {
     if (effect) {
       this.#handleEffect(target, effect, effect_target);
     }
-    // run callback?
   }
-  #handleEffect(target: string, effect: string, effectTarget?: ResourceType) {
+  async #handleEffect(target: string, effect: string | string[], effectTarget?: ResourceType) {
+    const effectArr = Array.isArray(effect) ? effect : [effect];
+
+    for (const e of effectArr) {
+      this.#processEffect(target, e, effectTarget);
+      await tick();
+    }
+  }
+  #processEffect(target: string, effect: string, effectTarget?: ResourceType) {
     if (!Boolean(target in this.#upgrades)) return;
     const building = BuildingManager.getBuilding(target);
 
     switch (effect) {
       case 'unlock':
         return BuildingManager.unlock(target);
+      case 'acquire':
+        return BuildingManager.acquire(target)
       case 'autonomy':
-        return BuildingManager.getBuilding(target).toggleAutonomy(true);
+        return building.toggleAutonomy(true);
       default: break;
     }
 
