@@ -10,8 +10,6 @@ class BuildingManager {
   #update: (updater: (value: this) => this) => void;
 
   #buildings: Record<string, Building> = {};
-  #data: Record<string, string>
-  // #effects: Record<string, string[]> = {};
   constructor() {
     const store = writable(this);
     const { subscribe } = readonly(store);

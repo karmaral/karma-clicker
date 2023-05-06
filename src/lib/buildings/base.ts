@@ -83,12 +83,12 @@ export default class Building {
 
   async #syncLevel() {
     const quantity = this.#quantity;
-    const { upgrade_cost } = this.#data;
+    const { upgrade_threshold } = this.#data;
 
-    while (quantity >= upgrade_cost[this.#level]) {
+    while (quantity >= upgrade_threshold[this.#level]) {
       this.#increaseLevel();
       
-      if (this.#level >= upgrade_cost.length) {
+      if (this.#level >= upgrade_threshold.length) {
         break;
       }
     }
@@ -113,8 +113,8 @@ export default class Building {
       this.#inProgress = true;
       return self;
     });
-    const duration = this.#duration;
 
+    const duration = this.#duration;
     if (!duration) {
       this.executeAction();
     } else {
@@ -177,9 +177,9 @@ export default class Building {
     const q = this.#quantity;
     const data = this.#data;
     const from = lvl > 0
-      ? data.upgrade_cost[lvl - 1]
+      ? data.upgrade_threshold[lvl - 1]
       : 0;
-    const next = data.upgrade_cost[lvl];
+    const next = data.upgrade_threshold[lvl];
     if (!next) return 100;
 
     const progress = (q - from) / (next - from) * 100;
@@ -209,4 +209,3 @@ export default class Building {
     }
   }
 }
-

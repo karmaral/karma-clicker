@@ -1,8 +1,9 @@
 <script lang="ts">
   import { karma } from '$lib/resources';
   import { formatNumber, withinRange } from '$lib/utils';
+  import type { WaveSlotType } from '$lib/types';
 
-  export let type: 'low' | 'mid' | 'high' = 'high';
+  export let type: WaveSlotType = 'high';
   export let min: number;
   export let max: number;
 

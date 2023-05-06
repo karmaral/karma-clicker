@@ -12,7 +12,7 @@ export interface UpgradeData {
   cost_type?: ResourceType
 }
 export interface BuildingData {
-  upgrade_cost?: number[];
+  upgrade_threshold?: number[];
   cost?: number;
   cost_type?: ResourceType;
   cost_multiplier?: number;
@@ -27,3 +27,5 @@ export interface ItemTextData {
   title: string;
   description: string;
 }
+
+export type WaveSlotType = 'low' | 'mid' | 'high';

@@ -1,12 +1,13 @@
 <script lang="ts">
   import WaveSlot from './wave-slot.svelte';
   import { compoundScale } from '$lib/utils';
+  import type { WaveSlotType } from '$lib/types';
 
   export let index: number;
   export let multiplier: number = .5;
   export let initialAmount = 10;
 
-  const slots = ['high', 'mid', 'low', 'mid'];
+  const slots: WaveSlotType[] = ['high', 'mid', 'low', 'mid'];
 
 </script>
 
