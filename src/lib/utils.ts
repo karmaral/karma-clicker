@@ -31,3 +31,8 @@ export function withinRange(val: number, min: number, max: number) {
 export function compoundScale(initial: number, times: number, multiplier: number) {
   return initial * (1 + multiplier) ** (times - 1);
 }
+
+export function multPow10(x: number, n: number) {
+  const multiplier = Math.pow(10, n);
+  return x * multiplier;
+}

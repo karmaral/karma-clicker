@@ -1,6 +1,7 @@
 <script lang="ts">
   import { experience, karma } from '$lib/resources';
   import { formatNumber } from '$lib/utils';
+  import { ProgressBar } from '$features/ui';
 
 </script>
 
@@ -20,6 +21,7 @@
     <p style:font-size=".5em">{formatNumber($karma.total)} total</p>
   </div>
 </div>
+<ProgressBar />
 
 
 <style>
