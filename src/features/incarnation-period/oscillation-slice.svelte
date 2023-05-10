@@ -8,15 +8,26 @@
   export let initialAmount = 10;
 
   const slots: WaveSlotType[] = ['high', 'mid', 'low', 'mid'];
+  
+  function calcMin(firstParent: boolean, firstSlot: boolean, times: number) {
+    let t = times - 1;
+
+    if (firstSlot) {
+      if (firstParent) return 0;
+
+      t--;
+    }
+    return compoundScale(initialAmount, t, multiplier);
+  }
 
 </script>
 
 <div class="oscillation-slice">
   {#each slots as type, i}
-    {@const times = (i + 1) * (index + 1) }
+    {@const times = i + 1}
     {@const firstParent = index === 0 }
     {@const firstSlot = i === 0 }
-    {@const min = (firstParent && firstSlot) ? 0 : compoundScale(initialAmount, (i * index), multiplier)}
+    {@const min = calcMin(firstParent, firstSlot, times)}
     {@const max = compoundScale(initialAmount, times, multiplier)}
     <WaveSlot {type} {min} {max} />
   {/each}

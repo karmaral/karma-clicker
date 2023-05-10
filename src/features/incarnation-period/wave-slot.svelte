@@ -14,11 +14,14 @@
     const progress = (current - min) / (max - min) * 100;
     return progress % 100;
   }
+
   $: progress = calcProgress($karma.total);
   $: active = withinRange($karma.total, min, max);
 
-  $: label = formatNumber(max, false);
-  $: small = label.length > 6;
+  $: labelMin = formatNumber(min, false);
+  $: labelMax = formatNumber(max, false);
+
+  $: small = labelMin.length > 6;
   
 
 </script>
@@ -33,7 +36,8 @@
   </div>
   <div class="progress-counter">
     <div class="progress-bar"></div>
-    <span class:small>{label}</span>
+    <span class:small class="min">{labelMin}</span>
+    <span class:small class="max">{labelMax}</span>
   </div>
   
 </div>
@@ -86,11 +90,16 @@
   } 
   .progress-counter span {
     position: absolute;
-    bottom: .5em;
     text-align: center;
     width: 100%;
     font-size: .8em;
     line-height: 1;
+  }
+  .min {
+    bottom: .5em;
+  }
+  .max {
+    top: .5em;
   }
   
   .progress-counter .small {
