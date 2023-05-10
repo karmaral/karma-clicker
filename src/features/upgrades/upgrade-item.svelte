@@ -65,7 +65,7 @@
       {#if !acquired}
         {#if 'cost' in data}
           <button on:click={purchase} disabled={!canPurchase}>
-            Acquire
+            Purchase:
             <br>
             <span style:font-size=".8em">{data.cost} {data.cost_type}</span>
           </button>

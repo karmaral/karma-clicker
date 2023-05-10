@@ -7,7 +7,7 @@
 
 </script>
 
-<div class="entities-widget">
+<div class="buildings-widget">
   <div class="container">
     {#each buildings as id (id)}
       {@const building = BuildingManager.getBuilding(id)}

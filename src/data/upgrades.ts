@@ -66,6 +66,18 @@ const data: Record<string, UpgradeData[]> = {
       cost: 200,
       cost_type: 'experience',
     }
+  ],
+  'steady': [
+    {
+      id: 'core_0',
+      title: 'Steady',
+      description: 'Unlock slow probes but very yielding.',
+      effect: ['unlock', 'acquire', 'autonomy'],
+      unlocks_at: 3,
+      unlock_type: 'karma',
+      cost: 3,
+      cost_type: 'karma',
+    },
   ]
 };
 export default data;

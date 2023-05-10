@@ -48,7 +48,7 @@ export default class Building {
     }
   }
 
-  add(n: number) {
+  add(n: number = 1) {
     const amt = Math.trunc(n);
 
     this.#update((self: typeof this) =>  {
