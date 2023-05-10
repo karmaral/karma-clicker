@@ -3,11 +3,11 @@ export default {
     yield_type: 'experience',
     yield_unit: 1,
     duration: 0,
-    quantity: 1,
+    owned: 1,
   },
   'basic': {
     upgrade_threshold: [5, 15, 25, 50, 75, 100, 125],
-    cost_multiplier: 0.12,
+    cost_multiplier: 1.15,
     yield_multiplier: 0.88,
     cost: 5,
     cost_type: 'karma',
@@ -19,7 +19,7 @@ export default {
   'steady': {
     upgrade_threshold: [5, 15, 25, 50, 75, 100, 125],
     cost: 20,
-    cost_multiplier: 1,
+    cost_multiplier: 2,
     yield_multiplier: 3.3,
     cost_type: 'karma',
     yield_unit: 100,
@@ -27,7 +27,17 @@ export default {
     duration: 5000,
     duration_reduction: 0,
   },
+  'chaos': {
+    upgrade_threshold: [5, 15, 25, 50, 75, 100, 125],
+    cost: 20,
+    cost_multiplier: 1.5,
+    cost_type: 'karma',
+    yield_unit: 50,
+    yield_type: 'karma',
     duration: 1000,
-    duration_reduction: 0.69,
-  }
+    duration_reduction: 0,
+    polarity_chance: 0.5,
+    polarity_magnitude_range: 10,
+  },
+
 }

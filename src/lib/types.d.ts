@@ -19,7 +19,7 @@ export interface BuildingData {
   yield_type: ResourceType;
   yield_unit: number;
   yield_multiplier?: number;
-  quantity?: number;
+  owned?: number;
   duration?: number;
   duration_reduction?: number;
 }

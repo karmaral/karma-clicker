@@ -1,12 +1,12 @@
 import { writable } from 'svelte/store';
-import entityData from '$data/entities';
+import buildingData from '$data/buildings';
 
-export const entities = writable({
+export const buildings = writable({
   'basic': {
     quantity: 0,
     level: 0,
     valueYield: 1,
-    duration: entityData.basic.duration,
+    duration: buildingData.basic.duration,
   }
 })
 

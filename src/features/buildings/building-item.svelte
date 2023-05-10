@@ -10,15 +10,13 @@
   export let id: string;
   export let textData: ItemTextData;
   
-
-  $: ({ level, quantity, duration, levelProgress, autonomous, inProgress } = $building);
+  $: ({ level, owned, duration, levelProgress, autonomous, inProgress } = $building);
 
   $: durationLabel = `${formatRounded(duration / 1000)}s`;
   $: activeCost = $building.getCost(buyMode === 1 ? 1 : 10);
   $: continuous = duration < 50;
 
   let buyMode: 1 | 10 = 1;
-  // let actionRing: HTMLDivElement;
 
   let progressElem: HTMLDivElement;
 
@@ -45,7 +43,7 @@
   }
 
   onMount(() => {
-    const queueListener = (detail) => {
+    const queueListener = (detail: { duration: number }) => {
       if (!continuous) {
         animateProgress(detail.duration);
       }
@@ -56,7 +54,7 @@
 
 <div class="item">
   <div class="item-info">
-    <div class="title">{quantity} {textData.title}</div>
+    <div class="title">{owned} {textData.title}</div>
     <div class="description">{textData.description}</div>
   </div>
   <div class="time-counter" 
@@ -71,7 +69,7 @@
   <div class="level">
     {level}
     <div class="level-wrap">
-      <span class="quantity-label">{quantity}</span>
+      <span class="owned-label">{owned}</span>
       <div class="level-counter" style:--progress={levelProgress}>
         <div class="level-progress"></div>
       </div>
@@ -92,7 +90,7 @@
   <div class="actions">
     <button class="btn-action" 
       on:click={queueAction} 
-      disabled={autonomous || inProgress || !quantity}
+      disabled={autonomous || inProgress || !owned}
     >
       Incarnate
     </button>
@@ -171,7 +169,7 @@
     width: calc(var(--progress) * 1%);
     height: 100%;
   }
-  .quantity-label {
+  .owned-label {
     position: absolute;
     inset: 0;
     transform: translateY(-100%);

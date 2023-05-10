@@ -50,11 +50,23 @@ const data: Record<string, UpgradeData[]> = {
       id: 'core_0',
       title: 'Self Discovery',
       description: 'Unlock probes that can generate karma.',
-      effect: 'unlock',
+      effect: ['unlock', 'autonomy'],
       unlocks_at: 10,
       unlock_type: 'karma',
       cost: 60,
       cost_type: 'experience',
+    },
+  ],
+  'steady': [
+    {
+      id: 'core_0',
+      title: 'Steady',
+      description: 'Unlock slow probes but very yielding.',
+      effect: ['unlock', 'acquire'],
+      unlocks_at: 3,
+      unlock_type: 'karma',
+      cost: 3,
+      cost_type: 'karma',
     },
     {
       id: 'core_1',
@@ -66,18 +78,6 @@ const data: Record<string, UpgradeData[]> = {
       cost: 200,
       cost_type: 'experience',
     }
-  ],
-  'steady': [
-    {
-      id: 'core_0',
-      title: 'Steady',
-      description: 'Unlock slow probes but very yielding.',
-      effect: ['unlock', 'acquire', 'autonomy'],
-      unlocks_at: 3,
-      unlock_type: 'karma',
-      cost: 3,
-      cost_type: 'karma',
-    },
   ]
 };
 export default data;

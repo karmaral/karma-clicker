@@ -31,4 +31,3 @@ export function withinRange(val: number, min: number, max: number) {
 export function compoundScale(initial: number, times: number, multiplier: number) {
   return initial * (1 + multiplier) ** (times - 1);
 }
-

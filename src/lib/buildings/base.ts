@@ -12,7 +12,7 @@ export default class Building {
   #data: BuildingData;
   #level: number = 0;
   #levelProgress: number = 0;
-  #quantity: number = 0;
+  #owned: number = 0;
   #total: number = 0;
   #duration: number;
   #unitYield: number;
@@ -31,7 +31,7 @@ export default class Building {
     this.#id = id;
     this.#data = initData;
     this.#duration = initData.duration;
-    this.#quantity = initData.quantity ?? 0;
+    this.#owned = initData.owned ?? 0;
 
     const {yield_type, yield_unit } = initData;
     this.#unitYield = yield_unit;
@@ -39,7 +39,7 @@ export default class Building {
 
     this.#listeners = {
       'level': [],
-      'quantity': [],
+      'owned': [],
       'total': [],
       'add': [],
       'remove': [],
@@ -50,18 +50,20 @@ export default class Building {
 
   add(n: number = 1) {
     const amt = Math.trunc(n);
-
     this.#update((self: typeof this) =>  {
-      self.#quantity += amt;
+      self.#owned += amt;
+      if (self.total === 0 && self.autonomous) {
+        this.queueAction();
+      }
       self.#total += amt;
       self.#levelProgress = self.#calcLevelProgress();
       return self;
     });
 
-    const quantityDetail = { quantity: this.#quantity };
+    const ownedDetail = { owned: this.#owned };
     const totalDetail = { total: this.#total };
     const addDetail = { added: amt };
-    this.#runCallbacks('quantity', quantityDetail);
+    this.#runCallbacks('owned', ownedDetail);
     this.#runCallbacks('total', totalDetail);
     this.#runCallbacks('add', addDetail);
 
@@ -71,21 +73,21 @@ export default class Building {
     const amt = Math.trunc(n);
 
     this.#update((self: typeof this) =>  {
-      self.#quantity -= amt;
+      self.#owned -= amt;
       return self;
     });
 
-    const quantityDetail = { quantity: this.#quantity };
+    const ownedDetail = { owned: this.#owned };
     const removeDetail = { removed: amt };
-    this.#runCallbacks('quantity', quantityDetail);
+    this.#runCallbacks('owned', ownedDetail);
     this.#runCallbacks('remove', removeDetail);
   }
 
   async #syncLevel() {
-    const quantity = this.#quantity;
+    const owned = this.#owned;
     const { upgrade_threshold } = this.#data;
 
-    while (quantity >= upgrade_threshold[this.#level]) {
+    while (owned >= upgrade_threshold[this.#level]) {
       this.#increaseLevel();
       
       if (this.#level >= upgrade_threshold.length) {
@@ -126,7 +128,7 @@ export default class Building {
     this.#runCallbacks('queue', queueDetail);
   }
   executeAction() {
-    this.#addResources();
+    this.#generateResources();
     this.#runCallbacks('action');
 
     this.#update((self: typeof this) => {
@@ -138,20 +140,20 @@ export default class Building {
       this.queueAction();
     }
   }
-  #addResources() {
+  #generateResources() {
     const resources = Object.keys(this.#production);
     resources.forEach((type: ResourceType) => {
       const unitYield = this.#production[type];
-      const value = unitYield * this.#quantity; // + effects bonuses, eventually
+      const value = unitYield * this.#owned; // + effects bonuses, eventually
       ResourceManager.add(type, value);
     });
   }
-  toggleAutonomy(value?: boolean) {
+  toggleAutonomy(toggle?: boolean) {
     this.#update((self: typeof this) => {
-      self.#autonomous = value ?? !self.#autonomous;
+      self.#autonomous = toggle ?? !self.#autonomous;
       return self;
     });
-    if (value) {
+    if (toggle && this.#owned) {
       this.queueAction();
     }
   }
@@ -165,16 +167,22 @@ export default class Building {
 
   getCost(n: number) {
     if (n < 1) return null;
-    return this.#cost(n);
+    return this.#cumulativePrice(n);
   }
-  #cost(n: number) {
-    const q = n + (this.#quantity ?? 1); // this smells, check
-    return this.#data.cost * (1 + this.#data.cost_multiplier) ** (q - 1);
+  #cumulativePrice(n: number) {
+    let sum = 0;
+    const currentOwned = this.#owned;
+    const targetOwned = this.#owned + n;
+    const { cost_multiplier: mult, cost } = this.#data;
+    for (let i = currentOwned + 1; i <= targetOwned; i++) {
+      sum += cost * Math.pow(mult, i) / mult;
+    }
+    return sum;
   }
 
   #calcLevelProgress() {
     const lvl = this.#level;
-    const q = this.#quantity;
+    const q = this.#owned;
     const data = this.#data;
     const from = lvl > 0
       ? data.upgrade_threshold[lvl - 1]
@@ -189,7 +197,7 @@ export default class Building {
   get data() { return this.#data; }
   get level() { return this.#level; }
   get levelProgress() { return this.#levelProgress; }
-  get quantity() { return this.#quantity; }
+  get owned() { return this.#owned; }
   get total() { return this.#total; }
   get production() { return this.#production; }
   get duration() { return this.#duration; }
@@ -209,3 +217,4 @@ export default class Building {
     }
   }
 }
+
