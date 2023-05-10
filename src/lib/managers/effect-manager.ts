@@ -5,6 +5,7 @@ class EffectManager {
   subscribe: Readable<this>['subscribe'];
   #set: (value: this) => void;
   #update: (updater: (value: this) => this) => void;
+  #effects: Record<string, Record<string, number | boolean>> = {};
   #listeners: Record<string, Array<(detail: Record<string, unknown>) => void>>;
 
   constructor() {
@@ -19,7 +20,7 @@ class EffectManager {
       'add': [],
     }
     Object.keys(data).forEach(name => {
-      this.#effects[name] = { unitYield: 1 };
+      this.#effects[name] = { purchased: false };
     });
   }
   
@@ -28,14 +29,14 @@ class EffectManager {
   }
 
 
-  get(target: string, property: string): number {
+  get(target: string, property: string) {
     if (!Boolean(target in this.#effects)) return;
     if (!Boolean(property in this.#effects[target])) return;
     return this.#effects[target][property];
   }
   addEffect(target: string, effect: string) {
     if (!Boolean(target in this.#effects)) return;
-    this.update((self: typeof this) => {
+      this.#update((self: typeof this) => {
       const unitYield = self.#effects[target].unitYield as number;
       self.#effects[target].unitYield = self.#processEffect(effect, unitYield);
 
@@ -48,6 +49,10 @@ class EffectManager {
   #processEffect(effect: string, value: number) {
     if (effect.includes('unitYield')) {
       const run = effect.replace('unitYield', String(value));
+      return eval(run);
+    }
+    if (effect.includes('multiplier')) {
+      const run = effect.replace('multiplier', String(value));
       return eval(run);
     }
   }
