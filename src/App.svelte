@@ -5,6 +5,7 @@
   import UpgradesWidget from '$features/upgrades';
   import BuildingsWidget from '$features/buildings';
   import { BuildingManager } from '$lib/managers';
+  import { SvelteToast } from '@zerodevx/svelte-toast';
 
   BuildingManager.unlock('main_action');
 
@@ -19,6 +20,7 @@
 <header>
   <h1>Karma Clicker</h1>
   <ResourcesInfo />
+  <SvelteToast />
 </header>
 <main>
   <div class="container">

@@ -2,7 +2,8 @@ import { tick } from 'svelte';
 import { type Readable, writable, readonly } from 'svelte/store';
 import type { ResourceType } from '$types';
 import data from '$data/upgrades';
-import { ResourceManager, EffectManager, BuildingManager } from '$lib/managers';
+import texts from '$data/upgrades-texts';
+import { ResourceManager, BuildingManager, NotificationManager } from '$lib/managers';
 
 const upgradeMap = {};
 Object.keys(data).forEach(name => {
@@ -70,6 +71,9 @@ class UpgradeManager {
 
     const item = upgradeMap[target][id];
     if (!item) return;
+
+    const textData = texts[target][id];
+    NotificationManager.notify(textData);
 
     this.#update((self: typeof this) => {
       self.#upgrades[target].push(id);

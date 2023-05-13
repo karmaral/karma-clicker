@@ -8,6 +8,18 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+  --toastBtnFont: inherit;
+  --toastContainerTop: auto;
+  --toastContainerBottom: 1.5rem;
+  --toastColor: black;
+  --toastBackground: hsl(0 0% 95%);
+  --toastHeight: auto;
+  --toastMinHeight: 3em;
+  --toastBoxShadow: none;
+  --toastBorder: 1px solid hsl(0 0% 0% / 25%);
+  --toastBorderRadius: 0px;
+  --toastMsgPadding: .5em;
+  --toastBarHeight: 0;
 }
 
 *,*::before,*::after {
@@ -31,4 +43,3 @@ button {
   font-family: inherit;
   font-size: inherit;
 }
-
