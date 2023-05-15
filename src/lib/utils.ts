@@ -1,3 +1,4 @@
+import type { Polarity } from '$types';
 export function formatRounded(ms: number, size = 1) {
   const s = 10 ** size;
   return Math.round(ms * s) / s;
