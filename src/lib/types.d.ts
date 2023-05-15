@@ -13,6 +13,8 @@ export type CombinedResourceType = 'karma' | 'red' | 'yellow' | 'blue';
 
 export type Polarity = -1 | 0 | 1;
 
+export type BuyMode = number | 'next' | 'max';
+
 export interface UpgradeData {
   id: string;
   effect: string | string[];

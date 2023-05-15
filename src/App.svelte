@@ -5,6 +5,7 @@
   import UpgradesWidget from '$features/upgrades';
   import BuildingsWidget from '$features/buildings';
   import { BuildingManager } from '$lib/managers';
+  import RefineryWidget from '$features/refinery';
   import { SvelteToast } from '@zerodevx/svelte-toast';
 
   BuildingManager.unlock('main_action');
@@ -34,6 +35,7 @@
       <UpgradesWidget />
     </div>
   </div>
+   <RefineryWidget /> 
 </main>
 <footer>
 </footer>
