@@ -1,4 +1,17 @@
-export type ResourceType = 'experience' | 'karma';
+export type ResourceType = 
+| 'experience'
+| 'karma_negative' 
+| 'karma_positive'
+| 'red_negative' 
+| 'yellow_negative' 
+| 'blue_negative'
+| 'red_positive'
+| 'yellow_positive'
+| 'blue_positive';
+
+export type CombinedResourceType = 'karma' | 'red' | 'yellow' | 'blue';
+
+export type Polarity = -1 | 0 | 1;
 
 export interface UpgradeData {
   id: string;
@@ -22,6 +35,8 @@ export interface BuildingData {
   owned?: number;
   duration?: number;
   duration_reduction?: number;
+  polarity_bias?: number;
+  polarity_multiplier?: number;
 }
 export interface ItemTextData {
   title: string;

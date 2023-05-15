@@ -2,7 +2,7 @@ import Resource from './base';
 
 export class Experience extends Resource {
   constructor() {
-    super();
+    super('experience');
   }
 }
 

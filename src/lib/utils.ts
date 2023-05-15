@@ -36,3 +36,14 @@ export function multPow10(x: number, n: number) {
   const multiplier = Math.pow(10, n);
   return x * multiplier;
 }
+export function getPolarityLabel(p: Polarity) {
+  switch(p) {
+    case 1:
+      return 'positive';
+    case 0:
+      return 'neutral';
+    case -1:
+      return 'negative';
+    default: break;
+  }
+}
