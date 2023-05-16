@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { karma } from '$lib/resources';
+  import { negKarma, posKarma } from '$lib/resources';
   import { formatNumber, withinRange } from '$lib/utils';
   import type { WaveSlotType } from '$lib/types';
 
@@ -14,12 +14,13 @@
     const progress = (current - min) / (max - min) * 100;
     return progress % 100;
   }
+  $: karma = $negKarma.total + $posKarma.total
 
-  $: progress = calcProgress($karma.total);
-  $: active = withinRange($karma.total, min, max);
+  $: progress = calcProgress(karma);
+  $: active = withinRange(karma, min, max);
 
-  $: labelMin = formatNumber(min, false);
-  $: labelMax = formatNumber(max, false);
+  $: labelMin = formatNumber(min);
+  $: labelMax = formatNumber(max);
 
   $: small = labelMin.length > 6;
   

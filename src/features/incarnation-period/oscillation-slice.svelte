@@ -7,15 +7,13 @@
   export let multiplier: number = .5;
   export let initialAmount = 10;
 
-  const slots: WaveSlotType[] = ['high', 'mid', 'low', 'mid'];
+  const slots: WaveSlotType[] = ['mid', 'high', 'mid', 'low'];
   
   function calcMin(firstParent: boolean, firstSlot: boolean, times: number) {
     let t = times - 1;
 
     if (firstSlot) {
       if (firstParent) return 0;
-
-      t--;
     }
     return compoundScale(initialAmount, t, multiplier);
   }

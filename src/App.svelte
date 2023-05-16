@@ -1,13 +1,15 @@
 <script lang="ts">
   import { ResourcesInfo } from '$features';
-  import IncarnationCycle from '$features/incarnation-period';
-  import MainAction from '$features/main-action.svelte';
+  import PlanetsWidget from '$features/planets/planets-widget.svelte';
   import UpgradesWidget from '$features/upgrades';
   import BuildingsWidget from '$features/buildings';
-  import { BuildingManager } from '$lib/managers';
   import RefineryWidget from '$features/refinery';
+  import { PlanetManager, BuildingManager } from '$lib/managers';
   import { SvelteToast } from '@zerodevx/svelte-toast';
 
+  PlanetManager.unlock('first');
+  PlanetManager.select('first');
+  PlanetManager.unlock('third');
   BuildingManager.unlock('main_action');
 
 </script>
@@ -24,11 +26,7 @@
 </header>
 <main>
   <div class="container">
-    <div class="incarnation">
-      <MainAction />
-      <IncarnationCycle />
-    </div>
-
+    <PlanetsWidget />
     <div class="wrapper">
       <UpgradesWidget />
       <BuildingsWidget />

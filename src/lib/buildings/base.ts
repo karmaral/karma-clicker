@@ -1,6 +1,6 @@
 import { type Readable, writable, readonly } from 'svelte/store';
 import type { BuildingData, ResourceType } from '$types';
-import { ResourceManager } from '$lib/managers';
+import { ResourceManager, PlanetManager } from '$lib/managers';
 import { biasedPolarity } from '$lib/utils';
 
 export default class Building {
@@ -165,6 +165,9 @@ export default class Building {
         return ResourceManager.add(t, value);
       }
 
+      if (type === 'experience') {
+        PlanetManager.getActive().addExperience(value);
+      }
 
       ResourceManager.add(type, value);
     });
@@ -250,3 +253,4 @@ export default class Building {
     }
   }
 }
+
