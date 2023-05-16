@@ -19,7 +19,6 @@
 </svelte:head>
 
 <header>
-  <h1>Karma Clicker</h1>
   <ResourcesInfo />
   <SvelteToast />
 </header>
@@ -29,10 +28,10 @@
       <MainAction />
       <IncarnationCycle />
     </div>
-    <BuildingsWidget />
 
-    <div class="upgrades">
+    <div class="wrapper">
       <UpgradesWidget />
+      <BuildingsWidget />
     </div>
   </div>
    <RefineryWidget /> 
@@ -41,9 +40,6 @@
 </footer>
 
 <style>
-  h1 {
-    font-size: 1em;
-  }
   header, main, footer {
     display: flex;
     flex-direction: column;
@@ -61,15 +57,22 @@
   .container {
     display: flex;
     justify-content: center;
-    gap: 1em;
+    gap: 5em;
     flex-wrap: wrap;
     height: 100%;
     width: 100%;
   }
-  .container > div {
+  .container > :global(div) {
     display: flex;
     flex-direction: column;
     flex-basis: calc(33% - 1em);
+    height: 100%;
+  }
+  .wrapper {
+    flex-grow: 1;
+    display: flex;
+    gap: 1em;
+    flex-direction: column;
   }
   footer {
     flex-direction: row;

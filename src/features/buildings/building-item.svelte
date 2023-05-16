@@ -1,35 +1,63 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { karma } from '$lib/resources';
   import { formatRounded, formatNumber } from '$lib/utils';
   import type { ItemTextData } from '$types';
-  import { BuildingManager } from '$lib/managers';
+  import { BuildingManager, ResourceManager } from '$lib/managers';
   import type Building from '$lib/buildings/base';
+  import { BuyModeSwitcher } from '$features/ui';
 
   export let building: Building;
   export let id: string;
   export let textData: ItemTextData;
   
-  $: ({ level, owned, duration, levelProgress, autonomous, inProgress } = $building);
+  $: ({ 
+    level,
+    owned,
+    duration,
+    levelProgress,
+    autonomous,
+    inProgress,
+    production } = $building);
 
   $: durationLabel = `${formatRounded(duration / 1000)}s`;
-  $: activeCost = $building.getCost(buyMode === 1 ? 1 : 10);
   $: continuous = duration < 50;
 
-  let buyMode: 1 | 10 = 1;
 
-  let progressElem: HTMLDivElement;
+  let buyMode: 1 | 10 | 'max' | 'next' = 1;
+  function calcBuyMode(building: Building, mode: typeof buyMode): number {
+    switch (mode) {
+      case 'max':
+        return BuildingManager.getAffordableQuantity(id) || 1;
+      case 'next':
+        return building.nextUntilThreshold; 
+      default:
+        return mode;
+    }
+  }
+  $: buyModeCount = calcBuyMode($building, buyMode);
+  $: activeCost = $building.getCost(buyModeCount);
 
-  function purchaseQuantity(n = 1) {
-    BuildingManager.purchase(id, n);
+  let resource = ResourceManager.getResource(building.data?.cost_type);
+
+  function calcCanAfford(amount: number, count: number) {
+    return BuildingManager.canAfford(id, buyModeCount);
+  }
+  $: canAfford = calcCanAfford($resource.amount, buyModeCount);
+
+
+  function purchase() {
+    BuildingManager.purchase(id, buyModeCount);
   }
   function queueAction() {
     building.queueAction();
   }
 
+  let progressElem: HTMLDivElement;
+
   async function animateProgress(duration: number) {
     if (!progressElem) return;
 
+    progressElem.getAnimations().forEach(a => a.cancel());
     const animation = progressElem.animate(
       [{ width: '100%' }],
       { duration, fill: 'none', easing: 'linear' }
@@ -39,7 +67,9 @@
     //   { duration, fill: 'none' }
     // );
     //
-    await animation.finished;
+    try {
+      await animation.finished;
+    } catch (err) {}
   }
 
   onMount(() => {
@@ -66,6 +96,26 @@
     ></div>
     <span class="time-label">{durationLabel}</span>
   </div> 
+  <div class="yield">
+    Yield:     
+    {#each Object.keys(production) as k}
+      {@const unitYield = production[k]}
+      {@const mult = $building.data.polarity_multiplier}
+      {@const multYield = unitYield * mult}
+      <span>
+        <strong>{formatNumber(multYield)} {k}</strong>  per unit,
+        <strong>{formatNumber(multYield * owned)}</strong> total
+          {#if (k !== 'experience')}
+            {@const bias = $building.data.polarity_bias}
+            {@const orientation = bias === 0 
+              ? ' (random)' 
+              : Math.abs(bias) > 1 ? ' (zealot)' : ''}
+            <br>
+            Polarity bias: {bias}{orientation}, x{mult} multiplier
+          {/if}
+      </span>
+    {/each}
+  </div>
   <div class="level">
     {level}
     <div class="level-wrap">
@@ -77,22 +127,26 @@
   </div>
   
   <div class="buy-wrap">
-    Buy
-    <button class="btn-quantity" on:click={() => buyMode = 1} class:active={buyMode === 1}>1 </button>
-    <button class="btn-quantity" on:click={() => buyMode = 10} class:active={buyMode === 10}>10 </button>
-    <button 
-      on:click={() => purchaseQuantity(buyMode)} 
-      disabled={activeCost > $karma.amount}
-    >
-      <span style:font-size=".9em">{formatNumber(activeCost)} karma</span>
-    </button>
+    <BuyModeSwitcher 
+      modes={[1, 10, 'next', 'max']} 
+      bind:buyMode
+    > 
+      <button 
+        on:click={purchase} 
+        disabled={!canAfford}
+        class="btn-purchase"
+      >
+        Purchase {buyModeCount}:&nbsp;
+        <span><strong>{formatNumber(activeCost)} {building.data?.cost_type}</strong></span>
+      </button>
+    </BuyModeSwitcher>
   </div>
   <div class="actions">
     <button class="btn-action" 
       on:click={queueAction} 
       disabled={autonomous || inProgress || !owned}
     >
-      Incarnate
+      {inProgress ? 'Incarnating' : 'Incarnate'}
     </button>
     <div class="autonomy">
       {#if autonomous}
@@ -112,13 +166,13 @@
     border: 1px solid hsl(0 0% 0% / 15%);
     padding: 2em;
     font-size: .8em;
+    margin-bottom: .5em;
   }
   .title {
     font-size: 1.3em;
     font-weight: bolder;
   }
   .description {
-    font-size: .8em;
     color: hsl(0 0% 0% / .8);
   }
   .time-counter {
@@ -146,6 +200,9 @@
     text-align: center;
     position: absolute;
     inset: 0;
+  }
+  .yield > span:not(:last-child)::after {
+    content: " | ";
   }
   .level {
     display: flex;
@@ -183,19 +240,9 @@
     align-items: center;
     justify-content: center;
   }
-  .buy-wrap {
-    display: flex;
-    gap: .3em;
-    align-items: center;
-  }
-  .buy-wrap > .btn-quantity {
-    border: unset;
-    background: unset;
-    opacity: .8;
- }
-  .buy-wrap > .btn-quantity.active {
-    font-weight: bold;
-    opacity: 1;
+  .btn-purchase {
+    flex-grow: 1;
+    font-size: .9em;
   }
   .actions {
     display: inline-flex;

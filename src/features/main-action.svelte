@@ -14,7 +14,8 @@
 
   onMount(() => {
     const listener = (detail) => {
-      ResourceManager.add('karma', detail.added / 3);
+      // this is an 'illegal' side effect as it is not registered anywhere
+      ResourceManager.add('karma_positive', detail.added / 3);
       // could have a passThrough = true arg that skips the multiplier effects
     };
     ResourceManager.addListener('experience', 'add', listener);
@@ -55,6 +56,7 @@
     justify-content: center;
     background: hsl(0 0% 12%);
     color: white;
+    position: relative;
   }
   button:active {
     background: hsl(0 0% 20%);

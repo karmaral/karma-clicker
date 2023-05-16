@@ -8,10 +8,12 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+
   --red: hsl(0 70% 52%);
   --yellow: hsl(60 68% 40%);
   --blue: hsl(242 58% 34%);
   --experience: hsl(128 93% 21%);
+
   --toastBtnFont: inherit;
   --toastContainerTop: auto;
   --toastContainerBottom: 1.5rem;
@@ -43,7 +45,12 @@ body {
   height: 100%;
 }
 
+h3, h4 {
+  margin-block: .4em;
+}
+
 button {
   font-family: inherit;
   font-size: inherit;
 }
+

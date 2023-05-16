@@ -48,7 +48,9 @@ class TooltipManager {
   removeInstance(instance: Instance) {
     const index = this.#instances.indexOf(instance);
     if (index !== -1) {
+      this.#instances[index].destroy();
       this.#instances.splice(index, 1);
+      this.#singleton.setInstances(this.#instances);
     }
   }
 }
