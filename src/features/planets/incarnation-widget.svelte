@@ -4,7 +4,6 @@
   import { PlanetManager } from '$lib/managers';
   import type { ItemTextData } from '$lib/types';
   import texts from '$data/planets-texts';
-  import PolygonChart from '$features/ui/polygon-chart.svelte';
 
   $: id = $PlanetManager.selected;
 
