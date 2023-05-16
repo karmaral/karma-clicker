@@ -1,11 +1,24 @@
-import Resource from './base';
+import { derived } from 'svelte/store';
+import PolarizedResource from './polarized';
+import type { Polarity, ResourceType } from '$types';
+import { getPolarityLabel } from '$lib/utils';
 
-class Karma extends Resource {
-  constructor() {
-    super();
+export default class Karma extends PolarizedResource {
+  constructor(polarity: Polarity) {
+    const type = `karma_${getPolarityLabel(polarity)}` as ResourceType;
+    super(type, polarity);
   }
 }
 
-const karma = new Karma(); 
-export default karma;
+const negKarma = new Karma(-1); 
+const posKarma = new Karma(1); 
+
+const combinedKarma = derived<Karma[], number>([negKarma, posKarma], ($values, set) => {
+  set($values[0].amount + $values[1].amount);
+});
+export {
+  negKarma,
+  posKarma,
+  combinedKarma,
+};
 

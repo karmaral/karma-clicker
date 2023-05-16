@@ -4,8 +4,6 @@ const data: Record<string, UpgradeData[]> = {
   'main_action': [
     {
       id: 'str_1',
-      title: 'Getting the hang of it',
-      description: 'Incarnation XP yield x1.5',
       effect: 'unitYield * 1.5',
       effect_target: 'experience',
       unlock_type: 'experience',
@@ -13,8 +11,6 @@ const data: Record<string, UpgradeData[]> = {
     },
     {
       id: 'str_2',
-      title: 'Upgrade',
-      description: 'Incarnation XP yield x2',
       effect: 'unitYield * 2',
       effect_target: 'experience',
       unlock_type: 'experience',
@@ -24,60 +20,89 @@ const data: Record<string, UpgradeData[]> = {
     },
     {
       id: 'str_3',
-      title: 'More cause means more effect',
-      description: 'Incarnation XP x3',
       effect: 'unitYield * 3',
       effect_target: 'experience',
       unlocks_at: 10,
-      unlock_type: 'karma',
+      unlock_type: 'karma_positive',
       cost: 15,
-      cost_type: 'karma'
+      cost_type: 'karma_positive'
     },
     {
       id: 'str_4',
-      title: 'Upgrade',
-      description: 'Incarnation XP yield squared',
       effect: 'unitYield ** 2',
       effect_target: 'experience',
       unlocks_at: 25, 
-      unlock_type: 'karma',
+      unlock_type: 'karma_positive',
       cost: 25,
-      cost_type: 'karma'
+      cost_type: 'karma_positive'
     },
   ],
   'basic': [
     {
       id: 'core_0',
-      title: 'Self Discovery',
-      description: 'Unlock probes that can generate karma.',
       effect: ['unlock', 'autonomy'],
       unlocks_at: 10,
-      unlock_type: 'karma',
+      unlock_type: 'karma_positive',
       cost: 60,
       cost_type: 'experience',
+    },
+    {
+      id: 'str_1',
+      effect: 'unitYield ** 2',
+      effect_target: 'all',
+      unlocks_at: 10000,
+      unlock_type: 'karma_positive',
+      cost: 10000,
+      cost_type: 'karma_positive',
     },
   ],
   'steady': [
     {
       id: 'core_0',
-      title: 'Steady',
-      description: 'Unlock slow probes but very yielding.',
       effect: ['unlock', 'acquire'],
       unlocks_at: 3,
-      unlock_type: 'karma',
+      unlock_type: 'karma_positive',
       cost: 3,
-      cost_type: 'karma',
+      cost_type: 'karma_positive',
     },
     {
       id: 'core_1',
-      title: 'An easier way',
-      description: 'Give probes incarnational autonomy.',
       effect: 'autonomy',
       unlocks_at: 20,
-      unlock_type: 'karma',
+      unlock_type: 'karma_positive',
       cost: 200,
       cost_type: 'experience',
     }
+  ],
+  'chaos': [
+    {
+      id: 'core_0',
+      effect: ['unlock', 'acquire', 'autonomy'],
+      unlocks_at: 50,
+      unlock_type: 'karma_positive',
+      cost: 50,
+      cost_type: 'karma_positive',
+    },
+  ],
+  'zealot': [
+    {
+      id: 'core_0',
+      effect: ['unlock', 'acquire'],
+      unlocks_at: 10000,
+      unlock_type: 'karma_positive',
+      cost: 10000,
+      cost_type: 'karma_positive',
+    },
+  ],
+  'red_basic': [
+    {
+      id: 'core_0',
+      effect: ['unlock', 'acquire', 'autonomy'],
+      unlocks_at: 5000,
+      unlock_type: 'red_positive',
+      cost: 5000,
+      cost_type: 'red_positive',
+    },
   ]
 };
 export default data;

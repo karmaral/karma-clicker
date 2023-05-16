@@ -10,6 +10,7 @@ class BuildingManager {
   #update: (updater: (value: this) => this) => void;
 
   #buildings: Record<string, Building> = {};
+
   constructor() {
     const store = writable(this);
     const { subscribe } = readonly(store);
@@ -23,12 +24,14 @@ class BuildingManager {
     if (!Boolean(target in data)) return;
 
     const item = data[target];
-    const { cost, cost_type } = item;
+    const { cost_type } = item;
 
     const canAfford = this.canAfford(target, quantity);
     if (canAfford) {
       this.unlock(target);
+      const cost = this.#buildings[target].getCost(quantity);
       ResourceManager.remove(cost_type, cost);
+
       this.acquire(target, quantity);
       return true;
     }
@@ -70,6 +73,20 @@ class BuildingManager {
     // multi costs will come later
     const cost = this.#buildings[target].getCost(quantity);
     return ResourceManager.has(cost_type, cost);
+  }
+  getAffordableQuantity(target: string) {
+    if (!Boolean(target in data)) return;
+    
+    const item = data[target];
+    const { cost_type } = item;
+    let q = 1;
+    let cost = this.#buildings[target].getCost(q);
+
+    while (ResourceManager.has(cost_type, cost)) {
+      q++;
+      cost = this.#buildings[target].getCost(q);
+    }
+    return q - 1;
   }
 
   getBuilding(id: string) {

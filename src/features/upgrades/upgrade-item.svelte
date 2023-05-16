@@ -1,25 +1,39 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { ResourceManager, UpgradeManager } from '$lib/managers';
-  import type { UpgradeData } from '$lib/types';
+  import { ResourceManager, UpgradeManager, TooltipManager } from '$lib/managers';
+  import { formatNumber as f, getUpgradeTypeLabel } from '$lib/utils';
+  import { InfoTooltip } from '$features/ui';
+  import type { UpgradeData, ItemTextData } from '$types';
+  import type { Instance } from 'tippy.js';
 
   export let target: string;
   export let data: UpgradeData;
+  export let textData: ItemTextData;
 
   let unlocked = false;
   let acquired = false;
   let canPurchase = false;
 
+  $: label = getUpgradeTypeLabel(data?.id);
+  $: type = label.toLowerCase();
+
+  let triggerElem: HTMLButtonElement;
+  let contentElem: HTMLDivElement; 
+  let ttInstance: Instance;
+
   function purchase() {
     const action = UpgradeManager.purchase(target, data.id);
     if (action) {
       acquired = true;
+      TooltipManager.removeInstance(ttInstance);
     }
   }
 
   onMount(() => {
+    ttInstance = TooltipManager.addInstance(triggerElem, contentElem);
+
     const { cost, cost_type, unlock_type, id } = data;
-    const onTotalChanged = (detail) => {
+    const onTotalChanged = (_detail: Record<string, number>) => {
       if (unlocked && acquired) {
         ResourceManager.removeListener(unlock_type, 'total', onTotalChanged);
         return;
@@ -39,75 +53,124 @@
         acquired = true;
       }
     };
-    const onChanged = (detail) => {
+    const onChanged = (detail: Record<string, number>) => {
       canPurchase = detail.amount >= cost;
     };
+    
     ResourceManager.addListener(unlock_type, 'total', onTotalChanged);
-    ResourceManager.addListener(cost_type, 'change', onChanged);
-
-    // console.log({ listener, locked, acquired, target, id: data.id });
+    if (cost_type) {
+      ResourceManager.addListener(cost_type, 'change', onChanged);
+    }
   });
 </script>
 
-<li class="item" 
+<li class="item {type}" 
   class:unlocked
   class:acquired
-  data-type={target}
-  data-unlocks-at={data.unlocks_at}
-  data-unlock-type={data.unlock_type}
+  class:disabled={!canPurchase}
 >
-  <div class="item-content">
-    <div class="item-header">
-      <span class="title">{data.title}</span>
-    </div>
-    <div class="item-body">
-      <p class="description">{data.description}</p>
-      {#if !acquired}
-        {#if 'cost' in data}
-          <button on:click={purchase} disabled={!canPurchase}>
-            Purchase:
-            <br>
-            <span style:font-size=".8em">{data.cost} {data.cost_type}</span>
-          </button>
+  <button 
+    on:click={purchase} 
+    bind:this={triggerElem}
+    data-tippy
+  >
+    {label.substring(0,2)}
+  </button>
+
+  <InfoTooltip bind:contentElem>
+    <div class="tooltip-content"
+      data-type="{label} - {target}"
+      data-unlocks-at={f(data.unlocks_at)}
+      data-unlock-type={data.unlock_type}
+    >
+      <div class="item-header">
+        <span class="title">{textData.title}</span>
+      </div>
+      <div class="item-body">
+        <p class="description">{textData.description}</p>
+        {#if !acquired}
+          {#if 'cost' in data}
+            <p class="cost">
+             Cost: <strong><span>{f(data.cost)} {data.cost_type}</span></strong>
+            </p>
+          {/if}
         {/if}
-      {/if}
+      </div>
     </div>
-  </div>
+  </InfoTooltip>
 </li>
 
-
 <style>
-  .item {
-    display: flex;
-    flex-direction: column;
-    /* gap: 1.2em; */
-    border: 1px solid hsl(0 0% 0% / 15%);
-    padding: 1em;
-    font-size: .7em;
-    flex-grow: 1;
-    flex-basis: calc(50% - var(--gap));
+  .item:not(.unlocked) > button {
+    opacity: .5;
   }
-  .item::before {
+  .item.acquired {
+    background: hsl(0 0% 0% / 5%);
+  }
+  .item.disabled > button {
+    border-color: hsl(0 0% 0% / 25%);
+    border-style: dashed;
+    animation: fadePop .7s;
+  }
+  .item:not(.disabled) {
+    --pop-intensity: 1.05;
+    animation: pop .5s;
+  }
+  .item:not(.unlocked) {
+    animation: pop .7s;
+  }
+  @keyframes pop {
+    from { transform: scale(var(--pop-intensity, 1.1)); }
+    to { transform: scale(1); }
+  }
+  @keyframes fadePop {
+    from { opacity: .6; }
+    to { opacity: 1; }
+  }
+
+  .item > button {
+    border: 1px solid hsl(0 0% 0% / 35%);
+    width: 2.5em;
+    aspect-ratio: 1;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .item:global(.blueprint) > button {
+    background-color: hsl(0 0% 0% / 80%);
+    border-color: hsl(0 0% 70% / 35%);
+    color: white;
+    font-weight: 500;
+    border-radius: 50%;
+  }
+  .item:global(.core) > button {
+    border-radius: 40%;
+  }
+  .item:global(.enhancement) > button {
+    border-radius: .2em;
+  }
+
+  .tooltip-content {
+    font-size: .7em;
+  }
+
+  .tooltip-content::before {
     content: attr(data-type);
-    font-size: .9em;
+    font-size: .8em;
+    font-weight: 500;
     opacity: .7;
     text-transform: uppercase;
-    text-align: right;
+    display: block;
     line-height: 1;
+    margin-bottom: 1em;
   }
-  .item::after {
+
+  .tooltip-content::after {
     content: "Unlocked at " attr(data-unlocks-at) " " attr(data-unlock-type);
     font-size: .9em;
     opacity: .7;
     margin-top: 1em;
   }
-  .item:not(.unlocked) {
-    opacity: .5;
-    pointer-events: none;
-  }
-  .item.acquired {
-    background: hsl(0 0% 0% / 5%);
-  }
+
   p {
     margin: 0;
   }
@@ -126,6 +189,9 @@
   .description {
     font-size: 1em;
     color: hsl(0 0% 0% / .8);
+  }
+  .item.disabled .cost span {
+    opacity: .7;
   }
 
 

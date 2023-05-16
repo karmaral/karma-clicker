@@ -93,7 +93,7 @@ class UpgradeManager {
       await tick();
     }
   }
-  #processEffect(target: string, effect: string, effectTarget?: ResourceType) {
+  #processEffect(target: string, effect: string, effectTarget?: ResourceType | 'all') {
     if (!Boolean(target in this.#upgrades)) return;
     const building = BuildingManager.getBuilding(target);
 
@@ -109,13 +109,25 @@ class UpgradeManager {
 
     if (effect.includes('unitYield')) {
       if (effectTarget) {
-        const unitYield = building.production[effectTarget];
-        const value = eval(effect.replace('unitYield', String(unitYield)));
-        building.updateProduction(effectTarget, value);
+        if (effectTarget === 'all') {
+          Object.keys(building.production).forEach((resource: ResourceType) => {
+            const unitYield = building.production[resource];
+            const value = eval(effect.replace('unitYield', `${unitYield}`));
+            console.log('unitYield new value =', value);
+            building.updateProduction(resource, value);
+          });
+        } else {
+          const unitYield = building.production[effectTarget];
+          const value = eval(effect.replace('unitYield', String(unitYield)));
+          console.log('unitYield new value =', value);
+          building.updateProduction(effectTarget, value);
+        }
       }
     }
+  }
 
-    
+  get upgrades() {
+    return this.#upgrades;
   }
 }
 

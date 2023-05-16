@@ -1,6 +1,7 @@
 import { type Readable, writable, readonly } from 'svelte/store';
 import type { BuildingData, ResourceType } from '$types';
 import { ResourceManager } from '$lib/managers';
+import { biasedPolarity } from '$lib/utils';
 
 export default class Building {
   subscribe: Readable<this>['subscribe'];
@@ -15,7 +16,6 @@ export default class Building {
   #owned: number = 0;
   #total: number = 0;
   #duration: number;
-  #unitYield: number;
   #autonomous: boolean = false;
   #inProgress: boolean = false;
   #production: Partial<Record<ResourceType, number>> = {};
@@ -34,7 +34,6 @@ export default class Building {
     this.#owned = initData.owned ?? 0;
 
     const {yield_type, yield_unit } = initData;
-    this.#unitYield = yield_unit;
     this.#production[yield_type] = yield_unit;
 
     this.#listeners = {
@@ -97,11 +96,13 @@ export default class Building {
   }
   #increaseLevel() {
     this.#update((self: typeof this) => {
-      const unitYield = self.unitYield;
-      const duration = self.duration;
       const { yield_multiplier, duration_reduction } = this.#data;
       self.#level++;
-      self.#unitYield = unitYield + unitYield * yield_multiplier;
+      Object.keys(self.#production).forEach(res => {
+        const unitYield = self.#production[res];
+        self.#production[res] = unitYield + unitYield * yield_multiplier;
+      });
+      const duration = self.duration;
       self.#duration = duration - duration * duration_reduction;
       return self;
     });
@@ -144,7 +145,27 @@ export default class Building {
     const resources = Object.keys(this.#production);
     resources.forEach((type: ResourceType) => {
       const unitYield = this.#production[type];
-      const value = unitYield * this.#owned; // + effects bonuses, eventually
+      let value = unitYield * this.#owned; // + effects bonuses, eventually
+
+      if (type.startsWith('karma')) {
+        const { polarity_multiplier, polarity_bias } = this.#data;
+        value = value * polarity_multiplier;
+
+        const polarity = biasedPolarity(polarity_bias);
+        const t = `karma_${polarity > 0 ? 'positive' : 'negative'}` as ResourceType;
+
+        const zealot = Math.abs(polarity_bias) > 1;
+        if (zealot) {
+          const rnd = biasedPolarity(0);
+          return rnd > 0
+            ? ResourceManager.add(type, value)
+            : ResourceManager.remove(type, value);
+        }
+
+        return ResourceManager.add(t, value);
+      }
+
+
       ResourceManager.add(type, value);
     });
   }
@@ -183,16 +204,17 @@ export default class Building {
   #calcLevelProgress() {
     const lvl = this.#level;
     const q = this.#owned;
-    const data = this.#data;
+    const threshold = this.#data.upgrade_threshold;
     const from = lvl > 0
-      ? data.upgrade_threshold[lvl - 1]
+      ? threshold[lvl - 1]
       : 0;
-    const next = data.upgrade_threshold[lvl];
+    const next = threshold[lvl];
     if (!next) return 100;
 
     const progress = (q - from) / (next - from) * 100;
     return progress % 100;
   }
+
   get id() { return this.#id; }
   get data() { return this.#data; }
   get level() { return this.#level; }
@@ -201,9 +223,20 @@ export default class Building {
   get total() { return this.#total; }
   get production() { return this.#production; }
   get duration() { return this.#duration; }
-  get unitYield() { return this.#unitYield; }
   get autonomous() { return this.#autonomous; }
   get inProgress() { return this.#inProgress; }
+  get currentThreshold() {
+    const lvl = this.#level;
+    const threshold = this.#data.upgrade_threshold;
+    return lvl < threshold.length ? threshold[lvl] : 1;
+  }
+  get nextUntilThreshold() { 
+    const lvl = this.#level;
+    const threshold = this.#data.upgrade_threshold;
+    return lvl < threshold.length 
+      ? threshold[lvl] - this.#owned
+      : 1;
+  }
 
   addListener(identifier: string, fn: (detail?: Record<string, unknown>) => void) {
     this.#listeners[identifier].push(fn);
@@ -217,4 +250,3 @@ export default class Building {
     }
   }
 }
-
