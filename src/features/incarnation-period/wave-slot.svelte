@@ -1,11 +1,13 @@
 <script lang="ts">
-  import { negKarma, posKarma } from '$lib/resources';
+  import { PlanetManager } from '$lib/managers';
   import { formatNumber, withinRange } from '$lib/utils';
   import type { WaveSlotType } from '$lib/types';
 
   export let type: WaveSlotType = 'high';
   export let min: number;
   export let max: number;
+
+  let planet = $PlanetManager.getActive();
 
   function calcProgress(current: number) {
     if (min > current) return 0;
@@ -14,7 +16,7 @@
     const progress = (current - min) / (max - min) * 100;
     return progress % 100;
   }
-  $: karma = $negKarma.total + $posKarma.total
+  $: karma = $planet?.karma?.combined || 0;
 
   $: progress = calcProgress(karma);
   $: active = withinRange(karma, min, max);

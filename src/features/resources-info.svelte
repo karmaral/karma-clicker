@@ -75,7 +75,10 @@
   </div>
 
 </div>
-<ProgressBar />
+<ProgressBar 
+  negative={$negKarma.amount}
+  positive={$posKarma.amount}
+/>
 
 
 <style>

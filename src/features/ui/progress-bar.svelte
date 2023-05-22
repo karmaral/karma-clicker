@@ -1,11 +1,15 @@
 <script lang="ts">
   import { formatNumber, multPow10 } from '$lib/utils';
-  import { negKarma, posKarma } from '$lib/resources';
+
+  export let negative: number;
+  export let positive: number;
+  export let absolute = false;
+  export let label = true;
 
   let magnitudeCounter = 1;
   let ceiling = multPow10(10, magnitudeCounter);
 
-  $: total = $negKarma.amount + $posKarma.amount;
+  $: total = negative + positive;
 
   $: if (total >= ceiling - (ceiling * 0.15)) {
     magnitudeCounter += 1;
@@ -17,17 +21,19 @@
     return `${width}%`;
   }
   $: width = getBarWidth(total, ceiling);
-  $: negWidth = getBarWidth(negKarma.amount, total);
-  $: posWidth = getBarWidth(posKarma.amount, total);
+  $: negWidth = getBarWidth(negative, total);
+  $: posWidth = getBarWidth(positive, total);
 
 </script>
 
-<div class="progress-bar">
-  <div class="progress-fill" style:width>
+<div class="progress-bar" class:absolute>
+  <div class="progress-fill" style:width={absolute ? '100%' : width}>
     <div class="negative" style:width={negWidth}></div>
     <div class="positive" style:width={posWidth}></div>
   </div>
-  <span class="value">{formatNumber(total, 2)} / {formatNumber(ceiling, 2)}</span>
+  {#if label}
+    <span class="value">{formatNumber(total, 2)} / {formatNumber(ceiling, 2)}</span>
+  {/if}
 </div>
 
 <style>
@@ -36,7 +42,6 @@
     height: 2rem;
     border: 1px solid gainsboro;
     position: relative;
-    margin-bottom: 1rem;
   }
   .progress-fill {
     display: flex;
@@ -50,11 +55,11 @@
   }
   .negative {
     height: 100%;
-    background: hsl(0 0% 0% / 40%);
+    background: var(--negative-fill, hsl(0 0% 0% / 40%));
   }
   .positive {
     height: 100%;
-    background: hsl(0 0% 100% / 50%);
+    background: var(--positive-fill, hsl(0 0% 100% / 50%));
   }
   span {
     position: absolute;

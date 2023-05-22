@@ -3,8 +3,9 @@
   import type Planet from '$lib/planets/base';
   import type { ItemTextData } from '$types';
   import { PlanetManager, TooltipManager } from '$lib/managers';
-  import { InfoTooltip } from '$features/ui';
+  import { InfoTooltip, ProgressBar } from '$features/ui';
   import type { Instance } from 'tippy.js';
+  import { formatNumber as f } from '$lib/utils';
 
   export let id: string;
   export let planet: Planet;
@@ -14,6 +15,9 @@
   $: locked = !$PlanetManager.planets.includes(id);
 
   $: experience = $planet?.experience || 0;
+  $: negKarma = $planet?.karma?.negative || 0;
+  $: posKarma = $planet?.karma?.positive || 0;
+  $: totalKarma = $planet?.karma?.combined || 0;
 
   function handleInspect() {
     if (locked) return;
@@ -46,7 +50,16 @@
       <h4>{textData.title}</h4>
       {textData.description}
       <p class="experience">
-        {experience} total planet experience
+        <strong>{f(experience, 2, true)}</strong> total planet experience
+      </p>
+      <p class="karma">
+        <strong>{f(totalKarma, 2, true)}</strong> total karma
+        <ProgressBar 
+          negative={negKarma}
+          positive={posKarma}
+          absolute={true}
+          label={false}
+        />
       </p>
       <p class="">
         Densities: -
@@ -105,6 +118,13 @@
     font-size: .9em;
   }
   .experience {
-    opacity: .8;
+    color: var(--experience)
+  }
+  .tooltip-content :global(.progress-bar) {
+    height: .5em;
+    margin-block: .5em;
+  }
+  .tooltip-content :global(.progress-fill) {
+    padding: 0;
   }
 </style>

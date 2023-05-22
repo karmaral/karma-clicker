@@ -24,8 +24,8 @@
   function purchase() {
     const action = UpgradeManager.purchase(target, data.id);
     if (action) {
-      acquired = true;
       TooltipManager.removeInstance(ttInstance);
+      acquired = true;
     }
   }
 
