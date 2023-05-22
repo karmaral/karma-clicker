@@ -103,6 +103,16 @@ const data: Record<string, UpgradeData[]> = {
       cost: 100,
       cost_type: 'red_positive',
     },
+  ],
+  'yellow_any': [
+    {
+      id: 'core_0',
+      effect: ['unlock', 'acquire', 'autonomy'],
+      unlocks_at: 100,
+      unlock_type: 'yellow_positive',
+      cost: 100,
+      cost_type: 'yellow_positive',
+    },
   ]
 };
 export default data;

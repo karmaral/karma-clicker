@@ -19,8 +19,11 @@ const data: Record<string, ItemTextData> = {
   },
   'red_basic': {
     title: 'Red Refiner probe', 
-    description: 'Produces red learning tokens on its own, karma free.',
-    
+    description: 'Produces red learning tokens on its own.',
+  },
+  'yellow_any': {
+    title: 'Any-Yellow Refiner probe', 
+    description: 'Produces yellow learning tokens of any polarity.',
   }
 };
 export default data;

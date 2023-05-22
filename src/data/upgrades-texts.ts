@@ -54,7 +54,13 @@ const data: Record<string, Record<string, ItemTextData>> = {
   'red_basic': {
     'core_0': {
       title: 'Auto Refinery',
-      description: 'A refiner probe that can produce tokens without consuming karma. Just like magic.',
+      description: 'A refiner probe that can produce tokens on its own.',
+    },
+  },
+  'yellow_any': {
+    'core_0': {
+      title: 'Auto Refinery 2',
+      description: 'A yellow refiner probe that can produce any polarity tokens on its own.',
     },
   },
 };
