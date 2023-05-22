@@ -1,12 +1,12 @@
 <script lang="ts">
   import type { Readable } from 'svelte/store';
   import { ResourceManager } from '$lib/managers';
-  import type { CombinedResourceType, ResourceType } from '$types';
+  import type { BaseResourceType, ResourceType } from '$types';
   import { ResourceQuantity } from '$features/ui';
   import type PolarizedResource from '$lib/resources/polarized';
   import texts from '$data/resources-texts';
 
-  export let type: CombinedResourceType;
+  export let type: BaseResourceType;
 
   let typeNeg = `${type}_negative` as ResourceType;
   let typePos = `${type}_positive` as ResourceType;

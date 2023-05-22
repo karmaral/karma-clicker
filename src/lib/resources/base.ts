@@ -19,8 +19,6 @@ export default class Resource {
     this.#set = set;
     this.#update = update;
 
-    this.#amount = 0;
-    this.#total = 0;
     this.#listeners = {
       'total': [],
       'change': [],
@@ -31,6 +29,7 @@ export default class Resource {
   }
 
   add(n: number) {
+    if (n < 0) return;
     const amt = Number(n.toFixed(2));
     this.#update((self: typeof this) =>  {
       self.#amount += amt;
@@ -46,9 +45,13 @@ export default class Resource {
     this.#runCallbacks('add', addDetail);
   }
   remove(n: number) {
+    if (n < 0) return;
     const amt = Number(n.toFixed(2));
     this.#update((self: typeof this) =>  {
       self.#amount -= amt;
+      if (self.#amount < 0) {
+        self.#amount = 0;
+      }
       return self;
     });
     const changeDetail = { amount: this.#amount };

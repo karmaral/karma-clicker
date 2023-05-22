@@ -1,10 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { formatRounded, formatNumber } from '$lib/utils';
-  import type { ItemTextData } from '$types';
+  import { formatRounded, formatNumber, splitResourceString } from '$lib/utils';
+  import type { BaseResourceType, ItemTextData } from '$types';
   import { BuildingManager, ResourceManager } from '$lib/managers';
   import type Building from '$lib/buildings/base';
   import { BuyModeSwitcher } from '$features/ui';
+  import { derived } from 'svelte/store';
+  import Resource from '$lib/resources/base';
 
   export let building: Building;
   export let id: string;
@@ -35,14 +37,15 @@
     }
   }
   $: buyModeCount = calcBuyMode($building, buyMode);
-  $: activeCost = $building.getCost(buyModeCount);
+  $: activeCosts = $building.getCosts(buyModeCount);
 
-  let resource = ResourceManager.getResource(building.data?.cost_type);
+  let costResources = BuildingManager.getBuildingCostResources(building);
+  let resources = derived<Resource[], Resource[]>(Object.values(costResources), ($resources, set) => set($resources));
 
-  function calcCanAfford(amount: number, count: number) {
-    return BuildingManager.canAfford(id, buyModeCount);
+  function calcCanAfford(count: number, _resources: Resource[]) {
+    return BuildingManager.canAfford(id, count);
   }
-  $: canAfford = calcCanAfford($resource.amount, buyModeCount);
+  $: canAfford = calcCanAfford(buyModeCount, $resources);
 
 
   function purchase() {
@@ -98,23 +101,34 @@
   </div> 
   <div class="yield">
     Yield:     
-    {#each Object.keys(production) as k}
-      {@const unitYield = production[k]}
-      {@const mult = $building.data.polarity_multiplier}
-      {@const multYield = unitYield * mult}
-      <span>
-        <strong>{formatNumber(multYield)} {k}</strong>  per unit,
-        <strong>{formatNumber(multYield * owned)}</strong> total
-          {#if (k !== 'experience')}
-            {@const bias = $building.data.polarity_bias}
-            {@const orientation = bias === 0 
-              ? ' (random)' 
-              : Math.abs(bias) > 1 ? ' (zealot)' : ''}
-            <br>
-            Polarity bias: {bias}{orientation}, x{mult} multiplier
-          {/if}
-      </span>
-    {/each}
+    <div class="yield-list">
+      {#each Object.keys(production) as k}
+        {@const unitYield = production[k]}
+        {@const mult = $building.data.polarity_multiplier}
+        {@const multYield = unitYield * mult}
+        <span>
+          <strong>{formatNumber(multYield)} {k}</strong>  per unit,
+          <strong>{formatNumber(multYield * owned)}</strong> total
+            {#if (k !== 'experience')}
+              {@const bias = $building.data.polarity_bias}
+              {@const orientation = bias === 0 
+                ? ' (random)' 
+                : Math.abs(bias) > 1 ? ' (zealot)' : ''}
+              <br>
+              Polarity bias: {bias}{orientation}, x{mult} multiplier
+            {/if}
+        </span>
+        {#if $building.data.type === 'refiner'}
+          {@const [base, polarity] = splitResourceString(k) }
+          {@const cost = ResourceManager.getConversionCost(base, multYield) }
+          <br>
+          Refining: 
+          <span>
+            {formatNumber(cost * owned)} karma_{polarity}
+          </span> 
+        {/if}
+      {/each}
+    </div>
   </div>
   <div class="level">
     {level}
@@ -136,8 +150,12 @@
         disabled={!canAfford}
         class="btn-purchase"
       >
-        Purchase {buyModeCount}:&nbsp;
-        <span><strong>{formatNumber(activeCost)} {building.data?.cost_type}</strong></span>
+        Purchase {buyModeCount}:
+          <div class="cost-list">
+            {#each Object.entries(activeCosts) as [type, cost] (type)}
+              <span><strong>{formatNumber(cost)}</strong> {type}</span>
+            {/each}
+          </div>
       </button>
     </BuyModeSwitcher>
   </div>
@@ -201,8 +219,9 @@
     position: absolute;
     inset: 0;
   }
-  .yield > span:not(:last-child)::after {
-    content: " | ";
+  .yield-list {
+    display: flex;
+    flex-direction: column;
   }
   .level {
     display: flex;
@@ -243,6 +262,14 @@
   .btn-purchase {
     flex-grow: 1;
     font-size: .9em;
+    display: flex;
+    gap: .5em;
+    justify-content: center;
+  }
+  .cost-list {
+    display: flex;
+    flex-direction: column;
+    gap: .3em;
   }
   .actions {
     display: inline-flex;

@@ -14,8 +14,9 @@ import {
   combinedYellow,
   combinedBlue,
 } from '$lib/resources';
-import type { ResourceType, CombinedResourceType } from '$types';
+import type { ResourceType, BaseResourceType } from '$types';
 import type Resource from '$lib/resources/base';
+import type Building from '$lib/buildings/base';
 
 class ResourceManager {
   subscribe: Readable<this>['subscribe'];
@@ -24,7 +25,7 @@ class ResourceManager {
 
   #resources: Record<string, Resource> = {};
   #effects: Record<string, string[]> = {};
-  #conversionTable: Record<CombinedResourceType, number>;
+  #conversionTable: Record<BaseResourceType, number>;
 
   constructor() {
     const store = writable(this);
@@ -62,13 +63,12 @@ class ResourceManager {
     if (!Boolean(type in this.#resources)) return;
     return this.#resources[type];
   }
-
   getTotal(type: ResourceType) {
     if (!Boolean(type in this.#resources)) return;
     const resource = get(this.#resources[type]);
     return resource.total;
   }
-  getCombinedTotal(type: CombinedResourceType, asReadable = false) {
+  getCombinedTotal(type: BaseResourceType, asReadable = false) {
     let res: Readable<number>;
     switch (type) {
       case 'karma':
@@ -116,13 +116,13 @@ class ResourceManager {
     const [combined, polarity] = targetType.split('_');
     const k = `karma_${polarity}` as ResourceType;
 
-    const cost = this.getConversionCost(combined as CombinedResourceType, amount);
+    const cost = this.getConversionCost(combined as BaseResourceType, amount);
     if (this.has(k, cost)) {
       this.remove(k, cost);
       this.add(targetType, amount);
     }
   }
-  getConversionCost(targetType: CombinedResourceType, amount: number) {
+  getConversionCost(targetType: BaseResourceType, amount: number) {
     if (targetType === 'karma') return; // de-conversion is too complex for now
     return amount * this.#conversionTable[targetType];
   }
@@ -130,7 +130,7 @@ class ResourceManager {
     if (targetType.startsWith('karma')) return;
 
     let [_combined, polarity] = targetType.split('_');
-    const combined = _combined as CombinedResourceType;
+    const combined = _combined as BaseResourceType;
     const k = `karma_${polarity}` as ResourceType;
 
     let q = 1;

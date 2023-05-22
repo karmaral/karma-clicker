@@ -9,7 +9,7 @@ export type ResourceType =
 | 'yellow_positive'
 | 'blue_positive';
 
-export type CombinedResourceType = 'karma' | 'red' | 'yellow' | 'blue';
+export type BaseResourceType = 'karma' | 'red' | 'yellow' | 'blue';
 
 export type Polarity = -1 | 0 | 1;
 
@@ -26,12 +26,19 @@ export interface UpgradeData {
 }
 export interface BuildingData {
   upgrade_threshold?: number[];
-  cost?: number;
-  cost_type?: ResourceType;
-  cost_multiplier?: number;
-  yield_type: ResourceType;
-  yield_unit: number;
-  yield_multiplier?: number;
+  type?: 'default' | 'refiner';
+  base_costs?: { 
+    [key: ResourceType | BaseResourceType]: number; 
+  };
+  cost_multipliers?: { 
+    [key: ResourceType | BaseResourceType | 'all']: number; 
+  };
+  base_yields: { 
+    [key: ResourceType | BaseResourceType]: number;
+  };
+  yield_multipliers?: { 
+    [key: ResourceType | BaseResourceType | 'all']: number;
+  };
   owned?: number;
   duration?: number;
   duration_reduction?: number;

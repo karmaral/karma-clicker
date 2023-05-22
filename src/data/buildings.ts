@@ -1,20 +1,27 @@
-export default {
+import type { BuildingData } from '$lib/types';
+
+const data: Record<string, BuildingData> = {
   'main_action': {
-    yield_type: 'experience',
-    yield_unit: 1,
+    base_yields: { 
+      'experience': 1,
+      'karma_positive': 0.33,
+    },
     duration: 0,
     owned: 1,
-    polarity_bias: 1,
+    polarity_bias: 0.5,
     polarity_multiplier: 1,
   },
   'basic': {
     upgrade_threshold: [5, 15, 25, 50, 75, 100, 125],
-    cost_multiplier: 1.15,
-    yield_multiplier: 0.88,
-    cost: 5,
-    cost_type: 'karma_positive',
-    yield_unit: 1,
-    yield_type: 'karma_positive',
+    base_costs: { 
+      'karma_positive': 5,
+    },
+    cost_multipliers: { 'all': 1.15 },
+    base_yields: { 
+      'experience': 2,
+      'karma_positive': 1,
+    },
+    yield_multipliers: { 'all': 0.88 },
     duration: 3000,
     duration_reduction: 0.39,
     polarity_bias: 1,
@@ -22,12 +29,14 @@ export default {
   },
   'steady': {
     upgrade_threshold: [5, 15, 25, 50, 75, 100, 125],
-    cost: 20,
-    cost_multiplier: 2,
-    yield_multiplier: 3.3,
-    cost_type: 'karma_positive',
-    yield_unit: 100,
-    yield_type: 'karma_positive',
+    base_costs: { 
+      'karma_positive': 20,
+    },
+    cost_multipliers: { 'all': 2 },
+    base_yields: {
+      'karma_positive': 100,
+    },
+    yield_multipliers: { 'all': 3.3 },
     duration: 5000,
     duration_reduction: 0,
     polarity_bias: 1,
@@ -35,12 +44,14 @@ export default {
   },
   'chaos': {
     upgrade_threshold: [5, 15, 25, 50, 75, 100, 125],
-    cost: 20,
-    cost_multiplier: 1.5,
-    yield_multiplier: 1.5,
-    cost_type: 'karma_positive',
-    yield_unit: 20,
-    yield_type: 'karma_positive',
+    base_costs: { 
+      'karma_positive': 20,
+    },
+    cost_multipliers: { 'all': 1.5 },
+    base_yields: { 
+      'karma_positive': 20,
+    },
+    yield_multipliers: { 'all': 1.5 },
     duration: 2000,
     duration_reduction: 0,
     polarity_bias: 0,
@@ -48,28 +59,51 @@ export default {
   },
   'zealot': {
     upgrade_threshold: [5, 15, 25, 50, 75, 100, 125],
-    cost: 10000,
-    cost_multiplier: 1.5,
-    yield_multiplier: 3,
-    cost_type: 'karma_positive',
-    yield_unit: 2000,
-    yield_type: 'karma_positive',
+    base_costs: { 
+      'karma_positive': 10000 
+    },
+    cost_multipliers: { 'all': 1.5 },
+    base_yields: { 
+      'karma_positive': 2000 
+    },
+    yield_multipliers: { 'all': 3 },
     duration: 5000,
     duration_reduction: 0.2,
     polarity_bias: 2,
     polarity_multiplier: 7,
   },
   'red_basic': {
+    type: 'refiner',
     upgrade_threshold: [5, 15, 25, 50, 75, 100, 125],
-    cost: 50,
-    cost_multiplier: 1.15,
-    yield_multiplier: 2,
-    cost_type: 'red_positive',
-    yield_unit: 1,
-    yield_type: 'red_positive',
+    base_costs: { 
+      'red_positive': 50,
+    },
+    cost_multipliers: { 'all': 1.15 },
+    base_yields: { 
+      'red_positive': 1,
+    },
+    yield_multipliers: { 'all': 2 },
     duration: 2000,
     duration_reduction: 0.2,
     polarity_bias: 1,
     polarity_multiplier: 1,
   },
+  'yellow_any': {
+    type: 'refiner',
+    upgrade_threshold: [5, 15, 25, 50, 75, 100, 125],
+    base_costs: { 
+      'yellow_positive': 50,
+      'yellow_negative': 50,
+    },
+    cost_multipliers: { 'all': 1.15 },
+    base_yields: { 
+      'yellow_positive': 1,
+    },
+    yield_multipliers: { 'all': 2 },
+    duration: 2000,
+    duration_reduction: 0.2,
+    polarity_bias: 0,
+    polarity_multiplier: 1,
+  },
 }
+export default data;

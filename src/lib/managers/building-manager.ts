@@ -3,6 +3,9 @@ import Building from '$lib/buildings/base';
 import { ResourceManager } from '.';
 
 import data from '$data/buildings';
+import RefinerBuilding from '$lib/buildings/refiner';
+import type Resource from '$lib/resources/base';
+import type { ResourceType } from '$lib/types';
 
 class BuildingManager {
   subscribe: Readable<this>['subscribe'];
@@ -23,14 +26,14 @@ class BuildingManager {
   purchase(target: string, quantity = 1) {
     if (!Boolean(target in data)) return;
 
-    const item = data[target];
-    const { cost_type } = item;
-
     const canAfford = this.canAfford(target, quantity);
     if (canAfford) {
       this.unlock(target);
-      const cost = this.#buildings[target].getCost(quantity);
-      ResourceManager.remove(cost_type, cost);
+
+      const costs = this.#buildings[target].getCosts(quantity);
+      Object.entries(costs).forEach(([type, cost]) => {
+        ResourceManager.remove(type as ResourceType, cost);
+      });
 
       this.acquire(target, quantity);
       return true;
@@ -41,7 +44,8 @@ class BuildingManager {
     if (Boolean(target in this.#buildings)) return;
     const item = data[target];
     this.#update((self: typeof this) => {
-      self.#buildings[target] = new Building(target, item);
+      const B = item.type === 'refiner' ? RefinerBuilding : Building;
+      self.#buildings[target] = new B(target, item);
       return self;
     });
   }
@@ -66,27 +70,32 @@ class BuildingManager {
 
   canAfford(target: string, quantity = 1) {
     if (!Boolean(target in data)) return false;
-
-    const item = data[target];
-    const { cost_type } = item;
-
-    // multi costs will come later
-    const cost = this.#buildings[target].getCost(quantity);
-    return ResourceManager.has(cost_type, cost);
+    if (quantity < 1) return false; 
+    const costs = this.#buildings[target].getCosts(quantity);
+    for (const [type, cost] of Object.entries(costs)) {
+      if (!ResourceManager.has(type as ResourceType, cost)) {
+        return false;
+      }
+    }
+    return true;
   }
   getAffordableQuantity(target: string) {
     if (!Boolean(target in data)) return;
     
-    const item = data[target];
-    const { cost_type } = item;
     let q = 1;
-    let cost = this.#buildings[target].getCost(q);
-
-    while (ResourceManager.has(cost_type, cost)) {
+    while (this.canAfford(target, q)) {
       q++;
-      cost = this.#buildings[target].getCost(q);
     }
     return q - 1;
+  }
+  getBuildingCostResources(building: Building): Record<string, Resource> {
+    const { base_costs } = building.data;
+    const resources = Object.keys(base_costs);
+    const result = {};
+    resources.forEach((type: ResourceType) => {
+      result[type] = ResourceManager.getResource(type);
+    });
+    return result;
   }
 
   getBuilding(id: string) {

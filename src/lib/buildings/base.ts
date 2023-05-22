@@ -1,12 +1,17 @@
 import { type Readable, writable, readonly } from 'svelte/store';
-import type { BuildingData, ResourceType } from '$types';
+import type { BaseResourceType, BuildingData, ResourceType } from '$types';
 import { ResourceManager, PlanetManager } from '$lib/managers';
-import { biasedPolarity } from '$lib/utils';
+import { 
+  isPolarized,
+  biasedPolarity,
+  getPolarityLabel,
+  splitResourceString,
+} from '$lib/utils';
 
 export default class Building {
   subscribe: Readable<this>['subscribe'];
   #set: (value: this) => void;
-  #update: (updater: (value: this) => this) => void;
+  protected _update: (updater: (value: this) => this) => void;
   #listeners: Record<string, Array<(detail: Record<string, unknown>) => void>>;
 
   #id: string;
@@ -25,7 +30,7 @@ export default class Building {
     const { set, update } = store;
     const { subscribe } = readonly(store);
     this.#set = set;
-    this.#update = update;
+    this._update = update;
     this.subscribe = subscribe;
 
     this.#id = id;
@@ -33,8 +38,10 @@ export default class Building {
     this.#duration = initData.duration;
     this.#owned = initData.owned ?? 0;
 
-    const {yield_type, yield_unit } = initData;
-    this.#production[yield_type] = yield_unit;
+    const { base_yields } = initData;
+    Object.keys(base_yields).forEach((res) => {
+      this.#production[res] = base_yields[res];
+    });
 
     this.#listeners = {
       'level': [],
@@ -49,7 +56,7 @@ export default class Building {
 
   add(n: number = 1) {
     const amt = Math.trunc(n);
-    this.#update((self: typeof this) =>  {
+    this._update((self: typeof this) =>  {
       self.#owned += amt;
       if (self.total === 0 && self.autonomous) {
         this.queueAction();
@@ -71,7 +78,7 @@ export default class Building {
   remove(n: number) {
     const amt = Math.trunc(n);
 
-    this.#update((self: typeof this) =>  {
+    this._update((self: typeof this) =>  {
       self.#owned -= amt;
       return self;
     });
@@ -95,12 +102,13 @@ export default class Building {
     }
   }
   #increaseLevel() {
-    this.#update((self: typeof this) => {
-      const { yield_multiplier, duration_reduction } = this.#data;
+    this._update((self: typeof this) => {
+      const { duration_reduction } = this.#data;
       self.#level++;
-      Object.keys(self.#production).forEach(res => {
-        const unitYield = self.#production[res];
-        self.#production[res] = unitYield + unitYield * yield_multiplier;
+      Object.keys(self.#production).forEach((res: ResourceType) => {
+        const currentYield = self.#production[res];
+        const mult = this.getYieldMultiplier(res);        
+        self.#production[res] = Number((currentYield + currentYield * mult).toFixed(2));
       });
       const duration = self.duration;
       self.#duration = duration - duration * duration_reduction;
@@ -112,7 +120,7 @@ export default class Building {
   }
 
   queueAction() {
-    this.#update((self: typeof this) => {
+    this._update((self: typeof this) => {
       this.#inProgress = true;
       return self;
     });
@@ -129,10 +137,10 @@ export default class Building {
     this.#runCallbacks('queue', queueDetail);
   }
   executeAction() {
-    this.#generateResources();
+    this._generateResources();
     this.#runCallbacks('action');
 
-    this.#update((self: typeof this) => {
+    this._update((self: typeof this) => {
       this.#inProgress = false;
       return self;
     });
@@ -141,67 +149,95 @@ export default class Building {
       this.queueAction();
     }
   }
-  #generateResources() {
+  protected _generateResources() {
     const resources = Object.keys(this.#production);
+    const activePlanet = PlanetManager.getActive();
     resources.forEach((type: ResourceType) => {
       const unitYield = this.#production[type];
       let value = unitYield * this.#owned; // + effects bonuses, eventually
 
-      if (type.startsWith('karma')) {
+      if (type === 'experience') {
+        activePlanet.addExperience(value);
+      }
+
+      if (isPolarized(type)) {
         const { polarity_multiplier, polarity_bias } = this.#data;
         value = value * polarity_multiplier;
 
+        const [base] = splitResourceString(type);
         const polarity = biasedPolarity(polarity_bias);
-        const t = `karma_${polarity > 0 ? 'positive' : 'negative'}` as ResourceType;
+        const p = getPolarityLabel(polarity);
+        const t = `${base}_${p}` as ResourceType;
 
-        const zealot = Math.abs(polarity_bias) > 1;
-        if (zealot) {
+        if (this.zealot) {
           const rnd = biasedPolarity(0);
-          return rnd > 0
-            ? ResourceManager.add(type, value)
-            : ResourceManager.remove(type, value);
+          if (rnd > 0) {
+            ResourceManager.add(type, value)
+            if (base === 'karma') {
+              activePlanet.addKarma(value, polarity);
+            }
+          } else {
+            ResourceManager.remove(type, value);
+            if (base === 'karma') {
+              activePlanet.removeKarma(value, polarity);
+            }
+          }
+          return;
         }
 
+        if (base === 'karma') {
+          activePlanet.addKarma(value, polarity);
+        }
         return ResourceManager.add(t, value);
-      }
-
-      if (type === 'experience') {
-        PlanetManager.getActive().addExperience(value);
       }
 
       ResourceManager.add(type, value);
     });
   }
   toggleAutonomy(toggle?: boolean) {
-    this.#update((self: typeof this) => {
+    this._update((self: typeof this) => {
       self.#autonomous = toggle ?? !self.#autonomous;
       return self;
     });
     if (toggle && this.#owned) {
-      this.queueAction();
+      if (!this.inProgress) {
+        this.queueAction();
+      }
     }
   }
   updateProduction(target: ResourceType, value: number) {
     if (!Boolean(target in this.#production)) return;
-    this.#update((self: typeof this) => {
+    this._update((self: typeof this) => {
       self.#production[target] = value;
       return self;
     });
   }
 
-  getCost(n: number) {
+  getCosts(n: number): Partial<Record<ResourceType, number>> {
     if (n < 1) return null;
-    return this.#cumulativePrice(n);
+
+    const { base_costs, cost_multipliers } = this.#data;
+    const result = { ...base_costs };
+
+    for (const type in result) {
+      const c = base_costs[type];
+      const m = cost_multipliers[type] || cost_multipliers['all'] || 1;
+      result[type] = this.#cumulativePrice(n, c, m);
+    }
+    return result;
   }
-  #cumulativePrice(n: number) {
+  #cumulativePrice(n: number, cost: number, multiplier: number) {
     let sum = 0;
     const currentOwned = this.#owned;
     const targetOwned = this.#owned + n;
-    const { cost_multiplier: mult, cost } = this.#data;
     for (let i = currentOwned + 1; i <= targetOwned; i++) {
-      sum += cost * Math.pow(mult, i) / mult;
+      sum += cost * Math.pow(multiplier, i) / multiplier;
     }
     return sum;
+  }
+  getYieldMultiplier(resource: ResourceType | BaseResourceType) {
+    const { yield_multipliers: m } = this.#data;   
+    return m[resource] || m['all'] || 1;
   }
 
   #calcLevelProgress() {
@@ -239,6 +275,9 @@ export default class Building {
     return lvl < threshold.length 
       ? threshold[lvl] - this.#owned
       : 1;
+  }
+  get zealot() {
+    return Math.abs(this.#data.polarity_bias) > 1;
   }
 
   addListener(identifier: string, fn: (detail?: Record<string, unknown>) => void) {

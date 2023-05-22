@@ -1,33 +1,25 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { ResourceManager, BuildingManager } from '$lib/managers';
+  import { BuildingManager } from '$lib/managers';
+  import { formatNumber as f, splitResourceString } from '$lib/utils';
 
   const id = 'main_action';
-
-  $: building = BuildingManager.getBuilding(id);
-  $: unitYield = $building.production[building.data.yield_type];
-
+  let building = BuildingManager.getBuilding(id);
 
   function addExperience() {
     building.queueAction();
   }
-
-  onMount(() => {
-    const listener = (detail) => {
-      // this is an 'illegal' side effect as it is not registered anywhere
-      ResourceManager.add('karma_positive', detail.added / 3);
-      // could have a passThrough = true arg that skips the multiplier effects
-    };
-    ResourceManager.addListener('experience', 'add', listener);
-  });
 </script>
 
 
 <div class="main-action-widget">
   <div class="container">
     <button class="planet" on:click={addExperience}>
-      Incarnate
-      <span>{unitYield} xp</span>
+      <div class="content">
+        <p class="title">Incarnate</p>
+        {#each Object.entries($building.production) as [type, amount] (type)}
+          <p><strong>{f(amount)}</strong> <span>{splitResourceString(type)[0]}</span></p>
+        {/each}
+      </div>
     </button>
   </div>
 </div>
@@ -42,10 +34,11 @@
     justify-content: center;
     height: 100%;
   }
-  button {
+  .planet {
     border: unset;
     border-radius: 50%;
     padding: 3em;
+    width: 12em;
     aspect-ratio: 1;
     cursor: pointer;
     font-weight: bold;
@@ -65,5 +58,22 @@
       0 0 0 5px hsl(0 0% 50%);
     transition: box-shadow .13s ease-out;
   }
+  .content {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  p.title {
+    margin-block: 0 .4em;
+  }
+  p:not(.title) {
+    margin-block: .2em;
+    font-size: .8em;
+    font-weight: 500;
+    opacity: .8;
+  }
+  p span { opacity: .7; }
 
 </style>

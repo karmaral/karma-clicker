@@ -1,10 +1,10 @@
 import { derived } from 'svelte/store';
 import PolarizedResource from './polarized';
-import type { Polarity, ResourceType, CombinedResourceType } from '$lib/types';
+import type { Polarity, ResourceType, BaseResourceType } from '$lib/types';
 import { getPolarityLabel } from '$lib/utils';
 
 export class LearningToken extends PolarizedResource {
-  constructor(type: CombinedResourceType, polarity: Polarity) {
+  constructor(type: BaseResourceType, polarity: Polarity) {
     const t = `${type}_${getPolarityLabel(polarity)}` as ResourceType;
     super(t, polarity);
   }

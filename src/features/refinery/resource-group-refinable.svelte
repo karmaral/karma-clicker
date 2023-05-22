@@ -1,14 +1,14 @@
 <script lang="ts">
   import type { Readable } from 'svelte/store';
   import { ResourceManager } from '$lib/managers';
-  import type { CombinedResourceType, ResourceType } from '$types';
+  import type { BaseResourceType, ResourceType } from '$types';
   import { ResourceQuantity } from '$features/ui';
   import type PolarizedResource from '$lib/resources/polarized';
   import { formatNumber, numberFormat } from '$lib/utils';
   import texts from '$data/resources-texts';
   import CurrencySymbol from '$features/ui/currency-symbol.svelte';
 
-  export let type: CombinedResourceType;
+  export let type: BaseResourceType;
   export let buyMode: number | 'max'; 
 
 

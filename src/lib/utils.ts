@@ -1,4 +1,4 @@
-import type { Polarity } from '$types';
+import type { BaseResourceType, Polarity, ResourceType } from '$types';
 
 export function formatRounded(ms: number, size = 1) {
   const s = 10 ** size;
@@ -8,7 +8,6 @@ export const numberFormat = Intl.NumberFormat('en-US', {
   maximumFractionDigits: 0,
   maximumSignificantDigits: 5,
 });
-
 
 // p r o o m p t
 export function formatNumber(val: number, floats = 2, useLongForm = false) {
@@ -70,7 +69,26 @@ export function getUpgradeTypeLabel(id: string) {
   }
   return 'Enhancement';
 }
+export function splitResourceString(r: string): [BaseResourceType, string] {
+  const [base, polarity] = r.split('_');
+  return [base as BaseResourceType, polarity];
+}
 
+export function isPolarized(r: ResourceType) {
+  const polarized = [
+    'karma', 
+    'red',
+    'yellow',
+    'blue'
+  ] as BaseResourceType[];
+  let result = false;
+  polarized.forEach(p => {
+    if (r.startsWith(p)) {
+      result = true;
+    }
+  });
+  return result;
+}
 export function getPolarityLabel(p: Polarity) {
   switch(p) {
     case 1:
