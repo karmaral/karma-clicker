@@ -1,52 +1,110 @@
 :root {
-  font-family: 'Encode Sans', sans-serif;
+  --ink-900:#111111;
+  --ink-700:#555555;
+  --ink-500:#767676;
+  --ink-400:#8a8a8a;
+  --ink-300:#a3a3a3;
+  --ink-200:#c2c2c2;
+  --line-300:#d4d4d4;
+  --line-200:#e2e2e2;
+  --line-100:#ededed;
+  --surface:#ffffff;
+  --surface-alt:#fafafa;
+  --canvas:#f4f4f2;
+  --ink-inverse:#ffffff;
+
+  --res-xp:#2f7d4f;
+  --res-red:#9e2b25;
+  --res-yellow:#9a7b21;
+  --res-blue:#33407a;
+
+  --status-gain:#2f7d4f;
+  --status-loss:#9e2b25;
+
+  --hatch-pos:repeating-linear-gradient(-45deg, #ffffff 1px, #ffffff 4px, #bdbdbd 4px, #bdbdbd 5px);
+  --hatch-neg:repeating-linear-gradient(45deg, #111111 1px, #111111 4px, #5a5a5a 4px, #5a5a5a 5px);
+  --hatch-pos-edge:inset 0 0 0 1px var(--line-300);
+
+  --hatch-pos-badge:repeating-linear-gradient(-90deg, #ffffff 1px, #ffffff 3px, #bdbdbd 3px, #bdbdbd 4px);
+  --hatch-neg-badge:repeating-linear-gradient(0deg, #111111 1px, #111111 3px, #5a5a5a 3px, #5a5a5a 4px);
+
+  --badge-size:9px;
+  --badge-radius:1.5px;
+  --badge-gap:7px;
+  --glyph-size:16px;
+
+  --font:"Encode Sans", system-ui, sans-serif;
+  --fs-display:30px;
+  --fs-xl:26px;
+  --fs-lg:19px;
+  --fs-md:15px;
+  --fs-base:13px;
+  --fs-sm:12px;
+  --fs-xs:11px;
+  --fs-label:10px;
+  --fs-label-sm:9.5px;
+  --ls-label:.16em;
+  --ls-label-sm:.14em;
+
+  --rule-strong:2px solid var(--ink-900);
+  --rule-section:1px solid var(--ink-900);
+  --rule-row:1px solid var(--line-100);
+  --rule-card:1px solid var(--line-200);
+
+  --sp-1:4px;
+  --sp-2:8px;
+  --sp-3:14px;
+  --sp-4:20px;
+  --sp-5:28px;
+  --sp-6:36px;
+
+  --t-fast:.12s ease;
+  --t-med:.15s ease;
+
+  --toastBtnFont: inherit;
+  --toastContainerTop: auto;
+  --toastContainerBottom: 1.5rem;
+  --toastColor: var(--ink-900);
+  --toastBackground: var(--surface);
+  --toastHeight: auto;
+  --toastMinHeight: 3em;
+  --toastBoxShadow: none;
+  --toastBorder: var(--rule-card);
+  --toastBorderRadius: 0px;
+  --toastMsgPadding: var(--sp-2);
+  --toastBarHeight: 0;
+}
+
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100vh;
+}
+
+body {
+  margin: 0;
+  height: 100%;
+  font-family: var(--font);
+  font-size: var(--fs-base);
   line-height: 1.5;
   font-weight: 400;
+  color: var(--ink-900);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
-
-  --red: hsl(0 70% 52%);
-  --yellow: hsl(60 68% 40%);
-  --blue: hsl(242 58% 34%);
-  --experience: hsl(128 93% 21%);
-
-  --toastBtnFont: inherit;
-  --toastContainerTop: auto;
-  --toastContainerBottom: 1.5rem;
-  --toastColor: black;
-  --toastBackground: hsl(0 0% 95%);
-  --toastHeight: auto;
-  --toastMinHeight: 3em;
-  --toastBoxShadow: none;
-  --toastBorder: 1px solid hsl(0 0% 0% / 25%);
-  --toastBorderRadius: 0px;
-  --toastMsgPadding: .5em;
-  --toastBarHeight: 0;
 }
 
-*,*::before,*::after {
-  box-sizing: border-box;
-}
-html {
-  height: 100vh;
-}
-body {
-  margin: 0;
-  height: 100%;
-}
 #app {
   display: flex;
   flex-direction: column;
-  align-items: center;
   height: 100%;
-}
-
-h3, h4 {
-  margin-block: .4em;
+  background-color: var(--canvas);
 }
 
 button {
@@ -54,3 +112,6 @@ button {
   font-size: inherit;
 }
 
+.num { font-variant-numeric: tabular-nums; }
+.karma-pos { background: var(--hatch-pos); box-shadow: var(--hatch-pos-edge); }
+.karma-neg { background: var(--hatch-neg); }

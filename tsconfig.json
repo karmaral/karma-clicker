@@ -18,6 +18,8 @@
     "paths": {
       "$features": ["src/features/index.ts"],
       "$features/*": ["src/features/*"],
+      "$ui": ["src/ui/index.ts"],
+      "$ui/*": ["src/ui/*"],
       "$lib/*": ["src/lib/*"],
       "$types": ["src/lib/types.d.ts"],
       "$data/*": ["src/data/*"]
