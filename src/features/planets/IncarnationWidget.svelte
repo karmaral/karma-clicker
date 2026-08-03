@@ -1,6 +1,6 @@
 <script lang="ts">
   import IncarnationCycle from '$features/incarnation-period';
-  import MainAction from '$features/main-action.svelte';
+  import MainAction from '$features/MainAction.svelte';
   import { PlanetManager } from '$lib/managers';
   import type { ItemTextData } from '$lib/types';
   import texts from '$data/planets-texts';

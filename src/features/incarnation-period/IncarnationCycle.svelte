@@ -1,6 +1,6 @@
 <script lang="ts">
   import planetData from '$data/planets';
-  import OscillationSlice from './oscillation-slice.svelte';
+  import OscillationSlice from './OscillationSlice.svelte';
   import { compoundScale } from '$lib/utils';
   import { PlanetManager } from '$lib/managers';
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import WaveSlot from './wave-slot.svelte';
+  import WaveSlot from './WaveSlot.svelte';
   import { compoundScale } from '$lib/utils';
   import type { WaveSlotType } from '$lib/types';
 

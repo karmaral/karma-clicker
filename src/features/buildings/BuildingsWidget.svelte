@@ -1,5 +1,5 @@
 <script lang="ts">
-  import BuildingItem from './building-item.svelte';
+  import BuildingItem from './BuildingItem.svelte';
   import { BuildingManager } from '$lib/managers';
   import texts from '$data/buildings-texts';
 

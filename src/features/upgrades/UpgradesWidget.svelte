@@ -1,5 +1,5 @@
 <script lang="ts">
-  import UpgradeItem from './upgrade-item.svelte';
+  import UpgradeItem from './UpgradeItem.svelte';
   import upgradeData from '$data/upgrades';
   import texts from '$data/upgrades-texts';
   import { UpgradeManager } from '$lib/managers';

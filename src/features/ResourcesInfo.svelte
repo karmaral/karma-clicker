@@ -21,7 +21,7 @@
       <ResourceQuantity name="experience" amount={$experience.amount}> 
         <CurrencySymbol 
           letter="ξ"
-          bgColor="var(--experience)"
+          bgColor="var(--res-xp)"
          />
       </ResourceQuantity>
     </p>
@@ -48,20 +48,20 @@
           <CurrencySymbol 
             letter="ϱ" 
             offset={['0px', '-.1em']}
-            bgColor="var(--red)"
+            bgColor="var(--res-red)"
           />
         </ResourceQuantity>
         <ResourceQuantity name="yellow" amount={$combinedYellow}> 
           <CurrencySymbol 
             letter="ɣ" 
             offset={['0px', '-.08em']}
-            bgColor="var(--yellow)"
+            bgColor="var(--res-yellow)"
           />
         </ResourceQuantity>
         <ResourceQuantity name="blue" amount={$combinedBlue}> 
           <CurrencySymbol 
             letter="ϐ" 
-            bgColor="var(--blue)"
+            bgColor="var(--res-blue)"
           />
         </ResourceQuantity>
       </p>

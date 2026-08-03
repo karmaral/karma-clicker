@@ -1,3 +1,3 @@
-import BuildingsWidget from './buildings-widget.svelte';
+import BuildingsWidget from './BuildingsWidget.svelte';
 
 export default BuildingsWidget;

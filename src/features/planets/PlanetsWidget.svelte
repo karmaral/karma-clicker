@@ -1,7 +1,7 @@
 <script lang="ts">
   import { PlanetManager } from '$lib/managers';
-  import PlanetList from '$features/planets/planet-list.svelte';
-  import IncarnationWidget from '$features/planets/incarnation-widget.svelte';
+  import PlanetList from '$features/planets/PlanetList.svelte';
+  import IncarnationWidget from '$features/planets/IncarnationWidget.svelte';
 
   $: ({ inspecting } = $PlanetManager);
 

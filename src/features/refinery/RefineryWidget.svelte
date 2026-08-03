@@ -1,7 +1,7 @@
 <script lang="ts">
   import { refineryView } from '$lib/stores';
-  import ResourceGroup from './resource-group.svelte';
-  import ResourceGroupRefinable from './resource-group-refinable.svelte';
+  import ResourceGroup from './ResourceGroup.svelte';
+  import ResourceGroupRefinable from './ResourceGroupRefinable.svelte';
   import { BuyModeSwitcher } from '$features/ui';
   
   let buyMode: number | 'max' = 1;

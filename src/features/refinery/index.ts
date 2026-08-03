@@ -1,4 +1,4 @@
-import RefineryWidget from './refinery-widget.svelte';
+import RefineryWidget from './RefineryWidget.svelte';
 
 export default RefineryWidget;
 

@@ -6,7 +6,7 @@
   import type PolarizedResource from '$lib/resources/polarized';
   import { formatNumber, numberFormat } from '$lib/utils';
   import texts from '$data/resources-texts';
-  import CurrencySymbol from '$features/ui/currency-symbol.svelte';
+  import CurrencySymbol from '$features/ui/CurrencySymbol.svelte';
 
   export let type: CombinedResourceType;
   export let buyMode: number | 'max'; 
@@ -72,21 +72,21 @@
         letter="ϱ" 
         fontSize={symbolFontSize} 
         offset={['0px', '.1em']}
-        bgColor="var(--red)"
+        bgColor="var(--res-red)"
       />
     {:else if type === 'yellow'}
       <CurrencySymbol 
         letter="ɣ" 
         fontSize={symbolFontSize} 
         offset={['0px', '.15em']}
-        bgColor="var(--yellow)"
+        bgColor="var(--res-yellow)"
       />
     {:else if type === 'blue'}
       <CurrencySymbol 
         letter="ϐ" 
         fontSize={symbolFontSize} 
         offset={['0px', '.3em']}
-        bgColor="var(--blue)"
+        bgColor="var(--res-blue)"
       />
     {/if}
 

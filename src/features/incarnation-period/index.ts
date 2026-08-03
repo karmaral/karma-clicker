@@ -1,3 +1,3 @@
-import IncarnationCycle from './incarnation-cycle.svelte';
+import IncarnationCycle from './IncarnationCycle.svelte';
 
 export default IncarnationCycle;

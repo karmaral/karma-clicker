@@ -1,8 +1,8 @@
-import ProgressBar from './progress-bar.svelte';
-import CurrencySymbol from './currency-symbol.svelte';
-import InfoTooltip from './info-tooltip.svelte';
-import ResourceQuantity from './resource-quantity.svelte';
-import BuyModeSwitcher from './buy-mode-switcher.svelte';
+import ProgressBar from './ProgressBar.svelte';
+import CurrencySymbol from './CurrencySymbol.svelte';
+import InfoTooltip from './InfoTooltip.svelte';
+import ResourceQuantity from './ResourceQuantity.svelte';
+import BuyModeSwitcher from './BuyModeSwitcher.svelte';
 
 export { 
   ProgressBar,

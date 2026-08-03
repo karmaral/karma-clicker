@@ -1,5 +1,5 @@
 import { toast } from '@zerodevx/svelte-toast';
-import Notification from '$features/ui/notification.svelte';
+import Notification from '$features/ui/Notification.svelte';
 import type { ItemTextData } from '$types';
 
 class NotificationManager {

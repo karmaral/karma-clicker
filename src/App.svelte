@@ -1,6 +1,6 @@
 <script lang="ts">
   import { ResourcesInfo } from '$features';
-  import PlanetsWidget from '$features/planets/planets-widget.svelte';
+  import PlanetsWidget from '$features/planets/PlanetsWidget.svelte';
   import UpgradesWidget from '$features/upgrades';
   import BuildingsWidget from '$features/buildings';
   import RefineryWidget from '$features/refinery';

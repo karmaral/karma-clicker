@@ -1,3 +1,3 @@
-import UpgradesWidget from './upgrades-widget.svelte';
+import UpgradesWidget from './UpgradesWidget.svelte';
 
 export default UpgradesWidget;
