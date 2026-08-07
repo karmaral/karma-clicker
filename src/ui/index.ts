@@ -11,6 +11,7 @@ import Label from './Label.svelte';
 import Meter from './Meter.svelte';
 import Rail from './Rail.svelte';
 import Section from './Section.svelte';
+import Stub from './Stub.svelte';
 import Tabs from './Tabs.svelte';
 import Value from './Value.svelte';
 
@@ -28,6 +29,7 @@ export {
   Meter,
   Rail,
   Section,
+  Stub,
   Tabs,
   Value,
 };

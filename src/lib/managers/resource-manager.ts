@@ -1,6 +1,5 @@
-import { type Readable, writable, readonly, get } from 'svelte/store';
-import { 
-  experience, 
+import {
+  experience,
   negKarma,
   posKarma,
   negRed,
@@ -9,110 +8,64 @@ import {
   posRed,
   posYellow,
   posBlue,
-  combinedKarma,
-  combinedRed,
-  combinedYellow,
-  combinedBlue,
 } from '$lib/resources';
 import type { ResourceType, CombinedResourceType } from '$types';
-import type Resource from '$lib/resources/base';
+import type Resource from '$lib/resources/base.svelte';
 
 class ResourceManager {
-  subscribe: Readable<this>['subscribe'];
-  #set: (value: this) => void;
-  #update: (updater: (value: this) => this) => void;
+  #resources: Record<string, Resource> = {
+    'experience': experience,
+    'karma_negative': negKarma,
+    'karma_positive': posKarma,
+    'red_negative': negRed,
+    'yellow_negative': negYellow,
+    'blue_negative': negBlue,
+    'red_positive': posRed,
+    'yellow_positive': posYellow,
+    'blue_positive': posBlue,
+  };
 
-  #resources: Record<string, Resource> = {};
-  #effects: Record<string, string[]> = {};
-  #conversionTable: Record<CombinedResourceType, number>;
-
-  constructor() {
-    const store = writable(this);
-    const { subscribe } = readonly(store);
-    const { set, update } = store;
-    this.subscribe = subscribe;
-    this.#set = set;
-    this.#update = update;
-
-    this.#resources = {
-      'experience': experience,
-      'karma_negative': negKarma,
-      'karma_positive': posKarma,
-      'red_negative': negRed,
-      'yellow_negative': negYellow,
-      'blue_negative': negBlue,
-      'red_positive': posRed,
-      'yellow_positive': posYellow,
-      'blue_positive': posBlue,
-    };
-    
-    this.#conversionTable = {
-      'karma': 1,
-      'red': 100,
-      'yellow': 1500,
-      'blue': 7000,
-    };
-
-    Object.keys(this.#resources).forEach(type => {
-      this.#effects[type] = [];
-    });
-  }
+  #conversionTable: Record<CombinedResourceType, number> = {
+    'karma': 1,
+    'red': 100,
+    'yellow': 1500,
+    'blue': 7000,
+  };
 
   getResource(type: ResourceType) {
-    if (!Boolean(type in this.#resources)) return;
     return this.#resources[type];
   }
 
   getTotal(type: ResourceType) {
-    if (!Boolean(type in this.#resources)) return;
-    const resource = get(this.#resources[type]);
-    return resource.total;
-  }
-  getCombinedTotal(type: CombinedResourceType, asReadable = false) {
-    let res: Readable<number>;
-    switch (type) {
-      case 'karma':
-        res = combinedKarma;
-        break;
-      case 'red':
-        res = combinedRed; 
-        break;
-      case 'yellow':
-        res = combinedYellow; 
-        break;
-      case 'blue':
-        res = combinedBlue; 
-        break;
-      default: break;
-    }
-    return asReadable ? res : get(res);
+    return this.#resources[type]?.total ?? 0;
   }
 
   getAmount(type: ResourceType) {
-    const resource = get(this.#resources[type]);
-    return resource.amount;
+    return this.#resources[type]?.amount ?? 0;
+  }
+
+  getCombinedTotal(type: CombinedResourceType) {
+    return this.getAmount(`${type}_negative` as ResourceType)
+      + this.getAmount(`${type}_positive` as ResourceType);
   }
 
   has(type: ResourceType, amount?: number) {
-    if (!amount) {
-      // check if resource unlocked
-       return;
-    }
+    if (!amount) return;
+
     return this.getAmount(type) >= amount;
   }
 
   add(type: ResourceType, amount: number) {
-    const resource = get(this.#resources[type]);
-    return resource.add(amount);
+    return this.#resources[type]?.add(amount);
   }
 
   remove(type: ResourceType, amount: number) {
-    const resource = get(this.#resources[type]);
-    return resource.remove(amount);
+    return this.#resources[type]?.remove(amount);
   }
 
   convert(targetType: ResourceType, amount: number) {
     if (targetType.startsWith('karma')) return;
+
     const [combined, polarity] = targetType.split('_');
     const k = `karma_${polarity}` as ResourceType;
 
@@ -122,14 +75,17 @@ class ResourceManager {
       this.add(targetType, amount);
     }
   }
+
   getConversionCost(targetType: CombinedResourceType, amount: number) {
     if (targetType === 'karma') return; // de-conversion is too complex for now
+
     return amount * this.#conversionTable[targetType];
   }
+
   getAffordableConversionQuantity(targetType: ResourceType) {
     if (targetType.startsWith('karma')) return;
 
-    let [_combined, polarity] = targetType.split('_');
+    const [_combined, polarity] = targetType.split('_');
     const combined = _combined as CombinedResourceType;
     const k = `karma_${polarity}` as ResourceType;
 
@@ -140,19 +96,16 @@ class ResourceManager {
       q++;
       cost = this.getConversionCost(combined, q);
     }
+
     return q - 1;
   }
 
-  addListener(type: ResourceType, listenerType: string, callback: (detail?: unknown) => void) {
-    if (!Boolean(type in this.#resources)) return;
-    const resource = get(this.#resources[type]);
-    resource.addListener(listenerType, callback);
+  addListener(type: ResourceType, listenerType: string, callback: (detail?: Record<string, unknown>) => void) {
+    this.#resources[type]?.addListener(listenerType, callback);
   }
 
-  removeListener(type: ResourceType, listenerType: string, callback: (detail?: unknown) => void) {
-    if (!Boolean(type in this.#resources)) return;
-    const resource = get(this.#resources[type]);
-    resource.removeListener(listenerType, callback);
+  removeListener(type: ResourceType, listenerType: string, callback: (detail?: Record<string, unknown>) => void) {
+    this.#resources[type]?.removeListener(listenerType, callback);
   }
 }
 

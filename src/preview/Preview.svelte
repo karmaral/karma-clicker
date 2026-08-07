@@ -7,12 +7,12 @@
   import {
     ExperienceModule, InertiaModule, KarmaModule, ManualModule,
   } from '$features/header';
-  import { GroupsSection, PlanetSection } from '$features/closeup';
-  import type { Group, Stage } from '$features/closeup';
+  import { ProbeTable, PlanetSection } from '$features/detail';
+  import type { Probe, Stage } from '$features/detail';
 
   let buyMode = $state('100');
 
-  let groups = $state<Group[]>([
+  let probes = $state<Probe[]>([
     {
       id: 'basic', count: '12', name: 'Basic probe',
       description: "Doesn't know much. Kinda just being.",
@@ -46,17 +46,18 @@
   ]);
 
   function setAim(id: string, value: number) {
-    const group = groups.find((g) => g.id === id);
-    if (group) group.aim = value;
+    const probe = probes.find((p) => p.id === id);
+    if (probe) probe.aim = value;
   }
 
   function buy(id: string) {
-    const group = groups.find((g) => g.id === id);
-    if (group?.cost.affordable) group.count = String(Number(group.count) + 1);
+    const probe = probes.find((p) => p.id === id);
+    if (probe?.cost.affordable) probe.count = String(Number(probe.count) + 1);
   }
 
   let cycles = $state(4);
   let wavePos = $state(0.19);
+  let flatten = $state(0.09);
 
   const planetStages = $derived(
     Array.from({ length: cycles * 2 }, (_, i): Stage => ({
@@ -304,6 +305,18 @@
       />
       <span class="spec num">{cycles} cycles · {cycles * 2} stages</span>
     </div>
+    <div class="control">
+      <label for="wave-flatten">Flatten</label>
+      <input
+        id="wave-flatten"
+        type="range"
+        min="0"
+        max="0.9"
+        step="0.01"
+        bind:value={flatten}
+      />
+      <span class="spec num">{Math.round(flatten * 100)}% flattened</span>
+    </div>
     <div class="canvas">
       <Card>
         <HeaderBand columns="1.25fr 4fr 2.5fr 1.75fr">
@@ -320,7 +333,7 @@
             banded
           >
             {#snippet consequence()}
-              Cycles <b>+12%</b> slower · wave flattened <b>9%</b>
+              Cycles <b>+12%</b> slower · wave flattened <b>{Math.round(flatten * 100)}%</b>
             {/snippet}
           </InertiaModule>
           <ManualModule sub="+3.1 xp · 3.6s" banded />
@@ -345,11 +358,12 @@
           stages={planetStages}
           current={currentStage}
           position={wavePos}
-          flattened="flattened 9% by comfort"
-          note="Aim your groups now — re-aiming takes three cycles, so commit before the flip."
+          {flatten}
+          flattened="flattened {Math.round(flatten * 100)}% by comfort"
+          note="Aim your probes now — re-aiming takes three cycles, so commit before the flip."
         />
-        <GroupsSection
-          {groups}
+        <ProbeTable
+          {probes}
           {buyMode}
           onbuymode={(m) => (buyMode = m)}
           onaim={setAim}

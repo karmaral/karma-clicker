@@ -24,7 +24,14 @@ export interface UpgradeData {
   cost?: number;
   cost_type?: ResourceType
 }
+/**
+ * `click` is you incarnating by hand — never allocatable, even once it auto-fires.
+ * `probe` can incarnate, clear, or be left behind. Defaults to `probe`.
+ */
+export type BuildingRole = 'click' | 'probe';
+
 export interface BuildingData {
+  role?: BuildingRole;
   upgrade_threshold?: number[];
   cost?: number;
   cost_type?: ResourceType;

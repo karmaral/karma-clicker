@@ -3,13 +3,15 @@
 
   interface Props {
     columns?: string;
+    /** Off when the sections carry their own rules as tab affordance. */
+    rule?: boolean;
     children?: Snippet;
   }
 
-  let { columns, children }: Props = $props();
+  let { columns, rule = true, children }: Props = $props();
 </script>
 
-<div class="band" style:grid-template-columns={columns}>
+<div class={['band', { rule }]} style:grid-template-columns={columns}>
   {@render children?.()}
 </div>
 
@@ -19,6 +21,9 @@
     grid-auto-flow: column;
     grid-auto-columns: minmax(0, 1fr);
     grid-template-rows: auto 1fr;
+  }
+
+  .band.rule {
     border-bottom: var(--rule-strong);
   }
 

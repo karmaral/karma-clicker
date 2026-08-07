@@ -1,4 +1,4 @@
-import Resource from './base';
+import Resource from './base.svelte';
 import type { Polarity, ResourceType } from '$types';
 import { getPolarityLabel } from '$lib/utils';
 

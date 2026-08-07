@@ -1,5 +1,6 @@
 export default {
   'main_action': {
+    role: 'click',
     yield_type: 'experience',
     yield_unit: 1,
     duration: 0,

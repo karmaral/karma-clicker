@@ -1,5 +1,5 @@
 import experience from './experience';
-import { negKarma, posKarma, combinedKarma } from './karma';
+import { negKarma, posKarma } from './karma';
 import {
   negRed,
   negYellow,
@@ -7,9 +7,6 @@ import {
   posRed,
   posYellow,
   posBlue,
-  combinedRed,
-  combinedYellow,
-  combinedBlue,
 } from './learning-token';
 
 export { 
@@ -22,9 +19,5 @@ export {
   posRed,
   posYellow,
   posBlue,
-  combinedKarma,
-  combinedRed,
-  combinedYellow,
-  combinedBlue,
 };
 
