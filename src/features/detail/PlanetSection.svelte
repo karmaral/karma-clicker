@@ -1,13 +1,13 @@
 <script lang="ts">
   import { Section } from '$ui';
   import DensityWave from './DensityWave.svelte';
-  import StageStrip from './StageStrip.svelte';
-  import type { Stage } from './types';
+  import CycleStrip from './CycleStrip.svelte';
+  import type { Phase } from './types';
 
   interface Props {
     name: string;
     status: string;
-    stages: Stage[];
+    phases: Phase[];
     current: number;
     position: number;
     flatten?: number;
@@ -18,7 +18,7 @@
   let {
     name,
     status,
-    stages,
+    phases,
     current,
     position,
     flatten = 0,
@@ -32,8 +32,8 @@
     {status}
   {/snippet}
 
-  <DensityWave stages={stages.length} {current} {position} {flatten} />
-  <StageStrip {stages} {current} />
+  <DensityWave phases={phases.length} {current} {position} {flatten} />
+  <CycleStrip {phases} {current} />
 
   <div class="legend">
     <span class="key">

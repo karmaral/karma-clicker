@@ -10,5 +10,5 @@ export const SCREENS: ScreenName[] = ['overview', 'detail', 'refinery'];
 export const SCREEN_LABELS: Record<ScreenName, string> = {
   overview: 'Overview',
   detail: '—',
-  refinery: 'Clearing',
+  refinery: 'Refinery',
 };

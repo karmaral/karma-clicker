@@ -1,9 +1,9 @@
 <script lang="ts">
   import { Chip, ChipQueue, Label } from '$ui';
-  import type { ChipState } from '$ui';
+  import type { ChipStatus } from '$ui';
   import { ResourceManager, UpgradeManager } from '$lib/managers';
   import { pulse } from '$lib/loop';
-  import { formatNumber } from '$lib/utils';
+  import { formatNumber as fmt } from '$lib/utils';
   import data from '$data/upgrades';
   import texts from '$data/upgrades-texts';
 
@@ -14,9 +14,10 @@
     id: string;
     label: string;
     cost?: string;
-    state: ChipState;
+    status: ChipStatus;
     /** How far from affordable, for sorting. */
     distance: number;
+    textData: Record<string, string>;
   }
 
   function upgradeFor(target: string, id: string): Upgrade | undefined {
@@ -25,24 +26,27 @@
     const item = data[target].find((u) => u.id === id);
     if (!item) return;
 
+    const text = texts[target]?.[id];
+
     const { cost, cost_type } = item;
     const locked = UpgradeManager.isLocked(target, id);
     const held = cost_type ? ResourceManager.getAmount(cost_type) : 0;
 
-    let state: ChipState = 'unlocked';
+    let status: ChipStatus = 'unlocked';
     if (locked) {
-      state = 'approaching';
+      status = 'approaching';
     } else if (cost && held >= cost) {
-      state = 'affordable';
+      status = 'affordable';
     }
 
     return {
       target,
       id,
-      label: texts[target]?.[id]?.title ?? id,
-      cost: cost ? `${formatNumber(cost)} ${cost_type?.split('_')[0]}` : undefined,
-      state,
+      label: text?.title ?? id,
+      cost: cost ? `${fmt(cost)} ${cost_type?.split('_')[0]}` : undefined,
+      status,
       distance: cost ? cost - held : 0,
+      textData: { ...text },
     };
   }
 
@@ -60,7 +64,7 @@
     return all.sort((a, b) => a.distance - b.distance);
   });
 
-  const shown = $derived(upgrades.filter((u) => u.state !== 'approaching').slice(0, VISIBLE));
+  const shown = $derived(upgrades.filter((u) => u.status !== 'approaching').slice(0, VISIBLE));
   const approaching = $derived(upgrades.length - shown.length);
 
   function buy(upgrade: Upgrade) {
@@ -79,12 +83,25 @@
       <Chip
         label={upgrade.label}
         cost={upgrade.cost}
-        state={upgrade.state}
+        status={upgrade.status}
         onclick={() => buy(upgrade)}
-      />
+      >
+        {#snippet tooltipContent()}
+          <div class="item-header">
+            <span class="title">{upgrade.textData.title}</span>
+          </div>
+          <div class="item-body">
+            <p class="description">{upgrade.textData.description}</p>
+            <p class="cost">
+              Cost: <strong><span>{upgrade.cost}</span></strong>
+            </p>
+          </div>
+          {upgrade.label}
+        {/snippet}
+      </Chip>
     {/each}
     {#if approaching > 0}
-      <Chip label="{approaching} approaching" state="approaching" disabled />
+      <Chip label="{approaching} approaching" status="approaching" disabled />
     {/if}
   </ChipQueue>
 </div>

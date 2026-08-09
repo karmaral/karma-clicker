@@ -1,20 +1,20 @@
 <script lang="ts">
   import { Label } from '$ui';
-  import type { Stage } from './types';
+  import type { Phase } from './types';
 
   interface Props {
-    stages: Stage[];
+    phases: Phase[];
     current: number;
   }
 
-  let { stages, current }: Props = $props();
+  let { phases, current }: Props = $props();
 </script>
 
-<div class="strip" style:grid-template-columns="repeat({stages.length}, 1fr)">
-  {#each stages as stage, i (stage.at)}
-    <div class={['cell', stage.kind, { current: i === current }]}>
-      <span class="kind"><Label text={stage.kind} size="sm" /></span>
-      <span class="at num">{stage.at}</span>
+<div class="strip" style:grid-template-columns="repeat({phases.length}, 1fr)">
+  {#each phases as phase, i (i)}
+    <div class={['cell', phase.kind, { current: i === current }]}>
+      <span class="kind"><Label text={phase.kind} size="sm" /></span>
+      <span class="at num">{phase.at}</span>
     </div>
   {/each}
 </div>

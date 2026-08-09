@@ -1,19 +1,21 @@
 import AimControl from './AimControl.svelte';
 import DetailScreen from './DetailScreen.svelte';
 import DensityWave from './DensityWave.svelte';
-import ProbeRow from './ProbeRow.svelte';
-import ProbeTable from './ProbeTable.svelte';
+import CohortRow from './CohortRow.svelte';
+import CohortTable from './CohortTable.svelte';
 import PlanetSection from './PlanetSection.svelte';
-import StageStrip from './StageStrip.svelte';
+import CycleBar from './CycleBar.svelte';
+import CycleStrip from './CycleStrip.svelte';
 
 export {
   AimControl,
+  CycleBar,
   DetailScreen,
   DensityWave,
-  ProbeRow,
-  ProbeTable,
+  CohortRow,
+  CohortTable,
   PlanetSection,
-  StageStrip,
+  CycleStrip,
 };
 
-export type { Probe, Stage, StageKind } from './types';
+export type { Phase, PhaseKind } from './types';

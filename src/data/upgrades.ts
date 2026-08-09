@@ -4,14 +4,14 @@ const data: Record<string, UpgradeData[]> = {
   'main_action': [
     {
       id: 'str_1',
-      effect: 'unitYield * 1.5',
+      effect: { op: 'mult', value: 1.5 },
       effect_target: 'experience',
       unlock_type: 'experience',
       unlocks_at: 30, 
     },
     {
       id: 'str_2',
-      effect: 'unitYield * 2',
+      effect: { op: 'mult', value: 2 },
       effect_target: 'experience',
       unlock_type: 'experience',
       unlocks_at: 200, 
@@ -20,7 +20,7 @@ const data: Record<string, UpgradeData[]> = {
     },
     {
       id: 'str_3',
-      effect: 'unitYield * 3',
+      effect: { op: 'mult', value: 3 },
       effect_target: 'experience',
       unlocks_at: 10,
       unlock_type: 'karma_positive',
@@ -29,7 +29,7 @@ const data: Record<string, UpgradeData[]> = {
     },
     {
       id: 'str_4',
-      effect: 'unitYield ** 2',
+      effect: { op: 'pow', value: 2, snapshot: true },
       effect_target: 'experience',
       unlocks_at: 25, 
       unlock_type: 'karma_positive',
@@ -48,7 +48,7 @@ const data: Record<string, UpgradeData[]> = {
     },
     {
       id: 'str_1',
-      effect: 'unitYield ** 2',
+      effect: { op: 'pow', value: 2, snapshot: true },
       effect_target: 'all',
       unlocks_at: 10000,
       unlock_type: 'karma_positive',

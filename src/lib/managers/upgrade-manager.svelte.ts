@@ -1,5 +1,5 @@
 import { tick } from 'svelte';
-import type { ResourceType, UpgradeData } from '$types';
+import type { Effect, ResourceType, UpgradeData } from '$types';
 import data from '$data/upgrades';
 import texts from '$data/upgrades-texts';
 import { ResourceManager, BuildingManager, NotificationManager } from '$lib/managers';
@@ -60,49 +60,37 @@ class UpgradeManager {
     NotificationManager.notify(texts[target][id]);
     this.#upgrades[target].push(id);
 
-    const { effect, effect_target } = item;
-    if (effect) {
-      this.#handleEffect(target, effect, effect_target);
+    if (item.effect) {
+      this.#handleEffect(target, item);
     }
   }
 
-  async #handleEffect(target: string, effect: string | string[], effectTarget?: ResourceType | 'all') {
-    const effectArr = Array.isArray(effect) ? effect : [effect];
+  async #handleEffect(target: string, item: UpgradeData) {
+    const { id, effect, effect_target } = item;
+    const effects = Array.isArray(effect) ? effect : [effect];
 
-    for (const e of effectArr) {
-      this.#processEffect(target, e, effectTarget);
+    for (const [index, entry] of effects.entries()) {
+      this.#processEffect(target, `${id}:${index}`, entry, effect_target);
       await tick();
     }
   }
 
-  #processEffect(target: string, effect: string, effectTarget?: ResourceType | 'all') {
+  #processEffect(target: string, id: string, effect: Effect, effectTarget?: ResourceType | 'all') {
     if (!Boolean(target in this.#upgrades)) return;
 
-    const building = BuildingManager.getBuilding(target);
-
-    switch (effect) {
-      case 'unlock':
-        return BuildingManager.unlock(target);
-      case 'acquire':
-        return BuildingManager.acquire(target);
-      case 'autonomy':
-        return building.toggleAutonomy(true);
-      default: break;
+    if (typeof effect === 'string') {
+      switch (effect) {
+        case 'unlock':
+          return BuildingManager.unlock(target);
+        case 'acquire':
+          return BuildingManager.acquire(target);
+        // case 'autonomy':
+        //   return BuildingManager.getBuilding(target).toggleAutonomy(true);
+        default: return;
+      }
     }
 
-    if (!effect.includes('unitYield') || !effectTarget) return;
-
-    if (effectTarget === 'all') {
-      Object.keys(building.production).forEach((resource: ResourceType) => {
-        const unitYield = building.production[resource];
-        building.updateProduction(resource, eval(effect.replace('unitYield', `${unitYield}`)));
-      });
-
-      return;
-    }
-
-    const unitYield = building.production[effectTarget];
-    building.updateProduction(effectTarget, eval(effect.replace('unitYield', String(unitYield))));
+    BuildingManager.getBuilding(target)?.addModifier({ id, target: effectTarget, ...effect });
   }
 
   get upgrades() {

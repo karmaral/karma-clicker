@@ -4,12 +4,13 @@
     name: string;
     note?: string;
     height?: string;
+    inert?: boolean;
   }
 
-  let { name, note, height = '96px' }: Props = $props();
+  let { name, note, height = '96px', inert = false }: Props = $props();
 </script>
 
-<div class="stub" style:min-height={height}>
+<div class={['stub', inert && 'inert']} style:min-height={height}>
   <span class="name">{name}</span>
   {#if note}
     <span class="note">{note}</span>
@@ -30,6 +31,10 @@
       var(--surface-alt) 6px 12px
     );
     min-width: 0;
+  }
+
+  .stub.inert {
+    opacity: .45;
   }
 
   .name {

@@ -7,74 +7,51 @@
   import {
     ExperienceModule, InertiaModule, KarmaModule, ManualModule,
   } from '$features/header';
-  import { ProbeTable, PlanetSection } from '$features/detail';
-  import type { Probe, Stage } from '$features/detail';
+  import { CohortTable, PlanetSection } from '$features/detail';
+  import type { Phase } from '$features/detail';
+  import Building from '$lib/buildings/base.svelte';
+  import buildingData from '$data/buildings';
 
   let buyMode = $state('100');
 
-  let probes = $state<Probe[]>([
-    {
-      id: 'basic', count: '12', name: 'Basic probe',
-      description: "Doesn't know much. Kinda just being.",
-      milestone: 70, aim: 1, lean: 'Positive', aimNote: 'Re-aiming · 2 cycles left · −8 xp',
-      output: { kind: 'pos', amount: '4', unit: '/s' }, cost: { kind: 'pos', amount: '26', affordable: true },
-    },
-    {
-      id: 'steady', count: '4', name: 'Steady probe',
-      description: 'Takes longer but yields considerably more.',
-      milestone: 35, aim: 1, lean: 'Positive', aimNote: 'Re-aiming · 2 cycles left · −8 xp',
-      output: { kind: 'pos', amount: '80', unit: '/s' }, cost: { kind: 'pos', amount: '320', affordable: true },
-    },
-    {
-      id: 'chaos', count: '1', name: 'Chaos probe',
-      description: 'Draws polarity at random — cannot be aimed.',
-      aim: 0, lean: 'Neutral', aimNote: 'Unaimable — that is the point',
-      unaimable: true, output: { kind: 'both', amount: '10', unit: '/s' }, cost: { kind: 'pos', amount: '68' },
-    },
-    {
-      id: 'zealot', count: '0', name: 'Zealot probe',
-      description: 'Whatever you aim it at, it goes all the way.',
-      aim: 2, lean: 'Hard positive', aimNote: 'Re-aiming · 2 cycles left · −8 xp',
-      output: { kind: 'pos', amount: '0', unit: '/s' }, cost: { kind: 'pos', amount: '10k' },
-    },
-    {
-      id: 'refiner', count: '0', name: 'Crimson Refiner',
-      description: 'Makes tokens directly. Karma free.',
-      aim: -1, lean: 'Negative', aimNote: 'Re-aiming · 2 cycles left · −8 xp',
-      output: { kind: 'red', amount: '0', unit: '/s' }, cost: { kind: 'red', amount: '50' },
-    },
-  ]);
+  /** Real buildings, off the manager — driven to a state worth looking at. */
+  const cohorts = [
+    ['basic', 12],
+    ['steady', 4],
+    ['chaos', 1],
+    ['zealot', 0],
+    ['red_basic', 0],
+  ].map(([id, count]: [string, number]) => {
+    const cohort = new Building(id, buildingData[id]);
+    if (count) cohort.add(count);
 
-  function setAim(id: string, value: number) {
-    const probe = probes.find((p) => p.id === id);
-    if (probe) probe.aim = value;
-  }
+    return cohort;
+  });
 
   function buy(id: string) {
-    const probe = probes.find((p) => p.id === id);
-    if (probe?.cost.affordable) probe.count = String(Number(probe.count) + 1);
+    cohorts.find((cohort) => cohort.id === id)?.add(1);
   }
 
   let cycles = $state(4);
   let wavePos = $state(0.19);
   let flatten = $state(0.09);
 
-  const planetStages = $derived(
-    Array.from({ length: cycles * 2 }, (_, i): Stage => ({
+  const planetPhases = $derived(
+    Array.from({ length: cycles * 2 }, (_, i): Phase => ({
       kind: i % 2 === 0 ? 'light' : 'dense',
       at: `${i * 25} xp`,
     }))
   );
 
-  const currentStage = $derived(
-    Math.min(planetStages.length - 1, Math.floor(wavePos * planetStages.length))
+  const currentPhase = $derived(
+    Math.min(planetPhases.length - 1, Math.floor(wavePos * planetPhases.length))
   );
 
   const waveStatus = $derived.by(() => {
-    const stage = planetStages[currentStage];
-    const next = planetStages[currentStage + 1];
+    const phase = planetPhases[currentPhase];
+    const next = planetPhases[currentPhase + 1];
     const flips = next ? ` · flips ${next.kind} at ${next.at}` : ' · last stage';
-    return `Stage ${currentStage + 1} of ${planetStages.length} · ${stage.kind}${flips}`;
+    return `Stage ${currentPhase + 1} of ${planetPhases.length} · ${phase.kind}${flips}`;
   });
 
   const inertiaTicks: MeterTick[] = [{ at: 20 }, { at: 60, strong: true }];
@@ -213,7 +190,7 @@
       <div class="row">
         <span class="row-key">height="6px"</span>
         <Meter value={70} height="6px" />
-        <span class="spec">milestone bar</span>
+        <span class="spec">level bar</span>
       </div>
       <div class="row">
         <span class="row-key">height="2px"</span>
@@ -291,7 +268,7 @@
         step="0.001"
         bind:value={wavePos}
       />
-      <span class="spec num">{wavePos.toFixed(3)} · stage {currentStage + 1}</span>
+      <span class="spec num">{wavePos.toFixed(3)} · stage {currentPhase + 1}</span>
     </div>
     <div class="control">
       <label for="wave-cycles">Cycles</label>
@@ -355,18 +332,18 @@
         <PlanetSection
           name="A regular planet"
           status={waveStatus}
-          stages={planetStages}
-          current={currentStage}
+          phases={planetPhases}
+          current={currentPhase}
           position={wavePos}
           {flatten}
           flattened="flattened {Math.round(flatten * 100)}% by comfort"
           note="Aim your probes now — re-aiming takes three cycles, so commit before the flip."
         />
-        <ProbeTable
-          {probes}
+        <CohortTable
+          {cohorts}
           {buyMode}
+          affordable={() => true}
           onbuymode={(m) => (buyMode = m)}
-          onaim={setAim}
           onbuy={buy}
           note="Aiming costs experience and takes three cycles — commit before the stage flips, not after."
         />

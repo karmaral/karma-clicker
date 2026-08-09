@@ -2,7 +2,7 @@
   import { Label } from '$ui';
 
   interface Props {
-    stages: number;
+    phases: number;
     current: number;
     position: number;
     /** Fraction of amplitude removed by inertia, 0–1. */
@@ -10,14 +10,14 @@
     height?: string;
   }
 
-  let { stages, current, position, flatten = 0, height = '70px' }: Props = $props();
+  let { phases, current, position, flatten = 0, height = '70px' }: Props = $props();
 
   const H = 70;
   const MID = H / 2;
   const AMP = H * 0.371;
 
-  const W = $derived(stages * 100);
-  const seg = $derived(W / stages);
+  const W = $derived(phases * 100);
+  const seg = $derived(W / phases);
 
   const r = (n: number) => Math.round(n * 100) / 100;
 
@@ -29,7 +29,7 @@
 
   const build = (k: number) => {
     let d = `M0,${MID} C${r(seg / 3)},${r(ctrlY(0, k))} ${r((2 * seg) / 3)},${r(ctrlY(0, k))} ${seg},${MID}`;
-    for (let i = 1; i < stages; i++) {
+    for (let i = 1; i < phases; i++) {
       d += ` S${r(i * seg + (2 * seg) / 3)},${r(ctrlY(i, k))} ${r((i + 1) * seg)},${MID}`;
     }
     return d;
@@ -46,8 +46,8 @@
   });
 
   const markerY = $derived.by(() => {
-    const g = position * stages;
-    const i = Math.min(stages - 1, Math.floor(g));
+    const g = position * phases;
+    const i = Math.min(phases - 1, Math.floor(g));
     const t = g - i;
     return MID * ((1 - t) ** 3 + t ** 3) + 3 * ctrlY(i, scale) * t * (1 - t);
   });
@@ -55,7 +55,7 @@
 
 <div class="wave" style:height>
   <svg viewBox="0 0 {W} {H}" preserveAspectRatio="none" aria-hidden="true">
-    {#each { length: stages } as _, i}
+    {#each { length: phases } as _, i}
       {#if i % 2 === 1 || i === current}
         <rect
           x={i * seg}

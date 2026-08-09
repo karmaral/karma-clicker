@@ -1,11 +1,12 @@
 <script lang="ts">
   import { Label, Section, Tabs } from '$ui';
-  import ProbeRow from './ProbeRow.svelte';
-  import type { Probe } from './types';
+  import type Building from '$lib/buildings/base.svelte';
+  import CohortRow from './CohortRow.svelte';
 
   interface Props {
     title?: string;
-    probes: Probe[];
+    cohorts: Building[];
+    affordable?: (id: string) => boolean;
     buyModes?: readonly string[];
     buyMode?: string;
     showAim?: boolean;
@@ -17,7 +18,8 @@
 
   let {
     title,
-    probes,
+    cohorts,
+    affordable,
     buyModes = ['1', '10', '100', 'Max'],
     buyMode = '1',
     showAim = true,
@@ -27,11 +29,12 @@
     onbuy,
   }: Props = $props();
 
-  const columns = $derived(
-    showAim
-      ? 'minmax(0, 1fr) 160px 100px 120px 30px'
-      : 'minmax(0, 1fr) 100px 120px 30px',
-  );
+  // const columns = $derived(
+  //   showAim
+  //     ? 'minmax(0, 1fr) 160px 100px 30px 120px'
+  //     : 'minmax(0, 1fr) 54px 96px 160px 96px',
+  // );
+  const columns = 'minmax(0, 1fr) 54px 96px 160px 96px';
 </script>
 
 <Section label="Incarnations" {title}>
@@ -39,23 +42,29 @@
     <Tabs tabs={buyModes} active={buyMode} size="sm" onselect={onbuymode} />
   {/snippet}
 
-  <div class="table" style:--probe-cols={columns}>
+  <div class="table" style:--cohort-cols={columns}>
     <div class="head">
-      <span><Label text="Probe" size="sm" /></span>
-      {#if showAim}
+      <span><Label text="Cohort · level" size="sm" /></span>
+
+      <span class="count"><Label text="Count" size="sm" /></span>
+
+      <!-- {#if showAim}
         <span><Label text="Aim" size="sm" /></span>
-      {/if}
-      <span class="right"><Label text="Output" size="sm" /></span>
+      {/if} -->
+
+      <span class="count"><Label text="Return time" size="sm" /></span>
+      
+      <span class="right"><Label text="Yield" size="sm" /></span>
       <span class="right"><Label text="Cost" size="sm" /></span>
-      <span class="count"><Label text="N" size="sm" /></span>
     </div>
 
-    {#each probes as probe (probe.id)}
-      <ProbeRow
-        {probe}
+    {#each cohorts as cohort (cohort.id)}
+      <CohortRow
+        {cohort}
         {showAim}
-        onaim={(v) => onaim?.(probe.id, v)}
-        onbuy={() => onbuy?.(probe.id)}
+        affordable={affordable?.(cohort.id)}
+        onaim={(v) => onaim?.(cohort.id, v)}
+        onbuy={() => onbuy?.(cohort.id)}
       />
     {/each}
   </div>
@@ -74,7 +83,7 @@
 
   .head {
     display: grid;
-    grid-template-columns: var(--probe-cols);
+    grid-template-columns: var(--cohort-cols);
     column-gap: var(--sp-3);
     align-items: end;
     padding-bottom: var(--sp-1);
@@ -87,7 +96,6 @@
     line-height: 1;
   }
 
-  .head .count,
   .head .right {
     justify-content: flex-end;
   }

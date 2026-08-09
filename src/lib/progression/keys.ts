@@ -30,7 +30,7 @@ export type RevealKey =
   | 'detail.disc'
   | 'detail.status'
   | 'detail.wave'
-  | 'detail.probeTable'
+  | 'detail.cohortTable'
   | 'detail.aimGlobal'
   | 'detail.aimPerRow'
   | 'detail.split'
@@ -50,7 +50,6 @@ export type RevealKey =
   | 'harvest.split'
   | 'harvest.outcomes'
 
-  // Labelled "Clearing" in the UI — see $lib/labels.
   | 'refinery.status'
   | 'refinery.backlog'
   | 'refinery.side'
@@ -63,7 +62,7 @@ export type SystemKey =
   | 'incarnation'
   | 'posKarma'
   | 'negKarma'
-  | 'probes'
+  | 'cohort'
   | 'wave'
   | 'aim'
   | 'excess'
@@ -77,7 +76,7 @@ export const SYSTEM_SURFACES: Record<SystemKey, RevealKey[]> = {
   incarnation: ['detail.disc'],
   posKarma: ['reading.posKarma'],
   negKarma: ['reading.negKarma'],
-  probes: ['detail.probeTable'],
+  cohort: ['detail.cohortTable'],
   wave: ['detail.wave'],
   aim: ['detail.aimGlobal'],
   excess: ['reading.excess'],

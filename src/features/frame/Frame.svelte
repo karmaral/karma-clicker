@@ -31,12 +31,23 @@
     >
       <Cell label={nav.label(screen)} banded>
         {#if screen === 'overview'}
-          <Value kind="xp" value={experience} />
+          {#if progression.isRevealed('reading.experience')}
+            <Value kind="xp" value={experience} />
+          {/if}
         {:else if screen === 'detail'}
           {#if progression.isRevealed('reading.negKarma')}
-            <Value kind="neg" value={negKarma} size="lg" />
+            <Value kind="neg" value={negKarma} />
           {/if}
-          <Value kind="pos" value={posKarma} />
+          {#if progression.isRevealed('reading.posKarma')}
+            <Value kind="pos" value={posKarma} />
+          {/if}
+        {:else if progression.isRevealed('reading.excess') || progression.isRevealed('reading.tokens')}
+          {#if progression.isRevealed('reading.tokens')}
+            <Value kind="any" value="—" size="lg" />
+          {/if}
+          {#if progression.isRevealed('reading.excess')}
+            <Value kind="both" value="—" />
+          {/if}
         {:else}
           <span class="pending">—</span>
         {/if}
@@ -45,9 +56,11 @@
   {/each}
 </HeaderBand>
 
-<Rail>
-  <UpgradeRail />
-</Rail>
+{#if progression.isRevealed('frame.rail')}
+  <Rail>
+    <UpgradeRail />
+  </Rail>
+{/if}
 
 <style>
   .pending {

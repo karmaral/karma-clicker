@@ -25,7 +25,7 @@
     pulse();
   }
 
-  function unlockProbes() {
+  function unlockCohorts() {
     for (const id of Object.keys(buildingData)) {
       if (buildingData[id].role === 'click') continue;
 
@@ -63,7 +63,7 @@
       </div>
 
       <div class="row">
-        <button onclick={unlockProbes}>unlock all probes</button>
+        <button onclick={unlockCohorts}>unlock all cohorts</button>
       </div>
     </div>
   {/if}

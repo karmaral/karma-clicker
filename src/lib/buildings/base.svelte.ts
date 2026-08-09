@@ -1,5 +1,7 @@
-import type { BuildingData, ResourceType } from '$types';
+import type { BuildingData, Modifier, ResourceType } from '$types';
 import { ResourceManager, PlanetManager } from '$lib/managers';
+import { ResourceEmitter, EMITTER_EVENTS } from '$lib/emission';
+import { ModifierSet, applyOp } from '$lib/modifiers';
 import { biasedPolarity } from '$lib/utils';
 
 type Listener = (detail?: Record<string, unknown>) => void;
@@ -7,45 +9,65 @@ type Listener = (detail?: Record<string, unknown>) => void;
 export default class Building {
   #id: string;
   #data: BuildingData;
-  #level = $state(0);
+  #level = $state(1);
   #levelProgress = $state(0);
-  #owned = $state(0);
+  #count = $state(0);
   #total = $state(0);
-  #duration = $state(0);
-  #autonomous = $state(false);
-  #inProgress = $state(false);
-  #production: Partial<Record<ResourceType, number>> = $state({});
+  #emitter: ResourceEmitter;
+  #modifiers = new ModifierSet();
+  #baseProduction: Partial<Record<ResourceType, number>> = {};
+
+  #production = $derived.by(() => {
+    const { yield_multipliers = {} } = this.#data;
+    const production: Partial<Record<ResourceType, number>> = {};
+
+    Object.keys(this.#baseProduction).forEach((type: ResourceType) => {
+      const multiplier = yield_multipliers[type] ?? 0;
+      const leveled = Math.pow(1 + multiplier, this.#level - 1);
+      const base = this.#baseProduction[type] * leveled;
+      production[type] = this.#modifiers.apply(base, 'yield', type);
+    });
+
+    return production;
+  });
+
+  #duration = $derived.by(() => {
+    const { duration = 0, duration_reduction = 0 } = this.#data;
+    const base = duration * Math.pow(1 - duration_reduction, this.#level - 1);
+
+    return this.#modifiers.apply(base, 'duration');
+  });
 
   #listeners: Record<string, Listener[]> = {
     level: [],
-    owned: [],
+    count: [],
     total: [],
     add: [],
     remove: [],
-    queue: [],
-    action: [],
   };
 
   constructor(id: string, initData: BuildingData) {
     this.#id = id;
     this.#data = initData;
-    this.#duration = initData.duration;
-    this.#owned = initData.owned ?? 0;
+    this.#count = initData.count ?? 0;
+    this.#emitter = new ResourceEmitter(
+      () => this.#generateResources(),
+      () => this.#duration,
+    );
 
-    const { yield_type, yield_unit } = initData;
-    this.#production[yield_type] = yield_unit;
+    this.#baseProduction = { ...initData.yields };
   }
 
   add(n: number = 1) {
     const amt = Math.trunc(n);
-    this.#owned += amt;
-    if (this.#total === 0 && this.#autonomous) {
+    this.#count += amt;
+    if (this.#total === 0 && this.#emitter.autonomous) {
       this.queueAction();
     }
     this.#total += amt;
     this.#levelProgress = this.#calcLevelProgress();
 
-    this.#runCallbacks('owned', { owned: this.#owned });
+    this.#runCallbacks('count', { count: this.#count });
     this.#runCallbacks('total', { total: this.#total });
     this.#runCallbacks('add', { added: amt });
 
@@ -54,66 +76,43 @@ export default class Building {
 
   remove(n: number) {
     const amt = Math.trunc(n);
-    this.#owned -= amt;
+    this.#count -= amt;
 
-    this.#runCallbacks('owned', { owned: this.#owned });
+    this.#runCallbacks('count', { count: this.#count });
     this.#runCallbacks('remove', { removed: amt });
   }
 
   #syncLevel() {
-    const owned = this.#owned;
+    const count = this.#count;
     const { upgrade_threshold } = this.#data;
     if (!upgrade_threshold) return;
 
-    while (owned >= upgrade_threshold[this.#level]) {
+    while (count >= upgrade_threshold[this.#level - 1]) {
       this.#increaseLevel();
 
-      if (this.#level >= upgrade_threshold.length) break;
+      if (this.#level > upgrade_threshold.length) break;
     }
   }
 
   #increaseLevel() {
-    const { yield_multiplier, duration_reduction } = this.#data;
     this.#level++;
-    Object.keys(this.#production).forEach((res: ResourceType) => {
-      const unitYield = this.#production[res];
-      this.#production[res] = unitYield + unitYield * yield_multiplier;
-    });
-    this.#duration = this.#duration - this.#duration * duration_reduction;
 
     this.#runCallbacks('level', { level: this.#level });
   }
 
   queueAction() {
-    this.#inProgress = true;
-
-    const duration = this.#duration;
-    if (!duration) {
-      this.executeAction();
-    } else {
-      setTimeout(() => this.executeAction(), duration);
-      // when duration becomes ridiculously small, probably just tick by seconds
-    }
-
-    this.#runCallbacks('queue', { duration });
+    this.#emitter.queue();
   }
 
   executeAction() {
-    this.#generateResources();
-    this.#runCallbacks('action');
-
-    this.#inProgress = false;
-
-    if (this.#autonomous) {
-      this.queueAction();
-    }
+    this.#emitter.emit();
   }
 
   #generateResources() {
     const resources = Object.keys(this.#production);
     resources.forEach((type: ResourceType) => {
       const unitYield = this.#production[type];
-      let value = unitYield * this.#owned; // + effects bonuses, eventually
+      let value = unitYield * this.#count; // + effects bonuses, eventually
 
       if (type.startsWith('karma')) {
         const { polarity_multiplier, polarity_bias } = this.#data;
@@ -142,17 +141,45 @@ export default class Building {
   }
 
   toggleAutonomy(toggle?: boolean) {
-    this.#autonomous = toggle ?? !this.#autonomous;
+    this.#emitter.toggleAutonomy(toggle);
 
-    if (toggle && this.#owned) {
+    if (toggle && this.#count) {
       this.queueAction();
     }
   }
 
-  updateProduction(target: ResourceType, value: number) {
-    if (!Boolean(target in this.#production)) return;
+  addModifier(modifier: Modifier) {
+    if (!modifier.snapshot) {
+      this.#modifiers.add(modifier);
+      return;
+    }
 
-    this.#production[target] = value;
+    this.#resolveSnapshot(modifier).forEach((mod) => this.#modifiers.add(mod));
+  }
+
+  /** Settles a snapshot at the factor it is worth now, one entry per resource. */
+  #resolveSnapshot({ snapshot, ...modifier }: Modifier): Modifier[] {
+    const { op, value, stat = 'yield' } = modifier;
+    const factor = (current: number) => (current ? applyOp(current, op, value) / current : 1);
+
+    if (stat === 'duration') {
+      return [{ ...modifier, op: 'mult', value: factor(this.#duration) }];
+    }
+
+    const scope = modifier.target ?? 'all';
+
+    return Object.keys(this.#production)
+      .filter((type) => scope === 'all' || scope === type)
+      .map((type: ResourceType) => ({
+        ...modifier,
+        target: type,
+        op: 'mult' as const,
+        value: factor(this.#production[type]),
+      }));
+  }
+
+  removeModifier(id: string) {
+    this.#modifiers.remove(id);
   }
 
   getCost(n: number) {
@@ -163,10 +190,10 @@ export default class Building {
 
   #cumulativePrice(n: number) {
     let sum = 0;
-    const currentOwned = this.#owned;
-    const targetOwned = this.#owned + n;
+    const currentCount = this.#count;
+    const targetCount = this.#count + n;
     const { cost_multiplier: mult, cost } = this.#data;
-    for (let i = currentOwned + 1; i <= targetOwned; i++) {
+    for (let i = currentCount + 1; i <= targetCount; i++) {
       sum += cost * Math.pow(mult, i) / mult;
     }
 
@@ -175,12 +202,12 @@ export default class Building {
 
   #calcLevelProgress() {
     const lvl = this.#level;
-    const q = this.#owned;
+    const q = this.#count;
     const threshold = this.#data.upgrade_threshold;
     if (!threshold) return 100;
 
-    const from = lvl > 0 ? threshold[lvl - 1] : 0;
-    const next = threshold[lvl];
+    const from = lvl > 1 ? threshold[lvl - 2] : 0;
+    const next = threshold[lvl - 1];
     if (!next) return 100;
 
     const progress = (q - from) / (next - from) * 100;
@@ -192,34 +219,54 @@ export default class Building {
   get data() { return this.#data; }
   get level() { return this.#level; }
   get levelProgress() { return this.#levelProgress; }
-  get owned() { return this.#owned; }
+  get count() { return this.#count; }
   get total() { return this.#total; }
   get production() { return this.#production; }
+
+  perSecond(type: ResourceType) {
+    const yielded = this.#production[type] ?? 0;
+    return yielded * this.#count / ((this.duration || 1000) / 1000);
+  }
+
   get duration() { return this.#duration; }
-  get autonomous() { return this.#autonomous; }
-  get inProgress() { return this.#inProgress; }
+  get modifiers() { return this.#modifiers.modifiers; }
+  get autonomous() { return this.#emitter.autonomous; }
+  get inProgress() { return this.#emitter.inProgress; }
+
+  get isMaxLevel() {
+    const threshold = this.#data.upgrade_threshold;
+    if (!threshold) return true;
+
+    return this.#level > threshold.length;
+  }
 
   get currentThreshold() {
     const lvl = this.#level;
     const threshold = this.#data.upgrade_threshold;
+    if (!threshold) return 1;
 
-    return lvl < threshold.length ? threshold[lvl] : 1;
+    return lvl <= threshold.length ? threshold[lvl - 1] : 1;
   }
 
   get nextUntilThreshold() {
     const lvl = this.#level;
     const threshold = this.#data.upgrade_threshold;
+    if (!threshold) return 1;
 
-    return lvl < threshold.length
-      ? threshold[lvl] - this.#owned
+    return lvl <= threshold.length
+      ? threshold[lvl - 1] - this.#count
       : 1;
   }
 
   addListener(identifier: string, fn: Listener) {
+    if (EMITTER_EVENTS.includes(identifier)) return this.#emitter.addListener(identifier, fn);
+
     this.#listeners[identifier].push(fn);
   }
 
   removeListener(identifier: string, fn: Listener) {
+    if (EMITTER_EVENTS.includes(identifier)) return this.#emitter.removeListener(identifier, fn);
+
     this.#listeners[identifier] = this.#listeners[identifier].filter((cb) => cb !== fn);
   }
 

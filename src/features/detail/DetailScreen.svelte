@@ -1,77 +1,55 @@
 <script lang="ts">
-  import { Stub } from '$ui';
-  import type { BadgeKind } from '$ui';
-  import { BuildingManager, ResourceManager } from '$lib/managers';
+  import { BuildingManager, PlanetManager } from '$lib/managers';
   import { progression } from '$lib/progression';
   import { formatNumber } from '$lib/utils';
   import { pulse } from '$lib/loop';
-  import type { ResourceType } from '$types';
+  import type Building from '$lib/buildings/base.svelte';
   import Disc from '../Disc.svelte';
   import Log from '../Log.svelte';
-  import ProbeTable from './ProbeTable.svelte';
-  import type { Probe } from './types';
-  import buildingData from '$data/buildings';
-  import texts from '$data/buildings-texts';
+  import RevealStub from '../RevealStub.svelte';
+  import CohortTable from './CohortTable.svelte';
+  import PlanetSection from './PlanetSection.svelte';
+  import type { Phase } from './types';
+  import planetTexts from '$data/planets-texts';
 
   const CLICK = 'main_action';
 
   const click = $derived(BuildingManager.getBuilding(CLICK));
-  const clickYield = $derived(click?.production[click.data.yield_type] ?? 0);
+  const clickYield = $derived(click?.production.experience ?? 0);
 
-  const probeCount = $derived(
+  const cohortCount = $derived(
     BuildingManager.buildings.reduce((sum, id) => {
-      const probe = BuildingManager.getBuilding(id);
-      if (!probe || probe.data.role === 'click') return sum;
+      const cohort = BuildingManager.getBuilding(id);
+      if (!cohort || cohort.data.role === 'click') return sum;
 
-      return sum + probe.owned;
+      return sum + cohort.count;
     }, 0),
   );
 
-  function badgeFor(type: ResourceType): BadgeKind {
-    if (type === 'experience') return 'xp';
-
-    const [family, polarity] = type.split('_');
-    if (family === 'karma') return polarity === 'negative' ? 'neg' : 'pos';
-
-    return family as BadgeKind;
-  }
-
-  const probes = $derived.by(() => {
-    const rows: Probe[] = [];
+  const cohorts = $derived.by(() => {
+    const rows: Building[] = [];
     for (const id of BuildingManager.buildings) {
-      const data = buildingData[id];
-      if (!data || data.role === 'click') continue;
+      const cohort = BuildingManager.getBuilding(id);
+      if (!cohort || cohort.data.role === 'click') continue;
 
-      const probe = BuildingManager.getBuilding(id);
-      if (!probe) continue;
-
-      const cost = probe.getCost(1);
-      const perSecond =
-        (probe.production[data.yield_type] ?? 0) * probe.owned
-        / ((probe.duration || 1000) / 1000);
-
-      rows.push({
-        id,
-        count: formatNumber(probe.owned),
-        name: texts[id]?.title ?? id,
-        description: texts[id]?.description ?? '',
-        aim: 0,
-        lean: '',
-        output: {
-          kind: badgeFor(data.yield_type),
-          amount: formatNumber(perSecond),
-          unit: '/s',
-        },
-        cost: {
-          kind: badgeFor(data.cost_type!),
-          amount: formatNumber(cost),
-          affordable: ResourceManager.getAmount(data.cost_type!) >= cost,
-        },
-      });
+      rows.push(cohort);
     }
 
     return rows;
   });
+
+  const planet = $derived(PlanetManager.getActive());
+
+  const phases = $derived<Phase[]>(
+    planet?.phases.map((phase) => ({
+      kind: phase.dense ? 'dense' : 'light',
+      at: `${formatNumber(phase.at)} xp`,
+    })) ?? [],
+  );
+
+  const waveStatus = $derived(
+    planet ? `stage ${planet.phase + 1} of ${planet.phasesPerAge}` : '',
+  );
 
   function incarnate() {
     click?.queueAction();
@@ -85,31 +63,44 @@
 
 <div class="detail">
   <div class="read">
-    <Disc
-      count={probeCount}
-      sub="+{formatNumber(clickYield)} experience"
-      onincarnate={incarnate}
-    />
-
-    {#if progression.isRevealed('detail.wave')}
-      <Stub name="detail.wave" note="the wave — Phase D" />
+    {#if progression.isRevealed('detail.disc')}
+      <Disc
+        count={cohortCount}
+        sub="+{formatNumber(clickYield)} experience"
+        onincarnate={incarnate}
+      />
     {/if}
 
-    <Log />
+    <RevealStub name="detail.status" note="the per-second rate line" height="48px" />
+
+    {#if progression.isRevealed('detail.wave') && planet}
+      <PlanetSection
+        name={planetTexts[planet.id]?.title ?? planet.id}
+        status={waveStatus}
+        {phases}
+        current={planet.phase}
+        position={planet.position}
+      />
+    {/if}
+
+    {#if progression.isRevealed('shared.log')}
+      <Log />
+    {/if}
   </div>
 
   <div class="act">
-    {#if progression.isRevealed('detail.probeTable')}
-      <ProbeTable
-        {probes}
+    {#if progression.isRevealed('detail.cohortTable')}
+      <CohortTable
+        {cohorts}
+        affordable={(id) => BuildingManager.canAfford(id, 1)}
         showAim={progression.isRevealed('detail.aimGlobal')}
         onbuy={buy}
       />
     {/if}
 
-    {#if progression.isRevealed('detail.split')}
-      <Stub name="detail.split" note="the probe split — Phase D" />
-    {/if}
+    <RevealStub name="detail.aimPerRow" note="per-row aim — Phase D" height="48px" />
+    <RevealStub name="detail.split" note="the probe split — Phase D" />
+    <RevealStub name="detail.field" note="the anchoring field — Phase D" />
   </div>
 </div>
 

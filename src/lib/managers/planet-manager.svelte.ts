@@ -1,4 +1,4 @@
-import Planet from '$lib/planets/base';
+import Planet from '$lib/planets/base.svelte';
 import data from '$data/planets';
 
 class PlanetManager {

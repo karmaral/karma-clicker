@@ -32,16 +32,19 @@
   .badge.blue   { background: var(--res-blue); }
 
   .badge.pos {
+    border-radius: 50%;
     background: var(--hatch-pos-badge);
     box-shadow: var(--hatch-pos-edge);
   }
 
   .badge.neg {
     background: var(--hatch-neg-badge);
+    border-radius: 50%;
   }
 
   .badge.both {
     background: var(--hatch-neg-badge);
+    border-radius: 50%;
   }
 
   .badge.both::after {

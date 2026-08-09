@@ -23,6 +23,6 @@ export interface MeterTick {
 
 export type ButtonVariant = 'filled' | 'outline';
 
-export type ChipState = 'affordable' | 'unlocked' | 'approaching';
+export type ChipStatus = 'affordable' | 'unlocked' | 'approaching';
 
 export type TabsSize = 'default' | 'sm';

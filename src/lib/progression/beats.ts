@@ -48,16 +48,16 @@ export const beats: Beat[] = [
   // Automatic from the first one — the wheel starting to turn.
   {
     id: 'first-probe',
-    when: (ctx) => ctx.probes >= 1,
+    when: (ctx) => ctx.totalSouls >= 1,
     floor: 1_100,
-    runs: ['probes'],
-    reveals: { 'detail.probeTable': 'live' },
+    runs: ['cohort'],
+    reveals: { 'detail.cohortTable': 'live' },
   },
 
   // The figures fly up into the header; the disc stays where it was.
   {
     id: 'rows-and-rail',
-    when: (ctx) => ctx.probes >= 10,
+    when: (ctx) => ctx.totalSouls >= 10,
     floor: 8_400,
     reveals: {
       'frame.header': 'live',
@@ -94,7 +94,7 @@ export const beats: Beat[] = [
   // The consequence arrives after the choice that caused it. The tool does not.
   {
     id: 'excess',
-    when: (ctx) => ctx.excess >= 0.3,
+    when: (ctx) => ctx.excess !== undefined && ctx.excess >= 0.3,
     floor: 186_000,
     runs: ['excess'],
     reveals: {
@@ -123,7 +123,7 @@ export const beats: Beat[] = [
   {
     id: 'harvest',
     eventOnly: true,
-    when: (ctx) => ctx.cyclesLived >= 1 && ctx.excess < 0.12,
+    when: (ctx) => ctx.activePlanetAgesLived >= 1 && ctx.excess !== undefined && ctx.excess < 0.12,
     runs: ['harvest'],
     reveals: {
       'overview.harvest': 'live',

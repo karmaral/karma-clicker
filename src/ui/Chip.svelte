@@ -1,36 +1,65 @@
 <script lang="ts">
-  import type { ChipState } from './types';
+    import type { Snippet } from 'svelte';
+  import { tooltip } from './actions/tooltip';
+  import Tooltip from './Tooltip.svelte';
+  import type { ChipStatus } from './types';
 
   interface Props {
     label: string;
     cost?: string;
-    state?: ChipState;
+    status?: ChipStatus;
     disabled?: boolean;
     onclick?: () => void;
+    tooltipContent?: Snippet;
   }
 
   let {
     label,
     cost,
-    state = 'affordable',
+    status = 'affordable',
     disabled = false,
     onclick,
+    tooltipContent,
   }: Props = $props();
+
+  let tooltipElem: HTMLElement | undefined = $state();
+  const tooltipOptions: Partial<Props> = {
+    placement: 'bottom-start',
+    delay: [450, 0],
+    interactive: false,
+  };
+
 </script>
 
-<button
-  type="button"
-  class={['chip', state]}
-  {disabled}
-  {onclick}
->
-  <span class="name">{label}</span>
-  {#if cost}
-    <span class="cost num">{cost}</span>
+<li>
+  <button
+    type="button"
+    class={['chip', status]}
+    {disabled}
+    {onclick}
+    {@attach tooltip({content: tooltipElem, options: tooltipOptions })}
+  >
+    <span class="name">{label}</span>
+    {#if cost}
+      <span class="cost num">{cost}</span>
+    {/if}
+  </button>
+
+  {#if tooltipContent}
+    <Tooltip bind:contentElem={tooltipElem}>
+      <div class="tooltip-content">
+        {@render tooltipContent()}
+      </div>
+    </Tooltip>
   {/if}
-</button>
+
+</li>
 
 <style>
+  li {
+    list-style: none;
+    padding: unset;
+  }
   .chip {
     display: flex;
     align-items: center;

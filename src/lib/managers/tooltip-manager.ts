@@ -1,8 +1,10 @@
-import tippy, { createSingleton, delegate } from 'tippy.js';
-import type { CreateSingletonInstance, Instance } from 'tippy.js';
+import tippy, { createSingleton } from 'tippy.js';
+import type { CreateSingletonInstance, Instance, Props } from 'tippy.js';
+
+type TooltipOptions = Partial<Props>;
 
 class TooltipManager {
-  #singleton: CreateSingletonInstance | null = null;
+  #singleton: CreateSingletonInstance;
   #options: Record<string, unknown>;
   #instances: Instance[] = [];
 
@@ -11,31 +13,22 @@ class TooltipManager {
       delay: 0,
       interactive: true,
     };
-    this.init();
+    this.#singleton = createSingleton([], {
+      interactive: true,
+      overrides: [
+        'placement',
+        'offset',
+        'delay',
+        'interactive',
+        'appendTo',
+      ],
+    });
   }
 
-  init() {
-    if (this.#singleton) return;
-
-    const tooltipSelector = 'body';
-    const triggers = '[data-tippy]';
-    const content = '.tooltip';
-
-   this.#singleton = createSingleton(
-      delegate(tooltipSelector, {
-        target: triggers,
-        content,
-        ...this.#options,
-      }),
-      {
-        interactive: true,
-      }
-    );
-  }
-
-  addInstance(elem: HTMLElement, contentElem: HTMLElement) {
+  addInstance(elem: HTMLElement, contentElem: HTMLElement, options: TooltipOptions = {}) {
     const instance = tippy(elem, {
       ...this.#options,
+      ...options,
       content: contentElem,
     });
 

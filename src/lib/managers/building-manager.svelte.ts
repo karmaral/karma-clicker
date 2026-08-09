@@ -29,7 +29,15 @@ class BuildingManager {
   acquire(target: string, quantity = 1) {
     if (!Boolean(target in data)) return;
 
-    this.#buildings[target]?.add(quantity);
+    const building = this.#buildings[target];
+    if (!building) return;
+
+    const firstAcquire = building.count === 0;
+    building.add(quantity);
+
+    if (firstAcquire && data[target].role !== 'click') {
+      building.toggleAutonomy(true);
+    }
   }
 
   canAfford(target: string, quantity = 1) {
