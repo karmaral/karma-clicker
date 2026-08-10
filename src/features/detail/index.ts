@@ -1,4 +1,6 @@
 import AimControl from './AimControl.svelte';
+import AimSection from './AimSection.svelte';
+import LeanMeter from './LeanMeter.svelte';
 import DetailScreen from './DetailScreen.svelte';
 import DensityWave from './DensityWave.svelte';
 import CohortRow from './CohortRow.svelte';
@@ -9,6 +11,8 @@ import CycleStrip from './CycleStrip.svelte';
 
 export {
   AimControl,
+  AimSection,
+  LeanMeter,
   CycleBar,
   DetailScreen,
   DensityWave,

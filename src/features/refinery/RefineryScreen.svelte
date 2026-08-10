@@ -3,7 +3,7 @@
 </script>
 
 <div class="refinery">
-  <RevealStub name="refinery.status" note="what the clearing is doing" height="48px" />
+  <RevealStub name="refinery.status" note="what the refinery is doing" height="48px" />
   <RevealStub name="refinery.intake" note="what goes in" />
   <RevealStub name="refinery.backlog" note="what is waiting" />
   <RevealStub name="refinery.rate" note="how fast it clears" height="48px" />

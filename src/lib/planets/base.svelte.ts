@@ -70,14 +70,17 @@ export default class Planet {
     }));
   });
 
-  /** Phases are drawn evenly wide, so the axis is counted in phases, not experience. */
-  #positionInAge = $derived.by(() => {
+  #throughPhase = $derived.by(() => {
     const opens = this.#experienceAfter(this.#phasesElapsed);
     const closes = this.#experienceAfter(this.#phasesElapsed + 1);
     const raw = (this.#experience.amount - opens) / (closes - opens);
-    const throughPhase = Math.min(1, Math.max(0, raw));
 
-    return (this.phase + throughPhase) / this.#phasesPerAge;
+    return Math.min(1, Math.max(0, raw));
+  });
+
+  /** Phases are drawn evenly wide, so the axis is counted in phases, not experience. */
+  #positionInAge = $derived.by(() => {
+    return (this.phase + this.#throughPhase) / this.#phasesPerAge;
   });
 
   bias(positive: boolean) {
@@ -96,4 +99,7 @@ export default class Planet {
   get isDense() { return this.phase % 2 === 1; }
   get position() { return this.#positionInAge; }
   get agesLived() { return Math.floor(this.#phasesElapsed / this.#phasesPerAge); }
+
+  /** Phases lived since arrival, fractional. The clock anything phase-priced reads. */
+  get progress() { return this.#phasesElapsed + this.#throughPhase; }
 }

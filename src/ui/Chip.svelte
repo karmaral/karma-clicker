@@ -10,6 +10,7 @@
     status?: ChipStatus;
     disabled?: boolean;
     onclick?: () => void;
+    caption?: Snippet;
     tooltipContent?: Snippet;
   }
 
@@ -19,6 +20,7 @@
     status = 'affordable',
     disabled = false,
     onclick,
+    caption,
     tooltipContent,
   }: Props = $props();
 
@@ -39,10 +41,21 @@
     {onclick}
     {@attach tooltip({content: tooltipElem, options: tooltipOptions })}
   >
-    <span class="name">{label}</span>
-    {#if cost}
-      <span class="cost num">{cost}</span>
+    <span class="header">
+
+      <span class="name">{label}</span>
+
+      {#if cost}
+        <span class="cost num">{cost}</span>
+      {/if}
+    </span>
+
+    {#if caption}
+    <span class="sub">
+      {@render caption()}
+    </span>
     {/if}
+
   </button>
 
   {#if tooltipContent}
@@ -61,9 +74,10 @@
     padding: unset;
   }
   .chip {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: var(--sp-2);
+    flex-direction: column;
+    gap: var(--sp-1);
     flex: none;
     padding: 7px var(--sp-3);
     background: var(--surface);
@@ -86,6 +100,10 @@
     font-size: var(--fs-xs);
     font-weight: 400;
     opacity: .7;
+  }
+
+  .caption {
+    display: block;
   }
 
   .chip.affordable {

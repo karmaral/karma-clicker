@@ -1,6 +1,6 @@
 /**
  * Surfaces the progression reveals, and systems it starts running.
- * Kept separate: a system simulates before its panel appears (CONTEXT v2 §3).
+ * Kept separate: a system simulates before its panel appears (CONTEXT v3 §3).
  */
 
 /** `inert` = drawn, 1px rule, unclickable — a promise. Distinct from availability. */

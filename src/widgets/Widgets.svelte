@@ -2,6 +2,7 @@
   import { Label } from '$ui';
   import { Canvas } from '@threlte/core'
   import Scene from './Scene.svelte';
+  import DotTypePreview from './DotTypePreview.svelte';
 </script>
 
 <svelte:head>
@@ -24,6 +25,9 @@
         <Canvas>
           <Scene />
         </Canvas>
+        <div class="overlay">
+          <DotTypePreview />
+        </div>
       </div>
     </div>
   </section>
@@ -32,6 +36,12 @@
 <style>
   .viewport {
     position: relative;
+  }
+  .overlay {
+    position: absolute;
+    top: var(--sp-3);
+    left: var(--sp-3);
+    z-index: 10;
   }
   button {
     position: absolute;

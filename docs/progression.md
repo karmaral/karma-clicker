@@ -3,7 +3,7 @@
 Rationale and open decisions for `$lib/progression`. The ladder itself lives in
 [`beats.ts`](../src/lib/progression/beats.ts) and the vocabulary in
 [`keys.ts`](../src/lib/progression/keys.ts) — this file does not restate either,
-nor CONTEXT v2.
+nor CONTEXT v3.
 
 ## Why it is shaped this way
 
@@ -59,14 +59,16 @@ this is the only practical way to reach them by hand.
 
 Design decisions deferred on purpose. None of these are oversights.
 
-- **Matched-pairs karma** is load-bearing under beats 7, 9 and 11. Left as-is
-  until the surrounding systems exist and it can be judged in play.
-- **The refinery** should auto-emit the lowest grade. The higher two lose
-  polarity and stop being buyable with karma directly — everything routes
-  through the refinery. Not implemented.
+- **The refinery** converts karma to red at an equal rate from each pile,
+  **keeping polarity**. Yellow is then *bought* by pairing the two reds off, blue
+  with yellow, and either red converts to its opposite at a steep scaling price.
+  Matching therefore happens above the refinery, not inside it, and excess simply
+  carries through into the token layer. Not implemented.
 - **Overview and Harvest layouts** are stubbed pending a design pass. The two
   lists on Overview, and where Harvest's verb sits relative to its disc, are
   open questions — don't improvise them.
+- **Per-cohort aiming** is far future. Rows read their lean; only the global
+  detent steers.
 
 ## Producers
 
@@ -88,6 +90,26 @@ Still open: `#generateResources` reaches into `PlanetManager.getActive()` to
 credit experience. Once planets emit, that closes a loop — Planet →
 ResourceManager → Building → PlanetManager. The injected payout makes it
 containable; it is not yet contained.
+
+## Aim
+
+Karma is declared unrouted. `BuildingData.yields` is keyed by `YieldType`, which
+is `ResourceType` plus the two **family** names (`karma`, `red`) — what data may
+*declare*, as against what the ledger *stores*. `karma` is not a `ResourceType`
+precisely so that `add('karma', n)` cannot typecheck against a pile that does not
+exist. `aim.resolve()` turns a family into two credits at emission.
+
+A cohort answers the global detent through `resistance`: 0 does as it is told, 1
+is unaimable and wanders around its own `polarity_bias`. The wander is value
+noise (`$lib/aim/noise`) rather than `Math.random`, because a per-emission coin
+flip reads as a bug where a slow wander reads as personality. One clock drives
+it — `aim.tick()` off the loop — so the row meters and the payout never disagree.
+
+**The re-aim penalty is not a `Modifier`.** Two reasons: it decays continuously
+rather than expiring, which the bucket list has no shape for; and it is priced in
+*phases*, so it is read off `Planet.progress` rather than a wall clock. That
+matters — phases advance on accumulated experience, so a penalty that slowed
+experience would extend its own duration. It therefore touches karma only.
 
 ## Modifiers
 
@@ -114,34 +136,40 @@ fixed ± amount, deliberately outgrown, which is the safe shape for the wave
 events under beats 5–7 since its magnitude can't be inflated by stacking
 multipliers under a temporary buff.
 
-### Snapshots are on the way out
+### Snapshots are gone
 
-`snapshot: true` freezes a modifier at what it is worth on purchase, resolving to
-a plain `mult` — one entry per affected resource. It only means anything for
+`snapshot: true` froze a modifier at what it was worth on purchase, resolving to
+a plain `mult` — one entry per affected resource. It only ever meant anything for
 `pow`, the sole op whose worth depends on the value it lands on; `boost` and
-`mult` are already scale-invariant. It reproduces what the old destructive
+`mult` are scale-invariant. It reproduced what the old destructive
 `unitYield ** 2` did: square once, then ride normal growth.
 
-**It should probably be cut from the core.** Two costs it carries that nothing
-else in the layer does:
+It was cut for two costs nothing else in the layer carries:
 
-- **It cannot be rebuilt from data.** Every other number here is a pure function
-  of `owned`, `level` and which upgrades are held — a save can store ids and
-  rederive the rest. A frozen factor is a fact about a *moment*, so the resolved
-  entries have to be serialised verbatim, and a rebalance of `yield_unit` will not
-  reach the figures already banked in old saves.
-- **It reintroduces acquisition-order dependence**, the one thing the buckets were
-  shaped to remove. `main_action` can already hit this: `str_4` (snapshot) and
-  `str_3` are both affordable at 25 positive karma, and buying them in the other
-  order gives 27 instead of 81. Also, if a modifier a snapshot was computed
-  against later expires, the frozen factor still embeds it.
+- **It could not be rebuilt from data.** Every other number here is a pure
+  function of `owned`, `level` and which upgrades are held — a save can store ids
+  and rederive the rest. A frozen factor is a fact about a *moment*, so the
+  resolved entries had to be serialised verbatim, and a rebalance would not reach
+  figures already banked in old saves.
+- **It reintroduced acquisition-order dependence**, the one thing the buckets were
+  shaped to remove. `main_action` hit this: `str_4` and `str_3` are both
+  affordable at 25 positive karma, and buying them in the other order gave 27
+  instead of 81. If a modifier a snapshot was computed against later expired, the
+  frozen factor still embedded it.
 
-These effects are rare enough — one or two `pow` upgrades in the whole game —
-that the event system granting the bonus can compute the factor itself and hand
-over an ordinary `mult`. Same result, no special case in the producer, and a save
-format that stays derivable. Removing it touches `Modifier.snapshot` in
-`types.d.ts`, `#resolveSnapshot` and its branch in `addModifier`, the `id`/`target`
-dedupe in `ModifierSet.add`, and the two flags in `data/upgrades.ts`.
+Worth being clear about what was *not* wrong with it, so it doesn't come back:
+a live `pow` has neither problem. `apply()` recomputes from base on every read,
+so the buckets stay order-independent and the figure stays a function of data.
+The snapshot existed only to keep the square off everything bought *later* — a
+balance intent, not a structural one. It is now written as the `mult` it always
+resolved to: `main_action/str_4` is `mult 9`, the ×1.5 ×2 ×3 ladder above it
+squared; `basic/str_1` became two targeted mults, since its yields ride different
+level curves and never shared one factor.
+
+The cost moved rather than vanished — those constants are hand-tuned, so
+rebalancing `str_1`–`str_3` silently invalidates the 9. Cheaper than a save
+format that cannot be rederived. `Effect` therefore carries an optional `target`
+that overrides the upgrade's `effect_target`, so one array can hit two yields.
 
 Level sits **outside** all five: `yield_multipliers` (per-resource) and `duration_reduction`
 scale the base as `(1 ± x)^(level - 1)`, identical to the old repeated fold, but
@@ -163,8 +191,9 @@ arbitrary later moment.
 Things that are simply unbuilt, and what they cost today.
 
 - **Three context values are stubs** — `reserve` and `planetsFinished` read `0`,
-  `excess` reads `undefined`. Their beats carry no floor precisely so they cannot
-  fire on a stub, which means **beats 9–12 are currently unreachable**. Expected.
+  `excess` reads `undefined`. Beats 9–12 are gated on them and are all
+  `eventOnly`, so they carry no floor and **cannot currently fire**. Expected.
+  Beat 7 reads `excess` too, but it has a floor and reaches on that instead.
   `excess` is not zeroed like the others because beat 9 asks `excess < 0.12`, and
   a zero would read as clean enough and open it the moment an age is lived.
   `planetsFinished` is now the cheap one: `Planet.harvested` exists, so it is a
@@ -177,22 +206,21 @@ Things that are simply unbuilt, and what they cost today.
 - **No `global` bucket in `data/upgrades.ts`.** That file is keyed by building
   target, so planet-wide upgrades have nowhere to live and beats 5 and 6 reach
   only via their floors.
-- **Karma is an `experience / 3` hack** in `wiring.svelte.ts`, carried over from
-  the deleted `MainAction`. It is what makes beat 2 fire.
-- **Nothing expires anything yet.** The modifier layer exists (see below) and
-  `Building.removeModifier` works, but no system calls it — beats 5–7 still need
-  whatever decides *when* an effect ends. Removal itself is solved.
+- **Nothing expires anything yet.** The modifier layer exists (see above) and
+  `Building.removeModifier` works, but no system calls it. The re-aim penalty is
+  deliberately **not** a modifier — see Aim above.
 
 ## Naming
 
-Code vocabulary and UI labels differ on purpose — `refinery` is labelled
-"Clearing", and `detail` (the design docs' "close-up") shows the planet's proper
-noun. `reading.*` rather than `header.*`, because those figures predate the
-header: beat 4 relocates them into the frame instead of revealing them again.
-None of this is drift; don't "fix" it.
+`detail` (the design docs' "close-up") shows the planet's proper noun, so code
+and label can never match there. `reading.*` rather than `header.*`, because
+those figures predate the header: beat 4 relocates them into the frame instead of
+revealing them again. None of this is drift; don't "fix" it.
+
+Retired with CONTEXT v3: *clearing* (→ refining, and the screen is labelled
+Refinery in both vocabularies now), *probe* (→ soul), *stage* (→ phase). Token
+code names stay `red`/`yellow`/`blue` against the UI's Crimson/Ochre/Indigo.
 
 The wave has its own three words. A **phase** is a half-wave, light or dense; two
-make a **cycle**; `cycles_per_age` of those make an **age**. The UI calls a phase
-a stage and an age a cycle, so the design docs' "stage 3 of 8" is phase 3 of a
-four-cycle age, and their "one complete cycle lived" is one age. `ages` counts
-up without limit — a planet is finished by harvesting, not by running out.
+make a **cycle**; `cycles_per_age` of those make an **age**. `ages` counts up
+without limit — a planet is finished by harvesting, not by running out.

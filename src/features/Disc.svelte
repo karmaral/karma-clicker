@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
-   * The disc is the click target from beat 1 to the end (CONTEXT v2 §4b).
-   * Early dots are countable probes; later they read as flow.
+   * The disc is the click target from beat 1 to the end (CONTEXT v3 §4b).
+   * Early dots are countable souls; later they read as flow.
    */
   const MAX_DOTS = 28;
 

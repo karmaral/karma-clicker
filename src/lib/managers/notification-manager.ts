@@ -5,7 +5,7 @@ import type { ItemTextData } from '$types';
 class NotificationManager {
   constructor() {}
   notify(data: ItemTextData) {
-  const { title, description } = data;
+    const { title, description } = data;
     toast.push({
       component: {
         src: Notification, 
@@ -13,6 +13,7 @@ class NotificationManager {
         sendIdTo: 'toastId',
       },
       pausable: true,
+      intro: { x: 0, y: 128 },
     });
   }
 }

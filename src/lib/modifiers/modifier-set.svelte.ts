@@ -1,22 +1,11 @@
-import type { Modifier, ModifierOp, ModifierStat, ResourceType } from '$types';
-
-/** One op against one value, for callers resolving a `snapshot` before it lands. */
-export function applyOp(value: number, op: ModifierOp, amount: number) {
-  if (op === 'flat' || op === 'final') return value + amount;
-  if (op === 'boost') return value * (1 + amount);
-  if (op === 'mult') return value * amount;
-
-  return Math.pow(value, amount);
-}
+import type { Modifier, ModifierOp, ModifierStat, YieldType } from '$types';
 
 /** A removable list of changes, applied over a base the owner still holds. */
 export default class ModifierSet {
   #modifiers = $state<Modifier[]>([]);
 
   add(modifier: Modifier) {
-    const clash = this.#modifiers
-      .some((mod) => mod.id === modifier.id && mod.target === modifier.target);
-    if (clash) return;
+    if (this.has(modifier.id)) return;
 
     this.#modifiers.push(modifier);
   }
@@ -33,7 +22,7 @@ export default class ModifierSet {
    * Every bucket combines order-independently, so removing one lands exactly
    * where it would be had it never applied.
    */
-  apply(base: number, stat: ModifierStat, target?: ResourceType) {
+  apply(base: number, stat: ModifierStat, target?: YieldType) {
     const applicable = this.#modifiers.filter((mod) => this.#applies(mod, stat, target));
     const values = (op: ModifierOp) => applicable
       .filter((mod) => mod.op === op)
@@ -48,7 +37,7 @@ export default class ModifierSet {
     return Math.pow((base + flat) * (1 + boost) * mult, power) + final;
   }
 
-  #applies(modifier: Modifier, stat: ModifierStat, target?: ResourceType) {
+  #applies(modifier: Modifier, stat: ModifierStat, target?: YieldType) {
     if ((modifier.stat ?? 'yield') !== stat) return false;
     if (stat === 'duration') return true;
 

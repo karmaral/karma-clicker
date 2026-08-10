@@ -6,14 +6,14 @@ export interface TriggerContext {
   amount(type: ResourceType): number;
   hasUpgrade(target: string, id: string): boolean;
   getCount(building: string): number;
-  /** Probes owned across every probe-role building. */
+  /** Souls owned across every soul-role building. */
   readonly totalSouls: number;
   /**
    * Unpaired karma as a fraction of the active planet's wall. `undefined` while
    * unbuilt — a zero would read as "clean enough" and open beat 9.
    */
   readonly excess: number | undefined;
-  /** Probes held back from incarnating — anchoring, then clearing. Not built yet. */
+  /** Souls held back from incarnating — anchoring, then refining. Not built yet. */
   readonly reserve: number;
   readonly planetsUnlocked: number;
   readonly activePlanetAgesLived: number;
@@ -44,8 +44,8 @@ export function createTriggerContext(): TriggerContext {
       return PlanetManager.getActive()?.agesLived ?? 0;
     },
 
-    // Phase D and beyond. Zero until then, which is why beats depending on them
-    // carry no experience floor — they must not fire on a stub.
+    // Phase D and beyond. The beats gated on these are eventOnly, so no floor
+    // can open them on a stub.
     get excess() { return undefined; },
     get reserve() { return 0; },
     get planetsFinished() { return 0; },

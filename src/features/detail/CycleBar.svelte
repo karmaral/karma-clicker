@@ -30,11 +30,11 @@
 <style>
   .cycle {
     display: inline-flex;
-    width: 100%;
-    height: 2px;
-    background: #dedede;
+    width: 12rem;
+    height: 3px;
+    background: var(--line-100);
   }
   .progress {
-    background: var(--ink-200);
+    background: var(--ink-400);
   }
 </style>

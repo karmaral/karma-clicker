@@ -3,7 +3,7 @@
     Badge, Button, Card, Cell, Chip, ChipQueue, Figure,
     HeaderBand, Label, Meter, Tabs, Rail, Value,
   } from '$ui';
-  import type { BadgeKind, ChipState, FigureSize, LabelSize, MeterTick } from '$ui';
+  import type { BadgeKind, ChipStatus, FigureSize, LabelSize, MeterTick } from '$ui';
   import {
     ExperienceModule, InertiaModule, KarmaModule, ManualModule,
   } from '$features/header';
@@ -50,19 +50,19 @@
   const waveStatus = $derived.by(() => {
     const phase = planetPhases[currentPhase];
     const next = planetPhases[currentPhase + 1];
-    const flips = next ? ` · flips ${next.kind} at ${next.at}` : ' · last stage';
-    return `Stage ${currentPhase + 1} of ${planetPhases.length} · ${phase.kind}${flips}`;
+    const flips = next ? ` · flips ${next.kind} at ${next.at}` : ' · last phase';
+    return `Phase ${currentPhase + 1} of ${planetPhases.length} · ${phase.kind}${flips}`;
   });
 
   const inertiaTicks: MeterTick[] = [{ at: 20 }, { at: 60, strong: true }];
 
-  const upgrades: { label: string; cost?: string; state: ChipState }[] = [
-    { label: 'More cause means more effect', cost: '15 karma', state: 'affordable' },
-    { label: 'An easier way', cost: '200 xp', state: 'affordable' },
-    { label: 'Free Wilderness', cost: '50 karma', state: 'unlocked' },
-    { label: 'A singular purpose', cost: '10k karma', state: 'unlocked' },
-    { label: 'Nothing is lost', cost: '24k karma', state: 'unlocked' },
-    { label: '3 approaching', state: 'approaching' },
+  const upgrades: { label: string; cost?: string; status: ChipStatus }[] = [
+    { label: 'More cause means more effect', cost: '15 karma', status: 'affordable' },
+    { label: 'An easier way', cost: '200 xp', status: 'affordable' },
+    { label: 'Free Wilderness', cost: '50 karma', status: 'unlocked' },
+    { label: 'A singular purpose', cost: '10k karma', status: 'unlocked' },
+    { label: 'Nothing is lost', cost: '24k karma', status: 'unlocked' },
+    { label: '3 approaching', status: 'approaching' },
   ];
 
   const views = ['Close-up', 'Overview', 'Refining'] as const;
@@ -208,9 +208,9 @@
     </p>
     <div class="btns">
       <Button label="Incarnate" sub="+3.1 xp · 3.6s" />
-      <Button label="Send probe" sub="3.0s" variant="outline" />
+      <Button label="Send soul" sub="3.0s" variant="outline" />
       <Button label="Incarnate" sub="+3.1 xp · 3.6s" disabled />
-      <Button label="Send probe" sub="3.0s" variant="outline" disabled />
+      <Button label="Send soul" sub="3.0s" variant="outline" disabled />
       <Button label="Incarnate" sub="+3.1 xp · 3.6s" progress={45} />
       <Button label="Incarnate" sub="+3.1 xp · 3.6s" progress={incarnation} />
     </div>
@@ -225,8 +225,8 @@
     </p>
     <div class="chips-demo">
       <Chip label="Affordable" cost="15 karma" />
-      <Chip label="Unlocked" cost="50 karma" state="unlocked" />
-      <Chip label="3 approaching" state="approaching" />
+      <Chip label="Unlocked" cost="50 karma" status="unlocked" />
+      <Chip label="3 approaching" status="approaching" />
     </div>
   </section>
 
@@ -268,7 +268,7 @@
         step="0.001"
         bind:value={wavePos}
       />
-      <span class="spec num">{wavePos.toFixed(3)} · stage {currentPhase + 1}</span>
+      <span class="spec num">{wavePos.toFixed(3)} · phase {currentPhase + 1}</span>
     </div>
     <div class="control">
       <label for="wave-cycles">Cycles</label>
@@ -280,7 +280,7 @@
         step="1"
         bind:value={cycles}
       />
-      <span class="spec num">{cycles} cycles · {cycles * 2} stages</span>
+      <span class="spec num">{cycles} cycles · {cycles * 2} phases</span>
     </div>
     <div class="control">
       <label for="wave-flatten">Flatten</label>
@@ -324,7 +324,7 @@
             </div>
             <ChipQueue escape="all 48 →">
               {#each upgrades as u (u.label)}
-                <Chip label={u.label} cost={u.cost} state={u.state} />
+                <Chip label={u.label} cost={u.cost} status={u.status} />
               {/each}
             </ChipQueue>
           </div>
@@ -337,7 +337,7 @@
           position={wavePos}
           {flatten}
           flattened="flattened {Math.round(flatten * 100)}% by comfort"
-          note="Aim your probes now — re-aiming takes three cycles, so commit before the flip."
+          note="Aim your souls now — re-aiming takes two phases, so commit before the flip."
         />
         <CohortTable
           {cohorts}
@@ -345,7 +345,7 @@
           affordable={() => true}
           onbuymode={(m) => (buyMode = m)}
           onbuy={buy}
-          note="Aiming costs experience and takes three cycles — commit before the stage flips, not after."
+          note="Aiming costs karma and takes two phases — commit before the phase flips, not after."
         />
       </Card>
     </div>

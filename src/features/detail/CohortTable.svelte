@@ -12,7 +12,6 @@
     showAim?: boolean;
     note?: string;
     onbuymode?: (mode: string) => void;
-    onaim?: (id: string, value: number) => void;
     onbuy?: (id: string) => void;
   }
 
@@ -25,16 +24,14 @@
     showAim = true,
     note,
     onbuymode,
-    onaim,
     onbuy,
   }: Props = $props();
 
-  // const columns = $derived(
-  //   showAim
-  //     ? 'minmax(0, 1fr) 160px 100px 30px 120px'
-  //     : 'minmax(0, 1fr) 54px 96px 160px 96px',
-  // );
-  const columns = 'minmax(0, 1fr) 54px 96px 160px 96px';
+  const columns = $derived(
+    showAim
+      ? '20px minmax(0, 1fr) 130px 170px 80px'
+      : '20px minmax(0, 1fr) 170px 80px',
+  );
 </script>
 
 <Section label="Incarnations" {title}>
@@ -43,18 +40,19 @@
   {/snippet}
 
   <div class="table" style:--cohort-cols={columns}>
+
     <div class="head">
+      <span class="count right"><Label text="N" size="sm" /></span>
+
       <span><Label text="Cohort · level" size="sm" /></span>
 
-      <span class="count"><Label text="Count" size="sm" /></span>
-
-      <!-- {#if showAim}
-        <span><Label text="Aim" size="sm" /></span>
-      {/if} -->
-
-      <span class="count"><Label text="Return time" size="sm" /></span>
+      {#if showAim}
+        <span class="lean"><Label text="Lean" size="sm" /></span>
+      {/if}
       
-      <span class="right"><Label text="Yield" size="sm" /></span>
+      <span class="output right"><Label text="Rate" size="sm" /></span>
+
+
       <span class="right"><Label text="Cost" size="sm" /></span>
     </div>
 
@@ -63,7 +61,6 @@
         {cohort}
         {showAim}
         affordable={affordable?.(cohort.id)}
-        onaim={(v) => onaim?.(cohort.id, v)}
         onbuy={() => onbuy?.(cohort.id)}
       />
     {/each}
@@ -99,10 +96,16 @@
   .head .right {
     justify-content: flex-end;
   }
+  .lean {
+    justify-content: center;
+  }
 
   .note {
     margin: 0;
     font-size: var(--fs-sm);
     color: var(--ink-300);
+  }
+  .output {
+    padding-right: var(--sp-2);
   }
 </style>

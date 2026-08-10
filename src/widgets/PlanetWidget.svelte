@@ -5,7 +5,7 @@
   import { Spring, Tween } from 'svelte/motion';
   import * as THREE from 'three';
   import RingParticle from './RingParticle.svelte';
-    import ParticleSwarm from './ParticleSwarm.svelte';
+  import ParticleSwarm from './ParticleSwarm.svelte';
 
   interactivity();
   const scale = new Spring(1, {
@@ -18,13 +18,17 @@
   let ringParticles = $state([]);
   let nextRingId = 0;
 
-  let swarmParticles = $state([]);
-  let nextSwarmId = 0;
+  let surgeCount = $state(0);
+
+  const planetColor = new THREE.Color(
+    getComputedStyle(document.documentElement).getPropertyValue('--ink-900').trim() || '#111111'
+  );
 
   function handleClick(event) {
     if (!circleMeshRef) return;
     
     circleMeshRef.scale.set(1.1, 1.1, 1.1);
+    surgeCount += 1;
     spawnRingParticle(event)
   }
 
@@ -38,18 +42,6 @@
   }
   function removeRingParticle(id: number) {
     ringParticles = ringParticles.filter(p => p.id !== id);
-  }
-
-  function spawnSwarmParticle(event) {
-    const { x, y, z } = event.point;
-
-    swarmParticles.push({
-      id: nextRingId++,
-      position: [x, y, z],
-    });
-  }
-  function removeSwarmParticle(id: number) {
-    swarmParticles = swarmParticles.filter(p => p.id !== id);
   }
 
   useTask((delta) => {
@@ -74,7 +66,11 @@
     >
       <T.CircleGeometry args={[2, 64]} />
       <T.MeshBasicMaterial 
-        color="black"
+        color={planetColor}
+        stencilWrite
+        stencilRef={1}
+        stencilFunc={THREE.AlwaysStencilFunc}
+        stencilZPass={THREE.ReplaceStencilOp}
       />
     </T.Mesh>
 
@@ -82,10 +78,9 @@
       <RingParticle 
         onkill={() => removeRingParticle(rp.id)}
       />
-      <ParticleSwarm 
-        onkill={() => removeSwarmParticle(rp.id)}
-      />
     {/each}
+
+    <ParticleSwarm surge={surgeCount} />
 
   </T.Group>
 </div>

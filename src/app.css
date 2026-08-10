@@ -64,6 +64,7 @@
   --toastBtnFont: inherit;
   --toastContainerTop: auto;
   --toastContainerBottom: 1.5rem;
+  --toastContainerLeft: 50%;
   --toastColor: var(--ink-900);
   --toastBackground: var(--surface);
   --toastHeight: auto;
@@ -115,3 +116,8 @@ button {
 .num { font-variant-numeric: tabular-nums; }
 .karma-pos { background: var(--hatch-pos); box-shadow: var(--hatch-pos-edge); }
 .karma-neg { background: var(--hatch-neg); }
+
+
+._toastItem {
+  translate: -50%;
+}

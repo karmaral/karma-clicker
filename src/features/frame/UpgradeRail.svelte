@@ -15,8 +15,7 @@
     label: string;
     cost?: string;
     status: ChipStatus;
-    /** How far from affordable, for sorting. */
-    distance: number;
+    distanceToAffordable: number;
     textData: Record<string, string>;
   }
 
@@ -45,7 +44,7 @@
       label: text?.title ?? id,
       cost: cost ? `${fmt(cost)} ${cost_type?.split('_')[0]}` : undefined,
       status,
-      distance: cost ? cost - held : 0,
+      distanceToAffordable: cost ? cost - held : 0,
       textData: { ...text },
     };
   }
@@ -61,7 +60,7 @@
       }
     }
 
-    return all.sort((a, b) => a.distance - b.distance);
+    return all.sort((a, b) => a.distanceToAffordable - b.distanceToAffordable);
   });
 
   const shown = $derived(upgrades.filter((u) => u.status !== 'approaching').slice(0, VISIBLE));
@@ -86,6 +85,12 @@
         status={upgrade.status}
         onclick={() => buy(upgrade)}
       >
+        {#snippet caption()}
+          <span class="scope">{upgrade.target}</span>
+          ·
+          <span class="effect">{upgrade.effect}</span>
+        {/snippet}
+
         {#snippet tooltipContent()}
           <div class="item-header">
             <span class="title">{upgrade.textData.title}</span>
@@ -101,7 +106,11 @@
       </Chip>
     {/each}
     {#if approaching > 0}
-      <Chip label="{approaching} approaching" status="approaching" disabled />
+      <Chip 
+        label="{approaching} approaching" 
+        status="approaching" 
+        disabled 
+      />
     {/if}
   </ChipQueue>
 </div>
@@ -113,6 +122,13 @@
     gap: var(--sp-4);
     flex: 1;
     min-width: 0;
+  }
+
+  .scope {
+    color: var(--ink-300);
+    font-size: 9px;
+    text-transform: uppercase;
+    font-weight: 600;
   }
 
   .head {

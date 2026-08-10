@@ -1,5 +1,5 @@
 import { tick } from 'svelte';
-import type { Effect, ResourceType, UpgradeData } from '$types';
+import type { Effect, UpgradeData, YieldType } from '$types';
 import data from '$data/upgrades';
 import texts from '$data/upgrades-texts';
 import { ResourceManager, BuildingManager, NotificationManager } from '$lib/managers';
@@ -75,7 +75,7 @@ class UpgradeManager {
     }
   }
 
-  #processEffect(target: string, id: string, effect: Effect, effectTarget?: ResourceType | 'all') {
+  #processEffect(target: string, id: string, effect: Effect, effectTarget?: YieldType | 'all') {
     if (!Boolean(target in this.#upgrades)) return;
 
     if (typeof effect === 'string') {

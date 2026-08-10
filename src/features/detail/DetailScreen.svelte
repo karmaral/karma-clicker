@@ -8,6 +8,7 @@
   import Log from '../Log.svelte';
   import RevealStub from '../RevealStub.svelte';
   import CohortTable from './CohortTable.svelte';
+  import AimSection from './AimSection.svelte';
   import PlanetSection from './PlanetSection.svelte';
   import type { Phase } from './types';
   import planetTexts from '$data/planets-texts';
@@ -48,7 +49,7 @@
   );
 
   const waveStatus = $derived(
-    planet ? `stage ${planet.phase + 1} of ${planet.phasesPerAge}` : '',
+    planet ? `phase ${planet.phase + 1} of ${planet.phasesPerAge}` : '',
   );
 
   function incarnate() {
@@ -83,6 +84,7 @@
       />
     {/if}
 
+
     {#if progression.isRevealed('shared.log')}
       <Log />
     {/if}
@@ -93,13 +95,16 @@
       <CohortTable
         {cohorts}
         affordable={(id) => BuildingManager.canAfford(id, 1)}
-        showAim={progression.isRevealed('detail.aimGlobal')}
+        showAim={progression.isRevealed('detail.aimPerRow')}
         onbuy={buy}
       />
     {/if}
 
-    <RevealStub name="detail.aimPerRow" note="per-row aim — Phase D" height="48px" />
-    <RevealStub name="detail.split" note="the probe split — Phase D" />
+    {#if progression.isRevealed('detail.aimGlobal')}
+      <AimSection />
+    {/if}
+
+    <RevealStub name="detail.split" note="the soul split — Phase D" />
     <RevealStub name="detail.field" note="the anchoring field — Phase D" />
   </div>
 </div>

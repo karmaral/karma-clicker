@@ -18,18 +18,11 @@ function watchBuildings() {
   });
 }
 
-/**
- * Karma as residue of incarnating. Carried over from MainAction — still a side
- * effect registered nowhere in the data, and it is what makes beat 2 fire.
- */
 function watchExperience() {
   ResourceManager.addListener('experience', 'add', (detail) => {
     const added = Number(detail?.added ?? 0);
     if (added <= 0) return;
 
-    const bias = PlanetManager.getActive()?.bias(true) ?? 1;
-
-    ResourceManager.add('karma_positive', (added / 3) * bias);
     log.add(`A life ended. +${formatNumber(added)} experience.`);
   });
 }

@@ -9,7 +9,7 @@
   <RevealStub name="overview.ahead" note="unreached planets" />
   <RevealStub name="overview.behind" note="planets left for good" />
   <RevealStub name="overview.cameHome" note="arrivals from behind you" height="48px" />
-  <RevealStub name="overview.harvest" note="needs a cycle lived and excess under 12%" height="48px" />
+  <RevealStub name="overview.harvest" note="needs an age lived and excess under 12%" height="48px" />
   <RevealStub name="overview.setOut" note="depart for the next planet" height="48px" />
 
   <HarvestSection />

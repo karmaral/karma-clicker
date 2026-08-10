@@ -1,4 +1,5 @@
 import { progression } from '$lib/progression';
+import { aim } from '$lib/aim';
 
 /**
  * Somewhere for progression to be evaluated. Buildings still schedule their own
@@ -24,5 +25,6 @@ export function stop() {
 
 /** Call directly after a discrete event rather than waiting for the tick. */
 export function pulse() {
+  aim.tick();
   progression.evaluate();
 }

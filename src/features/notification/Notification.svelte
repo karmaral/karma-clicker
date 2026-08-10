@@ -2,9 +2,16 @@
   import { toast } from '@zerodevx/svelte-toast';
   import { NotificationManager } from '$lib/managers';
 
-  export let toastId: string | number;
-  export let title: string = 'Default'
-  export let description: string = 'Description';
+  interface Props {
+    toastId: string | number;
+    title: string;
+    description?: string;
+  }
+  let {
+    toastId,
+    title = 'Default',
+    description = 'Description',
+  }: Props = $props();
 
 </script>
 

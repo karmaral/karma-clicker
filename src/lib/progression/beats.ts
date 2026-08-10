@@ -47,7 +47,7 @@ export const beats: Beat[] = [
 
   // Automatic from the first one — the wheel starting to turn.
   {
-    id: 'first-probe',
+    id: 'first-soul',
     when: (ctx) => ctx.totalSouls >= 1,
     floor: 1_100,
     runs: ['cohort'],
@@ -86,7 +86,7 @@ export const beats: Beat[] = [
     reveals: {
       'reading.negKarma': 'live',
       'detail.aimGlobal': 'live',
-      // Per-row aim is a later upgrade — the cell is drawn, not yet a control.
+      // The row's lean meter: what each cohort is doing, with no way to steer it.
       'detail.aimPerRow': 'inert',
     },
   },
@@ -149,7 +149,7 @@ export const beats: Beat[] = [
 
   // The reading you could not act on becomes the tab you act on.
   {
-    id: 'clearing',
+    id: 'refining',
     eventOnly: true,
     when: (ctx) =>
       ctx.reserve > 0 && ctx.total('karma_positive') > 0 && ctx.total('karma_negative') > 0,

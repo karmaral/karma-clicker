@@ -1,8 +1,8 @@
-import type { BuildingData, Modifier, ResourceType } from '$types';
+import type { BuildingData, Modifier, ResourceType, YieldType } from '$types';
 import { ResourceManager, PlanetManager } from '$lib/managers';
 import { ResourceEmitter, EMITTER_EVENTS } from '$lib/emission';
-import { ModifierSet, applyOp } from '$lib/modifiers';
-import { biasedPolarity } from '$lib/utils';
+import { ModifierSet } from '$lib/modifiers';
+import { aim } from '$lib/aim';
 
 type Listener = (detail?: Record<string, unknown>) => void;
 
@@ -15,13 +15,13 @@ export default class Building {
   #total = $state(0);
   #emitter: ResourceEmitter;
   #modifiers = new ModifierSet();
-  #baseProduction: Partial<Record<ResourceType, number>> = {};
+  #baseProduction: Partial<Record<YieldType, number>> = {};
 
   #production = $derived.by(() => {
     const { yield_multipliers = {} } = this.#data;
-    const production: Partial<Record<ResourceType, number>> = {};
+    const production: Partial<Record<YieldType, number>> = {};
 
-    Object.keys(this.#baseProduction).forEach((type: ResourceType) => {
+    Object.keys(this.#baseProduction).forEach((type: YieldType) => {
       const multiplier = yield_multipliers[type] ?? 0;
       const leveled = Math.pow(1 + multiplier, this.#level - 1);
       const base = this.#baseProduction[type] * leveled;
@@ -109,35 +109,38 @@ export default class Building {
   }
 
   #generateResources() {
-    const resources = Object.keys(this.#production);
-    resources.forEach((type: ResourceType) => {
-      const unitYield = this.#production[type];
-      let value = unitYield * this.#count; // + effects bonuses, eventually
+    Object.keys(this.#production).forEach((type: YieldType) => {
+      const value = this.#production[type] * this.#count;
 
-      if (type.startsWith('karma')) {
-        const { polarity_multiplier, polarity_bias } = this.#data;
-        value = value * polarity_multiplier;
-
-        const polarity = biasedPolarity(polarity_bias);
-        const t = `karma_${polarity > 0 ? 'positive' : 'negative'}` as ResourceType;
-
-        const zealot = Math.abs(polarity_bias) > 1;
-        if (zealot) {
-          const rnd = biasedPolarity(0);
-          return rnd > 0
-            ? ResourceManager.add(type, value)
-            : ResourceManager.remove(type, value);
-        }
-
-        return ResourceManager.add(t, value);
+      if (type === 'karma') {
+        this.#splitKarmaIntoPiles(value);
+        return;
       }
 
       if (type === 'experience') {
-        PlanetManager.getActive().addExperience(value);
+        PlanetManager.getActive()?.addExperience(value);
       }
 
-      ResourceManager.add(type, value);
+      ResourceManager.add(type as ResourceType, value);
     });
+  }
+
+  /** Aim sets the mix; the wave sets what each side of it is worth. */
+  #splitKarmaIntoPiles(value: number) {
+    const { positiveShare, karmaYieldFactor } = aim.resolve(this.#id, this.#data);
+    const planet = PlanetManager.getActive();
+    const earned = value * karmaYieldFactor;
+
+    const positive = earned * positiveShare * (planet?.bias(true) ?? 1);
+    const negative = earned * (1 - positiveShare) * (planet?.bias(false) ?? 1);
+
+    if (positive > 0) {
+      ResourceManager.add('karma_positive', positive);
+    }
+
+    if (negative > 0) {
+      ResourceManager.add('karma_negative', negative);
+    }
   }
 
   toggleAutonomy(toggle?: boolean) {
@@ -149,33 +152,7 @@ export default class Building {
   }
 
   addModifier(modifier: Modifier) {
-    if (!modifier.snapshot) {
-      this.#modifiers.add(modifier);
-      return;
-    }
-
-    this.#resolveSnapshot(modifier).forEach((mod) => this.#modifiers.add(mod));
-  }
-
-  /** Settles a snapshot at the factor it is worth now, one entry per resource. */
-  #resolveSnapshot({ snapshot, ...modifier }: Modifier): Modifier[] {
-    const { op, value, stat = 'yield' } = modifier;
-    const factor = (current: number) => (current ? applyOp(current, op, value) / current : 1);
-
-    if (stat === 'duration') {
-      return [{ ...modifier, op: 'mult', value: factor(this.#duration) }];
-    }
-
-    const scope = modifier.target ?? 'all';
-
-    return Object.keys(this.#production)
-      .filter((type) => scope === 'all' || scope === type)
-      .map((type: ResourceType) => ({
-        ...modifier,
-        target: type,
-        op: 'mult' as const,
-        value: factor(this.#production[type]),
-      }));
+    this.#modifiers.add(modifier);
   }
 
   removeModifier(id: string) {
@@ -223,7 +200,7 @@ export default class Building {
   get total() { return this.#total; }
   get production() { return this.#production; }
 
-  perSecond(type: ResourceType) {
+  perSecond(type: YieldType) {
     const yielded = this.#production[type] ?? 0;
     return yielded * this.#count / ((this.duration || 1000) / 1000);
   }

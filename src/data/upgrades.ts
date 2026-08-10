@@ -1,6 +1,9 @@
 import type { UpgradeData } from '$types';
 
 const data: Record<string, UpgradeData[]> = {
+  'global': [],
+  'refinery': [],
+  'harness': [],
   'main_action': [
     {
       id: 'str_1',
@@ -15,8 +18,7 @@ const data: Record<string, UpgradeData[]> = {
       effect_target: 'experience',
       unlock_type: 'experience',
       unlocks_at: 200, 
-      cost: 200,
-      cost_type: 'experience'
+      cost: { experience: 200 }
     },
     {
       id: 'str_3',
@@ -29,7 +31,8 @@ const data: Record<string, UpgradeData[]> = {
     },
     {
       id: 'str_4',
-      effect: { op: 'pow', value: 2, snapshot: true },
+      // Squares the ladder above it once: 1 × 1.5 × 2 × 3 × 9 = 81. Retune with str_1–3.
+      effect: { op: 'mult', value: 9 },
       effect_target: 'experience',
       unlocks_at: 25, 
       unlock_type: 'karma_positive',
@@ -48,8 +51,11 @@ const data: Record<string, UpgradeData[]> = {
     },
     {
       id: 'str_1',
-      effect: { op: 'pow', value: 2, snapshot: true },
-      effect_target: 'all',
+      // The two yields ride different level curves, so they take different factors.
+      effect: [
+        { op: 'mult', value: 1.6, target: 'experience' },
+        { op: 'mult', value: 6.6, target: 'karma' },
+      ],
       unlocks_at: 10000,
       unlock_type: 'karma_positive',
       cost: 10000,

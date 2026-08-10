@@ -1,15 +1,18 @@
-export type ResourceType = 
+/** Red only ever exists polarised; yellow and blue are matched pairs, so neutral. */
+export type ResourceType =
 | 'experience'
-| 'karma_negative' 
+| 'karma_negative'
 | 'karma_positive'
-| 'red_negative' 
-| 'yellow_negative' 
-| 'blue_negative'
+| 'red_negative'
 | 'red_positive'
-| 'yellow_positive'
-| 'blue_positive';
+| 'yellow'
+| 'blue';
 
-export type CombinedResourceType = 'karma' | 'red' | 'yellow' | 'blue';
+/** Families holding two piles at once. A family name is a routing instruction. */
+export type PolarizedResourceType = 'karma' | 'red';
+
+/** What data may declare. Wider than what the ledger stores — aim routes the rest. */
+export type YieldType = ResourceType | PolarizedResourceType;
 
 export type Polarity = -1 | 0 | 1;
 
@@ -24,18 +27,18 @@ export interface Modifier {
   op: ModifierOp;
   value: number;
   stat?: ModifierStat;
-  target?: ResourceType | 'all';
-  snapshot?: boolean;
+  target?: YieldType | 'all';
 }
 
 export type EffectVerb = 'unlock' | 'acquire' | 'autonomy';
 
-export type Effect = EffectVerb | Omit<Modifier, 'id' | 'target'>;
+/** `target` overrides the upgrade's `effect_target`, so one array can hit two yields. */
+export type Effect = EffectVerb | Omit<Modifier, 'id'>;
 
 export interface UpgradeData {
   id: string;
   effect: Effect | Effect[];
-  effect_target?: ResourceType | 'all';
+  effect_target?: YieldType | 'all';
   unlock_type: ResourceType;
   unlocks_at: number;
   cost?: number;
@@ -43,9 +46,9 @@ export interface UpgradeData {
 }
 /**
  * `click` is you incarnating by hand — never allocatable, even once it auto-fires.
- * `probe` can incarnate, clear, or be left behind. Defaults to `probe`.
+ * `soul` can incarnate, refine, or be merged. Defaults to `soul`.
  */
-export type BuildingRole = 'click' | 'probe';
+export type BuildingRole = 'click' | 'soul';
 
 export interface BuildingData {
   role?: BuildingRole;
@@ -53,17 +56,21 @@ export interface BuildingData {
   cost?: number;
   cost_type?: ResourceType;
   cost_multiplier?: number;
-  yields: Partial<Record<ResourceType, number>>;
-  yield_multipliers?: Partial<Record<ResourceType, number>>;
+  yields: Partial<Record<YieldType, number>>;
+  yield_multipliers?: Partial<Record<YieldType, number>>;
   count?: number;
   duration?: number;
   duration_reduction?: number;
+  /** The detent this cohort drifts toward, −2…2. */
   polarity_bias?: number;
+  /** What a hard detent pays, relative to an even one. */
   polarity_multiplier?: number;
+  /** 0 does as it is told; 1 is unaimable, drifting around its own bias. */
+  resistance?: number;
 }
 /**
  * A phase is a half-wave, light or dense; two make a cycle; `cycles_per_age` of
- * those make an age. The UI calls a phase a stage and an age a cycle.
+ * those make an age. Three words, used the same way in code and in the UI.
  */
 export interface PlanetData {
   ages: number;

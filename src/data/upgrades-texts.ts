@@ -22,39 +22,39 @@ const data: Record<string, Record<string, ItemTextData>> = {
   'basic': {
     'core_0': {
       title: 'Self Discovery',
-      description: 'Unlock probes that can generate karma.',
+      description: 'Unlock souls that can generate karma.',
     },
     'str_1': {
       title: 'A singular purpose',
-      description: 'The collective of probes unifies under a single purpose.\n Current yield squared.',
+      description: 'The collective of souls unifies under a single purpose.\n Current yield squared.',
     },
   },
   'steady': {
     'core_0': {
       title: 'Steady',
-      description: 'Unlock slow probes but very yielding.',
+      description: 'Unlock slow souls but very yielding.',
     },
     'core_1': {
       title: 'An easier way',
-      description: 'Give probes incarnational autonomy.',
+      description: 'Give souls incarnational autonomy.',
     }
   },
   'chaos': {
     'core_0': {
       title: 'Free Wilderness',
-      description: 'A probe that explores the full polarity spectrum at random.',
+      description: 'A soul that explores the full polarity spectrum at random.',
     },
   },
   'zealot': {
     'core_0': {
       title: 'MAX_VALUE',
-      description: 'A zealot probe willing to go all in.\n Zealotry can backfire!',
+      description: 'A zealot soul willing to go all in.\n Zealotry can backfire!',
     },
   },
   'red_basic': {
     'core_0': {
       title: 'Auto Refinery',
-      description: 'A refiner probe that can produce tokens without consuming karma. Just like magic.',
+      description: 'A refiner soul that can produce tokens without consuming karma. Just like magic.',
     },
   },
 };

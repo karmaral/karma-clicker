@@ -1,9 +1,10 @@
 <script lang="ts">
   import { Badge, PurchaseButton, Meter, Tooltip, tooltip } from '$ui';
+  import { aim } from '$lib/aim';
   import { formatNumber } from '$lib/utils';
   import type Building from '$lib/buildings/base.svelte';
-  import type { ResourceType } from '$types';
-  import AimControl from './AimControl.svelte';
+  import type { YieldType } from '$types';
+  import LeanMeter from './LeanMeter.svelte';
   import CycleBar from './CycleBar.svelte';
   import { badgeFor } from './badge';
   import texts from '$data/buildings-texts';
@@ -12,12 +13,7 @@
     cohort: Building;
     affordable?: boolean;
     showAim?: boolean;
-    aim?: number;
-    lean?: string;
-    aimNote?: string;
-    unaimable?: boolean;
     compact?: boolean;
-    onaim?: (value: number) => void;
     onbuy?: () => void;
   }
 
@@ -25,16 +21,12 @@
     cohort,
     affordable,
     showAim = true,
-    aim = 0,
-    lean = '',
-    aimNote,
-    unaimable,
     compact = true,
-    onaim,
     onbuy,
   }: Props = $props();
 
   const cost = $derived(cohort.getCost(1) ?? 0);
+  const aimed = $derived(aim.resolve(cohort.id, cohort.data));
 
   let isHovered: boolean = $state(false);
 
@@ -52,66 +44,66 @@
   onmouseleave={() => isHovered = false}
   role="group"
 >
-
-  <div class="ident">
-    <span class="name" 
-      {@attach tooltip({ content: tooltipElem, options: tooltipOptions })}
-    >
-      {texts[cohort.id]?.title ?? cohort.id}
-      <span class="tooltip-hint">···</span>
-    </span>
-    <div class="tooltip-wrapper" bind:this={tooltipElem}>
-      <Tooltip
-        title={texts[cohort.id]?.title}
-        description={texts[cohort.id]?.description}
-      />
-    </div>
-    <span class="description">{texts[cohort.id]?.description ?? ''}</span>
-    {#if cohort.data.upgrade_threshold}
-      <div class="level">
-        <span>level {cohort.level}</span>
-        <Meter value={cohort.levelProgress} height="2px" />
-        <span>
-          {#if cohort.isMaxLevel}
-            max
-          {:else}
-            next at {formatNumber(cohort.nextUntilThreshold)}
-          {/if}
-        </span>
-      </div>
-    {/if}
-  </div>
-
   <div class="count num">{formatNumber(cohort.count)}</div>
 
-  <div class="duration">
-    {formatNumber(cohort.duration / 1000)}s
-    <CycleBar id={cohort.id} />
+  <div class="ident">
+
+    <div class="header"
+      {@attach tooltip({ content: tooltipElem, options: tooltipOptions })}
+    >
+      <span class="name">
+        {texts[cohort.id]?.title ?? cohort.id}
+      </span>
+
+      {#if cohort.data.upgrade_threshold}
+        <div class="level">
+          <span>level {cohort.level}</span>
+          ·
+          <span>
+            {#if cohort.isMaxLevel}
+              max
+            {:else}
+              next at {formatNumber(cohort.nextUntilThreshold)}
+            {/if}
+          </span>
+        </div>
+      {/if}
+
+      <span class="tooltip-hint">···</span>
+      <div class="tooltip-wrapper" bind:this={tooltipElem}>
+        <Tooltip
+          title={texts[cohort.id]?.title}
+          description={texts[cohort.id]?.description}
+        />
+      </div>
+    </div>
+
+    <span class="description">{texts[cohort.id]?.description ?? ''}</span>
+
+    <span class="duration">
+      <CycleBar id={cohort.id} />
+      {formatNumber(cohort.duration / 1000)}s
+    </span>
+
   </div>
 
-  <!-- {#if showAim}
-    <AimControl
-      value={aim}
-      {lean}
-      note={aimNote}
-      {unaimable}
-      {onaim}
+  {#if showAim}
+    <LeanMeter
+      negativeReach={aimed.negativeReach}
+      positiveReach={aimed.positiveReach}
+      lean={aim.leanFor(aimed)}
     />
-  {/if} -->
-
+  {/if}
 
   <span class="output">
-    {#each Object.entries(cohort.production) as [type, amount]}
-      <Badge kind={badgeFor(type as ResourceType)} />
+    {#each Object.keys(cohort.production) as type}
+    <span class="output-type">
+      <Badge kind={badgeFor(type as YieldType)} />
       <span class="value num">
-        +{formatNumber(amount * cohort.count)}
-
-        <span class="each num">
-          +{formatNumber(amount)}
-        </span>
+        +{formatNumber(cohort.perSecond(type as YieldType))}<span class="unit">/s</span>
       </span>
+    </span>
     {/each}
-    <span class="each-label">each</span>
   </span>
 
 
@@ -151,6 +143,12 @@
     min-width: 0;
     position: relative;
   }
+  .header {
+    align-self: start;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+  }
 
   .name {
     font-size: var(--fs-base);
@@ -162,12 +160,16 @@
     display: flex;
     gap: var(--sp-2);
 
-    & .tooltip-hint {
-      display: none;
-      color: var(--ink-300);
-    }
   }
-  .row:hover .tooltip-hint { display: inline; }
+  .tooltip-hint {
+    visibility: hidden;
+    color: var(--ink-300);
+    font-weight: 500;
+    line-height: 1;
+    translate: 0% -1px;
+    align-self: center;
+  }
+  .row:hover .tooltip-hint { visibility: visible; }
   
   .tooltip-wrapper { pointer-events: none; }
   .row :global(.tippy-box) { pointer-events: none !important; }
@@ -181,41 +183,40 @@
   .level {
     display: flex;
     align-items: center;
-    gap: var(--sp-3);
     font-size: 10.5px;
     color: var(--ink-300);
+    gap: var(--sp-1);
     text-wrap: nowrap;
-    width: 100%;
-    position: absolute;
-    left: 0;
-    bottom: calc(var(--sp-1) * -1);
   }
 
   .count {
     font-size: var(--fs-md);
     font-weight: 600;
+    text-align: right;
   }
 
   .duration {
-    color: var(--ink-500);
-    position: relative;
-  }
-  .duration :global(.cycle) {
     position: absolute;
+    bottom: -16px;
     left: 0;
-    bottom: calc(var(--sp-2) * -1);
+    display: flex;
+    align-items: center;
+    color: var(--ink-500);
+    gap: var(--sp-2);
+    font-weight: 500;
   }
 
   .output {
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: var(--badge-gap);
+    gap: var(--sp-3);
     min-width: 0;
-    padding-right: var(--sp-5);
     position: relative;
-
-    & .value { margin-left: -3px; }
+    padding-right: var(--sp-2);
+  }
+  .output-type {
+    gap: var(--badge-gap);
   }
   .value {
     font-size: var(--fs-base);
@@ -224,49 +225,26 @@
     color: var(--ink-900);
     position: relative;
   }
-
-  .each {
-    display: none;
-    position: absolute;
-    left: 0;
-    bottom: calc(var(--sp-3) * -1);
-    width: 100%;
+  .unit {
     font-size: 10.5px;
-    line-height: 12px;
-    text-align: end;
-    color: var(--status-gain);
-  }
-  .each-label {
-    display: none;
-    position: absolute;
-    right: 0;
-    bottom: calc(var(--sp-3) * -1);
-    font-size: 10.5px;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--ink-300);
-    line-height: 12px;
+    margin-left: 1px;
   }
-  .row:hover .each { display: block; }
-  .row:hover .each-label { display: block; }
-  
+
   .row.compact {
     padding-block: 11px 17px;
 
     & .description { display: none; }
 
-    & .level { 
-      bottom: -2px;
-      translate: 0% 100%;
-    }
+    & .count { font-size: var(--fs-base); }
 
-    & .count { font-size: 14px; }
-
-    & .duration { font-size: 13px; }
+    & .duration { font-size: 10.5px; }
 
   }
 
   .row :global(.purchase::after) {
-    content: "";
+    content: unset;
     position: absolute;
     width: 100%;
     height: 100%;
