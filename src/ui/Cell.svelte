@@ -5,6 +5,8 @@
 
   interface Props {
     label: string;
+    /** Qualifies the label in place, for a section named after what it currently reads. */
+    labelNote?: string;
     labelSize?: LabelSize;
     caption?: string;
     gap?: string;
@@ -15,6 +17,7 @@
 
   let {
     label,
+    labelNote,
     labelSize = 'default',
     caption,
     gap = 'var(--sp-3)',
@@ -26,7 +29,12 @@
 
 <div class={['cell', { banded }]}>
   <div class="labelrow">
-    <Label text={label} size={labelSize} />
+    <span class="labels">
+      <Label text={label} size={labelSize} />
+      {#if labelNote}
+        <Label text={labelNote} size={labelSize} muted />
+      {/if}
+    </span>
     {#if header}
       <div class="header">{@render header()}</div>
     {/if}
@@ -64,6 +72,13 @@
 
   .labelrow > :global(*) {
     grid-area: 1 / 1;
+  }
+
+  .labels {
+    display: flex;
+    align-items: baseline;
+    gap: var(--sp-3);
+    min-width: 0;
   }
 
   .header {

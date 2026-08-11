@@ -1,3 +1,3 @@
-import HarvestSection from './HarvestSection.svelte';
+import FirstHarvestScreen from './FirstHarvestScreen.svelte';
 
-export { HarvestSection };
+export { FirstHarvestScreen };

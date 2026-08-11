@@ -1,7 +1,19 @@
 import type { ItemTextData } from '$types';
 
 const data: Record<string, Record<string, ItemTextData>> = {
-  'main_action': {
+  'planet:second': {
+    'discover': {
+      title: 'Somewhere else',
+      description: 'A second world, and a way to reach it.',
+    },
+  },
+  'planet:third': {
+    'discover': {
+      title: 'It finds you',
+      description: 'A third world makes itself known. Nothing was asked of you.',
+    },
+  },
+  'building:main': {
     'str_1': {
         title: 'Getting the hang of it',
         description: 'Incarnation XP yield x1.5',
@@ -19,7 +31,7 @@ const data: Record<string, Record<string, ItemTextData>> = {
       description: 'Incarnation XP yield squared',
     },
   },
-  'basic': {
+  'cohort:basic': {
     'core_0': {
       title: 'Self Discovery',
       description: 'Unlock souls that can generate karma.',
@@ -29,7 +41,7 @@ const data: Record<string, Record<string, ItemTextData>> = {
       description: 'The collective of souls unifies under a single purpose.\n Current yield squared.',
     },
   },
-  'steady': {
+  'cohort:steady': {
     'core_0': {
       title: 'Steady',
       description: 'Unlock slow souls but very yielding.',
@@ -39,19 +51,19 @@ const data: Record<string, Record<string, ItemTextData>> = {
       description: 'Give souls incarnational autonomy.',
     }
   },
-  'chaos': {
+  'cohort:chaos': {
     'core_0': {
       title: 'Free Wilderness',
       description: 'A soul that explores the full polarity spectrum at random.',
     },
   },
-  'zealot': {
+  'cohort:zealot': {
     'core_0': {
       title: 'MAX_VALUE',
       description: 'A zealot soul willing to go all in.\n Zealotry can backfire!',
     },
   },
-  'red_basic': {
+  'cohort:red_basic': {
     'core_0': {
       title: 'Auto Refinery',
       description: 'A refiner soul that can produce tokens without consuming karma. Just like magic.',

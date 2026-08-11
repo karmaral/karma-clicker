@@ -16,9 +16,8 @@ export interface Beat {
 }
 
 /**
- * `global` has no bucket in data/upgrades.ts yet — that file is keyed by building
- * target, so planet-wide upgrades have nowhere to live. Beats 5 and 6 lean on
- * their floors until it does.
+ * The bucket in data/upgrades.ts is present but empty, so neither upgrade named
+ * below exists. Beats 5 and 6 lean on their floors until they are authored.
  */
 const GLOBAL = 'global';
 
@@ -94,7 +93,8 @@ export const beats: Beat[] = [
   // The consequence arrives after the choice that caused it. The tool does not.
   {
     id: 'excess',
-    when: (ctx) => ctx.excess !== undefined && ctx.excess >= 0.3,
+    // Magnitude, not sign — Burden and Comfort both bite, in opposite ways.
+    when: (ctx) => ctx.excess !== undefined && Math.abs(ctx.excess) >= 0.3,
     floor: 186_000,
     runs: ['excess'],
     reveals: {
@@ -123,7 +123,8 @@ export const beats: Beat[] = [
   {
     id: 'harvest',
     eventOnly: true,
-    when: (ctx) => ctx.activePlanetAgesLived >= 1 && ctx.excess !== undefined && ctx.excess < 0.12,
+    // The planet authors its own conditions; the beat only asks whether they hold.
+    when: (ctx) => ctx.isActivePlanetHarvestable,
     runs: ['harvest'],
     reveals: {
       'overview.harvest': 'live',

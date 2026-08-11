@@ -1,9 +1,10 @@
 <script lang="ts">
   import { Cell, HeaderBand, Rail, Value } from '$ui';
   import { ResourceManager } from '$lib/managers';
+  import { getExcess } from '$lib/excess';
   import { progression } from '$lib/progression';
   import { nav } from '$lib/nav.svelte';
-  import { SCREENS, type ScreenName } from '$lib/labels';
+  import { SCREENS, getExcessSideLabel, type ScreenName } from '$lib/labels';
   import { formatNumber } from '$lib/utils';
   import NavSection from './NavSection.svelte';
   import UpgradeRail from './UpgradeRail.svelte';
@@ -20,6 +21,31 @@
   const experience = $derived(formatNumber(ResourceManager.getAmount('experience')));
   const posKarma = $derived(formatNumber(ResourceManager.getAmount('karma_positive')));
   const negKarma = $derived(formatNumber(ResourceManager.getAmount('karma_negative')));
+
+  const reading = $derived(getExcess());
+
+  /** Signed, so the sign carries Burden versus Comfort. The meter is still ahead. */
+  const excess = $derived(
+    reading === undefined ? '—' : `${reading > 0 ? '+' : ''}${Math.round(reading * 100)}%`,
+  );
+
+  /**
+   * Until tokens arrive the third section is named for the reading it carries, not
+   * for the tab it becomes at beat 11 (CONTEXT v3 §3.2).
+   */
+  const isRefineryTab = $derived(progression.isRevealed('reading.tokens'));
+
+  function getSectionLabel(screen: ScreenName) {
+    if (screen === 'refinery' && !isRefineryTab) return 'Excess';
+
+    return nav.label(screen);
+  }
+
+  function getSectionNote(screen: ScreenName) {
+    if (screen === 'refinery' && !isRefineryTab) return getExcessSideLabel(reading);
+
+    return undefined;
+  }
 </script>
 
 <HeaderBand rule={false} {columns}>
@@ -29,7 +55,7 @@
       active={nav.active === screen}
       onselect={() => nav.to(screen)}
     >
-      <Cell label={nav.label(screen)} banded>
+      <Cell label={getSectionLabel(screen)} labelNote={getSectionNote(screen)} banded>
         {#if screen === 'overview'}
           {#if progression.isRevealed('reading.experience')}
             <Value kind="xp" value={experience} />
@@ -46,7 +72,7 @@
             <Value kind="any" value="—" size="lg" />
           {/if}
           {#if progression.isRevealed('reading.excess')}
-            <Value kind="both" value="—" />
+            <Value kind="both" value={excess} />
           {/if}
         {:else}
           <span class="pending">—</span>

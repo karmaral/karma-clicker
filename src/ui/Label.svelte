@@ -4,12 +4,14 @@
   interface Props {
     text: string;
     size?: LabelSize;
+    /** A qualifier sitting beside a label, never a label on its own. */
+    muted?: boolean;
   }
 
-  let { text, size = 'default' }: Props = $props();
+  let { text, size = 'default', muted = false }: Props = $props();
 </script>
 
-<span class={['label', size]}>{text}</span>
+<span class={['label', size, { muted }]}>{text}</span>
 
 <style>
   .label {
@@ -25,6 +27,10 @@
     font-size: var(--fs-label-sm);
     letter-spacing: var(--ls-label-sm);
     font-weight: 700;
+    color: var(--ink-300);
+  }
+
+  .label.muted {
     color: var(--ink-300);
   }
 </style>

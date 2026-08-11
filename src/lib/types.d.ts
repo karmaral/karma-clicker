@@ -30,7 +30,17 @@ export interface Modifier {
   target?: YieldType | 'all';
 }
 
-export type EffectVerb = 'unlock' | 'acquire' | 'autonomy';
+/** Verbs act on the entity its bucket names — see `UpgradeScope`. */
+export type EffectVerb = 'unlock' | 'acquire' | 'autonomy' | 'discover';
+
+/**
+ * What an upgrade bucket is scoped to. `cohort` and `building` both route to
+ * `BuildingManager` — the split exists so a non-soul building has somewhere to
+ * go that does not call itself a cohort.
+ */
+export type UpgradeScope =
+  | { kind: 'global'; entity?: undefined }
+  | { kind: 'cohort' | 'building' | 'planet'; entity: string };
 
 /** `target` overrides the upgrade's `effect_target`, so one array can hit two yields. */
 export type Effect = EffectVerb | Omit<Modifier, 'id'>;
@@ -39,10 +49,10 @@ export interface UpgradeData {
   id: string;
   effect: Effect | Effect[];
   effect_target?: YieldType | 'all';
-  unlock_type: ResourceType;
-  unlocks_at: number;
-  cost?: number;
-  cost_type?: ResourceType
+  /** Single-entry table: `{ karma_positive: 15 }`. Only the first entry is read. */
+  unlocks_at: Partial<Record<ResourceType, number>>;
+  /** Single-entry table: `{ karma_positive: 15 }`. Only the first entry is read. */
+  costs?: Partial<Record<ResourceType, number>>;
 }
 /**
  * `click` is you incarnating by hand — never allocatable, even once it auto-fires.
@@ -69,6 +79,18 @@ export interface BuildingData {
   resistance?: number;
 }
 /**
+ * What a planet demands before it will let you take the first harvest — the
+ * one-off event that ends it, not the yield it pays afterwards. Every field is
+ * optional: a planet authors only what it imposes, absent means unrestricted.
+ * A new kind of restriction is a field here, a guard in `Planet`, and a label.
+ */
+export interface PlanetFirstHarvest {
+  excessGate?: number;
+  agesLived?: number;
+}
+
+export type FirstHarvestCondition = keyof PlanetFirstHarvest;
+/**
  * A phase is a half-wave, light or dense; two make a cycle; `cycles_per_age` of
  * those make an age. Three words, used the same way in code and in the UI.
  */
@@ -79,7 +101,8 @@ export interface PlanetData {
   initial_phase_amount: number;
   densities: number;
   max_initial_density: number;
-  /** Payout once harvested. Unset until the harvest pass. */
+  firstHarvest: PlanetFirstHarvest;
+  /** What the recurring harvest pays. Unset until the harvest pass. */
   yields?: Partial<Record<ResourceType, number>>;
   duration?: number;
 }

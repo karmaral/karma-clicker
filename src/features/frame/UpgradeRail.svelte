@@ -1,10 +1,12 @@
 <script lang="ts">
-  import { Chip, ChipQueue, Label } from '$ui';
+  import { Badge, Chip, ChipQueue, Label } from '$ui';
   import type { ChipStatus } from '$ui';
   import { ResourceManager, UpgradeManager } from '$lib/managers';
+  import type { ResourceType, YieldType } from '$types';
   import { pulse } from '$lib/loop';
   import { formatNumber as fmt } from '$lib/utils';
-  import data from '$data/upgrades';
+  import { badgeFor } from '$features/detail/badge';
+  import data, { parseScope } from '$data/upgrades';
   import texts from '$data/upgrades-texts';
 
   const VISIBLE = 5;
@@ -13,7 +15,8 @@
     target: string;
     id: string;
     label: string;
-    cost?: string;
+    scope: string;
+    costs?: Record<ResourceType, number>;
     status: ChipStatus;
     distanceToAffordable: number;
     textData: Record<string, string>;
@@ -27,24 +30,30 @@
 
     const text = texts[target]?.[id];
 
-    const { cost, cost_type } = item;
+    // The rail is where you buy things. Unpriced upgrades arrive on their own.
+    if (!item.costs) return;
+
+    const [cost_type, cost] = Object.entries(item.costs)[0] as [ResourceType, number];
     const locked = UpgradeManager.isLocked(target, id);
-    const held = cost_type ? ResourceManager.getAmount(cost_type) : 0;
+    const held = ResourceManager.getAmount(cost_type);
 
     let status: ChipStatus = 'unlocked';
     if (locked) {
       status = 'approaching';
-    } else if (cost && held >= cost) {
+    } else if (held >= cost) {
       status = 'affordable';
     }
+
+    const { kind, entity } = parseScope(target);
 
     return {
       target,
       id,
       label: text?.title ?? id,
-      cost: cost ? `${fmt(cost)} ${cost_type?.split('_')[0]}` : undefined,
+      scope: entity ?? kind,
+      costs: item.costs as Record<ResourceType, number>,
       status,
-      distanceToAffordable: cost ? cost - held : 0,
+      distanceToAffordable: cost - held,
       textData: { ...text },
     };
   }
@@ -81,14 +90,14 @@
     {#each shown as upgrade (upgrade.target + upgrade.id)}
       <Chip
         label={upgrade.label}
-        cost={upgrade.cost}
+        costs={upgrade.costs}
         status={upgrade.status}
         onclick={() => buy(upgrade)}
       >
         {#snippet caption()}
-          <span class="scope">{upgrade.target}</span>
+          <span class="scope">{upgrade.scope}</span>
           ·
-          <span class="effect">{upgrade.effect}</span>
+          <span class="effect">{upgrade.effect || ''}</span>
         {/snippet}
 
         {#snippet tooltipContent()}
@@ -98,7 +107,13 @@
           <div class="item-body">
             <p class="description">{upgrade.textData.description}</p>
             <p class="cost">
-              Cost: <strong><span>{upgrade.cost}</span></strong>
+              Cost:
+              {#if upgrade.costs}
+                {#each Object.entries(upgrade.costs) as [costType, costVal]}
+                  <strong><span>{fmt(costVal)}</span></strong>
+                  <Badge kind={badgeFor(costType as YieldType)} />
+                {/each}
+              {/if}
             </p>
           </div>
           {upgrade.label}

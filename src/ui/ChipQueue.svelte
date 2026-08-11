@@ -40,6 +40,7 @@
 
   .chips {
     display: flex;
+    align-items: center;
     gap: var(--sp-2);
     overflow-x: auto;
     overscroll-behavior-x: contain;

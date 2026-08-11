@@ -40,6 +40,55 @@ class BuildingManager {
     }
   }
 
+  /**
+   * Buildings holding souls. Filtered in by role, never by excluding the click —
+   * a later role that is not souls must not fall in here by default.
+   */
+  #cohorts() {
+    return this.buildings
+      .map((id) => this.#buildings[id])
+      .filter((building) => (building.data.role ?? 'soul') === 'soul');
+  }
+
+  countSouls() {
+    return this.#cohorts().reduce((sum, cohort) => sum + cohort.count, 0);
+  }
+
+  /** Both polarities together — the scale, not the mix. The click is manual, so it is out. */
+  countKarmaPerSecond() {
+    return this.#cohorts().reduce((sum, cohort) => sum + cohort.perSecond('karma'), 0);
+  }
+
+  /**
+   * One fraction taken out of every cohort, proportionally — you never choose
+   * which flavour goes (CONTEXT v3 §3.3). Rounding is per cohort, so read the
+   * count off `countMergeable` rather than recomputing it from the fraction.
+   */
+  #takeFromCohorts(mergeFraction: number) {
+    const fraction = Math.max(0, Math.min(1, mergeFraction));
+
+    return this.#cohorts()
+      .map((cohort) => ({ cohort, count: Math.round(cohort.count * fraction) }))
+      .filter(({ count }) => count > 0);
+  }
+
+  /** What merging at this fraction would take. The split control reads it. */
+  countMergeable(mergeFraction: number) {
+    return this.#takeFromCohorts(mergeFraction).reduce((sum, { count }) => sum + count, 0);
+  }
+
+  /** Merged souls stop being yours. Returns how many went. */
+  mergeSouls(mergeFraction: number) {
+    let merged = 0;
+
+    this.#takeFromCohorts(mergeFraction).forEach(({ cohort, count }) => {
+      cohort.remove(count);
+      merged += count;
+    });
+
+    return merged;
+  }
+
   canAfford(target: string, quantity = 1) {
     if (!Boolean(target in data)) return false;
     if (!Boolean(target in this.#buildings)) return false;

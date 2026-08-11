@@ -4,6 +4,7 @@
     BuildingManager, PlanetManager, ResourceManager, UpgradeManager,
   } from '$lib/managers';
   import { pulse } from '$lib/loop';
+  import { getExcess } from '$lib/excess';
   import { formatNumber } from '$lib/utils';
   import buildingData from '$data/buildings';
 
@@ -15,6 +16,10 @@
   let open = $state(true);
 
   const current = $derived(progression.current?.id ?? 'none');
+
+  /** The two figures beat 9 turns on, so a stuck run is diagnosable on sight. */
+  const excess = $derived(getExcess());
+  const planet = $derived(PlanetManager.getActive());
 
   function jump(delta: number) {
     progression.jumpTo(progression.beat + delta);
@@ -60,6 +65,13 @@
         <span class="id">karma {formatNumber(ResourceManager.getAmount('karma_positive'))}</span>
         <button onclick={() => grant('karma_positive', 1e4)}>+10k pos</button>
         <button onclick={() => grant('karma_negative', 1e4)}>+10k neg</button>
+      </div>
+
+      <div class="row">
+        <span class="id">
+          excess {excess === undefined ? '—' : `${Math.round(excess * 100)}%`}
+          · {planet?.unmetFirstHarvestConditions.join(', ') || 'harvestable'}
+        </span>
       </div>
 
       <div class="row">

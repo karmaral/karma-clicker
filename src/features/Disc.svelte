@@ -14,7 +14,7 @@
   }
 
   let {
-    size = 150,
+    size = 200,
     count = 0,
     action = 'Incarnate',
     sub,
@@ -22,15 +22,15 @@
   }: Props = $props();
 
   const dots = $derived(Math.min(count, MAX_DOTS));
-  const orbit = $derived(size * 0.68);
+  const orbit = $derived(size * 1.05);
 </script>
 
 <div class="disc-slot">
-  <div class="orbit" style:width="{size}px" style:height="{size}px">
+  <div class="orbit" style:width="{orbit}px" style:height="{orbit}px">
     <button
       class="disc"
-      style:width="{orbit}px"
-      style:height="{orbit}px"
+      style:width="{size}px"
+      style:height="{size}px"
       onclick={onincarnate}
       aria-label={action}
     ></button>
@@ -40,7 +40,7 @@
         {#each { length: dots } as _, i}
           <span
             class="dot"
-            style:transform="rotate({(360 / dots) * i}deg) translateY(-{size / 2}px)"
+            style:transform="rotate({(360 / dots) * i}deg) translateY(-{orbit / 2}px)"
           ></span>
         {/each}
       </div>

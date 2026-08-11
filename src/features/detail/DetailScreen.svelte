@@ -13,19 +13,12 @@
   import type { Phase } from './types';
   import planetTexts from '$data/planets-texts';
 
-  const CLICK = 'main_action';
+  const CLICK = 'main';
 
   const click = $derived(BuildingManager.getBuilding(CLICK));
   const clickYield = $derived(click?.production.experience ?? 0);
 
-  const cohortCount = $derived(
-    BuildingManager.buildings.reduce((sum, id) => {
-      const cohort = BuildingManager.getBuilding(id);
-      if (!cohort || cohort.data.role === 'click') return sum;
-
-      return sum + cohort.count;
-    }, 0),
-  );
+  const cohortCount = $derived(BuildingManager.countSouls());
 
   const cohorts = $derived.by(() => {
     const rows: Building[] = [];
@@ -62,8 +55,28 @@
   }
 </script>
 
-<div class="detail">
-  <div class="read">
+<div class="detail view-layout">
+
+  <div class="cohort">
+    {#if progression.isRevealed('detail.cohortTable')}
+      <CohortTable
+        {cohorts}
+        affordable={(id) => BuildingManager.canAfford(id, 1)}
+        showAim={progression.isRevealed('detail.aimPerRow')}
+        onbuy={buy}
+      />
+    {/if}
+
+    {#if progression.isRevealed('detail.aimGlobal')}
+      <AimSection />
+    {/if}
+
+    <RevealStub name="detail.split" note="the soul split — Phase D" />
+    <RevealStub name="detail.field" note="the anchoring field — Phase D" />
+  </div>
+
+
+  <div class="planet">
     {#if progression.isRevealed('detail.disc')}
       <Disc
         count={cohortCount}
@@ -90,34 +103,10 @@
     {/if}
   </div>
 
-  <div class="act">
-    {#if progression.isRevealed('detail.cohortTable')}
-      <CohortTable
-        {cohorts}
-        affordable={(id) => BuildingManager.canAfford(id, 1)}
-        showAim={progression.isRevealed('detail.aimPerRow')}
-        onbuy={buy}
-      />
-    {/if}
-
-    {#if progression.isRevealed('detail.aimGlobal')}
-      <AimSection />
-    {/if}
-
-    <RevealStub name="detail.split" note="the soul split — Phase D" />
-    <RevealStub name="detail.field" note="the anchoring field — Phase D" />
-  </div>
 </div>
 
 <style>
-  .detail {
-    display: grid;
-    grid-template-columns: 5fr 7fr;
-    align-items: start;
-    min-width: 0;
-  }
-
-  .read {
+  .planet {
     display: flex;
     flex-direction: column;
     gap: var(--sp-5);
@@ -126,7 +115,7 @@
     min-width: 0;
   }
 
-  .act {
+  .cohort {
     display: flex;
     flex-direction: column;
     min-width: 0;

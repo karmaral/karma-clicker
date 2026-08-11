@@ -152,7 +152,7 @@ It was cut for two costs nothing else in the layer carries:
   resolved entries had to be serialised verbatim, and a rebalance would not reach
   figures already banked in old saves.
 - **It reintroduced acquisition-order dependence**, the one thing the buckets were
-  shaped to remove. `main_action` hit this: `str_4` and `str_3` are both
+  shaped to remove. `building:main` hit this: `str_4` and `str_3` are both
   affordable at 25 positive karma, and buying them in the other order gave 27
   instead of 81. If a modifier a snapshot was computed against later expired, the
   frozen factor still embedded it.
@@ -162,8 +162,8 @@ a live `pow` has neither problem. `apply()` recomputes from base on every read,
 so the buckets stay order-independent and the figure stays a function of data.
 The snapshot existed only to keep the square off everything bought *later* — a
 balance intent, not a structural one. It is now written as the `mult` it always
-resolved to: `main_action/str_4` is `mult 9`, the ×1.5 ×2 ×3 ladder above it
-squared; `basic/str_1` became two targeted mults, since its yields ride different
+resolved to: `building:main/str_4` is `mult 9`, the ×1.5 ×2 ×3 ladder above it
+squared; `cohort:basic/str_1` became two targeted mults, since its yields ride different
 level curves and never shared one factor.
 
 The cost moved rather than vanished — those constants are hand-tuned, so
@@ -190,25 +190,191 @@ arbitrary later moment.
 
 Things that are simply unbuilt, and what they cost today.
 
-- **Three context values are stubs** — `reserve` and `planetsFinished` read `0`,
-  `excess` reads `undefined`. Beats 9–12 are gated on them and are all
-  `eventOnly`, so they carry no floor and **cannot currently fire**. Expected.
-  Beat 7 reads `excess` too, but it has a floor and reaches on that instead.
-  `excess` is not zeroed like the others because beat 9 asks `excess < 0.12`, and
-  a zero would read as clean enough and open it the moment an age is lived.
-  `planetsFinished` is now the cheap one: `Planet.harvested` exists, so it is a
-  filter over `PlanetManager.planets` — but nothing calls `harvest()` yet, so it
-  would still read `0`.
-- **Harvest has structure, no numbers.** `Planet.harvest()` flips `harvested` and
-  builds an emitter over `PlanetData.yields`, but no planet in `data/planets.ts`
-  sets `yields`, so a harvested planet emits nothing. Deliberate — the payout is
-  balance, and the layout is parked above.
-- **No `global` bucket in `data/upgrades.ts`.** That file is keyed by building
-  target, so planet-wide upgrades have nowhere to live and beats 5 and 6 reach
-  only via their floors.
+- **One context value is still a stub** — `reserve` reads `0`. Beat 11 is gated on
+  it and is `eventOnly`, so it carries no floor and **cannot currently fire**.
+  Expected: `reserve` is the non-incarnating side of the soul split, and the split
+  is `detail.split`, which beat 10 reveals and nothing yet renders.
+- **The recurring harvest has structure, no numbers.** `Planet.completeFirstHarvest()`
+  flips `harvested`, banks the merged count and the polarity, and builds an emitter
+  over `PlanetData.yields` — but no planet in `data/planets.ts` sets `yields`, so a
+  harvested planet emits nothing. Deliberate: the payout is balance, and it is the
+  one thing §3.9 says to ship flat first.
+- **The merged count and polarity are recorded and unread.** `Planet.merged` and
+  `Planet.polarity` are set at the first harvest and locked, but nothing consumes
+  them. §3.9's tier 1 is a flat bonus, so this is the intended half-step.
+- **The `global`, `refinery` and `harness` buckets in `data/upgrades.ts` are
+  empty.** They exist now, so planet-wide upgrades have somewhere to live — but
+  `wider_wave` and `the_other_way` are named by beats 5 and 6 and by nothing else,
+  so both beats still reach only via their floors.
+- **Nothing travels.** `PlanetManager.select` is called once, by `App.svelte`, with
+  `first`. Discovery now works — see Scopes below — but a discovered planet is
+  somewhere you cannot go, so `planetsFinished` cannot pass 1. This is the whole
+  of what beat 12 is waiting on.
 - **Nothing expires anything yet.** The modifier layer exists (see above) and
   `Building.removeModifier` works, but no system calls it. The re-aim penalty is
   deliberately **not** a modifier — see Aim above.
+
+## Roadmap
+
+The gaps above say what is missing. This says in what order, and how to tell
+where you are without reading any of it.
+
+### The gauge
+
+Two numbers, both countable in a minute:
+
+- **Beats, by why they fire.** A beat that reaches on its `floor` is not
+  finished — the floor is the anti-stall fallback, not the design. Count how many
+  fire for their own reason.
+- **Stubs retired.** `RevealKey` has 36 entries; every one not rendered by a real
+  component is a `RevealStub`.
+
+| own trigger | floor only | cannot fire |
+|---|---|---|
+| 1–4, 7, 8, 9, 10 | 5, 6 | 11, 12 |
+
+Stubs: **15 of 36**. Detail 5/8 · Overview 2/6 · Harvest 3/4 · Refinery 0/7.
+`reading.excess` is real; `reading.tokens` still renders a literal `—`.
+
+### The course
+
+Ordered by what each step unblocks, not by beat number. Every step is a pickup
+point: it lands on its own and moves at least one number in the gauge.
+
+| # | Step | Moves | Blocked by |
+|---|---|---|---|
+| ~~3~~ | ~~`excess` in `context.ts`~~ | ~~beat 7, half of beat 9~~ | **done** — see Excess below |
+| ~~4~~ | ~~A caller for the first harvest~~ | ~~beats 9, 10~~ | **done** |
+| ~~2~~ | ~~A path from data to `PlanetManager.unlock`~~ | ~~beat 8~~ | **done** — see Scopes below |
+| 1 | Author `wider_wave` and `the_other_way` in the `global` bucket | beats 5, 6 onto real triggers | nothing |
+| 8 | Travel | **beat 12** | reveal order — read on |
+| 5 | `PlanetData.yields` | merged planets actually pay | balance |
+| 6 | The soul split, then the refinery | `reserve`, beat 11, 7 stubs | §3.5 below |
+| 7 | Overview, Harvest and Refinery layouts | 12 stubs | design pass — see Parked |
+
+**Step 2 was supposed to be the keystone. It was half of one.** Discovery landed
+beat 8 on its own trigger, but beat 12 asks for `planetsFinished >= 2` and a
+discovered planet is not a reached one — nothing calls `PlanetManager.select`
+after mount.
+
+Step 8 is where it gets interesting, because the ladder as authored is
+**circular**. `overview.setOut` is *"depart for the next planet"*, and beat 12
+reveals it — but beat 12 fires on two finished planets, which departing is how
+you get. So departure cannot live only behind `setOut`, or the last beat is
+unreachable by construction.
+
+The reading that resolves it: departure belongs to **`overview.ahead`** (beat 8,
+*"unreached planets"* — a list of places to go, so going is what it is for), and
+`setOut` at beat 12 is the beat's own line — *two producers, out of phase, and
+nowhere to be* — the prompt to leave again once nothing needs you. That keeps
+`ahead` a list you act on from beat 8 and gives `setOut` something to mean.
+
+It is only a reading. Both keys are `RevealStub`s inside the parked Overview
+layout, so step 8 is really step 7 for one panel — don't improvise it, but note
+that beat 12 is blocked on a *layout* question, not a mechanical one.
+
+Step 1 stays cheap and buys the least: it retires no stubs and only corrects
+*why* two beats fire. Worth doing when touching that data anyway, not as a sprint.
+
+Step 6 splits in two now that the first harvest exists. `reserve` is the
+non-incarnating side of the soul split, not the kept side of the merge split — an
+earlier reading of this doc had that wrong. The split is `detail.split`, revealed
+at beat 10 and unrendered, so it comes first and beat 11 follows from it.
+
+### The one question left
+
+- **Where matching happens.** CONTEXT v3 §3.5 puts it inside the refinery, matched
+  pairs first, emitting Ochre. The refinery entry under Parked above puts it
+  above the refinery: karma refines to Crimson keeping polarity, and Ochre is
+  *bought*. Both agree on Crimson ↔ Crimson at a scaling price and on Indigo
+  bought with Ochre. Step 6 is the first thing that has to pick one; until then
+  the two readings cost nothing.
+
+## Excess — provisional, revisit before balancing
+
+> **Open with this next session.** CONTEXT v3 §3.2 defines excess but never says
+> what the wall *is*. What follows is a code-side decision taken to unblock beats
+> 7 and 9, not something §3.2 sanctions. Either §3.2 gets amended to match, or
+> this gets replaced. Do not treat the figures as settled.
+
+§3.2 gives the numerator without argument: excess is the signed difference
+between the two held piles, negative is Burden, positive is Comfort. The wall it
+is read against is the part with no definition anywhere, and every obvious
+candidate breaks something specific:
+
+- **A lifetime total** (`karma ever earned`) only ever grows while the numerator
+  is a stock, so excess decays toward zero on its own. The gate becomes free
+  late, and the debuff quietly stops existing.
+- **The two current piles** (`(P − N) / (P + N)`) invert under the refinery.
+  Matched-pair refining takes equal amounts from both, so the numerator holds
+  while the denominator shrinks — refining would *raise* your excess, against
+  §3.2's "the refinery is the main way excess leaves you".
+- **An authored figure per planet** matches the phrasing this doc used to carry,
+  but §3.2 is explicit that excess is global and only the *gate* is per-planet.
+  It also makes the reading jump on arrival somewhere new while the raw
+  difference did not move.
+
+What is in the code instead is **income rate**: the wall is karma per second
+across every cohort, times a `WALL_SECONDS` window in `lib/excess.ts`. Excess
+then reads as the share of that window you are holding unpaired. It survives all
+three tests — it scales with progression so it cannot be outgrown, it does not
+decay, and the refinery does not touch the denominator.
+
+The window is set to **600s**, chosen so §4's "beat 7 lands around ten minutes in"
+is the literal calibration rather than a coincidence. That is a guess with a
+rationale, not a tuned number, and it is the single knob for how hard excess
+bites.
+
+Two consequences worth naming before anyone balances against this:
+
+- **Spending karma lowers excess**, because excess is a stock of unspent karma.
+  §3.2's "exactly two ways down" is about deliberate tools; this is an incidental
+  third. It has not been closed.
+- **The wall is zero until something earns karma automatically**, so `getExcess()`
+  returns `undefined` rather than `0` — a zero would read as clean enough and
+  open beat 9 on nothing.
+
+The per-planet part went where §3.2 does put it: `PlanetData.firstHarvest` carries
+the conditions the planet imposes, and `Planet` checks them. Beat 9 asks the
+planet whether they hold rather than spelling any figure out itself.
+
+## Scopes
+
+`data/upgrades.ts` buckets are keyed `kind:entity` — `cohort:steady`,
+`building:main`, `planet:second` — and `parseScope()` sits in that file, beside
+the format it parses. A bare key (`global`, `refinery`, `harness`) names no
+entity; verbs are inert there, since there is nothing for them to act on.
+
+The colon is load-bearing: entity ids carry their own underscores (`red_basic`),
+so an underscore separator would have made the split positional — "the first one
+only" — a rule with nowhere to live but the parser.
+
+Three kinds, because the alternative was worse. Before this, the bucket key *was*
+a building id, which is why `unlock` reached only `BuildingManager` and planets
+had no route from data at all. Putting discovery in one flat `planets` bucket
+would have worked exactly once: a planet-specific upgrade would then sit as a
+sibling of every *other* planet's, with authoring adjacency the only thing tying
+it to its own — a convention nothing enforces and time erases. Containment does
+that job instead.
+
+`cohort` and `building` both route to `BuildingManager` and could have been one
+word. They are two because `main` is `role: 'click'`, so a single `cohort:` would
+have made one key lie, and `building:` leaves somewhere for a future non-soul
+building that is not a cohort either.
+
+`discover` is its own verb rather than a second meaning for `unlock`, so the
+bucket can later hold planet-specific upgrades without the verb having to guess
+what it is scoped to.
+
+**`costs` decides the shape.** `purchase()` refuses an unpriced upgrade, so one
+has no buyer by construction — `acquireUnpriced()` takes it off the loop the
+moment `unlocks_at` holds. That is the whole of "some planets are bought, others
+arrive": priced discoveries appear as chips in the rail, unpriced ones are
+triggers wearing the upgrade shape. The rail filters unpriced entries out for the
+same reason — it is where you buy things.
+
+Figures on `planet:second` and `planet:third` are placeholders. They put
+discovery near beat 8 and nothing more; nothing is balanced against them.
 
 ## Naming
 

@@ -8,6 +8,7 @@ const data: Record<string, PlanetData> = {
     initial_phase_amount: 100,
     densities: 3,
     max_initial_density: 1,
+    firstHarvest: { excessGate: 0.12, agesLived: 1 },
   },
   'second': {
     ages: 2,
@@ -16,6 +17,7 @@ const data: Record<string, PlanetData> = {
     initial_phase_amount: 100,
     densities: 3,
     max_initial_density: 1,
+    firstHarvest: { excessGate: 0.08, agesLived: 2 },
   },
   'third': {
     ages: 4,
@@ -24,6 +26,7 @@ const data: Record<string, PlanetData> = {
     initial_phase_amount: 1000,
     densities: 6,
     max_initial_density: 1,
+    firstHarvest: { excessGate: 0.05, agesLived: 4 },
   }
 }
 export default data;

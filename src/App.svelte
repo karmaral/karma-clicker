@@ -16,7 +16,7 @@
 
   PlanetManager.unlock('first');
   PlanetManager.select('first');
-  BuildingManager.unlock('main_action');
+  BuildingManager.unlock('main');
 
   const experience = $derived(formatNumber(ResourceManager.getAmount('experience')));
   const posKarma = $derived(formatNumber(ResourceManager.getAmount('karma_positive')));

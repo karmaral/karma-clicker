@@ -4,6 +4,7 @@
     HeaderBand, Label, Meter, Tabs, Rail, Value,
   } from '$ui';
   import type { BadgeKind, ChipStatus, FigureSize, LabelSize, MeterTick } from '$ui';
+  import type { ResourceType } from '$types';
   import {
     ExperienceModule, InertiaModule, KarmaModule, ManualModule,
   } from '$features/header';
@@ -56,12 +57,12 @@
 
   const inertiaTicks: MeterTick[] = [{ at: 20 }, { at: 60, strong: true }];
 
-  const upgrades: { label: string; cost?: string; status: ChipStatus }[] = [
-    { label: 'More cause means more effect', cost: '15 karma', status: 'affordable' },
-    { label: 'An easier way', cost: '200 xp', status: 'affordable' },
-    { label: 'Free Wilderness', cost: '50 karma', status: 'unlocked' },
-    { label: 'A singular purpose', cost: '10k karma', status: 'unlocked' },
-    { label: 'Nothing is lost', cost: '24k karma', status: 'unlocked' },
+  const upgrades: { label: string; costs?: Record<ResourceType, number>; status: ChipStatus }[] = [
+    { label: 'More cause means more effect', costs: { karma_positive: 15 }, status: 'affordable' },
+    { label: 'An easier way', costs: { experience: 200 }, status: 'affordable' },
+    { label: 'Free Wilderness', costs: { karma_positive: 50 }, status: 'unlocked' },
+    { label: 'A singular purpose', costs: { karma_positive: 10000 }, status: 'unlocked' },
+    { label: 'Nothing is lost', costs: { karma_positive: 24000 }, status: 'unlocked' },
     { label: '3 approaching', status: 'approaching' },
   ];
 
@@ -224,8 +225,8 @@
       purchased upgrades leave the queue entirely.
     </p>
     <div class="chips-demo">
-      <Chip label="Affordable" cost="15 karma" />
-      <Chip label="Unlocked" cost="50 karma" status="unlocked" />
+      <Chip label="Affordable" costs={{ karma_positive: 15 }} />
+      <Chip label="Unlocked" costs={{ karma_positive: 50 }} status="unlocked" />
       <Chip label="3 approaching" status="approaching" />
     </div>
   </section>
@@ -324,7 +325,7 @@
             </div>
             <ChipQueue escape="all 48 →">
               {#each upgrades as u (u.label)}
-                <Chip label={u.label} cost={u.cost} status={u.status} />
+                <Chip label={u.label} costs={u.costs} status={u.status} />
               {/each}
             </ChipQueue>
           </div>

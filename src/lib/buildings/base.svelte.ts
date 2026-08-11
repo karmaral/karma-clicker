@@ -3,6 +3,7 @@ import { ResourceManager, PlanetManager } from '$lib/managers';
 import { ResourceEmitter, EMITTER_EVENTS } from '$lib/emission';
 import { ModifierSet } from '$lib/modifiers';
 import { aim } from '$lib/aim';
+import { reserve } from '$lib/reserve.svelte';
 
 type Listener = (detail?: Record<string, unknown>) => void;
 
@@ -30,6 +31,18 @@ export default class Building {
 
     return production;
   });
+
+  /** Filtered in by role: a later role that is not souls is not a cohort by default. */
+  #isCohort = $derived.by(() => (this.#data.role ?? 'soul') === 'soul');
+
+  /** Only cohorts hold souls, so only cohorts feel the split. */
+  #reserved = $derived.by(() => {
+    if (!this.#isCohort) return 0;
+
+    return reserve.countHeld(this.#count);
+  });
+
+  #incarnating = $derived.by(() => this.#count - this.#reserved);
 
   #duration = $derived.by(() => {
     const { duration = 0, duration_reduction = 0 } = this.#data;
@@ -197,12 +210,15 @@ export default class Building {
   get level() { return this.#level; }
   get levelProgress() { return this.#levelProgress; }
   get count() { return this.#count; }
+  get isCohort() { return this.#isCohort; }
+  get reserved() { return this.#reserved; }
+  get incarnating() { return this.#incarnating; }
   get total() { return this.#total; }
   get production() { return this.#production; }
 
   perSecond(type: YieldType) {
     const yielded = this.#production[type] ?? 0;
-    return yielded * this.#count / ((this.duration || 1000) / 1000);
+    return yielded * this.#incarnating / ((this.duration || 1000) / 1000);
   }
 
   get duration() { return this.#duration; }

@@ -1,7 +1,8 @@
 import { Experience } from '$lib/resources/experience';
 import { ResourceManager } from '$lib/managers';
 import { ResourceEmitter } from '$lib/emission';
-import type { PlanetData, ResourceType } from '$types';
+import { getExcess } from '$lib/excess';
+import type { FirstHarvestCondition, PlanetData, Polarity, ResourceType } from '$types';
 
 const BIAS_WITH = 1.4;
 const BIAS_AGAINST = 0.6;
@@ -11,6 +12,8 @@ export default class Planet {
   #data: PlanetData;
   #experience = new Experience();
   #harvested = $state(false);
+  #merged = $state(0);
+  #polarity = $state<Polarity>(0);
   #emitter = $state<ResourceEmitter>();
 
   constructor(id: string, initData: PlanetData) {
@@ -22,10 +25,33 @@ export default class Planet {
     this.#experience.add(amount);
   }
 
-  harvest() {
+  /** Every condition the planet imposes that is not met yet. Empty means go. */
+  #unmet = $derived.by(() => {
+    const { excessGate, agesLived } = this.#data.firstHarvest;
+    const unmet: FirstHarvestCondition[] = [];
+
+    if (agesLived !== undefined && this.agesLived < agesLived) {
+      unmet.push('agesLived');
+    }
+
+    const excess = getExcess();
+    if (excessGate !== undefined && (excess === undefined || Math.abs(excess) >= excessGate)) {
+      unmet.push('excessGate');
+    }
+
+    return unmet;
+  });
+
+  /**
+   * The one-off event that ends the planet. Merged souls stop being yours, and
+   * the polarity read here locks what the recurring harvest pays.
+   */
+  completeFirstHarvest(merged: number, polarity: Polarity) {
     if (this.#harvested) return;
 
     this.#harvested = true;
+    this.#merged = Math.max(0, Math.trunc(merged));
+    this.#polarity = polarity;
 
     const { yields, duration } = this.#data;
     if (!yields) return;
@@ -91,7 +117,13 @@ export default class Planet {
   get data() { return this.#data; }
   get experience() { return this.#experience.amount; }
   get harvested() { return this.#harvested; }
+  get merged() { return this.#merged; }
+  get polarity() { return this.#polarity; }
   get emitter() { return this.#emitter; }
+
+  /** The conditions still standing in the way, for the UI to name. */
+  get unmetFirstHarvestConditions() { return this.#unmet; }
+  get isFirstHarvestReady() { return !this.#harvested && this.#unmet.length === 0; }
 
   get phases() { return this.#currentPhases; }
   get phasesPerAge() { return this.#phasesPerAge; }

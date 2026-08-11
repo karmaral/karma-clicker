@@ -1,5 +1,5 @@
 export default {
-  'main_action': {
+  'main': {
     role: 'click',
     yields: { experience: 1, karma: 1 },
     duration: 0,

@@ -3,10 +3,14 @@
   import { tooltip } from './actions/tooltip';
   import Tooltip from './Tooltip.svelte';
   import type { ChipStatus } from './types';
+    import Badge from './Badge.svelte';
+    import type { ResourceType, YieldType } from '$lib/types';
+    import { badgeFor } from '$features/detail/badge';
+    import { formatNumber } from '$lib/utils';
 
   interface Props {
     label: string;
-    cost?: string;
+    costs?: Record<ResourceType, number>;
     status?: ChipStatus;
     disabled?: boolean;
     onclick?: () => void;
@@ -16,7 +20,7 @@
 
   let {
     label,
-    cost,
+    costs,
     status = 'affordable',
     disabled = false,
     onclick,
@@ -45,8 +49,13 @@
 
       <span class="name">{label}</span>
 
-      {#if cost}
-        <span class="cost num">{cost}</span>
+      {#if costs}
+        {#each Object.entries(costs) as [costType, costVal] }
+          <span class="cost">
+            <span class="num">{formatNumber(costVal)}</span>
+            <Badge kind={badgeFor(costType as YieldType)} />
+          </span>
+        {/each}
       {/if}
     </span>
 
@@ -75,7 +84,7 @@
   }
   .chip {
     display: inline-flex;
-    align-items: center;
+    align-items: start;
     flex-direction: column;
     gap: var(--sp-1);
     flex: none;
@@ -91,15 +100,25 @@
     cursor: default;
   }
 
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+  }
+
   .name {
     font-size: var(--fs-sm);
     font-weight: 600;
   }
 
   .cost {
-    font-size: var(--fs-xs);
+    font-size: 12px;
     font-weight: 400;
     opacity: .7;
+    display: flex;
+    gap: var(--sp-1);
+    align-items: center;
   }
 
   .caption {
@@ -109,6 +128,8 @@
   .chip.affordable {
     border-color: var(--ink-900);
     color: var(--ink-900);
+
+    & .cost { opacity: 1; }
   }
 
   .chip.unlocked {

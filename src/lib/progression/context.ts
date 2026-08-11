@@ -1,5 +1,6 @@
 import type { ResourceType } from '$types';
 import { ResourceManager, BuildingManager, UpgradeManager, PlanetManager } from '$lib/managers';
+import { getExcess } from '$lib/excess';
 
 export interface TriggerContext {
   total(type: ResourceType): number;
@@ -8,16 +9,13 @@ export interface TriggerContext {
   getCount(building: string): number;
   /** Souls owned across every soul-role building. */
   readonly totalSouls: number;
-  /**
-   * Unpaired karma as a fraction of the active planet's wall. `undefined` while
-   * unbuilt — a zero would read as "clean enough" and open beat 9.
-   */
+  /** Signed: negative is Burden, positive is Comfort. `undefined` before any karma. */
   readonly excess: number | undefined;
+  /** Whether the active planet's own conditions are all met. It sets them, not the beat. */
+  readonly isActivePlanetHarvestable: boolean;
   /** Souls held back from incarnating — anchoring, then refining. Not built yet. */
   readonly reserve: number;
   readonly planetsUnlocked: number;
-  readonly activePlanetAgesLived: number;
-  /** Planets left for good. The departure, not its ongoing arrivals. Not built yet. */
   readonly planetsFinished: number;
 }
 
@@ -29,25 +27,25 @@ export function createTriggerContext(): TriggerContext {
     getCount: (building) => BuildingManager.getBuilding(building)?.count ?? 0,
 
     get totalSouls() {
-      return BuildingManager.buildings.reduce((sum, id) => {
-        const building = BuildingManager.getBuilding(id);
-        if (!building || building.data.role === 'click') return sum;
-        return sum + building.count;
-      }, 0);
+      return BuildingManager.countSouls();
     },
 
     get planetsUnlocked() {
       return PlanetManager.planets.length;
     },
 
-    get activePlanetAgesLived() {
-      return PlanetManager.getActive()?.agesLived ?? 0;
+    get excess() { return getExcess(); },
+
+    get isActivePlanetHarvestable() {
+      return PlanetManager.getActive()?.isFirstHarvestReady ?? false;
     },
 
-    // Phase D and beyond. The beats gated on these are eventOnly, so no floor
-    // can open them on a stub.
-    get excess() { return undefined; },
+    get planetsFinished() {
+      return PlanetManager.finished;
+    },
+
+    // Waits on the soul split, which beat 10 reveals. Beat 11 is eventOnly, so
+    // no floor can open it on a stub.
     get reserve() { return 0; },
-    get planetsFinished() { return 0; },
   };
 }

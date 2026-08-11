@@ -1,8 +1,13 @@
 import { tick } from 'svelte';
-import type { Effect, UpgradeData, YieldType } from '$types';
-import data from '$data/upgrades';
+import type { Effect, ResourceType, UpgradeData } from '$types';
+import data, { parseScope } from '$data/upgrades';
 import texts from '$data/upgrades-texts';
-import { ResourceManager, BuildingManager, NotificationManager } from '$lib/managers';
+import {
+  ResourceManager,
+  BuildingManager,
+  PlanetManager,
+  NotificationManager,
+} from '$lib/managers';
 
 const upgradeMap: Record<string, Record<string, UpgradeData>> = {};
 Object.keys(data).forEach((name) => {
@@ -23,7 +28,7 @@ class UpgradeManager {
     const item = upgradeMap[target][id];
     if (!item) return;
 
-    const { unlock_type, unlocks_at } = item;
+    const [unlock_type, unlocks_at] = Object.entries(item.unlocks_at)[0] as [ResourceType, number];
 
     return ResourceManager.getTotal(unlock_type) < unlocks_at;
   }
@@ -34,6 +39,19 @@ class UpgradeManager {
     return this.#upgrades[target].includes(id);
   }
 
+  /** Unpriced upgrades have no buyer, so `unlocks_at` acts as the trigger. Polled off the loop. */
+  acquireUnpriced() {
+    Object.entries(upgradeMap).forEach(([target, items]) => {
+      Object.values(items).forEach((item) => {
+        if (item.costs) return;
+        if (this.#upgrades[target].includes(item.id)) return;
+        if (this.isLocked(target, item.id)) return;
+
+        this.acquire(target, item.id);
+      });
+    });
+  }
+
   purchase(target: string, id: string) {
     if (!Boolean(target in this.#upgrades)) return;
     if (this.#upgrades[target].includes(id)) return;
@@ -41,7 +59,9 @@ class UpgradeManager {
     const item = upgradeMap[target][id];
     if (!item) return;
 
-    const { cost, cost_type } = item;
+    const costEntry = item.costs ? Object.entries(item.costs)[0] as [ResourceType, number] : undefined;
+    if (!costEntry) return;
+    const [cost_type, cost] = costEntry;
     if (ResourceManager.getAmount(cost_type) < cost) return;
 
     ResourceManager.remove(cost_type, cost);
@@ -66,31 +86,40 @@ class UpgradeManager {
   }
 
   async #handleEffect(target: string, item: UpgradeData) {
-    const { id, effect, effect_target } = item;
-    const effects = Array.isArray(effect) ? effect : [effect];
+    const effects = Array.isArray(item.effect) ? item.effect : [item.effect];
 
     for (const [index, entry] of effects.entries()) {
-      this.#processEffect(target, `${id}:${index}`, entry, effect_target);
+      this.#processEffect(target, item, entry, index);
       await tick();
     }
   }
 
-  #processEffect(target: string, id: string, effect: Effect, effectTarget?: YieldType | 'all') {
+  #processEffect(target: string, item: UpgradeData, effect: Effect, index: number) {
     if (!Boolean(target in this.#upgrades)) return;
+
+    // A global-scoped bucket names no entity, so nothing here can act for it yet.
+    const { entity } = parseScope(target);
+    if (!entity) return;
 
     if (typeof effect === 'string') {
       switch (effect) {
         case 'unlock':
-          return BuildingManager.unlock(target);
+          return BuildingManager.unlock(entity);
         case 'acquire':
-          return BuildingManager.acquire(target);
+          return BuildingManager.acquire(entity);
+        case 'discover':
+          return PlanetManager.unlock(entity);
         // case 'autonomy':
-        //   return BuildingManager.getBuilding(target).toggleAutonomy(true);
+        //   return BuildingManager.getBuilding(entity).toggleAutonomy(true);
         default: return;
       }
     }
 
-    BuildingManager.getBuilding(target)?.addModifier({ id, target: effectTarget, ...effect });
+    BuildingManager.getBuilding(entity)?.addModifier({
+      id: `${item.id}:${index}`,
+      target: item.effect_target,
+      ...effect,
+    });
   }
 
   get upgrades() {
