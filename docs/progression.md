@@ -59,11 +59,11 @@ this is the only practical way to reach them by hand.
 
 Design decisions deferred on purpose. None of these are oversights.
 
-- **The refinery** converts karma to red at an equal rate from each pile,
-  **keeping polarity**. Yellow is then *bought* by pairing the two reds off, blue
-  with yellow, and either red converts to its opposite at a steep scaling price.
-  Matching therefore happens above the refinery, not inside it, and excess simply
-  carries through into the token layer. Not implemented.
+- **The token layer above the refinery.** Yellow is *bought* by pairing the two
+  reds off, blue with yellow, and either red converts to its opposite at a steep
+  scaling price. Matching therefore happens above the refinery, not inside it.
+  The refinery itself is built — see Refinery below; these three purchases are
+  not, and none of them has a price curve yet.
 - **Overview and Harvest layouts** are stubbed pending a design pass. The two
   lists on Overview, and where Harvest's verb sits relative to its disc, are
   open questions — don't improvise them.
@@ -91,6 +91,38 @@ credit experience. Once planets emit, that closes a loop — Planet →
 ResourceManager → Building → PlanetManager. The injected payout makes it
 containable; it is not yet contained.
 
+## Souls
+
+The soul split is a **fraction**, not a count: the share of every cohort held
+back from incarnating, taken proportionally, never chosen by flavour — the rule
+`countMergeable` already follows for merging (§3.3). Reserved souls are still
+yours, unlike merged ones. They only stop earning, and that is the whole of what
+reserving costs. Rounding is per cohort, so `countReserved()` sums what each
+cohort actually holds rather than recomputing from the fraction.
+
+**`Cohort extends Building`** — the one place inheritance beat composition, which
+is worth reconciling with Producers above rather than reading as drift. `Planet`
+was refused a `Building` base because it wants none of Building's economy and
+would carry a fake `owned = 1` to satisfy arithmetic that does not apply to it. A
+cohort wants all of that economy and adds exactly one thing: its count is souls.
+That is the test — a subclass that only adds, never one that has to fake what it
+inherits.
+
+What is genuinely cohort-only is narrower than it first looks. `aim` and the
+karma split stay on `Building`, because `main` is `role: 'click'` and yields
+karma too; only holding, reserving and merging souls move down.
+
+`role` is now read **once**, in `BuildingManager.unlock`, to pick the class.
+Everything downstream asks `instanceof Cohort`. The predicate it replaced had to
+be spelled "is soul" rather than "is not click" so a future non-soul building
+would not fall in by default — a rule that lived only in a comment. Class
+identity makes it structural.
+
+`Building.active` is the seam: how many of the count are producing. The base
+returns all of them, `Cohort` subtracts the reserve, and both `#generateResources`
+and `perSecond` read it — so income and the excess wall can never disagree about
+who is working.
+
 ## Aim
 
 Karma is declared unrouted. `BuildingData.yields` is keyed by `YieldType`, which
@@ -110,6 +142,44 @@ rather than expiring, which the bucket list has no shape for; and it is priced i
 *phases*, so it is read off `Planet.progress` rather than a wall clock. That
 matters — phases advance on accumulated experience, so a penalty that slowed
 experience would extend its own duration. It therefore touches karma only.
+
+### What the row shows
+
+The row used to print `perSecond('karma')` — production over duration and nothing
+else — while the payout multiplied that by `karmaYieldFactor` and by the planet's
+bias. So the cohort with `polarity_multiplier: 7` displayed the same figure at
+Even as at Hard negative while really paying several times more, and extremity —
+the entire reward for committing — was invisible. The row now shows **both piles
+separately**, which is the only presentation that can carry the mix, the payoff
+and the bias at once, and `badge.ts` already had `pos`/`neg` waiting for it.
+
+Three rules hold it together:
+
+- **Settled, not realized.** `aim.resolveSettled()` drops the drift term. Drift is
+  redrawn every tick, and it lands hardest on exactly the cohorts where extremity
+  pays — every one with `polarity_multiplier > 1` also has `resistance > 0` — so a
+  live figure would churn by ~20% forever. The `LeanMeter` beside it already
+  carries the wander, as a band. Drift is a span here, never a number.
+- **The re-aim penalty stays out of the rows.** `AimSection` reports it once, as
+  "karma down 65%". It is global and decaying; inside every row it would read as a
+  per-cohort property and make the whole panel sag together.
+- **One definition of income.** `countKarmaPerSecond()` sums the same split the
+  rows display, so the excess wall and the screen cannot disagree. The cost is
+  that the wall now moves with aim and with the phase — see Excess below.
+
+**The arrow is the aim, not the wave.** It compares each rate against the same
+rate at Even, so it says what *your* slider is doing to *this* cohort. That is
+information only a row has: an unaimable cohort (`resistance: 1`) shows no marks
+at all, which reads correctly as "your slider does nothing here". The tempting
+alternative — an arrow for the coming phase flip — was refused as a row element
+because phase is global, so every row would print the same bit. That belongs on
+the wave display, once.
+
+Note that nothing here *breathes*. `Planet.bias()` is a square wave, `1.4` or
+`0.6` on `isDense`, so a rate sits flat for a whole phase and then jumps by a
+factor of about 2.3. Making bias continuous over `position` is a real option, but
+it changes the average bias across a phase and the wall reads income, so it is a
+balance change and not a display one.
 
 ## Modifiers
 
@@ -190,10 +260,9 @@ arbitrary later moment.
 
 Things that are simply unbuilt, and what they cost today.
 
-- **One context value is still a stub** — `reserve` reads `0`. Beat 11 is gated on
-  it and is `eventOnly`, so it carries no floor and **cannot currently fire**.
-  Expected: `reserve` is the non-incarnating side of the soul split, and the split
-  is `detail.split`, which beat 10 reveals and nothing yet renders.
+- **The soul split has no control.** `reserve` is real — see Souls below — but
+  `detail.split` is still a `RevealStub`, so nothing but `DevPanel` can set the
+  fraction. Beat 11 is reachable, not playable.
 - **The recurring harvest has structure, no numbers.** `Planet.completeFirstHarvest()`
   flips `harvested`, banks the merged count and the polarity, and builds an emitter
   over `PlanetData.yields` — but no planet in `data/planets.ts` sets `yields`, so a
@@ -202,10 +271,15 @@ Things that are simply unbuilt, and what they cost today.
 - **The merged count and polarity are recorded and unread.** `Planet.merged` and
   `Planet.polarity` are set at the first harvest and locked, but nothing consumes
   them. §3.9's tier 1 is a flat bonus, so this is the intended half-step.
-- **The `global`, `refinery` and `harness` buckets in `data/upgrades.ts` are
-  empty.** They exist now, so planet-wide upgrades have somewhere to live — but
-  `wider_wave` and `the_other_way` are named by beats 5 and 6 and by nothing else,
-  so both beats still reach only via their floors.
+- **The `harness` bucket in `data/upgrades.ts` is empty.** `global` and
+  `refinery` are now authored; `harness` exists so there is somewhere for its
+  upgrades to live, and nothing names one yet.
+- **The refinery runs behind seven stubs.** The engine is live — see Refinery
+  below — so souls in seats turn karma into red on a clock, and the rail sells
+  the upgrades that move it. Nothing on the Refinery screen draws any of it.
+- **Red has no sink.** Ochre is *bought* with equal parts Crimson and the
+  opposite Crimson at a steep scaling price, both decided and neither built, so
+  red only accumulates. The two purchases need a buyer, which is a screen.
 - **Nothing travels.** `PlanetManager.select` is called once, by `App.svelte`, with
   `first`. Discovery now works — see Scopes below — but a discovered planet is
   somewhere you cannot go, so `planetsFinished` cannot pass 1. This is the whole
@@ -231,10 +305,15 @@ Two numbers, both countable in a minute:
 
 | own trigger | floor only | cannot fire |
 |---|---|---|
-| 1–4, 7, 8, 9, 10 | 5, 6 | 11, 12 |
+| 1–11 | — | 12 |
+
+Beat 11 counts, but read it with the asterisk in Known gaps: its trigger is live
+and only `DevPanel` can satisfy it, because the split has no control yet.
 
 Stubs: **15 of 36**. Detail 5/8 · Overview 2/6 · Harvest 3/4 · Refinery 0/7.
-`reading.excess` is real; `reading.tokens` still renders a literal `—`.
+`reading.excess` is real; `reading.tokens` still renders a literal `—`. The
+refinery engine landed without moving this line — a running system and a drawn
+panel are counted separately here for exactly that reason.
 
 ### The course
 
@@ -246,10 +325,12 @@ point: it lands on its own and moves at least one number in the gauge.
 | ~~3~~ | ~~`excess` in `context.ts`~~ | ~~beat 7, half of beat 9~~ | **done** — see Excess below |
 | ~~4~~ | ~~A caller for the first harvest~~ | ~~beats 9, 10~~ | **done** |
 | ~~2~~ | ~~A path from data to `PlanetManager.unlock`~~ | ~~beat 8~~ | **done** — see Scopes below |
-| 1 | Author `wider_wave` and `the_other_way` in the `global` bucket | beats 5, 6 onto real triggers | nothing |
+| ~~6a~~ | ~~The soul split~~ | ~~`reserve`, beat 11~~ | **done** — see Souls above |
+| ~~6b~~ | ~~The refinery engine~~ | ~~nothing visible~~ | **done** — see Refinery below |
+| ~~1~~ | ~~Author the `global` bucket~~ | ~~beats 5, 6 onto real triggers~~ | **done** — see Scopes below |
 | 8 | Travel | **beat 12** | reveal order — read on |
 | 5 | `PlanetData.yields` | merged planets actually pay | balance |
-| 6 | The soul split, then the refinery | `reserve`, beat 11, 7 stubs | §3.5 below |
+| 9 | The token purchases — Ochre, Indigo, opposite Crimson | red gets a sink | price curves, and a buyer |
 | 7 | Overview, Harvest and Refinery layouts | 12 stubs | design pass — see Parked |
 
 **Step 2 was supposed to be the keystone. It was half of one.** Discovery landed
@@ -273,22 +354,81 @@ It is only a reading. Both keys are `RevealStub`s inside the parked Overview
 layout, so step 8 is really step 7 for one panel — don't improvise it, but note
 that beat 12 is blocked on a *layout* question, not a mechanical one.
 
-Step 1 stays cheap and buys the least: it retires no stubs and only corrects
-*why* two beats fire. Worth doing when touching that data anyway, not as a sprint.
+Step 1 was billed as buying the least, and it retired no stubs — but it emptied
+the floor-only column, so every beat that *can* fire now fires for its own reason.
+What remains is beat 12, and it is blocked on a layout.
 
-Step 6 splits in two now that the first harvest exists. `reserve` is the
+Step 6 split in two and both halves are done, which is why step 9 is new: the
+refinery makes red on a clock now, and nothing spends it. `reserve` is the
 non-incarnating side of the soul split, not the kept side of the merge split — an
-earlier reading of this doc had that wrong. The split is `detail.split`, revealed
-at beat 10 and unrendered, so it comes first and beat 11 follows from it.
+earlier reading of this doc had that wrong.
 
-### The one question left
+**Step 6b moved no number in the gauge, on purpose.** It retired no stubs and
+lit no beat; it put a system under a beat that was already reaching. That is the
+shape the gauge cannot see, and the reason to read it next to the course rather
+than instead of it.
 
-- **Where matching happens.** CONTEXT v3 §3.5 puts it inside the refinery, matched
-  pairs first, emitting Ochre. The refinery entry under Parked above puts it
-  above the refinery: karma refines to Crimson keeping polarity, and Ochre is
-  *bought*. Both agree on Crimson ↔ Crimson at a scaling price and on Indigo
-  bought with Ochre. Step 6 is the first thing that has to pick one; until then
-  the two readings cost nothing.
+### Refinery — engine built, screen not
+
+**Matching does not happen inside the refinery.** Polarized karma always becomes
+polarized Crimson; the refinery never pairs anything off. Ochre is *bought* with
+equal parts Crimson, and the opposite Crimson is bought at a steeply scaling
+price. CONTEXT v3 §3.5, which puts matched pairs inside the refinery emitting
+Ochre, is **superseded** — amend §3.5 or annotate it, but do not re-derive the
+question here.
+
+What that makes the refinery is a **throughput** problem rather than a mix
+problem: X karma every Y seconds, whatever the labels read as. Three axes, all
+upgradable, and the `refinery` bucket now holds one upgrade for each:
+
+| axis | moves | how |
+|---|---|---|
+| staffing | reserved souls working it | `min(reserve, seats)`, linear on the batch |
+| efficiency | the X — karma per batch | `yield` modifiers |
+| speed | the Y — seconds per batch | `duration` modifiers |
+
+**The staffing knob is closed.** Staffing is a linear multiplier on the batch,
+and bought *seats* cap how many souls can work. It appears in X and never in Y —
+in both, throughput would go quadratic in souls and the other two axes would be
+decorative. Seats pay off exactly when there are souls to fill them, which
+couples the split to the upgrades instead of stacking with them.
+
+That leaves efficiency and staffing both scaling X, which is only worth keeping
+apart because they are *paid* differently — staffing costs incarnations every
+second it is held, efficiency is bought once. Batch and interval stay genuinely
+distinct for a separate reason: at equal throughput, big slow batches leave karma
+sitting unrefined longer, and unrefined karma is exactly what excess measures.
+
+`$lib/refinery.svelte.ts` is the singleton, next to `reserve`. It **composes**
+`ResourceEmitter` like every other producer, so its clock, its autonomy and its
+`action` event are the ones the rest of the app already speaks. Its clock starts
+from `wiring.svelte.ts` when the `refining` system runs, not when the tab opens —
+the system simulates before its panel appears, per the rule in `keys.ts`.
+
+Both piles are drawn at the **same** rate and each is capped by what it holds, so
+an empty pile does not stall the other and the difference between them — the
+excess — passes through untouched. Conversion is **1:1**; efficiency scales the
+karma consumed, which is what the axis table means by X, and no separate
+karma-to-red ratio exists. That ratio is the obvious next balance knob if the
+refinery turns out to pay too well, and it is deliberately not there yet.
+
+`seats` is a third `ModifierStat` beside `yield` and `duration`. Only yields are
+keyed by resource, so `ModifierSet.#isApplicable` now asks that question for
+yields alone rather than excluding `duration` by name.
+
+`refinery` is also the first upgrade bucket whose scope names **no entity and is
+not global**: there is exactly one refinery, so `parseScope` returns a `refinery`
+kind and `UpgradeManager` routes its modifiers to the singleton. Verbs (`unlock`,
+`acquire`, `discover`) still act on entities only, so a refinery upgrade is
+always a modifier.
+
+Parked: **soul types feeding the refinery differently**, and any partial-staffing
+curve where empty seats slow the batch rather than shrink it. Both were
+considered and set aside as too complex for a first pass.
+
+Still open, and none of it mechanical: every figure in the bucket and in
+`refinery.svelte.ts` is a placeholder, the seven stubs are untouched, and red has
+nowhere to go until the token purchases exist.
 
 ## Excess — provisional, revisit before balancing
 
@@ -325,7 +465,7 @@ is the literal calibration rather than a coincidence. That is a guess with a
 rationale, not a tuned number, and it is the single knob for how hard excess
 bites.
 
-Two consequences worth naming before anyone balances against this:
+Consequences worth naming before anyone balances against this:
 
 - **Spending karma lowers excess**, because excess is a stock of unspent karma.
   §3.2's "exactly two ways down" is about deliberate tools; this is an incidental
@@ -333,6 +473,19 @@ Two consequences worth naming before anyone balances against this:
 - **The wall is zero until something earns karma automatically**, so `getExcess()`
   returns `undefined` rather than `0` — a zero would read as clean enough and
   open beat 9 on nothing.
+- **Reserving souls raises excess before the refinery lowers it.** Reserved souls
+  do not earn, so staffing the refinery shrinks the denominator and the karma you
+  are holding reads as a larger share of a smaller window. This follows from the
+  wall being income-shaped and was not designed; it may be the right tension — you
+  pay to clean up — or it may be a spiral. Untested either way, and it is one more
+  thing that moves if the wall does.
+- **Aim and the phase now move the wall.** `countKarmaPerSecond()` reads the same
+  split the rows show — see "What the row shows" under Aim — so it carries
+  `karmaYieldFactor` and `Planet.bias()`. Aiming into a high-`polarity_multiplier`
+  cohort widens the wall several-fold and the excess reading falls; the phase flip
+  swings it by up to 2.3× on its own. This was taken deliberately, to avoid two
+  disagreeing definitions of karma per second, and it is the change most worth
+  reverting first if excess starts reading strangely.
 
 The per-planet part went where §3.2 does put it: `PlanetData.firstHarvest` carries
 the conditions the planet imposes, and `Planet` checks them. Beat 9 asks the
@@ -372,6 +525,36 @@ moment `unlocks_at` holds. That is the whole of "some planets are bought, others
 arrive": priced discoveries appear as chips in the rail, unpriced ones are
 triggers wearing the upgrade shape. The rail filters unpriced entries out for the
 same reason — it is where you buy things.
+
+Every cohort bucket opens with `first` — `['unlock', 'acquire']`, which builds
+the cohort and hands you one of it. It was `core_0`, a word that named a position
+rather than a thing, on an index no bucket ever reached `_1` of honestly. The
+`autonomy` verb never appears beside it: `BuildingManager.acquire` switches
+autonomy on at the first non-click acquire, so authoring it is redundant, and its
+case in `#processEffect` stays commented out.
+
+`cohort:basic/first` is unpriced for a reason that is not balance: the rail
+arrives at beat 4 and the cohort table at beat 3, so a *priced* first cohort has
+no buyer until after the beat it is supposed to cause. It was `['unlock',
+'autonomy']`, which builds the cohort at count 0 and grants nothing, so beats 3
+and 4 could only ever reach on their floors. Don't re-price it without giving the
+opening another buyer first.
+
+`cohort:steady/speed_1` was `core_1`, the one second entry upgrade, and its
+`autonomy` effect bought nothing. It keeps its price and its title and now moves
+what steady conspicuously lacks: `duration_reduction: 0` makes it the one cohort
+that never speeds up with count. Placeholder figure.
+
+`global` holds two priced triggers and nothing else, so `effect` is now optional
+on `UpgradeData` — an upgrade whose whole content is the purchase. That is what
+made `wider_wave` the wrong word: the scope cannot widen anything, and beat 5
+calls the wave *a clock you read, not a lever*. It is `read_the_wave`. Both are
+priced rather than granted, because beat 6 is *how dirty do you want to run* and
+a choice you are handed is not one.
+
+Beat 6 lost its `total('karma_negative') > 0` fallback in the same edit. `aim`
+returns `positiveShare: 1` until beat 6 runs `negKarma`, so that pile could not
+exist before the beat that tested for it — a second route on paper only.
 
 Figures on `planet:second` and `planet:third` are placeholders. They put
 discovery near beat 8 and nothing more; nothing is balanced against them.

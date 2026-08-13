@@ -1,7 +1,8 @@
 <script lang="ts">
   import { Badge, PurchaseButton, Meter, Tooltip, tooltip } from '$ui';
   import { aim } from '$lib/aim';
-  import { formatNumber } from '$lib/utils';
+  import { progression } from '$lib/progression';
+  import { f } from '$lib/utils';
   import type Building from '$lib/buildings/base.svelte';
   import type { YieldType } from '$types';
   import LeanMeter from './LeanMeter.svelte';
@@ -28,13 +29,57 @@
   const cost = $derived(cohort.getCost(1) ?? 0);
   const aimed = $derived(aim.resolve(cohort.id, cohort.data));
 
+  const TREND_DEADBAND = 0.005;
+
+  const TREND_MARKS: Record<number, string> = { [-1]: '▼', 0: '', 1: '▲' };
+
+  const TREND_TITLES: Record<number, string> = {
+    [-1]: 'Your aim is holding this rate down',
+    0: '',
+    1: 'Your aim is lifting this rate',
+  };
+
+  /** Against Even — what your aim is doing to this rate, not what the wave is. */
+  function trendOf(value: number, atEven: number) {
+    const delta = value - atEven;
+    if (Math.abs(delta) <= atEven * TREND_DEADBAND) return 0;
+
+    return Math.sign(delta);
+  }
+
+  /** One line per figure. Karma reads as two once beat 6 has split the pile. */
+  const rates = $derived.by(() => {
+    return Object.keys(cohort.production).flatMap((key) => {
+      const type = key as YieldType;
+      if (type !== 'karma') return [{ type, value: cohort.perSecond(type), trend: 0 }];
+
+      const now = cohort.karmaPerSecond();
+      if (!progression.runs('negKarma')) return [{ type, value: now.positive, trend: 0 }];
+
+      const even = cohort.karmaPerSecond(0);
+
+      return [
+        {
+          type: 'karma_positive' as YieldType,
+          value: now.positive,
+          trend: trendOf(now.positive, even.positive),
+        },
+        {
+          type: 'karma_negative' as YieldType,
+          value: now.negative,
+          trend: trendOf(now.negative, even.negative),
+        },
+      ];
+    });
+  });
+
   let isHovered: boolean = $state(false);
 
   let tooltipElem: HTMLElement | undefined = $state();
   const tooltipOptions = {
-    placement: 'bottom-start',
-    delay: [350, 0],
-    offset: [-12, 12],
+    placement: 'right',
+    delay: [650, 0],
+    offset: [0, 16],
     interactive: false,
   };
 </script>
@@ -44,13 +89,11 @@
   onmouseleave={() => isHovered = false}
   role="group"
 >
-  <div class="count num">{formatNumber(cohort.count)}</div>
+  <div class="count num">{f(cohort.count)}</div>
 
   <div class="ident">
 
-    <div class="header"
-      {@attach tooltip({ content: tooltipElem, options: tooltipOptions })}
-    >
+    <div class="header" >
       <span class="name">
         {texts[cohort.id]?.title ?? cohort.id}
       </span>
@@ -63,26 +106,20 @@
             {#if cohort.isMaxLevel}
               max
             {:else}
-              next at {formatNumber(cohort.nextUntilThreshold)}
+              next in {f(cohort.nextUntilThreshold)}
             {/if}
           </span>
         </div>
       {/if}
 
       <span class="tooltip-hint">···</span>
-      <div class="tooltip-wrapper" bind:this={tooltipElem}>
-        <Tooltip
-          title={texts[cohort.id]?.title}
-          description={texts[cohort.id]?.description}
-        />
-      </div>
     </div>
 
     <span class="description">{texts[cohort.id]?.description ?? ''}</span>
 
     <span class="duration">
       <CycleBar id={cohort.id} />
-      {formatNumber(cohort.duration / 1000)}s
+      {f(cohort.duration / 1000)}s
     </span>
 
   </div>
@@ -96,23 +133,42 @@
   {/if}
 
   <span class="output">
-    {#each Object.keys(cohort.production) as type}
-    <span class="output-type">
-      <Badge kind={badgeFor(type as YieldType)} />
-      <span class="value num">
-        +{formatNumber(cohort.perSecond(type as YieldType))}<span class="unit">/s</span>
+    {#each rates as rate (rate.type)}
+      <span 
+        class={['output-type', rate.type ]} 
+        title={TREND_TITLES[rate.trend]}
+      >
+        <Badge kind={badgeFor(rate.type)} />
+        <span class="value num">
+          +{f(rate.value)}<span class="unit">/s</span>
+          <span class={['trend', { 'down': rate.trend < 0 }]}>
+            {TREND_MARKS[rate.trend]}
+          </span>
+        </span>
       </span>
-    </span>
     {/each}
   </span>
 
 
-  <PurchaseButton
-    kind={badgeFor(cohort.data.cost_type!)}
-    amount={formatNumber(cost)}
-    {affordable}
-    onclick={onbuy}
-  />
+  <div class="purchase-container"
+    {@attach tooltip({ content: tooltipElem, options: tooltipOptions })}
+  >
+    <PurchaseButton
+      kind={badgeFor(cohort.data.cost_type!)}
+      amount={f(cost)}
+      {affordable}
+      onclick={onbuy}
+    />
+
+    <div class="tooltip-wrapper" bind:this={tooltipElem}>
+      <Tooltip
+        title={texts[cohort.id]?.title}
+        description={texts[cohort.id]?.description}
+      >
+        name, lore, rates, +each and all that
+      </Tooltip>
+    </div>
+  </div>
 
 
 </div>
@@ -206,20 +262,24 @@
     font-weight: 500;
   }
 
+  /* Karma is two figures here, so the 170px column is tight — watch it wrap. */
   .output {
     display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: var(--sp-3);
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: end;
+    gap: var(--sp-2);
     min-width: 0;
     position: relative;
-    padding-right: var(--sp-2);
   }
   .output-type {
+    display: flex;
+    align-items: center;
     gap: var(--badge-gap);
   }
+
   .value {
-    font-size: var(--fs-base);
+    font-size: var(--fs-sm);
     font-weight: 600;
     line-height: 1;
     color: var(--ink-900);
@@ -230,6 +290,19 @@
     font-weight: 500;
     color: var(--ink-300);
     margin-left: 1px;
+  }
+  .trend {
+    width: 7px;
+    font-size: 7px;
+    line-height: 1;
+    color: var(--ink-400);
+    text-align: right;
+    left: 0;
+    top: -8px;
+    position: absolute;
+  }
+  .trend.down {
+    top: 12px;
   }
 
   .row.compact {

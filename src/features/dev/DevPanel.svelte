@@ -5,7 +5,9 @@
   } from '$lib/managers';
   import { pulse } from '$lib/loop';
   import { getExcess } from '$lib/excess';
-  import { formatNumber } from '$lib/utils';
+  import { reserve } from '$lib/reserve.svelte';
+  import { refinery } from '$lib/refinery.svelte';
+  import { f } from '$lib/utils';
   import buildingData from '$data/buildings';
 
   /** Console handle, for poking at state by hand and for the headless driver. */
@@ -27,6 +29,12 @@
 
   function grant(type: 'experience' | 'karma_positive' | 'karma_negative', amount: number) {
     ResourceManager.add(type, amount);
+    pulse();
+  }
+
+  /** The only way to set the split until `detail.split` is built. */
+  function reserveSouls(fraction: number) {
+    reserve.set(fraction);
     pulse();
   }
 
@@ -55,14 +63,14 @@
       </div>
 
       <div class="row">
-        <span class="id">xp {formatNumber(ResourceManager.getAmount('experience'))}</span>
+        <span class="id">xp {f(ResourceManager.getAmount('experience'))}</span>
         <button onclick={() => grant('experience', 1e3)}>+1k</button>
         <button onclick={() => grant('experience', 1e5)}>+100k</button>
         <button onclick={() => grant('experience', 1e6)}>+1M</button>
       </div>
 
       <div class="row">
-        <span class="id">karma {formatNumber(ResourceManager.getAmount('karma_positive'))}</span>
+        <span class="id">karma {f(ResourceManager.getAmount('karma_positive'))}</span>
         <button onclick={() => grant('karma_positive', 1e4)}>+10k pos</button>
         <button onclick={() => grant('karma_negative', 1e4)}>+10k neg</button>
       </div>
@@ -71,6 +79,24 @@
         <span class="id">
           excess {excess === undefined ? '—' : `${Math.round(excess * 100)}%`}
           · {planet?.unmetFirstHarvestConditions.join(', ') || 'harvestable'}
+        </span>
+      </div>
+
+      <div class="row">
+        <span class="id">
+          reserve {BuildingManager.countReserved()} of {BuildingManager.countSouls()}
+        </span>
+        <button onclick={() => reserveSouls(0)}>0</button>
+        <button onclick={() => reserveSouls(0.25)}>25%</button>
+        <button onclick={() => reserveSouls(0.5)}>50%</button>
+      </div>
+
+      <div class="row">
+        <span class="id">
+          seats {refinery.workers}/{refinery.seats}
+          · {f(refinery.perSecond)}/s each way
+          · red {f(ResourceManager.getAmount('red_positive'))}
+          /{f(ResourceManager.getAmount('red_negative'))}
         </span>
       </div>
 

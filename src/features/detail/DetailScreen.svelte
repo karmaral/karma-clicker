@@ -1,7 +1,7 @@
 <script lang="ts">
   import { BuildingManager, PlanetManager } from '$lib/managers';
   import { progression } from '$lib/progression';
-  import { formatNumber } from '$lib/utils';
+  import { f } from '$lib/utils';
   import { pulse } from '$lib/loop';
   import type Building from '$lib/buildings/base.svelte';
   import Disc from '../Disc.svelte';
@@ -37,7 +37,7 @@
   const phases = $derived<Phase[]>(
     planet?.phases.map((phase) => ({
       kind: phase.dense ? 'dense' : 'light',
-      at: `${formatNumber(phase.at)} xp`,
+      at: `${f(phase.at)} xp`,
     })) ?? [],
   );
 
@@ -80,7 +80,7 @@
     {#if progression.isRevealed('detail.disc')}
       <Disc
         count={cohortCount}
-        sub="+{formatNumber(clickYield)} experience"
+        sub="+{f(clickYield)} experience"
         onincarnate={incarnate}
       />
     {/if}

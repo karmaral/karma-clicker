@@ -20,7 +20,8 @@ export type BuyMode = number | 'next' | 'max';
 
 export type ModifierOp = 'flat' | 'boost' | 'mult' | 'pow' | 'final';
 
-export type ModifierStat = 'yield' | 'duration';
+/** `seats` is the refinery's third axis: how many souls it can put to work. */
+export type ModifierStat = 'yield' | 'duration' | 'seats';
 
 export interface Modifier {
   id: string;
@@ -36,10 +37,11 @@ export type EffectVerb = 'unlock' | 'acquire' | 'autonomy' | 'discover';
 /**
  * What an upgrade bucket is scoped to. `cohort` and `building` both route to
  * `BuildingManager` — the split exists so a non-soul building has somewhere to
- * go that does not call itself a cohort.
+ * go that does not call itself a cohort. `refinery` names no entity because
+ * there is exactly one of it; `global` names none because it owns nothing yet.
  */
 export type UpgradeScope =
-  | { kind: 'global'; entity?: undefined }
+  | { kind: 'global' | 'refinery'; entity?: undefined }
   | { kind: 'cohort' | 'building' | 'planet'; entity: string };
 
 /** `target` overrides the upgrade's `effect_target`, so one array can hit two yields. */
@@ -47,7 +49,8 @@ export type Effect = EffectVerb | Omit<Modifier, 'id'>;
 
 export interface UpgradeData {
   id: string;
-  effect: Effect | Effect[];
+  /** Omitted where the purchase itself is the point — a `global` trigger has nothing to act on. */
+  effect?: Effect | Effect[];
   effect_target?: YieldType | 'all';
   /** Single-entry table: `{ karma_positive: 15 }`. Only the first entry is read. */
   unlocks_at: Partial<Record<ResourceType, number>>;

@@ -2,8 +2,7 @@ import type { BuildingData, Modifier, ResourceType, YieldType } from '$types';
 import { ResourceManager, PlanetManager } from '$lib/managers';
 import { ResourceEmitter, EMITTER_EVENTS } from '$lib/emission';
 import { ModifierSet } from '$lib/modifiers';
-import { aim } from '$lib/aim';
-import { reserve } from '$lib/reserve.svelte';
+import { aim, type Detent, type ResolvedAim } from '$lib/aim';
 
 type Listener = (detail?: Record<string, unknown>) => void;
 
@@ -31,18 +30,6 @@ export default class Building {
 
     return production;
   });
-
-  /** Filtered in by role: a later role that is not souls is not a cohort by default. */
-  #isCohort = $derived.by(() => (this.#data.role ?? 'soul') === 'soul');
-
-  /** Only cohorts hold souls, so only cohorts feel the split. */
-  #reserved = $derived.by(() => {
-    if (!this.#isCohort) return 0;
-
-    return reserve.countHeld(this.#count);
-  });
-
-  #incarnating = $derived.by(() => this.#count - this.#reserved);
 
   #duration = $derived.by(() => {
     const { duration = 0, duration_reduction = 0 } = this.#data;
@@ -123,10 +110,10 @@ export default class Building {
 
   #generateResources() {
     Object.keys(this.#production).forEach((type: YieldType) => {
-      const value = this.#production[type] * this.#count;
+      const value = this.#production[type] * this.active;
 
       if (type === 'karma') {
-        this.#splitKarmaIntoPiles(value);
+        this.#payKarma(value);
         return;
       }
 
@@ -139,13 +126,18 @@ export default class Building {
   }
 
   /** Aim sets the mix; the wave sets what each side of it is worth. */
-  #splitKarmaIntoPiles(value: number) {
-    const { positiveShare, karmaYieldFactor } = aim.resolve(this.#id, this.#data);
+  #splitKarma(value: number, { positiveShare, karmaYieldFactor }: ResolvedAim) {
     const planet = PlanetManager.getActive();
     const earned = value * karmaYieldFactor;
 
-    const positive = earned * positiveShare * (planet?.bias(true) ?? 1);
-    const negative = earned * (1 - positiveShare) * (planet?.bias(false) ?? 1);
+    return {
+      negative: earned * (1 - positiveShare) * (planet?.bias(false) ?? 1),
+      positive: earned * positiveShare * (planet?.bias(true) ?? 1),
+    };
+  }
+
+  #payKarma(value: number) {
+    const { positive, negative } = this.#splitKarma(value, aim.resolve(this.#id, this.#data));
 
     if (positive > 0) {
       ResourceManager.add('karma_positive', positive);
@@ -154,6 +146,16 @@ export default class Building {
     if (negative > 0) {
       ResourceManager.add('karma_negative', negative);
     }
+  }
+
+  /**
+   * Both piles per second, off the settled aim so the figure does not churn with
+   * drift. `detent` prices an aim you have not set — the row's arrow reads Even.
+   */
+  karmaPerSecond(detent?: Detent) {
+    const resolved = aim.resolveSettled(this.#id, this.#data, detent);
+
+    return this.#splitKarma(this.perSecond('karma'), resolved);
   }
 
   toggleAutonomy(toggle?: boolean) {
@@ -210,15 +212,15 @@ export default class Building {
   get level() { return this.#level; }
   get levelProgress() { return this.#levelProgress; }
   get count() { return this.#count; }
-  get isCohort() { return this.#isCohort; }
-  get reserved() { return this.#reserved; }
-  get incarnating() { return this.#incarnating; }
   get total() { return this.#total; }
   get production() { return this.#production; }
 
+  /** How many of the count are producing. Subclasses may hold some back. */
+  get active() { return this.#count; }
+
   perSecond(type: YieldType) {
     const yielded = this.#production[type] ?? 0;
-    return yielded * this.#incarnating / ((this.duration || 1000) / 1000);
+    return yielded * this.active / ((this.duration || 1000) / 1000);
   }
 
   get duration() { return this.#duration; }

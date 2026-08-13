@@ -23,7 +23,7 @@ export default class ModifierSet {
    * where it would be had it never applied.
    */
   apply(base: number, stat: ModifierStat, target?: YieldType) {
-    const applicable = this.#modifiers.filter((mod) => this.#applies(mod, stat, target));
+    const applicable = this.#modifiers.filter((mod) => this.#isApplicable(mod, stat, target));
     const values = (op: ModifierOp) => applicable
       .filter((mod) => mod.op === op)
       .map((mod) => mod.value);
@@ -37,9 +37,15 @@ export default class ModifierSet {
     return Math.pow((base + flat) * (1 + boost) * mult, power) + final;
   }
 
-  #applies(modifier: Modifier, stat: ModifierStat, target?: YieldType) {
+  /**
+   * Whether one modifier belongs in one `apply` call. Two questions, in order:
+   * does it move the stat being asked for, and — for yields only, which are
+   * keyed by resource — does it move this resource. An untargeted modifier is
+   * `all`, so it moves every one of them.
+   */
+  #isApplicable(modifier: Modifier, stat: ModifierStat, target?: YieldType) {
     if ((modifier.stat ?? 'yield') !== stat) return false;
-    if (stat === 'duration') return true;
+    if (stat !== 'yield') return true;
 
     const scope = modifier.target ?? 'all';
 

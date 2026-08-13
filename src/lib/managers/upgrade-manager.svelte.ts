@@ -1,7 +1,8 @@
 import { tick } from 'svelte';
-import type { Effect, ResourceType, UpgradeData } from '$types';
+import type { Effect, Modifier, ResourceType, UpgradeData } from '$types';
 import data, { parseScope } from '$data/upgrades';
 import texts from '$data/upgrades-texts';
+import { refinery } from '$lib/refinery.svelte';
 import {
   ResourceManager,
   BuildingManager,
@@ -97,8 +98,17 @@ class UpgradeManager {
   #processEffect(target: string, item: UpgradeData, effect: Effect, index: number) {
     if (!Boolean(target in this.#upgrades)) return;
 
+    const { kind, entity } = parseScope(target);
+
+    // The one scope with a singleton behind it. Verbs act on entities, so a
+    // refinery upgrade is always a modifier and never a verb.
+    if (kind === 'refinery') {
+      if (typeof effect === 'string') return;
+
+      return refinery.addModifier(this.#toModifier(item, effect, index));
+    }
+
     // A global-scoped bucket names no entity, so nothing here can act for it yet.
-    const { entity } = parseScope(target);
     if (!entity) return;
 
     if (typeof effect === 'string') {
@@ -115,11 +125,16 @@ class UpgradeManager {
       }
     }
 
-    BuildingManager.getBuilding(entity)?.addModifier({
-      id: `${item.id}:${index}`,
-      target: item.effect_target,
-      ...effect,
-    });
+    BuildingManager.getBuilding(entity)?.addModifier(this.#toModifier(item, effect, index));
+  }
+
+  /**
+   * One modifier out of one effect entry, for whoever will hold it. `index`
+   * keeps an upgrade's several effects individually removable, and `effect`
+   * spreads last so its own `target` beats the upgrade's `effect_target`.
+   */
+  #toModifier(item: UpgradeData, effect: Omit<Modifier, 'id'>, index: number): Modifier {
+    return { id: `${item.id}:${index}`, target: item.effect_target, ...effect };
   }
 
   get upgrades() {

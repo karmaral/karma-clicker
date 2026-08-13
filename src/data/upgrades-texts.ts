@@ -1,6 +1,34 @@
 import type { ItemTextData } from '$types';
 
 const data: Record<string, Record<string, ItemTextData>> = {
+  'global': {
+    'read_the_wave': {
+      title: 'The shape of it',
+      description: 'The unevenness you have been feeling can be read.',
+    },
+    'the_other_way': {
+      title: 'The other way',
+      description: 'Aim the lives to serve themselves. What they gain, they take.',
+    },
+  },
+  'refinery': {
+    'seats_1': {
+      title: 'Room to work',
+      description: 'Four seats. Reserved souls fill them; an empty seat refines nothing.',
+    },
+    'efficiency_1': {
+      title: 'A steadier hand',
+      description: 'Karma per batch x1.5',
+    },
+    'speed_1': {
+      title: 'Shorter shifts',
+      description: 'Seconds per batch x0.75',
+    },
+    'seats_2': {
+      title: 'The floor below',
+      description: 'Twelve more seats.',
+    },
+  },
   'planet:second': {
     'discover': {
       title: 'Somewhere else',
@@ -14,6 +42,10 @@ const data: Record<string, Record<string, ItemTextData>> = {
     },
   },
   'building:main': {
+    'speed_3': {
+      title: 'It clicked for you',
+      description: 'You figure out a way to incarnate instantly.'
+    },
     'str_1': {
         title: 'Getting the hang of it',
         description: 'Incarnation XP yield x1.5',
@@ -32,7 +64,7 @@ const data: Record<string, Record<string, ItemTextData>> = {
     },
   },
   'cohort:basic': {
-    'core_0': {
+    'first': {
       title: 'Self Discovery',
       description: 'Unlock souls that can generate karma.',
     },
@@ -42,29 +74,29 @@ const data: Record<string, Record<string, ItemTextData>> = {
     },
   },
   'cohort:steady': {
-    'core_0': {
+    'first': {
       title: 'Steady',
       description: 'Unlock slow souls but very yielding.',
     },
-    'core_1': {
+    'speed_1': {
       title: 'An easier way',
-      description: 'Give souls incarnational autonomy.',
+      description: 'Seconds per incarnation x0.75',
     }
   },
   'cohort:chaos': {
-    'core_0': {
+    'first': {
       title: 'Free Wilderness',
       description: 'A soul that explores the full polarity spectrum at random.',
     },
   },
   'cohort:zealot': {
-    'core_0': {
+    'first': {
       title: 'MAX_VALUE',
       description: 'A zealot soul willing to go all in.\n Zealotry can backfire!',
     },
   },
   'cohort:red_basic': {
-    'core_0': {
+    'first': {
       title: 'Auto Refinery',
       description: 'A refiner soul that can produce tokens without consuming karma. Just like magic.',
     },

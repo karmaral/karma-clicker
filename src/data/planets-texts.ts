@@ -2,16 +2,16 @@ import type { ItemTextData } from '$lib/types';
 
 const data: Record<string, ItemTextData> = {
   'first': {
-    title: 'A regular planet',
-    description: 'Ideal for testing out monotonous decisions.',
+    title: 'Planet 1',
+    description: 'Simple',
   },
   'second': {
-    title: 'A slightly less regular planet',
-    description: 'Ideal for testing out a bit more radical decisions.',
+    title: 'Planet 2',
+    description: 'Harder',
   },
   'third': {
-    title: 'The Very Hard planet',
-    description: 'I\'d wait a bit before entering here if I were you.',
+    title: 'Planet 3',
+    description: 'Haderer',
   },
 };
 export default data;

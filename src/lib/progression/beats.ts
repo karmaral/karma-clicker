@@ -15,10 +15,7 @@ export interface Beat {
   reveals?: Partial<Record<RevealKey, RevealState>>;
 }
 
-/**
- * The bucket in data/upgrades.ts is present but empty, so neither upgrade named
- * below exists. Beats 5 and 6 lean on their floors until they are authored.
- */
+/** Both upgrades named below are priced triggers with no effect of their own. */
 const GLOBAL = 'global';
 
 export const beats: Beat[] = [
@@ -46,7 +43,7 @@ export const beats: Beat[] = [
 
   // Automatic from the first one — the wheel starting to turn.
   {
-    id: 'first-soul',
+    id: 'first_soul',
     when: (ctx) => ctx.totalSouls >= 1,
     floor: 1_100,
     runs: ['cohort'],
@@ -55,7 +52,7 @@ export const beats: Beat[] = [
 
   // The figures fly up into the header; the disc stays where it was.
   {
-    id: 'rows-and-rail',
+    id: 'rows_and_rail',
     when: (ctx) => ctx.totalSouls >= 10,
     floor: 8_400,
     reveals: {
@@ -71,15 +68,16 @@ export const beats: Beat[] = [
   // The noise you had noticed has a shape. A clock you read, not a lever.
   {
     id: 'wave',
-    when: (ctx) => ctx.hasUpgrade(GLOBAL, 'wider_wave'),
+    when: (ctx) => ctx.hasUpgrade(GLOBAL, 'read_the_wave'),
     floor: 26_900,
     reveals: { 'detail.wave': 'live' },
   },
 
   // A choice and nothing else: how dirty do you want to run.
+  // No `karma_negative` fallback — this beat is what lets that pile exist.
   {
-    id: 'negative-karma',
-    when: (ctx) => ctx.hasUpgrade(GLOBAL, 'the_other_way') || ctx.total('karma_negative') > 0,
+    id: 'negative_karma',
+    when: (ctx) => ctx.hasUpgrade(GLOBAL, 'the_other_way'),
     floor: 74_200,
     runs: ['negKarma', 'aim'],
     reveals: {
@@ -170,7 +168,7 @@ export const beats: Beat[] = [
 
   // Two producers, out of phase, and nowhere to be.
   {
-    id: 'second-harvest',
+    id: 'second_harvest',
     eventOnly: true,
     when: (ctx) => ctx.planetsFinished >= 2,
     reveals: { 'overview.setOut': 'live' },

@@ -55,7 +55,7 @@
   }
 
   .purchase.affordable {
-    color: var(--ink-700);
+    color: var(--ink-900);
 
     &:hover {
       color: white;

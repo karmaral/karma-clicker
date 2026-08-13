@@ -29,8 +29,8 @@
 
   const columns = $derived(
     showAim
-      ? '20px minmax(0, 1fr) 130px 170px 80px'
-      : '20px minmax(0, 1fr) 170px 80px',
+      ? '20px minmax(0, 1fr) 130px 170px 96px'
+      : '20px minmax(0, 1fr) 170px 96px',
   );
 </script>
 
@@ -104,8 +104,5 @@
     margin: 0;
     font-size: var(--fs-sm);
     color: var(--ink-300);
-  }
-  .output {
-    padding-right: var(--sp-2);
   }
 </style>

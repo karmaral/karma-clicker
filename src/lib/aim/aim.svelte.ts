@@ -83,11 +83,25 @@ class Aim {
     return noise(id, t) * DRIFT_DETENTS * biasPull;
   }
 
+  /** What the aim pays right now, drift and all. The payout reads this. */
   resolve(id: string, data: BuildingData): ResolvedAim {
+    return this.#resolve(id, data, this.#detent, true);
+  }
+
+  /**
+   * The same without drift, so a figure on screen does not churn every tick —
+   * the meter beside it already carries the wander as a band. `detent` prices an
+   * aim you have not set, which is how the row reads itself against Even.
+   */
+  resolveSettled(id: string, data: BuildingData, detent: Detent = this.#detent): ResolvedAim {
+    return this.#resolve(id, data, detent, false);
+  }
+
+  #resolve(id: string, data: BuildingData, detent: number, drifting: boolean): ResolvedAim {
     const { polarity_bias = 0, polarity_multiplier = 1, resistance = 0 } = data;
     const biasPull = clamp(resistance, 0, 1);
-    const settledAim = this.#detent * (1 - biasPull) + polarity_bias * biasPull;
-    const drifted = settledAim + this.#driftFor(id, biasPull);
+    const settledAim = detent * (1 - biasPull) + polarity_bias * biasPull;
+    const drifted = drifting ? settledAim + this.#driftFor(id, biasPull) : settledAim;
     const realizedAim = clamp(drifted, HARDEST_NEGATIVE, HARDEST_POSITIVE);
     const unaimable = biasPull >= 1;
     const wander = DRIFT_DETENTS * biasPull;

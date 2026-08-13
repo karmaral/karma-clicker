@@ -5,7 +5,7 @@
   import { progression } from '$lib/progression';
   import { nav } from '$lib/nav.svelte';
   import { SCREENS, getExcessSideLabel, type ScreenName } from '$lib/labels';
-  import { formatNumber } from '$lib/utils';
+  import { f } from '$lib/utils';
   import NavSection from './NavSection.svelte';
   import UpgradeRail from './UpgradeRail.svelte';
 
@@ -18,9 +18,9 @@
   const visible = $derived(SCREENS.filter((screen) => nav.state(screen) !== 'absent'));
   const columns = $derived(visible.map((screen) => WIDTHS[screen]).join(' '));
 
-  const experience = $derived(formatNumber(ResourceManager.getAmount('experience')));
-  const posKarma = $derived(formatNumber(ResourceManager.getAmount('karma_positive')));
-  const negKarma = $derived(formatNumber(ResourceManager.getAmount('karma_negative')));
+  const experience = $derived(f(ResourceManager.getAmount('experience')));
+  const posKarma = $derived(f(ResourceManager.getAmount('karma_positive')));
+  const negKarma = $derived(f(ResourceManager.getAmount('karma_negative')));
 
   const reading = $derived(getExcess());
 

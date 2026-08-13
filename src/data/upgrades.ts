@@ -8,15 +8,73 @@ const ENTITY_KINDS = ['cohort', 'building', 'planet'] as const;
  */
 export function parseScope(key: string): UpgradeScope {
   const [kind, entity] = key.split(':');
-  if (!entity) return { kind: 'global' };
-  if (!ENTITY_KINDS.includes(kind as (typeof ENTITY_KINDS)[number])) return { kind: 'global' };
+
+  // The refinery is the one scope with a singleton behind it rather than an entity.
+  if (!entity && kind === 'refinery') {
+    return { kind: 'refinery' };
+  }
+
+  if (!entity) {
+    return { kind: 'global' };
+  }
+
+  if (!ENTITY_KINDS.includes(kind as (typeof ENTITY_KINDS)[number])) {
+    return { kind: 'global' };
+  }
 
   return { kind: kind as (typeof ENTITY_KINDS)[number], entity };
 }
 
 const data: Record<string, UpgradeData[]> = {
-  'global': [],
-  'refinery': [],
+  /**
+   * Owns no entity, so nothing here carries a verb or a modifier — the price is
+   * the whole of the choice. Both unlock under their beat's floor. Placeholder figures.
+   */
+  'global': [
+    {
+      id: 'read_the_wave',
+      unlocks_at: { experience: 9000 },
+      costs: { karma_positive: 750 },
+    },
+    {
+      id: 'the_other_way',
+      unlocks_at: { experience: 30000 },
+      costs: { karma_positive: 4000 },
+    },
+  ],
+  /**
+   * Three axes and no fourth. Seats cap the souls, efficiency moves the batch,
+   * speed moves the interval — staffing must never touch the interval, or
+   * throughput goes quadratic in souls. Each is priced in what buying it should
+   * make you feel: seats in karma, efficiency in lifetimes, speed in what the
+   * refinery itself makes. Placeholder figures.
+   */
+  'refinery': [
+    {
+      id: 'seats_1',
+      effect: { op: 'flat', value: 4, stat: 'seats' },
+      unlocks_at: { karma_negative: 5000 },
+      costs: { karma_positive: 25000 },
+    },
+    {
+      id: 'efficiency_1',
+      effect: { op: 'mult', value: 1.5 },
+      unlocks_at: { red_positive: 500 },
+      costs: { experience: 1000000 },
+    },
+    {
+      id: 'speed_1',
+      effect: { op: 'mult', value: 0.75, stat: 'duration' },
+      unlocks_at: { red_positive: 2000 },
+      costs: { red_positive: 1500 },
+    },
+    {
+      id: 'seats_2',
+      effect: { op: 'flat', value: 12, stat: 'seats' },
+      unlocks_at: { red_positive: 8000 },
+      costs: { red_positive: 6000 },
+    },
+  ],
   'harness': [],
   /**
    * Entity is the planet id. `costs` decides the shape: a priced discovery is
@@ -40,6 +98,12 @@ const data: Record<string, UpgradeData[]> = {
     },
   ],
   'building:main': [
+    // {
+    //   id: 'speed_3',
+    //   effect: { op: 'flat', value: -10000 },
+    //   effect_target: 'duration',
+    //   unlocks_at: { experience: 500 },
+    // },
     {
       id: 'str_1',
       effect: { op: 'mult', value: 1.5 },
@@ -70,12 +134,17 @@ const data: Record<string, UpgradeData[]> = {
       costs: { karma_positive: 25 }
     },
   ],
+  /**
+   * `first` opens the bucket and hands you one — `acquire` carries autonomy, so
+   * the verb is never authored beside it. Unpriced here on purpose: the rail is
+   * beat 4 and the cohort table beat 3, so a priced first cohort has no buyer
+   * before the beat that needs it.
+   */
   'cohort:basic': [
     {
-      id: 'core_0',
-      effect: ['unlock', 'autonomy'],
-      unlocks_at: { karma_positive: 50 },
-      costs: { experience: 60 },
+      id: 'first',
+      effect: ['unlock', 'acquire'],
+      unlocks_at: { karma_positive: 15 },
     },
     {
       id: 'str_1',
@@ -90,29 +159,30 @@ const data: Record<string, UpgradeData[]> = {
   ],
   'cohort:steady': [
     {
-      id: 'core_0',
+      id: 'first',
       effect: ['unlock', 'acquire'],
       unlocks_at: { karma_positive: 100 },
       costs: { karma_positive: 100 },
     },
     {
-      id: 'core_1',
-      effect: 'autonomy',
+      // `duration_reduction: 0` — steady is the one cohort count never speeds up.
+      id: 'speed_1',
+      effect: { op: 'mult', value: 0.75, stat: 'duration' },
       unlocks_at: { karma_positive: 20 },
       costs: { experience: 200 },
     }
   ],
   'cohort:chaos': [
     {
-      id: 'core_0',
-      effect: ['unlock', 'acquire', 'autonomy'],
+      id: 'first',
+      effect: ['unlock', 'acquire'],
       unlocks_at: { karma_positive: 50 },
       costs: { karma_positive: 50 },
     },
   ],
   'cohort:zealot': [
     {
-      id: 'core_0',
+      id: 'first',
       effect: ['unlock', 'acquire'],
       unlocks_at: { karma_positive: 10000 },
       costs: { karma_positive: 10000 },
@@ -120,8 +190,8 @@ const data: Record<string, UpgradeData[]> = {
   ],
   'cohort:red_basic': [
     {
-      id: 'core_0',
-      effect: ['unlock', 'acquire', 'autonomy'],
+      id: 'first',
+      effect: ['unlock', 'acquire'],
       unlocks_at: { red_positive: 5000 },
       costs: { red_positive: 5000 },
     },

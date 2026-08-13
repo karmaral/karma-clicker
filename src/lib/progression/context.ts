@@ -13,7 +13,7 @@ export interface TriggerContext {
   readonly excess: number | undefined;
   /** Whether the active planet's own conditions are all met. It sets them, not the beat. */
   readonly isActivePlanetHarvestable: boolean;
-  /** Souls held back from incarnating — anchoring, then refining. Not built yet. */
+  /** Souls held back from incarnating. Set by the soul split. */
   readonly reserve: number;
   readonly planetsUnlocked: number;
   readonly planetsFinished: number;
@@ -44,8 +44,6 @@ export function createTriggerContext(): TriggerContext {
       return PlanetManager.finished;
     },
 
-    // Waits on the soul split, which beat 10 reveals. Beat 11 is eventOnly, so
-    // no floor can open it on a stub.
-    get reserve() { return 0; },
+    get reserve() { return BuildingManager.countReserved(); },
   };
 }

@@ -8,7 +8,7 @@
   import { getFirstHarvestPolarity } from '$lib/excess';
   import { FIRST_HARVEST_POLARITY_LABELS, getFirstHarvestConditionLabel } from '$lib/labels';
   import { progression } from '$lib/progression';
-  import { formatNumber } from '$lib/utils';
+  import { f } from '$lib/utils';
   import { pulse } from '$lib/loop';
   import RevealStub from '../RevealStub.svelte';
   import planetTexts from '$data/planets-texts';
@@ -69,8 +69,8 @@
           aria-label="Souls to merge"
         />
         <div class="counts">
-          <span><b class="num">{formatNumber(merged)}</b> merged</span>
-          <span><b class="num">{formatNumber(kept)}</b> kept</span>
+          <span><b class="num">{f(merged)}</b> merged</span>
+          <span><b class="num">{f(kept)}</b> kept</span>
         </div>
       </div>
     {/if}
@@ -89,7 +89,7 @@
       <div class="verb">
         <Button
           label="Leave for good"
-          sub={blockers.length ? `Needs ${blockers.join(' · ')}` : `${formatNumber(merged)} merged`}
+          sub={blockers.length ? `Needs ${blockers.join(' · ')}` : `${f(merged)} merged`}
           disabled={!planet?.isFirstHarvestReady}
           onclick={completeFirstHarvest}
         />

@@ -6,7 +6,7 @@
   import { progression, validate } from '$lib/progression';
   import { nav } from '$lib/nav.svelte';
   import { wire } from '$lib/wiring.svelte';
-  import { formatNumber } from '$lib/utils';
+  import { f } from '$lib/utils';
   import * as loop from '$lib/loop';
   import { Frame } from '$features/frame';
   import { DetailScreen } from '$features/detail';
@@ -18,8 +18,8 @@
   PlanetManager.select('first');
   BuildingManager.unlock('main');
 
-  const experience = $derived(formatNumber(ResourceManager.getAmount('experience')));
-  const posKarma = $derived(formatNumber(ResourceManager.getAmount('karma_positive')));
+  const experience = $derived(f(ResourceManager.getAmount('experience')));
+  const posKarma = $derived(f(ResourceManager.getAmount('karma_positive')));
 
   wire();
 

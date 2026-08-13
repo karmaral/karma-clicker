@@ -1,16 +1,13 @@
 <script lang="ts">
   import { Label } from '$ui';
-  import { log, elapsed } from '$lib/log.svelte';
+  import { log } from '$lib/log.svelte';
 </script>
 
 <div class="log">
   <Label text="Log" />
   <ol>
     {#each log.entries as entry (entry.id)}
-      <li>
-        <span class="at num">{elapsed(entry.at)}</span>
-        <span class="text">{entry.text}</span>
-      </li>
+      <li>{entry.text}</li>
     {/each}
   </ol>
 </div>
@@ -35,23 +32,13 @@
   }
 
   li {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: var(--sp-3);
     padding: var(--sp-2) 0;
     border-bottom: var(--rule-row);
     font-size: var(--fs-sm);
+    color: var(--ink-700);
   }
 
   li:last-child {
     border-bottom: none;
-  }
-
-  .at {
-    color: var(--ink-300);
-  }
-
-  .text {
-    color: var(--ink-700);
   }
 </style>

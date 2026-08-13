@@ -11,7 +11,7 @@ export const numberFormat = Intl.NumberFormat('en-US', {
 
 
 // p r o o m p t
-export function formatNumber(val: number, floats = 2, useLongForm = false) {
+export function f(val: number, floats = 2, useLongForm = false) {
   const suffixes = useLongForm
     ? ['', ' thousand', ' million', ' billion', ' trillion', ' quadrillion', ' quintillion', ' sextillion', ' septillion', ' octillion', ' nonillion' ]
     : ['', 'k', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No'];
@@ -62,13 +62,6 @@ export function compoundSum(initial: number, times: number, multiplier: number) 
 export function multPow10(x: number, n: number) {
   const multiplier = Math.pow(10, n);
   return x * multiplier;
-}
-
-export function getUpgradeTypeLabel(id: string) {
-  if (id.startsWith('core')) {
-    return id === 'core_0' ? 'Blueprint': 'Core';
-  }
-  return 'Enhancement';
 }
 
 export function getPolarityLabel(p: Polarity) {

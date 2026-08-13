@@ -1,4 +1,5 @@
 import Building from '$lib/buildings/base.svelte';
+import Cohort from '$lib/buildings/cohort.svelte';
 import { ResourceManager } from '.';
 import data from '$data/buildings';
 
@@ -19,11 +20,19 @@ class BuildingManager {
     return true;
   }
 
+  /**
+   * `role` is read here and nowhere else — the class carries it afterwards.
+   * Chosen by naming souls, never by excluding the click, so a later role that
+   * is not souls does not become a cohort by default.
+   */
   unlock(target: string) {
     if (!Boolean(target in data)) return;
     if (Boolean(target in this.#buildings)) return;
 
-    this.#buildings[target] = new Building(target, data[target]);
+    const initData = data[target];
+    const Kind = (initData.role ?? 'soul') === 'soul' ? Cohort : Building;
+
+    this.#buildings[target] = new Kind(target, initData);
   }
 
   acquire(target: string, quantity = 1) {
@@ -40,23 +49,32 @@ class BuildingManager {
     }
   }
 
-  /**
-   * Buildings holding souls. Filtered in by role, never by excluding the click —
-   * a later role that is not souls must not fall in here by default.
-   */
   #cohorts() {
     return this.buildings
       .map((id) => this.#buildings[id])
-      .filter((building) => (building.data.role ?? 'soul') === 'soul');
+      .filter((building): building is Cohort => building instanceof Cohort);
   }
 
   countSouls() {
     return this.#cohorts().reduce((sum, cohort) => sum + cohort.count, 0);
   }
 
-  /** Both polarities together — the scale, not the mix. The click is manual, so it is out. */
+  /** Souls held back from incarnating. Summed per cohort, matching the rounding. */
+  countReserved() {
+    return this.#cohorts().reduce((sum, cohort) => sum + cohort.reserved, 0);
+  }
+
+  /**
+   * Both polarities together — the scale, not the mix. Summed off the same split
+   * the rows show, so the wall and the display cannot disagree about income; that
+   * puts aim and the wave phase inside the wall. The click is manual, so it is out.
+   */
   countKarmaPerSecond() {
-    return this.#cohorts().reduce((sum, cohort) => sum + cohort.perSecond('karma'), 0);
+    return this.#cohorts().reduce((sum, cohort) => {
+      const { positive, negative } = cohort.karmaPerSecond();
+
+      return sum + positive + negative;
+    }, 0);
   }
 
   /**

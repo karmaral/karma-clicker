@@ -4,7 +4,7 @@
   import { PlanetManager } from '$lib/managers';
   import { getFirstHarvestConditionLabel } from '$lib/labels';
   import { progression } from '$lib/progression';
-  import { formatNumber } from '$lib/utils';
+  import { f } from '$lib/utils';
   import RevealStub from '../RevealStub.svelte';
   import FirstHarvestScreen from '../harvest/FirstHarvestScreen.svelte';
   import planetTexts from '$data/planets-texts';
@@ -50,8 +50,8 @@
                 <span class="name">{planetTexts[id]?.title ?? id}</span>
                 <span class="stat num">
                   {each.harvested
-                    ? `${formatNumber(each.merged)} merged`
-                    : `${formatNumber(each.agesLived)} ages · phase ${each.phase + 1} of ${each.phasesPerAge}`}
+                    ? `${f(each.merged)} merged`
+                    : `${f(each.agesLived)} ages · phase ${each.phase + 1} of ${each.phasesPerAge}`}
                 </span>
               </button>
             </li>
