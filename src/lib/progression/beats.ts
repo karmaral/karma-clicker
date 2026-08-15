@@ -111,9 +111,9 @@ export const beats: Beat[] = [
       'nav.overview': 'live',
       'overview.active': 'live',
       'overview.ahead': 'live',
-      'overview.cameHome': 'live',
+      'overview.harvest': 'live',
       // States both conditions rather than greying out silently.
-      'overview.harvest': 'inert',
+      'overview.firstHarvest': 'inert',
     },
   },
 
@@ -125,7 +125,7 @@ export const beats: Beat[] = [
     when: (ctx) => ctx.isActivePlanetHarvestable,
     runs: ['harvest'],
     reveals: {
-      'overview.harvest': 'live',
+      'overview.firstHarvest': 'live',
       'harvest.disc': 'live',
       'harvest.verb': 'live',
       'harvest.split': 'live',
@@ -166,11 +166,11 @@ export const beats: Beat[] = [
     },
   },
 
-  // Two producers, out of phase, and nowhere to be.
+  // Two producers, out of phase, and nowhere to be. Reveals nothing — the log
+  // carries it, and everything it could have shown is already reachable.
   {
     id: 'second_harvest',
     eventOnly: true,
     when: (ctx) => ctx.planetsFinished >= 2,
-    reveals: { 'overview.setOut': 'live' },
   },
 ];

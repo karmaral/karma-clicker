@@ -1,384 +1,386 @@
-# Handoff — 2026-08-13
+# Handoff — 2026-08-15 (Souls: orbits around the planet)
 
-Six changes sit uncommitted on `dev-next`. All compile. **Changes 1–4 have been
-played through once by hand** — see What was watched; 5 and 6 have not. The design
-rationale lives in `docs/progression.md`; this file is only what a cold start needs
-to know that the doc does not say.
+Five sessions of work are now uncommitted on top of `rebuild checkpoint 5`.
+Sessions 1–4 were carried in the previous handoffs; this session built **the soul
+swarm**, in the planet's own medium — orthographic, ink-only, sized in body
+radii — and stood up a second lab to author it.
+
+The Overview work (Part 3) is untouched by every visuals session and **has still
+never been played.**
+
+`npm run check` reports the same 12 pre-existing errors throughout, none in any
+file any session touched — itemised under Housekeeping. Last run at the end of
+this session: `COMPLETED 1322 FILES 12 ERRORS 2 WARNINGS 5 FILES_WITH_PROBLEMS`.
 
 ## State of the tree
 
 ```
- M docs/progression.md
- M src/data/upgrades.ts
- M src/data/upgrades-texts.ts
- M src/features/detail/CohortRow.svelte
- M src/features/detail/CohortTable.svelte
+ M docs/handoff.md            M src/lib/labels.ts
+ M docs/progression.md        M src/lib/managers/planet-manager.svelte.ts
  M src/features/dev/DevPanel.svelte
- M src/lib/aim/aim.svelte.ts
- M src/lib/buildings/base.svelte.ts
- M src/lib/managers/building-manager.svelte.ts
- M src/lib/managers/upgrade-manager.svelte.ts
- M src/lib/modifiers/modifier-set.svelte.ts
- M src/lib/progression/context.ts
- M src/lib/types.d.ts
- M src/lib/wiring.svelte.ts
-?? src/lib/buildings/cohort.svelte.ts
-?? src/lib/refinery.svelte.ts
-
-                                  ── change 5, the log ──
- M src/features/Log.svelte
- M src/lib/log.svelte.ts
- M src/lib/progression/beats.ts       ← four id renames only
- M src/lib/progression/index.ts
- M src/lib/wiring.svelte.ts           ← also above
-?? src/data/log-texts.ts
-?? src/lib/progression/milestones.ts
-
-                                  ── the `f` rename, nothing else ──
- M src/App.svelte
- M src/features/detail/DetailScreen.svelte
- M src/features/frame/Frame.svelte
- M src/features/frame/UpgradeRail.svelte
- M src/features/harvest/FirstHarvestScreen.svelte
  M src/features/overview/OverviewScreen.svelte
- M src/lib/utils.ts
- M src/ui/Chip.svelte
- M src/features/detail/CohortRow.svelte   ← also above
- M src/features/dev/DevPanel.svelte       ← also above
-
- M src/data/planets-texts.ts      ← not from this work
- M src/ui/PurchaseButton.svelte   ← not from this work
+ M src/lib/planets/base.svelte.ts
+ M src/lib/progression/beats.ts
+ M src/lib/progression/keys.ts
+ M src/widgets/Widgets.svelte
+ M tsconfig.json
+?? src/data/planet-visuals.ts
+?? src/features/overview/HarvestLedger.svelte
+?? src/features/overview/PlanetDetail.svelte
+?? src/features/overview/PlanetList.svelte
+?? src/widgets/LabPanel.svelte          new this session
+?? src/widgets/PlanetLabPanel.svelte
+?? src/widgets/SwarmLabPanel.svelte     new this session
+?? src/widgets/planet-lab.svelte.ts
+?? src/widgets/planet/                  + orbit.ts, SoulSwarm.svelte
+?? src/widgets/swarm-lab.svelte.ts      new this session
 ```
 
-The third block is the one to know before reading a diff: those eight files contain
-**only** `formatNumber` → `f` — except `utils.ts`, which also loses
-`getUpgradeTypeLabel` in change 6. `beats.ts` carries four id renames plus change 6.
+---
 
-`npm run check` reports 12 errors, all of them pre-existing and none in the files
-above: `Chip.svelte`, `notification-manager.ts`, `UpgradeRail.svelte`,
-`Preview.svelte`, and the tooltip `delay` tuple in `CohortRow.svelte` that
-predates this work. `npm run build` passes.
+# Part 1 — Souls: orbits (this session)
 
-`planets-texts.ts` currently carries `Planet 1 / Simple`, `Planet 2 / Harder`,
-`Planet 3 / Haderer` over the written copy. Placeholder, and possibly not meant
-to be kept.
+## How this session was verified
 
-## 1. The soul split — settled
+Precisely, because it is uneven, and because a previous handoff got this wrong in
+the other direction:
 
-`reserve` is real state and beat 11's trigger is live. New `$lib/reserve.svelte`
-singleton holds one fraction; `Cohort extends Building` overrides a new generic
-`active` getter to subtract the held souls. `role` is read exactly once, in
-`BuildingManager.unlock`, to pick the class — everything downstream asks
-`instanceof Cohort`.
+- **The assistant has not seen a single frame of any of it.** Headless Chrome
+  would not produce a file for `http://` URLs in this environment (a
+  `data:text/html` probe with a fresh `--user-data-dir` did work, so the
+  mechanism is fine and the http case is the unsolved part). Everything below is
+  code that typechecks.
+- **The author drove the swarm lab.** `DEFAULT_SWARM` in `orbit.ts` now holds
+  values that came out of the lab's `copy` button — `printSwarm`'s four-decimal
+  form, and not numbers the assistant authored. The file's mtime (20:00:26) is
+  after the last assistant edit to `material.ts` (19:54:44) and `Widgets.svelte`
+  (19:55:15), and the dev server logged an HMR of `orbit.ts`'s importers at that
+  same second. So the swarm was on screen, with the ring and with the far half
+  already removed, and was tuned there.
+- **What that does not establish:** whether the ring and the back-half removal
+  were *judged* — a paste preserves whatever the sliders were at, and `ring`
+  came back at exactly its authored 0.3. Nobody said in words that either looks
+  right. Treat both as seen but unsigned.
+- **Motion has not been reported on by anyone.** `speed`, `speedScatter`, the
+  alternating direction and `wobble` all only exist in a running frame.
 
-Written up under **Souls** in `progression.md`, including why this subclass does
-not contradict the anti-inheritance argument two sections above it.
+## What a swarm is
 
-**Not playable.** `detail.split` is still a `RevealStub`, so only `DevPanel` can
-set the fraction (0 / 25% / 50% buttons). Deferred on purpose — the split UI is a
-design job the owner wants to do themselves.
+`orbit.ts` — the whole model, ~200 lines, no three.js in it.
 
-`active` reaches further than the karma it was built for. `#generateResources`
-credits the planet's own experience through the same `this.active` multiplier, so
-reserved souls stop aging the planet as well as stop earning: staffing the
-refinery slows phases, which pushes back beat 9's `agesLived` gate and stretches
-any live re-aim penalty in wall-clock time. Neither doc names this. It compounds
-with the excess effect under **Excess** rather than offsetting it.
+**A cohort is a band of orbits, not a ring.** Every soul runs its own trajectory,
+drawn from its band's by three scatters: `radiusScatter` and `tiltScatter`
+thicken the band, `nodeScatter` opens its plane out into a shell. All three at
+zero collapses a cohort to one wire, which is the failure mode to recognise.
 
-## 2. The cohort row's rates — built, not endorsed
+A band comes from its **index alone** — `bandAt(index, visual)` — so cohort 3
+looks like cohort 3 on every world and nothing is authored per planet. Radius
+steps by `spacing`; inclination alternates sign by `tiltStep`; **direction
+alternates with inclination.** That pairing is deliberate: counter-rotation is
+only jarring between bands sharing a plane, so separating the planes first is
+what makes opposed directions read as two orbits rather than as a mistake against
+the body's spin. Nodes step by the golden angle so no two planes line up by
+arithmetic.
 
-The owner's words: *"I'm not sold on the rates and everything, but it's a
-rabbithole for another day."* Treat everything in this section as provisional.
-Do not build on it, and do not tidy it into permanence.
+A soul is stored as an **orthonormal basis for its own plane**, so the hot loop
+is two cosines and six multiplies with no matrices and no allocation. `SOUL_CAPACITY`
+is 256; past that a band wants a stream, not more instances.
 
-What changed: karma now displays as two figures per row (positive and negative)
-instead of one unrouted total, each with a small ▲/▼ comparing it against the
-same rate at Even aim.
+**Nothing in the swarm is game state.** It is handed `counts: number[]` and never
+learns what a cohort is — the same separation `Planet` and `PlanetVisual` keep.
 
-The part that was **not** a preference: `perSecond('karma')` returned production
-over duration and stopped, while the payout multiplied by `karmaYieldFactor` and
-the planet's bias. The `polarity_multiplier: 7` cohort displayed an identical
-rate at Even and at Hard negative while really paying several times more. Any
-future revert should keep that fixed, whatever happens to the two-figure layout.
+## Structure vs. content — the call the sizing rests on
 
-The owner has already reworked the presentation by hand — `.output` is back to
-`flex-direction: row` and the mark is absolutely positioned above or below the
-number rather than beside it. So the column-width concern that motivated the
-original stack is unresolved; watch the `experience` + `karma` cohort, which
-needs three figures in 170px.
+The planet's outline is authored **in pixels**; souls are authored **in body
+radii**. That is not an inconsistency, it is the distinction:
 
-### The one line to revert first
+- The outline is *structure* — the drawn edge of the widget, which must hold its
+  weight at 40px and at 420px alike.
+- Souls are *content*. A px-authored dot at 40px is nearly as wide as the world
+  it orbits, and the swarm reads as noise. Scaling with the body is also the only
+  thing that makes a cinematic push-in work, since `zoom` then carries them.
 
-```ts
-// building-manager.svelte.ts
-countKarmaPerSecond()   // now sums the split, not perSecond('karma')
+`dotFloor` is the one px-authored number in the swarm — the size a dot never
+falls below, so a small widget has dots rather than dust. It enters at draw time
+only, as `visual.dotFloor / zoom`.
+
+## Two inks, and nothing behind
+
+Souls carry `outTone` (off the body) and `frontTone` (in front of it), chosen
+**per fragment** via an analytic sphere test in view space. Per fragment matters:
+a dot straddling the silhouette is cut into two halves rather than switching
+colour when its centre crosses, which at 4px reads as a bug.
+
+**The far half is discarded.** A pale third ink was built for it and then cut at
+the author's call — motion already says the path closes, and a dot that is
+neither in front nor gone only asks to be read as a nearer dot.
+
+The discard is analytic rather than `depthTest: true`. Both hide the far half;
+only this one hides it at exactly `rim`, which is where the ink already switches.
+Depth testing would cut along the displaced terrain while the ink cut along the
+sphere, and the two would disagree by more as `amplitude` grows. `depthTest` is
+therefore still `false`, and the comment on it says why.
+
+This is the answer to the **per-fragment depth ink** that the previous handoff
+banked as "the problem the game will hit when the swarm is joined to the planet,
+and it is unsolved". It is solved, and the solved version is smaller than the
+banked one because one of the three cases turned out not to be wanted.
+
+## The ring
+
+Each dot carries a contrasting ring, `ring` as a fraction of its radius. The
+argument is the planet's own outline argument: place can only know what a soul is
+*near*, not what is *under* it, and the body owns the whole ramp — so a dot in
+one ink will eventually sit on that ink. A ring carries both ends of the ramp on
+every dot.
+
+Two decisions inside it:
+
+- **The quad grows to hold it** (`span *= 1 + uRing`), so the fill stays the size
+  `dot` says and the ring is added around a dot rather than eaten out of one.
+- **Its ink is derived, not authored** — the far end of the ramp from whatever
+  the fill landed on. A fourth authored tone would need setting once per place a
+  soul can be, and would still be wrong for one of them.
+
+**Known limitation, unfixed:** at widget sizes (40–80px) dots sit on the
+`dotFloor`, so a `ring: 0.3` is a fifth of a pixel and contributes nothing there.
+Making it work small needs a px floor for the ring too, which means the shader
+learning `zoom` and per-instance size. Deliberately not built — see whether it is
+wanted at true size first.
+
+## The second lab
+
+`PlanetLabPanel` was split: everything generic moved into **`LabPanel.svelte`**
+(grouped sliders, double-click reset, a `header` snippet, an `under` snippet per
+row), and both panels are now thin. The planet lab sits right, the swarm lab
+left, and the page's padding was widened to keep clear of both.
+
+`LabPanel` takes a `value: (key: string) => number` **accessor** rather than a
+record, because a TS `interface` gets no implicit index signature and
+`PlanetVisual`/`SwarmVisual` are interfaces. It styles snippet-provided rows
+through `:global()`, so a consumer's own `input[type=range]` matches the built-in
+ones from one place.
+
+**Cohort counts live in the lab, not in `SwarmVisual`.** `swarm-lab.svelte.ts`
+holds a separate `size = { bands, per }` and derives `counts` from it, so the
+sliders exist without `printSwarm`'s pasteable literal ever learning about game
+state.
+
+## Where it renders
+
+`Widgets.svelte` gained a **Souls — orbits** section: the subject at 420px, one
+cohort and two beside it, then the whole swarm across the true-size strip on
+`--surface`. `swarmFrame` is 3.2 rather than the body's 2.5, because rim-hugging
+orbits need more room than a bare body.
+
+```
+src/widgets/planet/
+  orbit.ts      bands, scatter, basis, placement — no three.js         new
+  SoulSwarm     one InstancedMesh, billboarded and sized in the shader new
+  material.ts   + soulVertex / soulFragment / createSoulMaterial
+src/widgets/swarm-lab.svelte.ts    draft + workbench counts            new
+src/widgets/SwarmLabPanel.svelte   the panel                           new
+src/widgets/LabPanel.svelte        extracted from PlanetLabPanel       new
 ```
 
-This puts `karmaYieldFactor` and `Planet.bias()` inside the excess wall. It was
-taken deliberately, to avoid two disagreeing definitions of karma per second, and
-it is a genuine balance change: aiming into a high-`polarity_multiplier` cohort
-widens the wall several-fold, and a phase flip swings it up to 2.3× on its own.
-If excess starts reading strangely, this is the cause. Reverting it costs only
-the guarantee that the wall and the screen agree.
+## Decisions worth re-deciding
 
-### Refused on purpose
+- **Billboarding happens in the vertex shader, in view space** — not by composing
+  a camera quaternion with the body's tilt group on the CPU. Cheaper and it
+  cannot drift out of sync, but it does mean the quad has no world orientation
+  anything else can read.
+- **The body is treated as a sphere in the soul shader**, terrain ignored. At the
+  amplitudes worlds are authored at, the error is inside the outline's own
+  weight. A world at the far end of `amplitude`'s range will show it.
+- **One swarm record for all worlds.** Every planet's souls orbit the same way; a
+  per-planet swarm is a decision nothing has asked for. Trivial to split later —
+  `swarmLab` would just gain the planet lab's `drafts` shape.
+- **`ring`'s ink is derived from the fill.** If a ring ever wants to be paper on
+  both inks, that is an authored tone and this goes.
 
-- **A phase-flip arrow on the row.** Phase is global, so every row would print
-  the same bit. It belongs on the wave display, once — still unbuilt.
-- **Drift in the displayed figure.** `aim.resolveSettled()` exists to drop it.
-  Every cohort with `polarity_multiplier > 1` also has `resistance > 0`, so a
-  live figure would churn by roughly 20% forever. The `LeanMeter` carries the
-  wander as a band; drift is a span here, never a number.
-- **The re-aim penalty in the rows.** `AimSection` already reports it once.
+# Part 2 — What does not exist
 
-### Adjacent, not done
+- **No screen draws a planet or a swarm.** `PlanetView` is referenced only by
+  `Widgets.svelte`. `OverviewScreen`, `PlanetList` and `PlanetDetail` are
+  untouched by any visuals session.
+- **The old swarm stack is still there and is meant to go.** The author has said
+  `ParticleSwarm.svelte`, `PlanetWidget.svelte`, `Scene.svelte`,
+  `RingParticle.svelte`, `dots.svelte.ts`, `dot-types.ts` and
+  `planet-widget-controller.svelte.ts` "can go away entirely". Nothing was
+  deleted, and the **Swarm — existing** section is still at the bottom of
+  `Widgets.svelte` rendering them. Deleting it is the cheapest open task in the
+  tree; it was left because the new swarm has not been signed off.
+- **Nothing reads `$data/planet-visuals` except the lab.** `Planet` does not know
+  it exists, which is deliberate, but it also means no id mismatch is caught —
+  `cool_1`, `ridged` and `banded` are not planets.
+- **A `scale` parameter does not exist**, and now there is a swarm for it to
+  size. Planned: size the body and its souls together, so apparent size is
+  carried by something other than the disc. This is why `amplitude`'s range runs
+  far past anything authored — deformation is meant to read as a small body,
+  roundness as a large one.
+- **Surface objects do not exist.** Only the field they would query.
+- **A band-budget readout was considered and not built.** It would show, live,
+  what share of the ramp `land` and the shade each own — the thing that had to be
+  measured offline to find a bug two sessions ago.
+- **The cap-sum field is still the strongest unbuilt idea.** Land as three
+  continents at 0.42 rad, six regions at 0.20, seven craters at 0.09 — terrain
+  authored as *feature size in radians*, which drops into `field.ts` as another
+  `rawHeight` and inherits normalisation for free. With it comes a type→parameter
+  table (asteroid, frozen, ocean, gas giant…), which is the answer to the
+  id-mismatch problem: derive a picture from type + seed and let
+  `planet-visuals.ts` become overrides rather than the only source.
 
-`Planet.bias()` is a square wave — `1.4` or `0.6` on `isDense` — so nothing
-breathes; a rate sits flat for a phase and then jumps. Making it continuous over
-`position` is a real option and was the owner's original interest, but it moves
-the average bias across a phase and the wall reads income, so it is a balance
-change rather than a display one. Take it on its own.
+## Still true from earlier sessions
 
-## 3. The refinery engine — built, invisible
+The four calls the medium rests on — orthographic camera, Threlte sizing an ortho
+frustum in pixels so `zoom` is px per world unit, a radially-offset inverted
+hull, and ink-only enforced through the ramp — are unchanged and still the
+load-bearing part. The swarm was built on all four; `readRamp` is shared verbatim
+between the surface and soul shaders, because GLSL ES 1.00 forbids dynamic
+indexing into a uniform array and the workaround must not be written twice.
 
-Recorded under **Refinery — engine built, screen not** in `progression.md`. The
-staffing knob that section left open is now **closed and built**: staffing is
-linear on the batch, seats cap it, and staffing never touches the interval.
+`field.ts` is still the seam: one TS implementation of the noise, never
+duplicated into GLSL, so a marker and the terrain under it cannot disagree.
 
-`$lib/refinery.svelte.ts` is the singleton, next to `reserve`. It composes
-`ResourceEmitter` like every other producer. Both karma piles are drawn at the
-same rate, each capped by what it holds, and conversion is 1:1 — so excess
-passes through the step untouched, which is the whole point of §3.5 being
-superseded.
+**The texture/shade split** from last session stands: texture is `land · height +
+bias` quantised alone; shade is `rim + key` quantised on its own and applied as a
+shift of `shadeDepth` whole slots along the ramp. `readRamp` clamps, so deep
+shadow crushes to solid ink rather than wrapping — an engraving's behaviour, and
+intended.
 
-Three things went wider than the refinery, and each is the kind of change worth
-knowing about before reading a diff:
+Written up under **Planet visuals** in `progression.md`, which gained a **Souls in
+orbit** subsection this session for the four decisions above — bands over rings,
+index-derived bands with direction paired to inclination, structure-in-px against
+content-in-radii, and ink by place with nothing behind.
 
-- **`ModifierStat` gained `seats`.** `ModifierSet.#isApplicable` (renamed from
-  `#applies`) now asks the resource-target question for `yield` only, instead of
-  naming `duration` as the exception. Behaviour for existing modifiers is
-  identical; the rule is just stated the right way round.
-- **`parseScope` gained a `refinery` kind.** It is the first bucket that names no
-  entity and is not global. `UpgradeManager` routes its modifiers to the
-  singleton; verbs still act on entities only.
-- **`UpgradeManager.#toModifier`** was extracted because two call sites now build
-  the same modifier. It is also where the `effect_target` override rule finally
-  gets written down.
+## `planet-visuals.ts` — partly un-stale now
 
-### The import cycle
+The previous handoff said all six entries were stale after the texture/shade
+split. **That is now wrong for two of them.** `first` and `second` were
+re-authored this session (mtime 20:09:51, after all the swarm work) and carry
+non-zero `shadeDepth`, `relief`, `clip` and `contour` — `first` also went to a
+signed `amplitude` of −0.075, which is the engraved direction.
 
-`upgrade-manager` → `refinery.svelte` → `$lib/managers` → `upgrade-manager`.
-This is the same shape `building-manager` already has (it imports the barrel that
-imports it), nothing is touched at module init, and `build` resolves it. Worth
-knowing it is there before adding a top-level manager call to the refinery.
+`third`, `cool_1`, `ridged` and `banded` still sit at `shadeDepth: 0, relief: 0,
+clip: 0, contour: 0` — untouched since before the split, and `third` and `cool_1`
+are the two whose terrain was measured at under one band step, so they are very
+nearly blank without the shade. The file header now says which two are current
+rather than condemning all six.
 
-### Deliberately not built
+## Housekeeping
 
-- **The token purchases.** Ochre from equal-parts Crimson, Indigo from Ochre, and
-  the opposite Crimson at a steep price. All three are decided and none has a
-  price curve, so red currently only accumulates. New step 9 in the course table.
-- **A karma-to-red ratio.** Conversion is 1:1 and efficiency scales the karma
-  consumed. A ratio is the obvious first knob if the refinery pays too well; it
-  was left out rather than guessed at.
-- **The seven stubs.** Untouched, as asked. The engine exposes `seats`,
-  `workers`, `batch`, `interval` and `perSecond` for whatever draws them.
+- **The 12 `check` errors have gone unowned for six sessions.** They are the
+  baseline every session is measured against, which only works while the count is
+  memorised — a thirteenth would hide in it. Four unrelated faults, more than half
+  one fix:
 
-## 4. The opening — beats 3 and 4 could not fire
+  | Count | Where | What |
+  |---|---|---|
+  | 7 | `Preview.svelte` | `costs` literals typed against the full `Record<ResourceType, number>` instead of `Partial`. One widening fixes all seven. |
+  | 2 | `Chip.svelte` | tippy props — `placement` absent from `Partial<Props>`, and two `Partial<Props>` with nothing in common. |
+  | 1 | `CohortRow.svelte` | tooltip `delay` given `number[]` where a `[number, number]` tuple is required. |
+  | 1 | `notification-manager.ts` | Svelte 5 `Component<Props>` assigned to a legacy `SvelteComponent` slot. |
+  | 1 | `UpgradeRail.svelte` | reads `.effect` off `Upgrade`, which has no such property. |
 
-`cohort:basic/core_0` was `['unlock', 'autonomy']` and priced. `unlock` builds
-the cohort at count 0 and grants nothing, so `totalSouls` could never leave 0 by
-any route: the rail that sells `core_0` is beat 4, the cohort table that sells
-souls is beat 3, and beat 3 wants a soul. Both beats reached on their floors
-only, and the first cohort was unbuyable until after the beat it was supposed to
-cause.
+  Only the last is a live defect rather than a typing lapse. It is
+  `{upgrade.effect || ''}` in the caption snippet, so the `.effect` span has been
+  rendering empty on every chip since it was written — the `|| ''` is what hides
+  it. Decide whether that caption wants `UpgradeData.effect`, or whether it goes.
 
-It is now `['unlock', 'acquire']`, unpriced, at 15 lifetime positive karma — the
-"trigger wearing the upgrade shape" already described under **Scopes**, where the
-rationale is now recorded. `acquire` carries autonomy on its own, so the verb was
-redundant as well as inert (its case in `#processEffect` is commented out).
+- **Removing a uniform breaks HMR until a reload.** Cutting `uBackTone` made
+  `syncSoulUniforms` throw `Cannot set properties of undefined (setting 'value')`
+  in the author's browser, because the effect ran against a material built before
+  the module reloaded. Harmless and cleared by F5, but it will happen again on
+  the next uniform removal, and it looks like a real crash in the overlay.
+- **Never put a backtick inside the GLSL template literals** in `material.ts` — it
+  closes the string and TypeScript starts parsing shader source as TS.
+- Each `PlanetView` is its own WebGL context; the workbench now stands up eleven
+  with swarms in nine of them. Fine there, but the Overview list cannot take one
+  canvas per row.
+- `progression.md`'s opening line still claims the doc covers `$lib/progression`.
+  It has carried Excess, Scopes, Naming, Refinery, planet rendering and now the
+  orbiting souls for a while.
+- `printVisual`/`printSwarm` emit every field at four decimals. Paste indentation
+  has drifted once already.
 
-Two consequences: `core_0` no longer appears in the rail, since the rail filters
-unpriced entries; and its notification copy in `upgrades-texts.ts` still reads
-*"Unlock souls that can generate karma"*, written for something you buy and now
-fired unprompted. Left alone — it is the owner's voice.
+---
 
-The gauge in `progression.md` listed beats 1–4 under "own trigger". That was
-aspirational until now, and is accurate as of this change.
+# Part 3 — Overview (unchanged, still unplayed)
 
-### Beat 6's second clause is dead, and not for want of data
+## What was decided, and by whom
 
-`when: hasUpgrade(global, 'the_other_way') || total('karma_negative') > 0`.
-`aim.#resolve` returns `positiveShare: 1` while `progression.runs('negKarma')` is
-false, and `negKarma` is what beat 6 turns on — so negative karma cannot exist
-until beat 6 has already fired. The clause is unreachable by construction, not
-merely unauthored, and beat 6 reaches on its floor no matter what.
+Four calls were the owner's, taken before any code:
 
-Authoring `the_other_way` (course step 1) is the whole fix, so nothing new is
-needed — but the fallback beside it is dead weight rather than a second route,
-and step 1 is worth more than the course table's "buys the least" implies.
+1. **Three separate sections**, not one segmented roster — each band its own
+   `Section`. Labelled **Active**, **Behind**, **Ahead**, stacked in that order.
+   Behind is hidden outright while empty.
+2. **The verb travels with the selection.** Picking a world in any band feeds the
+   right column; Harvest and Reach are buttons in that column.
+3. **`overview.setOut` deleted**, beat 12 reveals nothing. It is now the only
+   beat that reveals nothing, and the log already carries its line.
+4. **`cameHome` → `harvest`, `harvest` → `firstHarvest`.**
 
-## 5. The log — a narrative window
+The rationale is written up under **Overview** in `progression.md`.
 
-Recorded nowhere in `progression.md`, which does not mention the log at all. Its
-only prior design statement was the comment above beat 1 in `beats.ts` — *"One
-button, one number. The log carries the reward."*
+## First-harvest conditions are single-sourced
 
-`log.svelte.ts` went from one writer to three:
+`Planet.#unmet` and the Ahead row had independently authored orders. Both now
+walk `FIRST_HARVEST_CONDITIONS` in `labels.ts`, with the predicates in
+`Planet.#isConditionMet`.
 
-- `add(text)` — a line, as before.
-- `once(key, text)` — at most ever, latched against a module-level `written` set.
-- `accumulate(key, format)` — holds repeats in a pending bucket and flushes every
-  `COALESCE_MS` (2s) onto **one** row that counts up.
+**`strict` is false in `@tsconfig/svelte`**, so an un-handled switch case returns
+`undefined` and typechecks clean. Completeness is carried by a
+`Record<FirstHarvestCondition, number>` and two `const unhandled: never` guards,
+both of which do fail without `strictNullChecks`. Verified by adding a third
+condition — `check` went 12 → 15, naming exactly three sites — then reverted.
 
-Only the head row absorbs. A run of incarnations occupies a single row; the moment
-anything else lands, that row freezes at its final figure and the new line prepends
-above it. `add` flushes pending repeats first, so the order stays honest rather than
-printing a phase flip before the lives that preceded it.
+## The one call that was the assistant's
 
-The timestamp is gone, and with it `elapsed()` and the entry's `at` field. Entries
-now carry `key` and `count`, which the UI does not draw — they are what lets a row
-keep absorbing.
+**Reaching requires the current world to be harvested** — `PlanetManager.canReach`.
+The owner's answer replaced the question about placement and did not settle the
+gate; this reading keeps beat 12 reachable, because a world is left for good and
+leaving an unharvested one strands it. Reverting is one line, but decide what
+happens to a stranded world first.
 
-### Where the lines come from
+## What to watch when it is played
 
-`wiring.svelte.ts` is still the only module that writes to the log. Keep it that
-way; two watchers were added there rather than anywhere else.
+Nothing on this list has been clicked. The DevPanel row **unlock all planets**
+makes the axis walkable; reaching still needs a real harvest, which needs
+`1 age lived` and `excess under 12%` on the first world.
 
-- **`watchBeats`** reads `progression.beat` in an `$effect` with a `previous` mark.
-  It deliberately does **not** use `evaluate()`'s return value, which stays
-  discarded in `loop.ts` — the counter carries the same information without
-  changing the progression API. `once` keying by beat id is what makes `DevPanel`
-  scrubbing idempotent.
-- **`watchMoments`** walks the new `progression/milestones.ts`: four firsts no beat
-  covers. First negative karma is there because beat 6 reaches on its floor, so the
-  frame can arrive before any harm is done; first reserve because beat 11 wants
-  more than reserve alone; first token because beat 11 is the refinery *starting*,
-  not its first output; and excess at 0.6, twice beat 7's threshold.
+- Active and Ahead at beat 8. **Behind stays invisible at beat 10** — it reveals
+  there, but you are still standing on the world you just harvested. It should
+  appear only after the first Reach.
+- An Ahead world giving **Reach**, disabled, reading *Harvest Planet 1 first*.
+- The active world staying in **Active** after its harvest, reading `merged`.
+- The right column's band label agreeing with the list the selection came from —
+  authored in two files, nothing enforces the match.
+- Beat 12 firing at all. It never could before.
+- `HarvestLedger` empty until step 5. Intended, not a bug.
 
-`milestones.ts` mirrors `beats.ts` in shape and shares its `TriggerContext`, but has
-no `reveals` and no `runs` — a beat changes the frame, a milestone only says
-something happened. Anything a beat already fires on belongs there, not here.
+## Housekeeping
 
-### The copy is a draft, not authored
+- **`Planet.harvested` should be `isHarvested`.** Same rule catches
+  `ResourceEmitter.autonomous` and `.inProgress`, and `Building` re-exposes both.
+- **`completeFirstHarvest` can hang.** A planet declaring `yields` without
+  `duration` gives `ResourceEmitter` a `0` and `queue()` re-queues forever.
+  Latent until step 5 — which is exactly the step that would trip it.
+- **Band labels authored twice**, in `OverviewScreen` and `PlanetDetail.getBandLabel`.
+- **`planets-texts.ts`** still carries `Planet 1 / Simple` placeholders, now drawn
+  on screen by `PlanetDetail`.
 
-`src/data/log-texts.ts` is a fourth `*-texts.ts`. The twelve beat lines are drawn
-from the beat comments in `beats.ts`, which were the best-written narrative in the
-repo and invisible to the player. **The shape is settled; the words are not** —
-treat every line in that file as placeholder awaiting the owner's voice.
-
-Two copy calls taken without being asked: the `+N experience` figure came off the
-incarnation line, on the grounds that it is the ledger half and `reading.experience`
-is live from beat 1; and the wave lines kept their existing wording verbatim.
-
-### Two renames rode along
-
-- **`formatNumber` → `f`**, 35 occurrences across 11 files. `UpgradeRail`'s
-  `formatNumber as fmt` alias was dropped rather than becoming `f as fmt`.
-  `formatRounded` and `numberFormat` in the same file were left alone.
-- **Beat ids to snake_case** — `first_soul`, `rows_and_rail`, `negative_karma`,
-  `second_harvest`. Safe because nothing matched them by literal: they are only
-  read generically, in `validate()`'s messages and `DevPanel`'s `current?.id`.
-
-### Deliberately not built
-
-- **`ItemTextData.flavour`** is still declared and still unused. It was the obvious
-  slot for per-entity narrative and was passed over — the log's sources are beats
-  and firsts, not entities.
-- **Upgrade acquisitions** stay on the toast channel only. `UpgradeManager.acquire`
-  has authored prose in hand and sends it somewhere that vanishes; routing it to the
-  log was considered and dropped as too high-volume.
-- **`shared.log`** is still drawn on one screen despite its `shared.*` key.
-
-## What was watched
-
-Changes 1–4. One manual pass through the ladder. There are no tests and no headless
-driver, so this is one person clicking, not coverage — but nothing on the list
-misbehaved.
-
-- Reserving souls in `DevPanel` cuts income and moves `countReserved()`. The
-  `$derived` inside a subclass field (`Cohort.#reserved`) reads correctly.
-- The two karma figures hold still between ticks — no drift leaking in.
-- Excess does not lurch when the aim slider moves.
-- The refinery pays once beat 11 and `seats_1` are in. The `DevPanel` row reads
-  `seats worked/total`, throughput and both red piles.
-- `refinery.svelte.ts` uses the same unobserved-`$derived`-in-a-class pattern as
-  `Cohort`, and `#refine()` reads `#batch` from inside a `setTimeout`. Throughput
-  did follow seats and reserved souls; that is still where to look if it stops.
-
-Two things that were not on the list and are worth knowing:
-
-- **The log floods.** *Fixed by change 5 — `watchExperience` now coalesces instead
-  of printing per credit.* It read: `watchExperience` prints "A life ended" on every
-  experience credit, souls included, into a 40-entry buffer; at ten `basic` souls on
-  a 3s clock the wave's phase-flip lines are evicted within seconds.
-- **Beats 7 and 9 pull opposite ways.** 7 wants excess ≥ 30%, 9 wants it under
-  12%, and on planet one the only way down is spending karma — the refinery is
-  beat 11. That is the incidental third route named under **Excess**, and it is
-  now the shape of the mid-game rather than a footnote.
-
-`CohortTable.svelte` also had `170px 96x` in the non-aim branch of its grid
-template — a voided declaration, so the table fell back to auto columns for beats
-1–3. Fixed.
-
-## 6. Step 1, and the `core_0` rename — built, not played
-
-The `global` bucket is authored, so beats 5 and 6 fire for their own reason and
-the floor-only column of the gauge is empty. Both entries are priced triggers
-with no effect — `effect` is now optional on `UpgradeData`. `wider_wave` became
-**`read_the_wave`**: a global upgrade reaches `if (!entity) return;` in
-`#processEffect`, so it could never have widened anything, and beat 5 calls the
-wave *a clock you read, not a lever*. Beat 6 lost its `karma_negative > 0`
-fallback, which the previous session had already shown unreachable.
-
-Prices are placeholders under each beat's floor: `read_the_wave` at 9k
-experience for 750 positive karma, `the_other_way` at 30k for 4,000.
-
-**`core_0` → `first`** in all five cohort buckets, plus texts. `core` named a
-position, not a thing, and no bucket had an honest `_1`. Nothing matched the id
-by literal except `getUpgradeTypeLabel` in `utils.ts` — dead code with no
-callers, mapping `core_0`→"Blueprint", now deleted. That function was the only
-record of what `core` was reaching for; it is written down in `progression.md`
-under **Scopes** before being removed.
-
-`cohort:steady/core_1` → **`speed_1`**. Its `autonomy` effect bought nothing:
-the verb's case is commented out and `acquire` grants autonomy anyway, so it was
-a 200-experience purchase that did literally nothing. Kept as a purchase rather
-than deleted, per the owner. It now carries `{ op: 'mult', value: 0.75, stat:
-'duration' }` — steady is the one cohort with `duration_reduction: 0`, so it
-never speeds up with count, and "An easier way" still reads true. **This is a
-balance change and a placeholder figure.** The redundant `autonomy` verb also
-came off `chaos` and `red_basic`.
-
-**Not played.** `check` reports the same 12 pre-existing errors and `build`
-passes, but nothing here has been clicked through. What to watch: `read_the_wave`
-and `the_other_way` appearing as rail chips with scope `global` (the rail draws
-every bucket, and neither has ever been rendered), and steady's `speed_1`
-actually shortening the incarnation.
-
-### One copy correction
-
-`log-texts.ts` said *"The first harm done on purpose. It pays better."* It does
-not. `extremityPayoff` reads `Math.abs(realizedAim)`, so Hard negative and Hard
-positive pay identically — extremity pays, direction does not. The only
-asymmetry is `Planet.bias()`, which flips every phase and averages out. The line
-is now service-to-self framed and makes no claim about the rate.
-
-All three places negative karma is described now share that register: the
-`first_negative_karma` moment, beat 6's own log line, and `the_other_way`'s
-description. Nothing else in `log-texts.ts` made a polarity claim. The remaining
-fourteen lines there are still placeholder.
+---
 
 ## Untouched roadmap
 
-In `progression.md`'s course table, unchanged by this session:
-`PlanetData.yields` for the recurring harvest (step 5), travel and beat 12
-(step 8), the token purchases (step 9), and the Overview / Harvest / Refinery
-layouts (step 7). Step 1 is done — see above.
+In `progression.md`'s course table: `PlanetData.yields` for the recurring harvest
+(step 5), the token purchases (step 9), and the Harvest / Refinery layouts (step
+7) — two screens now, both parked on the same question Overview answered: where
+the verb sits.
 
-Change 5 adds one job that is not in that table: **authoring `log-texts.ts`**. It
-is writing, not code — sixteen lines, all of them placeholder, and the only new
-surface where the game speaks in prose.
+Still outside that table: **authoring `log-texts.ts`**, sixteen placeholder lines.
 
-Everything mechanical that could land without a design pass has landed. Steps 7,
-8 and 9 all bottom out in the parked layouts, so the next move is a design
-decision rather than a code one.
+Not in the table at all: **placing the planet widget in the game**, **re-authoring
+the four remaining stale visuals**, **deleting the old swarm stack**, and **the
+cap-sum field with its type→parameter table**, which is the piece that would give
+every planet a picture without hand-authoring one.

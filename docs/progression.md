@@ -51,6 +51,13 @@ Every `RevealKey` has a render site. Panels that are revealed but unbuilt use
 `RevealStub`, which reads its own key and dims itself when the state is `inert`
 — so a screen accretes beat by beat even while its layout is pending.
 
+`strict` is **false** in the inherited `@tsconfig/svelte`, so a switch that misses
+a union member returns `undefined` and typechecks clean. Nothing that fans out over
+a union can rely on the compiler unless it is made to: use an exhaustive `Record`
+for the list and a `const unhandled: never` default for the branches. Both fail
+without `strictNullChecks`; the missing return does not. `FIRST_HARVEST_CONDITIONS`
+in `labels.ts` is the worked example.
+
 `DevPanel` (DEV only) exposes beat −/+/reset, resource grants, and
 `window.karma`. Yields are low and the later beats trigger at high figures, so
 this is the only practical way to reach them by hand.
@@ -64,9 +71,9 @@ Design decisions deferred on purpose. None of these are oversights.
   scaling price. Matching therefore happens above the refinery, not inside it.
   The refinery itself is built — see Refinery below; these three purchases are
   not, and none of them has a price curve yet.
-- **Overview and Harvest layouts** are stubbed pending a design pass. The two
-  lists on Overview, and where Harvest's verb sits relative to its disc, are
-  open questions — don't improvise them.
+- **The Harvest layout** is stubbed pending a design pass: where Harvest's verb
+  sits relative to its disc is an open question — don't improvise it. Overview
+  is no longer one of these; see Overview below.
 - **Per-cohort aiming** is far future. Rows read their lean; only the global
   detent steers.
 
@@ -122,6 +129,218 @@ identity makes it structural.
 returns all of them, `Cohort` subtracts the reserve, and both `#generateResources`
 and `perSecond` read it — so income and the excess wall can never disagree about
 who is working.
+
+## Overview
+
+One axis, three bands, each its own `Section` and its own reveal key: **Active**
+(beat 8), **Behind** (beat 10), **Ahead** (beat 8). Active is pinned first — the
+world you are on is the one you act on — and the other two follow in axis order.
+
+**Behind is hidden entirely while it is empty**, rather than drawing an empty
+line. It reveals at beat 10, when the first world is harvested, but you are still
+standing on that world; it has nothing to list until you reach somewhere else.
+Active and Ahead always draw, and Ahead carries the empty line.
+
+Picking a world in any band feeds the right column, and **the verb travels with
+the selection** — Harvest on the world you are on, Reach on one that is ahead,
+nothing on one that is behind. The right column names the band its selection sits
+in, so the same three words label both halves of the screen. There is no separate verb panel, which is what
+retired `overview.setOut`.
+
+**`overview.setOut` and `overview.cameHome` are gone**, and the two that remain
+say what they are:
+
+| was | is | draws |
+|---|---|---|
+| `overview.harvest` | `overview.firstHarvest` | the gated one-off button |
+| `overview.cameHome` | `overview.harvest` | the recurring take from everything behind you |
+
+That pairing is the same distinction the code already makes — `completeFirstHarvest`,
+`isFirstHarvestReady`, `PlanetData.firstHarvest` against `PlanetData.yields`. The
+string `overview.harvest` now names a different panel than it did before; it is
+worth knowing when reading an old diff.
+
+### Reaching
+
+`PlanetManager.reach(id)` is the verb, and **a world must be harvested before it
+can be left**. That is the whole gate: a world is left for good, so leaving an
+unharvested one would strand it — `finished` would never count it and beat 12
+would go back to being unreachable, which is the circularity this was resolving.
+It is one predicate, `canReach`, if that turns out to be the wrong call.
+
+`behind` and `ahead` are derived on the manager, not on the screen, and they
+partition by `harvested` around whatever is selected. The active world stays in
+**where you are** after its first harvest — you are still on it until you reach
+somewhere else — so it can read `merged` while sitting in the band it started in.
+
+### The ledger reads nothing yet
+
+`overview.harvest` is revealed **live at beat 8**, when nothing is behind you and
+nothing pays. It draws its empty state until beat 10 and its rows after. It is
+deliberately absent from `SYSTEM_SURFACES`: it precedes `finishedPlanets` by two
+beats, which `validate()` would otherwise flag, and correctly.
+
+Its rows are computed from `PlanetData.yields` over `duration`, so it fills the
+moment step 5 authors them. Until then every finished world reads *nothing yet* —
+which is honest, not a stub.
+
+## Planet visuals
+
+A world's picture is authored in the widget lab and pasted into
+[`planet-visuals.ts`](../src/data/planet-visuals.ts), keyed by planet id.
+**`Planet` never reads it** — a world's numbers and its picture are separate
+files on purpose, and nothing couples them. The cost of that is real: no id
+mismatch is caught, and three entries in the file are not planets at all.
+
+**Threlte was kept, but not because the look needs 3D.** A stepped fresnel on an
+undistorted sphere is a posterised radial gradient and nothing more; the picture
+comes from the noise. It was kept because the orbiting swarm and the planned
+surface objects are 3D composites, and an SVG planet would strand both.
+
+Four calls sit under everything else:
+
+1. **Orthographic camera.** Perspective foreshortening fights a flat vector read,
+   and it makes a constant-weight outline impossible. Ortho collapses the view
+   vector to a constant, so the fresnel is `1 − |N.z|` — no lighting rig, and no
+   light anywhere in the medium. The `key` term is the same maths as one, and is
+   the only term that says which way a slope faces. Both are screen-fixed: at
+   `amplitude` 0 each is a pure function of position on the disc, and the planet
+   slides underneath them. That is why neither is allowed into the texture.
+2. **Threlte sizes an ortho frustum in pixels**, so `zoom` *is* pixels per world
+   unit. That is what holds an outline authored in px to its weight from 40px to
+   420px. It is the one piece of Threlte-specific knowledge the whole thing rests
+   on.
+3. **The outline is an inverted hull offset radially, not along the face normal.**
+   A radially displaced sphere stays star-shaped about its origin while
+   |amplitude| < 1, so radial offset provably cannot self-intersect — which is
+   the usual reason hull outlines look bad on lumpy meshes.
+4. **Ink only, and enforced.** Bands quantise to an index into a ramp read out of
+   the CSS tokens, so no shader can invent a grey the design system does not own.
+
+### The field is normalised, and why that is load-bearing
+
+`field.ts` is the seam: given any direction it returns the height the mesh was
+built from, so a marker and the terrain under it cannot disagree. That is why the
+noise is a single TS implementation rather than being duplicated into GLSL.
+
+It **measures its own range at construction and remaps to −1…1**. Without that,
+`land` was worth whatever the octave settings happened to leave it: fbm divides
+by the amplitude *sum*, which is the theoretical range, but Perlin rarely leaves
+±0.7 and decorrelated octaves shrink it further. Measured, the field only ever
+spanned about ±0.5 — and two of the four authored worlds had terrain worth **less
+than a single band step**, so most of their surface could never cross a contour
+whatever the seed. Their pictures were coming from `key`, not from land.
+
+`land` now reads directly: 1 is the terrain owning the whole ramp. The four
+worlds authored before this were carried across by the affine inverse rather than
+re-tuned, so their numbers moved and their pictures did not.
+
+Normalisation is also what lets a new field mode be added at all. `ridge`, `warp`
+and `strata` each change the raw range, and normalisation absorbs the change
+instead of silently re-scaling every band setting already in the file.
+
+### The texture and the shade are two layers, not one sum
+
+Everything used to be summed into one coordinate and quantised once, which meant
+the picture was part terrain and part screen gradient with no way to tell them
+apart. **The band coordinate is now body-fixed alone** — `land` plus `bias`,
+where `land` reads a vertex attribute and therefore turns with the surface. `rim`
+and `key` are quantised separately and composited afterwards as a shift of whole
+slots along the ink ramp, `shadeDepth` deep.
+
+The point is not the tidiness. It is that `shadeDepth: 0` now gives a genuinely
+flat texture that belongs to the world, and that contours stop being drawn on a
+coordinate half of which does not rotate.
+
+**The contour is the band boundary as a stroked path.** `fwidth` converts the
+distance to a boundary into pixels, so a hairline is the weight it claims at any
+zoom and any `detail`, and is absent where the field is flat rather than smearing
+across it. Its *path* is not resolution-free — it follows a per-vertex
+interpolant and kinks at triangle scale. It carries two inks, chosen by which
+side of the terminator the line falls on rather than by the tone beneath it. That
+switch is computed whatever `shadeDepth` is, so on a flat texture the contour's
+ink can be the only thing on the planet saying where the light is.
+
+The cost was paid in the authored file: all six entries were tuned under the
+summed model and are stale.
+
+### Shading terrain the surface does not have
+
+The medium is authored as a disc, which means `amplitude` near 0 — and at 0 the
+baked normal is the sphere's own, so the shade has no terrain in it and its bands
+come out as plane cuts of a sphere. **`relief` is the terrain's worth to the
+shading normal alone**, added to `amplitude` when normals are baked. A bump map,
+per vertex, from the same analytic field slope. It is what lets a flat disc be lit
+by its own landscape.
+
+`amplitude` is signed, and `clip` flattens the field's negative half onto the
+sphere so the displacement only ever works one way — a negative amplitude cuts
+pits into a smooth ball instead of also bulging where the field runs low. Both
+live in `field.ts` rather than in the mesh builder, and the normal is
+differenced from the *displacement* rather than the raw height, so a clipped
+world's flat half shades flat. The texture is not clipped: it keeps the whole
+field, so the same map can be cut or raised without the pattern changing.
+
+### What the sizes taught
+
+**Legibility at 40px comes from feature size, not from `detail`.** A coarse field
+with few octaves survives the reduction; a fine one turns to mottle regardless of
+how finely it is polygonised. `detail` is a quality knob and nothing more — since
+the contour arrived it no longer even sets a band edge's width, only how smoothly
+its path is polygonised.
+`ridge` is the sharp case: it creases *every* octave, so fine octaves stop being
+texture and become their own crevasse network. It wants a coarse field and takes
+its detail from the crease, which is the opposite of how the smooth worlds tune.
+
+### Souls in orbit
+
+The swarm was rebuilt in the planet's own medium — same orthographic camera, same
+ink ramp, inside the body's tilt group. Four things in it are decisions rather
+than mechanics.
+
+**A cohort is a band of orbits, not a ring.** Each soul runs its own trajectory,
+drawn from its band's by three scatters: two thicken the band, one opens its
+plane out into a shell. Beads on a shared wire read as a diagram; a clump of
+paths reads as a population. All scatters at zero collapses a cohort back to the
+wire, which is the failure mode to recognise on sight.
+
+**A band comes from its index alone**, so cohort 3 looks like cohort 3 on every
+world and nothing is authored per planet. Inclination alternates, and *direction
+alternates with it*. That pairing is the point: counter-rotation is only jarring
+between bands sharing a plane, so separating the planes is what turns opposed
+directions into two orbits instead of a mistake against the body's spin.
+
+**The outline is authored in pixels and the souls in body radii**, and the
+difference is structure against content. The outline is the drawn edge of the
+widget and must hold its weight at any size. Souls are content: a px-authored dot
+at 40px is nearly as wide as the world it circles, and the swarm reads as noise.
+Sizing them in radii is also the only thing that makes a push-in work, since zoom
+then carries them. One px number survives — the floor a dot never falls below, so
+a small widget has dots rather than dust.
+
+**Ink is chosen by where a soul is, per fragment.** Two inks, off the body and in
+front of it; behind it, nothing. A pale third ink for the far half was built and
+cut — motion already says the path closes, and a dot that is neither in front nor
+gone only asks to be read as a nearer dot. Per fragment rather than per dot
+because a dot on the silhouette should be cut in half, not switch colour when its
+centre crosses; at 4px the switch reads as a bug. The far half is discarded
+analytically rather than depth-tested, so the hide radius and the ink-switch
+radius are the same number instead of the depth buffer cutting along terrain
+while the ink cuts along the sphere.
+
+Place cannot know what is *under* a dot, and the body owns the whole ramp — so
+every dot also carries a ring in the ramp's far end, which is the argument the
+planet's outline already makes. Its ink is derived from the fill rather than
+authored, because a fourth authored tone would need setting once per place a soul
+can be and would still be wrong for one of them.
+
+### Open
+
+Nothing in the game draws a planet yet — the medium, the swarm and two labs
+exist; the placement does not. Surface objects do not exist, only the field they
+would query. No parameter sizes a world against another, so the swarm has nothing
+to scale with. And each view is its own WebGL context, which the workbench can
+afford and an Overview list of one canvas per row cannot.
 
 ## Aim
 
@@ -280,10 +499,8 @@ Things that are simply unbuilt, and what they cost today.
 - **Red has no sink.** Ochre is *bought* with equal parts Crimson and the
   opposite Crimson at a steep scaling price, both decided and neither built, so
   red only accumulates. The two purchases need a buyer, which is a screen.
-- **Nothing travels.** `PlanetManager.select` is called once, by `App.svelte`, with
-  `first`. Discovery now works — see Scopes below — but a discovered planet is
-  somewhere you cannot go, so `planetsFinished` cannot pass 1. This is the whole
-  of what beat 12 is waiting on.
+- ~~**Nothing travels.**~~ Closed — `PlanetManager.reach` is the verb and the
+  Ahead band is where it is taken. See Overview below.
 - **Nothing expires anything yet.** The modifier layer exists (see above) and
   `Building.removeModifier` works, but no system calls it. The re-aim penalty is
   deliberately **not** a modifier — see Aim above.
@@ -305,12 +522,13 @@ Two numbers, both countable in a minute:
 
 | own trigger | floor only | cannot fire |
 |---|---|---|
-| 1–11 | — | 12 |
+| 1–12 | — | — |
 
 Beat 11 counts, but read it with the asterisk in Known gaps: its trigger is live
-and only `DevPanel` can satisfy it, because the split has no control yet.
+and only `DevPanel` can satisfy it, because the split has no control yet. Beat 12
+joined the column when reaching landed — it is the only beat that reveals nothing.
 
-Stubs: **15 of 36**. Detail 5/8 · Overview 2/6 · Harvest 3/4 · Refinery 0/7.
+Stubs: **11 of 35**. Detail 5/8 · Overview 5/5 · Harvest 3/4 · Refinery 0/7.
 `reading.excess` is real; `reading.tokens` still renders a literal `—`. The
 refinery engine landed without moving this line — a running system and a drawn
 panel are counted separately here for exactly that reason.
@@ -328,35 +546,25 @@ point: it lands on its own and moves at least one number in the gauge.
 | ~~6a~~ | ~~The soul split~~ | ~~`reserve`, beat 11~~ | **done** — see Souls above |
 | ~~6b~~ | ~~The refinery engine~~ | ~~nothing visible~~ | **done** — see Refinery below |
 | ~~1~~ | ~~Author the `global` bucket~~ | ~~beats 5, 6 onto real triggers~~ | **done** — see Scopes below |
-| 8 | Travel | **beat 12** | reveal order — read on |
+| ~~8~~ | ~~Travel~~ | ~~beat 12~~ | **done** — see Overview below |
 | 5 | `PlanetData.yields` | merged planets actually pay | balance |
 | 9 | The token purchases — Ochre, Indigo, opposite Crimson | red gets a sink | price curves, and a buyer |
-| 7 | Overview, Harvest and Refinery layouts | 12 stubs | design pass — see Parked |
+| 7 | Harvest and Refinery layouts | 8 stubs | design pass — see Parked |
 
 **Step 2 was supposed to be the keystone. It was half of one.** Discovery landed
 beat 8 on its own trigger, but beat 12 asks for `planetsFinished >= 2` and a
 discovered planet is not a reached one — nothing calls `PlanetManager.select`
 after mount.
 
-Step 8 is where it gets interesting, because the ladder as authored is
-**circular**. `overview.setOut` is *"depart for the next planet"*, and beat 12
-reveals it — but beat 12 fires on two finished planets, which departing is how
-you get. So departure cannot live only behind `setOut`, or the last beat is
-unreachable by construction.
-
-The reading that resolves it: departure belongs to **`overview.ahead`** (beat 8,
-*"unreached planets"* — a list of places to go, so going is what it is for), and
-`setOut` at beat 12 is the beat's own line — *two producers, out of phase, and
-nowhere to be* — the prompt to leave again once nothing needs you. That keeps
-`ahead` a list you act on from beat 8 and gives `setOut` something to mean.
-
-It is only a reading. Both keys are `RevealStub`s inside the parked Overview
-layout, so step 8 is really step 7 for one panel — don't improvise it, but note
-that beat 12 is blocked on a *layout* question, not a mechanical one.
+Step 8 was where it got interesting, because the ladder as authored was
+**circular**. `overview.setOut` was *"depart for the next planet"* and beat 12
+revealed it — but beat 12 fires on two finished planets, which leaving is how you
+get. Reaching could not live behind `setOut` without making the last beat
+unreachable by construction. It is resolved, and `setOut` is gone; see Overview.
 
 Step 1 was billed as buying the least, and it retired no stubs — but it emptied
-the floor-only column, so every beat that *can* fire now fires for its own reason.
-What remains is beat 12, and it is blocked on a layout.
+the floor-only column. With step 8 done, every beat now fires for its own reason
+and the gauge's third column is empty too.
 
 Step 6 split in two and both halves are done, which is why step 9 is new: the
 refinery makes red on a clock now, and nothing spends it. `reserve` is the

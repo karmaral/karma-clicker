@@ -36,13 +36,14 @@ export type RevealKey =
   | 'detail.split'
   | 'detail.field'
 
-  // One axis: behind you, where you are, ahead of you.
+  // One axis: behind you, active, ahead of you. Reaching is an action on
+  // `ahead`, not a reveal of its own — the last beat would be unreachable otherwise.
   | 'overview.active'
   | 'overview.behind'
   | 'overview.ahead'
-  | 'overview.cameHome'
+  // The gated one-off, then the recurring take from everything behind you.
+  | 'overview.firstHarvest'
   | 'overview.harvest'
-  | 'overview.setOut'
 
   // A takeover, not a fourth tab.
   | 'harvest.disc'
@@ -89,6 +90,8 @@ export const SYSTEM_SURFACES: Record<SystemKey, RevealKey[]> = {
     'refinery.backlog',
     'reading.tokens',
   ],
+  // `overview.harvest` is deliberately absent: the ledger is drawn empty from
+  // beat 8 and only fills at beat 10, so it precedes the system it reports on.
   finishedPlanets: ['overview.behind'],
 };
 

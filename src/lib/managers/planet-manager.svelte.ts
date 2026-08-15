@@ -20,6 +20,15 @@ class PlanetManager {
     this.#selected = id;
   }
 
+  /** A world is left for good, so an unharvested one cannot be left at all. */
+  reach(id: string) {
+    if (!this.canReach) return;
+    if (!Boolean(id in this.#planets)) return;
+    if (this.#planets[id].harvested) return;
+
+    this.#selected = id;
+  }
+
   /** The active planet's one-off ending. Returns how many souls were merged. */
   completeFirstHarvest(mergeFraction: number) {
     const planet = this.getActive();
@@ -41,6 +50,19 @@ class PlanetManager {
 
   get planets() { return Object.keys(this.#planets); }
   get selected() { return this.#selected; }
+
+  /** The axis, minus where you are: harvested is behind you, the rest is ahead. */
+  get behind() {
+    return this.planets.filter((id) => id !== this.#selected && this.#planets[id].harvested);
+  }
+
+  get ahead() {
+    return this.planets.filter((id) => id !== this.#selected && !this.#planets[id].harvested);
+  }
+
+  get canReach() {
+    return this.getActive()?.harvested ?? false;
+  }
 
   /** Planets left for good — the count beats 10 and 12 read. */
   get finished() {

@@ -22,7 +22,8 @@
       "$ui/*": ["src/ui/*"],
       "$lib/*": ["src/lib/*"],
       "$types": ["src/lib/types.d.ts"],
-      "$data/*": ["src/data/*"]
+      "$data/*": ["src/data/*"],
+      "$widgets/*": ["src/widgets/*"]
 
     }
   },

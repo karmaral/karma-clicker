@@ -2,6 +2,7 @@ import { Experience } from '$lib/resources/experience';
 import { ResourceManager } from '$lib/managers';
 import { ResourceEmitter } from '$lib/emission';
 import { getExcess } from '$lib/excess';
+import { FIRST_HARVEST_CONDITIONS } from '$lib/labels';
 import type { FirstHarvestCondition, PlanetData, Polarity, ResourceType } from '$types';
 
 const BIAS_WITH = 1.4;
@@ -27,20 +28,34 @@ export default class Planet {
 
   /** Every condition the planet imposes that is not met yet. Empty means go. */
   #unmet = $derived.by(() => {
-    const { excessGate, agesLived } = this.#data.firstHarvest;
-    const unmet: FirstHarvestCondition[] = [];
+    const required = this.#data.firstHarvest;
 
-    if (agesLived !== undefined && this.agesLived < agesLived) {
-      unmet.push('agesLived');
-    }
+    return FIRST_HARVEST_CONDITIONS.filter((condition) => {
+      const threshold = required[condition];
+      if (threshold === undefined) return false;
 
-    const excess = getExcess();
-    if (excessGate !== undefined && (excess === undefined || Math.abs(excess) >= excessGate)) {
-      unmet.push('excessGate');
-    }
-
-    return unmet;
+      return !this.#isConditionMet(condition, threshold);
+    });
   });
+
+  /** A condition a planet does not declare is not a condition, so absence is not met. */
+  #isConditionMet(condition: FirstHarvestCondition, threshold: number): boolean {
+    switch (condition) {
+      case 'agesLived': {
+        return this.agesLived >= threshold;
+      }
+      case 'excessGate': {
+        const excess = getExcess();
+
+        return excess !== undefined && Math.abs(excess) < threshold;
+      }
+      default: {
+        const unhandled: never = condition;
+
+        return unhandled;
+      }
+    }
+  }
 
   /**
    * The one-off event that ends the planet. Merged souls stop being yours, and

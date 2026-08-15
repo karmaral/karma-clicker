@@ -1,13 +1,13 @@
 <script lang="ts">
-  /** Layout awaits its design pass — unbuilt keys are held in reveal order until then. */
-  import { Button } from '$ui';
+  /** One axis, three bands. Selecting feeds the right column; the verb lives there. */
   import { PlanetManager } from '$lib/managers';
-  import { getFirstHarvestConditionLabel } from '$lib/labels';
+  import { FIRST_HARVEST_CONDITIONS, getFirstHarvestConditionLabel } from '$lib/labels';
   import { progression } from '$lib/progression';
   import { f } from '$lib/utils';
-  import RevealStub from '../RevealStub.svelte';
   import FirstHarvestScreen from '../harvest/FirstHarvestScreen.svelte';
-  import planetTexts from '$data/planets-texts';
+  import PlanetList from './PlanetList.svelte';
+  import PlanetDetail from './PlanetDetail.svelte';
+  import HarvestLedger from './HarvestLedger.svelte';
 
   /**
    * The takeover owns the screen while open, but leaving it is free: nothing is
@@ -18,103 +18,97 @@
   let picked = $state('');
 
   const selected = $derived(picked || PlanetManager.selected);
-  const planet = $derived(PlanetManager.getPlanet(selected));
-  const name = $derived(planetTexts[selected]?.title ?? '—');
-
-  /** Only the planet you are on can be harvested; the rest are places to go. */
-  const isActive = $derived(selected === PlanetManager.selected);
-  const isOffered = $derived(isActive && Boolean(planet) && !planet.harvested);
-
-  const blockers = $derived(
-    (planet?.unmetFirstHarvestConditions ?? []).map((condition) =>
-      getFirstHarvestConditionLabel(condition, planet?.data.firstHarvest[condition] ?? 0),
-    ),
+  const active = $derived(PlanetManager.getPlanet(PlanetManager.selected));
+  const isOffered = $derived(
+    selected === PlanetManager.selected && Boolean(active) && !active.harvested,
   );
+
+  function getHereStat(id: string) {
+    const planet = PlanetManager.getPlanet(id);
+
+    if (planet.harvested) {
+      return `${f(planet.merged)} merged`;
+    }
+
+    return `${f(planet.agesLived)} ages · phase ${planet.phase + 1} of ${planet.phasesPerAge}`;
+  }
+
+  function getBehindStat(id: string) {
+    return `${f(PlanetManager.getPlanet(id).merged)} merged`;
+  }
+
+  /** An unreached world is known only by what it will ask of you. */
+  function getAheadStat(id: string) {
+    const { firstHarvest } = PlanetManager.getPlanet(id).data;
+
+    return FIRST_HARVEST_CONDITIONS
+      .filter((condition) => firstHarvest[condition] !== undefined)
+      .map((condition) => getFirstHarvestConditionLabel(condition, firstHarvest[condition] ?? 0))
+      .join(' · ');
+  }
 </script>
 
 {#if isHarvesting && isOffered}
   <FirstHarvestScreen onclose={() => (isHarvesting = false)} />
 {:else}
   <div class="overview view-layout">
-    <div class="planet-list">
+    <div class="axis">
       {#if progression.isRevealed('overview.active')}
-        <ul class="planets">
-          {#each PlanetManager.planets as id (id)}
-            {@const each = PlanetManager.getPlanet(id)}
-            <li>
-              <button
-                type="button"
-                class={['planet', { on: id === selected }]}
-                onclick={() => (picked = id)}
-              >
-                <span class="name">{planetTexts[id]?.title ?? id}</span>
-                <span class="stat num">
-                  {each.harvested
-                    ? `${f(each.merged)} merged`
-                    : `${f(each.agesLived)} ages · phase ${each.phase + 1} of ${each.phasesPerAge}`}
-                </span>
-              </button>
-            </li>
-          {/each}
-        </ul>
-        <RevealStub name="overview.ahead" note="unreached planets" />
-        <RevealStub name="overview.behind" note="planets left for good" />
-      {/if}
-    </div>
-
-    <div class="planet-detail">
-      {#if progression.isRevealed('overview.harvest') && isOffered}
-        <Button
-          label="Harvest {name}"
-          sub={blockers.length ? `Needs ${blockers.join(' · ')}` : 'Ready'}
-          disabled={!progression.isLive('overview.harvest') || !planet.isFirstHarvestReady}
-          onclick={() => (isHarvesting = true)}
+        <PlanetList
+          label="Active"
+          ids={[PlanetManager.selected]}
+          {selected}
+          stat={getHereStat}
+          onpick={(id) => (picked = id)}
         />
       {/if}
-      <RevealStub name="overview.cameHome" note="arrivals from behind you" height="48px" />
-      <RevealStub name="overview.setOut" note="depart for the next planet" height="48px" />
+
+      {#if progression.isRevealed('overview.behind') && PlanetManager.behind.length}
+        <PlanetList
+          label="Behind"
+          ids={PlanetManager.behind}
+          {selected}
+          stat={getBehindStat}
+          onpick={(id) => (picked = id)}
+        />
+      {/if}
+
+      {#if progression.isRevealed('overview.ahead')}
+        <PlanetList
+          label="Ahead"
+          ids={PlanetManager.ahead}
+          {selected}
+          stat={getAheadStat}
+          empty="Nowhere else is known."
+          onpick={(id) => (picked = id)}
+        />
+      {/if}
+
     </div>
 
+    <div class="detail">
+      {#if progression.isRevealed('overview.active')}
+        <PlanetDetail id={selected} onharvest={() => (isHarvesting = true)} />
+      {/if}
+
+      {#if progression.isRevealed('overview.harvest')}
+        <HarvestLedger />
+      {/if}
+    </div>
   </div>
 {/if}
 
 <style>
-
-  .planets {
+  .axis {
     display: flex;
     flex-direction: column;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    border-top: var(--rule-row);
+    min-width: 0;
   }
 
-  .planet {
+  .detail {
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--sp-4);
-    width: 100%;
-    padding: var(--sp-3) var(--sp-2);
-    background: none;
-    border: none;
-    border-bottom: var(--rule-row);
-    cursor: pointer;
-    text-align: left;
-  }
-
-  .planet.on {
-    background: var(--surface-alt);
-  }
-
-  .name {
-    font-size: var(--fs-md);
-    font-weight: 600;
-    color: var(--ink-900);
-  }
-
-  .stat {
-    font-size: var(--fs-sm);
-    color: var(--ink-500);
+    flex-direction: column;
+    border-left: var(--rule-card);
+    min-width: 0;
   }
 </style>

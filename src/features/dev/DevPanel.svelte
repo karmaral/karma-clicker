@@ -9,6 +9,7 @@
   import { refinery } from '$lib/refinery.svelte';
   import { f } from '$lib/utils';
   import buildingData from '$data/buildings';
+  import planetData from '$data/planets';
 
   /** Console handle, for poking at state by hand and for the headless driver. */
   Object.assign(window, {
@@ -43,6 +44,14 @@
       if (buildingData[id].role === 'click') continue;
 
       BuildingManager.unlock(id);
+    }
+    pulse();
+  }
+
+  /** Fills the Ahead band without paying for discovery. Reaching still needs a harvest. */
+  function unlockPlanets() {
+    for (const id of Object.keys(planetData)) {
+      PlanetManager.unlock(id);
     }
     pulse();
   }
@@ -98,6 +107,15 @@
           · red {f(ResourceManager.getAmount('red_positive'))}
           /{f(ResourceManager.getAmount('red_negative'))}
         </span>
+      </div>
+
+      <div class="row">
+        <span class="id">
+          {PlanetManager.behind.length} behind
+          · {PlanetManager.ahead.length} ahead
+          · {PlanetManager.canReach ? 'can reach' : 'held'}
+        </span>
+        <button onclick={unlockPlanets}>unlock all planets</button>
       </div>
 
       <div class="row">

@@ -36,12 +36,37 @@ export function getExcessSideLabel(excess: number | undefined) {
   return excess > 0 ? 'Comfort side' : 'Burden side';
 }
 
+/**
+ * The record is what makes the order exhaustive: `strict` is off, so a missing
+ * switch case compiles fine, but a missing key here does not. Widen
+ * `PlanetFirstHarvest` and this fails until the condition is placed.
+ */
+const CONDITION_ORDER: Record<FirstHarvestCondition, number> = {
+  agesLived: 1,
+  excessGate: 2,
+};
+
+/**
+ * Canonical order. Anything listing a planet's conditions walks this, so what it
+ * asks reads the same on the Ahead row as on the Harvest button.
+ */
+export const FIRST_HARVEST_CONDITIONS = (Object.keys(CONDITION_ORDER) as FirstHarvestCondition[])
+  .sort((a, b) => CONDITION_ORDER[a] - CONDITION_ORDER[b]);
+
 /** Why a planet will not let you take the first harvest yet. */
-export function getFirstHarvestConditionLabel(condition: FirstHarvestCondition, value: number) {
+export function getFirstHarvestConditionLabel(
+  condition: FirstHarvestCondition,
+  value: number,
+): string {
   switch (condition) {
     case 'agesLived':
       return `${value} ${value === 1 ? 'age' : 'ages'} lived`;
     case 'excessGate':
       return `excess under ${Math.round(value * 100)}%`;
+    default: {
+      const unhandled: never = condition;
+
+      return unhandled;
+    }
   }
 }
