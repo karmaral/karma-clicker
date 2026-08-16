@@ -7,8 +7,13 @@
  * a cohort is, the same separation `Planet` and `PlanetVisual` already keep.
  */
 
-/** Instances are allocated once. Past this a band wants a stream, not more dots. */
-export const SOUL_CAPACITY = 256;
+/**
+ * Instances are allocated once, so this is a ceiling and not a target: it is the
+ * lab's own sliders at their tops — eight bands of a hundred — because a slider
+ * that silently stops meaning anything past a third of its travel is worse than
+ * no slider. Past this a band wants a stream, not more dots.
+ */
+export const SOUL_CAPACITY = 800;
 
 /** Spreads the bands' planes so no two line up by arithmetic. */
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
@@ -72,6 +77,18 @@ export interface SwarmVisual {
   ring: number;
 
   /**
+   * The share of the swarm the harness owns, 0…1 — and a *share* is a count, so
+   * this resolves to whole souls. Each rider is fully on its line; nothing is
+   * partly on one. Pulling a soul part of the way there was tried and is wrong:
+   * the two places it could be are two points on a sphere, and the straight line
+   * between them is a chord that passes through the world.
+   *
+   * Authored as a fraction because the swarm's size changes under it, and
+   * because the mechanic is anchor upgrades buying riders a soul at a time.
+   */
+  riders: number;
+
+  /**
    * Two inks, one per place a soul can be *seen*: off the body and in front of
    * it. The far half is hidden. A pale third ink was tried for it and cut —
    * motion already says the path closes, and a dot that is neither in front nor
@@ -95,6 +112,8 @@ export interface Soul {
   size: number;
   wobble: number;
   wobbleRate: number;
+  /** Its place in the dealing order — the soul with place 0 rides first. */
+  place: number;
 }
 
 /** xorshift, so one integer fixes the whole swarm — as `seed` does for the field. */
@@ -156,6 +175,24 @@ function orbitBasis(soul: Soul, tilt: number, node: number) {
   soul.vz = ct * cn;
 }
 
+/**
+ * The order souls take the harness in. Drawn from the swarm's own seed, so it is
+ * fixed for a given swarm: raising the rider count puts one more soul on a line
+ * rather than dealing the whole swarm again. Shuffled rather than taken in index
+ * order, which would fill the innermost cohort before the next one has a rider.
+ */
+function dealPlaces(souls: Soul[], random: () => number) {
+  const order = souls.map((unused, i) => i);
+
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+
+  order.forEach((soul, place) => (souls[soul].place = place));
+}
+
 /** One soul per unit of `counts[i]`, while the counts are small enough to mean it. */
 export function createSouls(visual: SwarmVisual, counts: number[]): Soul[] {
   const random = createRandom(visual.seed);
@@ -175,6 +212,7 @@ export function createSouls(visual: SwarmVisual, counts: number[]): Soul[] {
         size: Math.max(0.002, visual.dot + strayBy(random, visual.dotScatter)),
         wobble: visual.wobble * random(),
         wobbleRate: visual.wobbleRate * (0.5 + random()),
+        place: 0,
       };
 
       orbitBasis(
@@ -187,7 +225,14 @@ export function createSouls(visual: SwarmVisual, counts: number[]): Soul[] {
     }
   });
 
+  dealPlaces(souls, random);
+
   return souls;
+}
+
+/** How many souls ride, from the share. A share that buys none buys nothing. */
+export function riderCount(visual: SwarmVisual, souls: number) {
+  return Math.max(0, Math.min(souls, Math.round(visual.riders * souls)));
 }
 
 /** Where a soul is at `elapsed`. Writes into `out`, so the loop allocates nothing. */
@@ -206,6 +251,17 @@ export function placeSoul(
   out.x = soul.ux * along + soul.vx * across;
   out.y = soul.uy * along + soul.vy * across;
   out.z = soul.uz * along + soul.vz * across;
+}
+
+/**
+ * How far round its own orbit a soul is, 0…1. The same figure indexes a harness
+ * loop, so a soul can be put on a line without its motion changing rate and
+ * without a second clock being started for it.
+ */
+export function phaseOf(soul: Soul, elapsed: number) {
+  const turns = (soul.phase + soul.speed * elapsed) / (Math.PI * 2);
+
+  return turns - Math.floor(turns);
 }
 
 export type SwarmGroup = 'Orbits' | 'Scatter' | 'Souls';
@@ -239,20 +295,21 @@ export const SWARM_PARAMS: SwarmParam[] = [
   { key: 'dot', label: 'Dot', group: 'Souls', min: 0.004, max: 0.12, step: 0.002 },
   { key: 'dotScatter', label: 'Dot scatter', group: 'Souls', min: 0, max: 0.06, step: 0.002 },
   { key: 'dotFloor', label: 'Dot floor px', group: 'Souls', min: 0, max: 4, step: 0.25 },
+  { key: 'riders', label: 'Riders', group: 'Souls', min: 0, max: 1, step: 0.01 },
   { key: 'ring', label: 'Ring', group: 'Souls', min: 0, max: 0.8, step: 0.02 },
   { key: 'outTone', label: 'Tone outside', group: 'Souls', min: 0, max: 6, step: 1 },
   { key: 'frontTone', label: 'Tone in front', group: 'Souls', min: 0, max: 6, step: 1 },
 ];
 
 export const DEFAULT_SWARM: SwarmVisual = {
-  seed: 1,
-  radius: 1.12,
-  spacing: 0.025,
+  seed: 50149,
+  radius: 1.3,
+  spacing: 0.045,
   rim: 1,
-  radiusScatter: 0.065,
-  tiltScatter: 0.03,
+  radiusScatter: 0.095,
+  tiltScatter: 0.13,
   nodeScatter: 0.24,
-  tiltStep: 0.8,
+  tiltStep: 0.74,
   speed: 0.69,
   speedScatter: 0.31,
   wobble: 0.065,
@@ -260,6 +317,7 @@ export const DEFAULT_SWARM: SwarmVisual = {
   dot: 0.042,
   dotScatter: 0.012,
   dotFloor: 1.5,
+  riders: 0,
   ring: 0.3,
   outTone: 6,
   frontTone: 0,

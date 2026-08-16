@@ -239,6 +239,119 @@ Normalisation is also what lets a new field mode be added at all. `ridge`, `warp
 and `strata` each change the raw range, and normalisation absorbs the change
 instead of silently re-scaling every band setting already in the file.
 
+### Terrain as features, not as octaves
+
+Noise can be asked for a *scale* and never for a *count*. Turning `frequency`
+down until the blobs are continent-sized gives you however many the seed felt
+like, which is why every world authored out of fbm alone reads as weather rather
+than as a place. A world that is meant to have **three continents** cannot say so.
+
+[`caps.ts`](../src/widgets/planet/caps.ts) is the other way round. A tier is a
+count and a size in radians — three at 0.42, six at 0.20, seven at 0.09 — and the
+field is what those round caps contribute where they land. There are three tiers,
+coarse, mid and fine, and each carries a signed **lift**, so the same three rows
+of sliders make continents at one end and craters at the other. It is a raw field
+in exactly the sense `sampleFbm` is: `field.ts` normalises it and nothing else
+touches it, so it inherits `clip`, `amplitude`, the bands and the outline free.
+
+Four decisions in it:
+
+1. **Summed, not maxed.** Where two caps overlap the ground stands higher than
+   either. Taking the max would union them into one flat plateau; summing makes
+   the seam between two landmasses the highest ground on them, which is where a
+   range belongs.
+2. **Blended into the noise, not added to it.** At 1 there is nothing but smooth
+   domes. Adding would pile a second landscape on top of the first; blending
+   spends the noise on the *edges* of the caps instead, so the middle of the
+   slider is a shaped world with a rough coastline — the thing neither field can
+   produce alone.
+3. **Read at the warped direction.** `warp` already exists and already slides the
+   sample point across the sphere, so it bends the caps for nothing. That is what
+   keeps a continent from being a circle, and it means the coastline detail and
+   the landmass shape are the same knob.
+4. **Scaled by the largest lift, not by its measured range.** A cap standing on
+   its own reaches exactly ±1 and the bare sphere between them sits at 0, which
+   is what makes the blend honest — both sides on the same scale, so a half is a
+   half. Measuring instead would have folded the seed into the scale, and folded
+   it badly: the 4096-probe grid is coarse enough to step over a fine cap
+   entirely, so a reseed would move the whole world's tone rather than just where
+   its craters fell. Overlaps run past ±1 and are left for the outer
+   normalisation, the same allowance `ridge` already has.
+
+**`clip` is doing as much work as the caps are.** At 1 it flattens the field's
+negative half onto the sphere, so on a cap world the sea *is* the sphere and only
+land ever rises — which is the reading the whole system was after and which no
+amount of noise tuning gets to.
+
+### The water is drawn, not noised
+
+A blend at 1 leaves the ground between caps at exactly one value, and a constant
+has no band boundary in it — so the water goes dead, and `contour` has nothing to
+draw. Measured on a two-continent world: **92.6% of the sphere in a single band.**
+
+The obvious repair is to leave some fbm in the water, and it is the wrong one.
+Water carrying the land's noise reads as *land that happens to be submerged* —
+same grain, same crinkle, same frequency — and weighting it down does not help,
+because it is the wrong structure and not the wrong amount. So the water is given
+the two things water is actually organised by: **distance from a coast**, and a
+**swell**. Both go in as height and both are then quantised and ruled by the
+machinery already there, which is what makes them line work rather than mottle.
+
+**`capSkirt` is the coast.** A ring just outside each cap's rim, running against
+its lift and back to nothing. It has to be a ring rather than a wider skirt for a
+reason that is not a preference: the inner falloff is already zero at the rim, so
+anything continuous added outside it has to come back. The reach is fixed at half
+the cap's own radius and the slider is the ring's *depth*, since depth is what
+decides whether it survives at 80px. Signed, because the ring is the only thing
+saying which way the ground leans as it leaves a cap: positive digs a trough
+hugging the coast and drawn *below* the open water, and on a crater the same ring
+is the raised rim a crater has — one slider, both readings, no special-casing of
+the sign. Negative banks it into a shoal, lighter than the sea it sits in. At 0.6
+it puts 8.1% of the sphere into its own bands.
+
+**`capSwell` is the open sea**, which the skirt by definition cannot reach.
+Warped latitude bands — the same term `strata` uses, so `warp` swirls them and
+they read as swell rather than as a ruled grid — added across the water and
+masked out over the land. Measured at skirt 0.6: the largest single band falls
+from 84.9% of the sphere to 68.6% at a swell of 0.08 and 29.3% at 0.3, which is
+the flat sea breaking into ruled tones with contour lines along their edges.
+
+**The mask is coverage, not the cap sum**, and this is the part that is easy to
+get wrong. The sum is zero in two unrelated places: far out at sea, and *exactly
+on a coast*, where the falloff has come back to nothing. A mask built from it is
+therefore wide open at the shoreline — measured, 1.0000 at the coast against
+0.4293 for the coverage mask — so the swell would run straight over every beach.
+Coverage is monotone from a cap's centre to the outer edge of its skirt, taken as
+a max across caps, and cannot do that.
+
+**None of it deforms the sea.** With `clip` at 1 the field's negative half is
+flattened onto the sphere, so skirt and swell survive as tone and as line and the
+water stays perfectly smooth — texture without geometry, which is the useful half
+of asking for normals instead of a heightfield. The other half is not available:
+`relief` scales the shading normal from the *field's own slope*, and on a clipped
+world the water's slope is zero by construction, so there is nothing there for it
+to amplify.
+
+The skirt also **softens the reseed hazard above**. With no skirt the flat ground
+sits at an extreme of the measured range and a stray crater pair can flip it
+across the midline; the skirt gives the datum a neighbourhood, and it walks in
+from band −4 to band 0 of nine as the slider goes 0 → 1.
+
+**Known, and the author's call.** The outer normalisation puts the field's
+midline at the centre of its measured range, and on a cap world the ocean sits
+very near that midline. A seed where two craters happen to stack drops the
+minimum below what the tallest continent reaches, and the ocean crosses from just
+under the midline to just over it — the sphere's tone inverts on a reseed. It is
+the documented normalisation behaving as specified, not a fault, but it makes
+`land` and `bias` unreliable across a reseed. Clamping the cap sum to ±1 would
+pin sea level at 0 for every seed, at the cost of decision 1 above.
+
+Every world already in the file carries the tiers at `caps: 0`, so their pictures
+are untouched; `capped` is the only entry with the blend turned up, and it is a
+specimen rather than a world. **The type→parameter table that would author these
+numbers from a planet's type and seed is not built** — that is the half of the
+idea that answers the id-mismatch problem, and it is still open.
+
 ### The texture and the shade are two layers, not one sum
 
 Everything used to be summed into one coordinate and quantised once, which meant
@@ -334,6 +447,13 @@ planet's outline already makes. Its ink is derived from the fill rather than
 authored, because a fourth authored tone would need setting once per place a soul
 can be and would still be wrong for one of them.
 
+`SOUL_CAPACITY` is the instance allocation and nothing else, so it is set to what
+the lab's own sliders can ask for rather than to a guess at a good number: eight
+bands of a hundred, 800. It was 256, which the lab could exceed by dragging two
+sliders a third of the way — and a slider that stops meaning anything partway
+along is worse than a slider that is not there. Only `souls.length` is drawn per
+frame, so the ceiling costs one allocation and no work.
+
 ### Anchors on the surface
 
 The harness poles, and the first thing that is *on* the planet rather than
@@ -382,6 +502,207 @@ not per fragment, which is the opposite of the souls' rule and for a reason: a
 dot straddling the silhouette should be cut in half, but an anchor is a place,
 and a place is on one side or the other.
 
+### The harness lines
+
+The lines the anchors exist to carry. The construction is the design handoff's
+§2 and is not reinterpreted: every *pair* carries a family, each loop a true
+slerp from one anchor to the other, bulged outward by a sine and turned about
+the chord between them. The twist is not decoration — a planar loop collapses to
+a hard straight needle every time it turns edge-on to an orthographic camera,
+and alternating its sign per level is what makes a family weave instead of
+stack. Five decisions sit on top of that.
+
+**A line is strung between anchors that exist.** The harness is built from the
+*placed* nodes only, not from every node the count names. So it grows as anchors
+are driven in — one anchor, then a pair's band, then a cage — and the ghost keeps
+marking a place that carries nothing yet. This is what makes the count legible:
+at any moment the drawing says how far the world has been taken, and it says it
+in lines rather than in a figure.
+
+**Every anchor is a crown, and the same slider opens it into a cage.** The
+two-anchor minimum is dropped, because the first anchor placed *is* one anchor
+and the harness has to draw something. A crown is a family that closes on its own
+anchor: each loop is the circle on the sphere that passes through the anchor,
+centred `reach` away from it, so the curve leaves the anchor and comes back to it
+and the only corner in it is the grip. At small `reach` that is a tuft; at π/2 the
+circle is a great circle through the anchor and its antipode, which is the full
+onion cage. One parameter covers the whole range, so the visual for a crown is a
+slider to be judged and not a choice between two constructions to be argued
+about. It was first built as the lone anchor's substitute for the pair it has not
+got; on sight it turned out to be the best thing the harness draws, so every
+anchor carries one and the pair lines connect crowns. One anchor is now the
+general case seen alone rather than a special case that happens to look better.
+
+**A line is tied to the top of its pole.** The lines first converged on the
+*surface* — on the ground at the anchor's foot — which drew a pole standing beside
+a harness rather than a pole holding one up. Each placement now carries a `peak`,
+its solid's tip in body radii, and that is the radius a loop leaves from and
+returns to. Two consequences were chosen rather than fallen into. It is taken per
+anchor, from the same `field.sampleRadius` the solid was placed with, so a pole on
+high ground is tied higher and the line cannot float off a tip the terrain moved.
+And only the *ends* lift: a loop's radius is a sine blend from the grip at the
+ends to `1 + bulge` at the middle, so the peak stays exactly where it was authored
+instead of the whole cage scaling outward with the anchor and leaving the frame.
+The blend degenerates to the old `1 + bulge·sin πt` when the grip is 1, which is
+what a node with no `peak` still gets — the probe and anything holding bare
+figure nodes are unchanged.
+
+**The budget is spent per family, not per loop.** Pairs go as n², so eight anchors
+carry twenty-eight of them; a fixed count per family would make the last anchor
+six times as expensive as the first. Rotations are cut to the share of a fixed
+total each family is owed — a crown counts as one, an edge as one — so `density`
+stops buying loops well before its slider ends and the harness thickens with the
+count without the count squaring the cost. The lab prints the number actually
+drawn beside the number strung, because the slider's own value stops meaning
+anything past that point.
+
+**The ink rule is the ghost's rule, finished.** Two inks by *place* — paper over
+the body, ink off it — chosen per fragment, because one loop crosses the
+silhouette twice and has to invert where it does. Both ways of saying *far* are
+then the same gesture spent twice: a step toward the middle of the ramp, which is
+away from whichever end the ink was chosen to contrast with. Behind the body's
+centre plane is one step; being an outer loop is the other, and that second one
+is what sinks a family into what it sits on instead of letting every loop claim
+the same weight. It is stepped and never mixed — a blend between two ramp slots
+is a gradient, and the system does not own one. The design handoff's table gives
+four hex values with asymmetric fades (paper → #7a7a7a over the body, ink →
+#bcbcbc off it); ours is symmetric, which is one slider fewer and the rule the
+unplaced anchor already draws by.
+
+`backHide` is the other end of that rule and not a fifth ink: at 1 the stretch of
+every line running behind the body is discarded outright, which is what the fade
+can only approach. It is cut per fragment at the same silhouette the ink switches
+at, and by the same test the souls already hide their far half by — so a rider and
+the line under it go together, instead of a dot vanishing off a line that stayed.
+It reaches the panel as an integer slider with two stops, because the lab draws
+every field the same way and a checkbox for one of them would be a second kind of
+control to maintain.
+
+### Souls ride the lines, or they do not
+
+The design handoff has souls travelling *on* the harness. The swarm built two
+sessions earlier has them on their own scattered orbits. Both are defensible and
+the choice is visual, so it became a parameter: `harness`, 0 to 1. It was first
+authored as *how much of a soul's path the lines own*, and that reading did not
+survive being looked at — see below. What the parameter is really asking is how
+much of the **swarm** the lines own.
+
+It was built as a blend and not a switch, and the thing that made a blend look
+possible is that both curves are read at the **same phase**. A soul's angle round
+its own orbit, taken as a fraction of a turn, indexes its loop as well — so at
+0.5 a soul should have been halfway between the two places it could be, rather
+than two things moving at different rates averaged into a wobble.
+
+**Judged, and wrong.** Seen running, the middle of that slider does not read as
+souls settling onto the lines; it reads as the swarm being reshuffled, with dots
+cutting straight through the body on the way. The phase argument was sound and
+the interpolation was not: the two places a soul could be are two points on a
+sphere, and a straight lerp between them is a *chord*, which passes through the
+interior whenever they are far apart. Only 0 and 1 are worth looking at, which is
+the tell that the parameter is not continuous in the first place.
+
+**So the quantity is a count, not a weight**, and `harness` became `riders`. How
+much of the swarm rides is *how many souls do* — which is also what the mechanic
+will be, since riders are bought by anchor upgrades and an upgrade grants a whole
+soul rather than a fraction of everyone's path. The slider stays a share because
+that is the honest way to author it against a swarm whose size changes, but it
+resolves to a count and the lab prints the count, the way the harness panel
+prints loops drawn beside anchors strung: a share that buys no additional soul is
+a share that did nothing.
+
+Assignment is stable as it climbs. Each soul is dealt a `place` at creation — a
+shuffle of the whole swarm, drawn from the same seed the orbits come from — and
+rides while its place is under the count, so raising the share puts one more soul
+on a line instead of dealing the swarm again. Shuffled and not taken in index
+order, which would fill the innermost cohort before the next one had a rider.
+Which *line* a rider takes is fixed by its own index and not by how many ride, so
+buying a rider adds a dot to the harness and moves none of the others.
+
+Souls are spread across the whole harness rather than taking loops in order:
+at eight anchors there are more loops than souls, and modulo would crowd every
+soul onto the first few pairs.
+
+The swarm sits outside the world's spin and the harness inside it, since a line
+ends at an anchor and an anchor turns with the ground. So the spin stopped being
+the body's and became the scene's: one angle, integrated once, handed to the body
+to turn by and to the swarm to put a loop back where the world has since carried
+it. A body that kept its own angle and a swarm that kept another would be two
+clocks for one rotation.
+
+**What a soul does at the end of a line is unjudged.** A pair loop runs from one
+anchor to the other, so a soul reaching the far end reappears at the near one.
+Read generously that is the harness's traffic — souls sinking into one pole and
+rising at another — and with several dots per line at different phases it should
+read as a flow. Read badly it is a pop. The crown does not have the problem at
+all, since its loops close on their own anchor. The alternative is a ping-pong,
+which is one line and costs the direction.
+
+### The crowded harness wants a figure, not a graph
+
+Also judged on sight: **the crown a lone anchor carries is the best thing the
+harness draws**, and the many-anchor case is the worst. One anchor gives a
+flower; eight give chaos. The original reading was an electromagnetic sheet — a
+field wrapped round a body — but what the drawing actually earns its keep with is
+geometry, and geometry is precisely what is lost as the count climbs.
+
+The cause is not density, and turning density down will not buy harmony back.
+It is that **every pair is drawn**. Anchors are placed on an optimal spherical
+code, which is a *figure* — a triangle, a bipyramid, a cube — and drawing all
+n² pairs draws that figure's complete graph rather than the figure. At three
+anchors the two are the same thing, which is why the low counts read well and
+the high ones do not. Drawing only the pairs that are **edges** of the figure —
+the near neighbours, the convex hull — leaves the harness saying the shape the
+anchors are actually in. Long diagonals are what cross everything else.
+
+**`span` is how that is decided, and it is a ratio rather than an angle.** Each
+pair is measured against the *closest* pair in the same figure, so the test is
+the figure's own scale and nothing has to be authored per count. At 1 only the
+shortest links are strung; at about 1.4 the links are the figures' own edges; and
+2.6 clears the longest pair in every figure, so the top of the slider is the
+complete graph back again and the two readings can be compared by dragging. The
+default is 1.4. What that buys, one to eight anchors: 0, 1, 3, 6, 9, 12, 15, 16
+links — against 0, 1, 3, 6, 10, 15, 21, 28 pairs. Counts one to four are
+untouched, because at those every pair already is an edge.
+
+The other half of it is the flower, and it is built: **every anchor carries a
+crown** and the links are what *connect* crowns rather than what the harness
+mostly is. That gives the two constructions one voice instead of making one
+anchor a special case that happens to look better than the general one, and it
+takes the seam with it for the loops that carried it worst — a crown closes on
+its own anchor, so a rider on one never jumps. Whether families should
+additionally share a frame, so their rotations land in register instead of at
+unrelated angles, is a smaller question underneath the same one and is not built.
+
+The loop budget absorbs both changes: a crown is a family and an edge is a
+family, and the same total is divided among them. At eight anchors that is 24
+families against 28 pairs before, and 160 loops against 168.
+
+### Every harness parameter is an upgrade axis
+
+The reason to keep all of this as parameters rather than resolving it to one good
+default: **the harness is a thing the player improves.** Anchors are already
+bought one at a time, and everything the lines are made of is a plausible thing
+to buy next — more loops, deeper bulge, a wider reach, more souls riding. So a
+harness slider is not only an authoring knob to be frozen once it looks right;
+it is the shape of an upgrade, and the value in `DEFAULT_HARNESS` is the
+*starting* value of one. That is an argument for keeping the ranges wide enough
+that the far end still reads as an achievement, and against collapsing two
+parameters into one because a single default happened to fit both.
+
+`twist` is the first range judged short on those grounds: it stopped at 0.8 rad
+and now runs to 2π, a full turn along a loop's own length. The *range* is the
+decision recorded here; where `DEFAULT_HARNESS` sits inside it is authored on the
+lab's sliders and has moved since. `span` arrives the same way — the choice
+between the figure's edges and its complete graph could have been a constant, and
+is a slider because "the harness reaches further" is a plausible thing to buy.
+
+Two things deliberately did **not** become axes. An anchor's `peak` is derived
+from the solid it belongs to, because a line tied anywhere but the tip is a
+mistake rather than a setting — and the anchor's own `size` is already the axis
+that moves it, so a second slider could only disagree with the first. `backHide`
+is a legibility switch: it says what the drawing shows, not how good the harness
+is, and nothing about the player's progress should turn it on.
+
 ### One light, and worlds only choose how much
 
 The key's *aim* is a system token now, sitting beside the ink ramp rather than
@@ -398,16 +719,104 @@ normal. A low-poly reading was one slider away for several sessions and was neve
 wanted; keeping it cost a varying, a per-fragment cross product and a false
 promise in `detail`'s doc comment, which claimed coarse meshes had a use.
 
+### The click leaves marks
+
+The first thing in the widget that answers the *player* rather than an author's
+slider. One click is one **flash**, and a flash leaves two kinds of mark.
+
+**The halo is about the world, not on it.** A ring around the whole body, facing
+the camera, born just outside the silhouette and growing past the frame. It hangs
+outside `PlanetBody` altogether, so neither the tilt nor the spin reaches it —
+a halo that turned with the world would be a band drawn on the world. Being born
+*outside* radius 1 is the same argument: a ring that starts on the body reads as
+something painted there and then wiped, not as something leaving.
+
+Its stroke is authored in **pixels**, which is the outline's argument reused. A
+halo is a drawn edge — structure, not content — so it must hold its weight at
+every widget size, and it must not thin as it expands. `fwidth` gives that for
+nothing: the same derivative measure `contourAt` draws a band boundary with makes
+a px stroke px-wide at any radius, so the instance's scale is the only thing that
+grows.
+
+**A spark is on the ground it hit.** A white dot with a ring leaving its own edge,
+placed at a random direction and sitting at `field.sampleRadius` — on the terrain,
+not on the sphere the terrain was displaced from — and inside the spin, so it
+travels with the surface. The direction is `Math.random` and not the seeded stream
+the swarm and the caps draw from, because a flash is an *event*: two clicks landing
+in the same place is the failure here, not the unreproducibility. The radius is
+sampled once, at the flash, so a flash never outlives a slider.
+
+**Sparks carry no silhouette test**, which is the one deliberate exception to the
+rule every other mark obeys. The souls discard their far half, the harness fades
+it, the anchors' ghost steps toward mid-ramp — a spark on the far side simply
+shows through the world. The reasoning is that a strike is an event and not an
+object: it says *the world was hit here*, and hiding half of them would mean half
+of all clicks produced no answer at all.
+
+**Both fade on alpha**, which is the second bend. Every other tone in this medium
+is a whole slot of the ink ramp, and the in-medium ways to say *leaving* are to
+walk the tone toward paper or to thin the stroke to nothing. Neither survives the
+background changing: at tone 0 a halo is `--surface`, so it vanishes correctly on
+the canvas and turns into a bright ring over a dark body. Alpha is the only fade
+that means the same thing wherever the mark happens to be. It is one uniform to
+reverse if the exception costs more than it buys.
+
+**The curves were chosen by probe, not by eye.** A cubic-out growth against a
+squared fade put the halo at 99% of its travel while still a quarter visible —
+it stops in mid-air and is then rubbed out. The travel is quadratic-out and the
+fade is cubed, so the mark is 5% opaque with 13.5% of its distance still to go
+and still moving at a third of its opening speed. The assertion is now the probe's:
+*a mark must still be travelling when it becomes invisible.*
+
+**Many live at once, out of one draw apiece.** Two instanced meshes with a
+thirty-two slot ring buffer each, a `fade` per instance, and no expiry
+bookkeeping — a slot is free because it is old. A component per ring, mounting
+and unmounting on every click, is what the original implementation did and is
+what a fast clicker cannot afford. Nothing is swept and nothing allocates.
+
+**The widget owns the click.** `PlanetView` gains a real `<button>` over the
+canvas, present only when a `pulse` is given — a world that cannot answer a click
+should not take one — and the count it keeps is a prop the scene *answers*. That
+split is what lets the game drive the same marks from a header button later
+without the scene learning what a click bought. It is also why the count lives in
+the view and not the scene: the canvas is unmounted whenever the view scrolls out
+of the observer's range, and a click is the view's event.
+
+**A pulse parameter is an upgrade axis**, on the harness's argument. `sparks` is
+the clearest: a click that incarnates more souls should mark the world in more
+places, and the share resolves to whole flashes. `haloWidth` and `sparkWidth` at
+0 are the two marks switched off, so neither needed a toggle of its own.
+
+**Parked: the harness rings.** A flash could travel `t` along the loops, riders
+surging and settling — the harness answering a click the way the body does. It
+has to be a phase offset in the sampling and never a rebuild, since `buildLoops`
+is cached precisely because rebuilding is the expensive path. Not built, and it
+wants the rider count to have been looked at first.
+
 ### Open
 
-Nothing in the game draws a planet yet — the medium, the swarm, the anchors and
-three labs exist; the placement does not. **The loops between anchors are the
-next thing and are unbuilt**; the pair-family construction is specified in the
-design handoff (§2, arc + sine bulge + a twist about the chord, which is what
-stops a planar loop collapsing to a needle edge-on). Surface objects do not
+Nothing in the game draws a planet yet — the medium, the swarm, the anchors, the
+harness and four labs exist; the placement does not. Surface objects do not
 exist, only the field they would query. No parameter sizes a world against
 another. And each view is its own WebGL context, which the workbench can afford
 and an Overview list of one canvas per row cannot.
+
+The first three things that came back from seeing the harness run are built:
+`twist` runs to 2π, the souls' blend is a rider count, and the many-anchor figure
+is the anchors' own edges with a crown on every one of them. The harness was then
+tuned on the lab and pasted back — `DEFAULT_HARNESS` is a hand-authored record
+now, `span` at 1 and `twist` at 0 among them — so the lines have been judged.
+`riders` is still 0 there, and nothing yet says the rider count has been looked at.
+
+Three more came back from that sitting and are built: the lines are tied to the
+poles' tips, the swarm's per-band slider reaches a hundred, and `backHide` drops
+the far side of the harness. Typechecked, built and probed; not yet seen.
+
+The click is built too — a halo and its sparks, above — and it is the first thing
+here that is not an authoring surface. It is also the first with two acknowledged
+exceptions to the medium's rules written into it: alpha as a fade, and no
+silhouette test on a spark. Both are one uniform to reverse and neither has been
+seen running.
 
 ## Aim
 

@@ -44,7 +44,7 @@
   reset={(key) => planetLab.reset(key as keyof PlanetVisual)}
 >
   {#snippet header()}
-    <div class="row">
+    <div class="row picks">
       {#each planetLab.ids as id (id)}
         <button
           class={['pick', { on: id === planetLab.selected }]}
@@ -96,7 +96,35 @@
 </LabPanel>
 
 <style>
-  /* Layout for these rows comes from LabPanel; only the puck is local. */
+  /* Layout for these rows comes from LabPanel; only the puck and this are local. */
+
+  /**
+   * The ids run past the panel rather than wrapping. Wrapping would push the
+   * sliders down by a row every few worlds and the panel is already the full
+   * height of its rail; a strip that scrolls costs the same height at any count.
+   */
+  .picks {
+    /**
+     * Not shorthand for tidiness: `.body` is a column flex box with a bounded
+     * height, and a scroll container's automatic minimum size is 0 rather than
+     * its content. Without this the row is free to shrink and collapses to its
+     * own padding the moment `overflow-x` stops being `visible`.
+     */
+    flex: none;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    /* Room for the bar, so it does not sit on top of the buttons. */
+    padding-bottom: var(--sp-1);
+    scrollbar-width: thin;
+    overscroll-behavior-x: contain;
+  }
+
+  /* Without this a long list squeezes every id instead of overflowing. */
+  .picks .pick {
+    flex: none;
+    white-space: nowrap;
+  }
+
   .aim {
     align-items: flex-start;
     padding: var(--sp-1) 0;

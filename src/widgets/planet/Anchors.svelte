@@ -8,6 +8,7 @@
     createAnchorEdgeMaterial, createAnchorGhostMaterial, createAnchorMaterial,
     syncAnchorEdgeUniforms, syncAnchorGhostUniforms, syncAnchorUniforms,
   } from './material';
+  import { RENDER_ORDER } from './stack';
 
   interface Props {
     visual: AnchorVisual;
@@ -83,21 +84,23 @@
   });
 </script>
 
-<!--
-  The stack, and the whole of it: body 0, placed anchors 1, ghosts 2, souls 3.
-  The handoff draws anchors last, but its souls had no depth cue of their own;
-  ours discard everything behind the world already, so a soul that is drawn at
-  all is in front of the surface an anchor stands on and should pass over it.
-  Ghosts sit above the placed because they alone are never occluded.
--->
+<!-- Ghosts sit above the placed because they alone are never occluded. -->
 {#if solid}
   {#each standing as anchor, i (i)}
     <T.Group position={anchor.position} quaternion={anchor.quaternion}>
       {#if anchor.isPlaced}
-        <T.Mesh geometry={solid.body} material={face} renderOrder={1} />
-        <T.LineSegments geometry={solid.lines} material={edge} renderOrder={1} />
+        <T.Mesh geometry={solid.body} material={face} renderOrder={RENDER_ORDER.anchor} />
+        <T.LineSegments
+          geometry={solid.lines}
+          material={edge}
+          renderOrder={RENDER_ORDER.anchor}
+        />
       {:else}
-        <T.LineSegments geometry={solid.lines} material={ghost} renderOrder={2} />
+        <T.LineSegments
+          geometry={solid.lines}
+          material={ghost}
+          renderOrder={RENDER_ORDER.ghost}
+        />
       {/if}
     </T.Group>
   {/each}

@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import type { AnchorVisual } from './anchor';
+import type { HarnessVisual } from './harness';
 import { readInkRamp, RAMP_SIZE, RAMP_SLOTS } from './ink';
 import { keyLight } from './light.svelte';
 import type { SwarmVisual } from './orbit';
+import type { PulseVisual } from './pulse';
 import type { PlanetVisual } from './visual';
 
 /**
@@ -256,6 +258,78 @@ const soulFragment = /* glsl */ `
 `;
 
 /**
+ * The harness. One `LineSegments` for every loop, with `level` — 0 innermost,
+ * 1 outermost — carried per vertex, and `vRel` the fragment's offset from the
+ * body's centre in camera axes. Under an orthographic camera that makes xy the
+ * silhouette and z the near/far test, which is the whole of what the ink rule
+ * needs.
+ */
+const harnessVertex = /* glsl */ `
+  attribute float level;
+
+  varying float vLevel;
+  varying vec3 vRel;
+
+  void main() {
+    vLevel = level;
+
+    vec3 centre = (viewMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+    vec4 viewPos = modelViewMatrix * vec4(position, 1.0);
+
+    vRel = viewPos.xyz - centre;
+
+    gl_Position = projectionMatrix * viewPos;
+  }
+`;
+
+/**
+ * The ink rule, and there is no other lighting anywhere in the harness. Two
+ * inks by *place* — over the body, off it — chosen per fragment, because a
+ * single loop crosses the silhouette twice and must invert where it does.
+ *
+ * Both ways of saying far are the same gesture, spent twice: a step toward the
+ * middle of the ramp, which is away from whichever end the ink was chosen to
+ * contrast with. Behind the body's own centre plane is one; being an outer loop
+ * is the other, and that one is what sinks a family into what it sits on
+ * instead of letting every loop claim the same weight.
+ *
+ * Stepped rather than mixed. A blend between two ramp slots is a gradient, and
+ * the system does not own one.
+ */
+const harnessFragment = /* glsl */ `
+  uniform vec3 uRamp[${RAMP_SLOTS}];
+  uniform float uInTone;
+  uniform float uOutTone;
+  uniform float uBackFade;
+  uniform float uBackHide;
+  uniform float uLevelFade;
+
+  varying float vLevel;
+  varying vec3 vRel;
+
+  ${rampRead}
+
+  void main() {
+    // The body as a unit sphere, terrain ignored — a loop stands off the
+    // surface, so the mean radius is the only silhouette it can cross.
+    float over = step(dot(vRel.xy, vRel.xy), 1.0);
+    float back = step(vRel.z, 0.0);
+
+    // Let the body hide what is behind it, if it is asked to. Per fragment, so
+    // a line crossing the silhouette is cut at it rather than dropped whole —
+    // the rule the souls' far half already goes by.
+    if (uBackHide > 0.5 && over * back > 0.5) discard;
+
+    float tone = mix(uOutTone, uInTone, over);
+    tone += (back * uBackFade + vLevel * uLevelFade) * sign(3.0 - tone);
+
+    gl_FragColor = vec4(readRamp(tone), 1.0);
+
+    #include <colorspace_fragment>
+  }
+`;
+
+/**
  * An anchor's facets. No normal attribute: the normal comes from screen
  * derivatives, which is exact here because every triangle of the solid really
  * is flat. Lit by the system's one key, so a placed anchor takes its light from
@@ -391,6 +465,130 @@ const anchorGhostFragment = /* glsl */ `
   }
 `;
 
+/**
+ * The click's halo: one ring around the whole world, built from the body's
+ * origin in *view space* so it faces the camera without a quaternion and
+ * without inheriting the tilt of whatever group it hangs in.
+ *
+ * `fade` is per instance, which is what lets many flashes live at once out of
+ * one draw — the alternative was a component per ring, mounting and unmounting
+ * on every click.
+ */
+const haloVertex = /* glsl */ `
+  attribute float fade;
+
+  varying vec2 vUv;
+  varying float vFade;
+
+  void main() {
+    vUv = uv;
+    vFade = fade;
+
+    vec4 origin = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+    float span = length(instanceMatrix[0].xyz);
+
+    gl_Position = projectionMatrix * (origin + vec4(position.xy * span, 0.0, 0.0));
+  }
+`;
+
+const haloFragment = /* glsl */ `
+  uniform vec3 uRamp[${RAMP_SLOTS}];
+  uniform float uWidth;
+  uniform float uTone;
+
+  varying vec2 vUv;
+  varying float vFade;
+
+  ${rampRead}
+
+  void main() {
+    // 1.0 exactly on the quad's inscribed circle, which is the ring's radius —
+    // so the instance's scale is the only thing that grows it.
+    float spread = length(vUv - 0.5) * 2.0;
+
+    // Derivatives have to be taken in uniform control flow, hence before the
+    // width test. The stroke is then the px it says it is at any radius, by the
+    // same measure contourAt draws a band boundary with.
+    float perPixel = fwidth(spread);
+    if (uWidth <= 0.0) discard;
+
+    float pixels = abs(spread - 1.0) / max(perPixel, 1e-6);
+    float alpha = (1.0 - smoothstep(uWidth * 0.5 - 0.5, uWidth * 0.5 + 0.5, pixels)) * vFade;
+    if (alpha <= 0.0) discard;
+
+    gl_FragColor = vec4(readRamp(uTone), alpha);
+
+    #include <colorspace_fragment>
+  }
+`;
+
+/**
+ * A flash on the surface: a filled dot with a ring travelling out of it.
+ * Billboarded from the instance's own centre, the way a soul is.
+ *
+ * There is no silhouette test here and that is the decision — a spark is
+ * visible wherever it landed, including the far side, so neither the world nor
+ * the depth buffer hides it.
+ */
+const sparkVertex = /* glsl */ `
+  attribute float fade;
+  attribute float grow;
+
+  varying vec2 vUv;
+  varying float vFade;
+  varying float vGrow;
+
+  void main() {
+    vUv = uv;
+    vFade = fade;
+    vGrow = grow;
+
+    vec4 centre = modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+    float span = length(instanceMatrix[0].xyz);
+
+    gl_Position = projectionMatrix * (centre + vec4(position.xy * span, 0.0, 0.0));
+  }
+`;
+
+const sparkFragment = /* glsl */ `
+  uniform vec3 uRamp[${RAMP_SLOTS}];
+  uniform float uCore;
+  uniform float uWidth;
+  uniform float uTone;
+  uniform float uRingTone;
+
+  varying vec2 vUv;
+  varying float vFade;
+  varying float vGrow;
+
+  ${rampRead}
+
+  void main() {
+    float spread = length(vUv - 0.5) * 2.0;
+    float perPixel = fwidth(spread);
+
+    // The quad is sized to hold the ring at its widest, so the dot is a share
+    // of it rather than the whole — hard edged, antialiased as a soul is.
+    float aa = perPixel * 1.5;
+    float flash = 1.0 - smoothstep(uCore - aa, uCore, spread);
+
+    // The ring leaves the dot's own edge rather than its centre, so the two are
+    // one mark at the flash instead of a ring drawn through a dot.
+    float at = mix(uCore, 1.0, vGrow);
+    float pixels = abs(spread - at) / max(perPixel, 1e-6);
+    float ring = uWidth > 0.0
+      ? 1.0 - smoothstep(uWidth * 0.5 - 0.5, uWidth * 0.5 + 0.5, pixels)
+      : 0.0;
+
+    float alpha = max(flash, ring) * vFade;
+    if (alpha <= 0.0) discard;
+
+    gl_FragColor = vec4(readRamp(mix(uRingTone, uTone, step(0.5, flash))), alpha);
+
+    #include <colorspace_fragment>
+  }
+`;
+
 export function createSurfaceMaterial() {
   return new THREE.ShaderMaterial({
     vertexShader: surfaceVertex,
@@ -447,6 +645,25 @@ export function createSoulMaterial() {
   });
 }
 
+export function createHarnessMaterial() {
+  return new THREE.ShaderMaterial({
+    vertexShader: harnessVertex,
+    fragmentShader: harnessFragment,
+    // The lines behind the planet stay visible and pale rather than
+    // disappearing, so the depth buffer must not have an opinion about them.
+    depthTest: false,
+    depthWrite: false,
+    uniforms: {
+      uRamp: { value: readInkRamp() },
+      uInTone: { value: 0 },
+      uOutTone: { value: 6 },
+      uBackFade: { value: 2 },
+      uBackHide: { value: 0 },
+      uLevelFade: { value: 1 },
+    },
+  });
+}
+
 export function createAnchorMaterial() {
   return new THREE.ShaderMaterial({
     vertexShader: anchorVertex,
@@ -494,6 +711,72 @@ export function createAnchorGhostMaterial() {
       uZoom: { value: 100 },
     },
   });
+}
+
+export function createHaloMaterial() {
+  return new THREE.ShaderMaterial({
+    vertexShader: haloVertex,
+    fragmentShader: haloFragment,
+    side: THREE.DoubleSide,
+    // The one place the ink rule is bent: a mark that is leaving has to leave,
+    // and every other way of saying so — walking the tone toward paper, thinning
+    // the stroke — says it against the ramp instead of against the canvas.
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    uniforms: {
+      uRamp: { value: readInkRamp() },
+      uWidth: { value: 2 },
+      uTone: { value: 6 },
+    },
+  });
+}
+
+export function createSparkMaterial() {
+  return new THREE.ShaderMaterial({
+    vertexShader: sparkVertex,
+    fragmentShader: sparkFragment,
+    side: THREE.DoubleSide,
+    transparent: true,
+    // A spark is visible wherever it landed, the far side included.
+    depthTest: false,
+    depthWrite: false,
+    uniforms: {
+      uRamp: { value: readInkRamp() },
+      uCore: { value: 0.25 },
+      uWidth: { value: 1.5 },
+      uTone: { value: 0 },
+      uRingTone: { value: 0 },
+    },
+  });
+}
+
+export function syncHaloUniforms(material: THREE.ShaderMaterial, visual: PulseVisual) {
+  const u = material.uniforms;
+
+  u.uWidth.value = visual.haloWidth;
+  u.uTone.value = Math.round(visual.haloTone);
+}
+
+export function syncSparkUniforms(material: THREE.ShaderMaterial, visual: PulseVisual) {
+  const u = material.uniforms;
+
+  // The quad holds the ring at its widest, so the dot is that share of it — one
+  // number rather than a second scale the two marks could disagree about.
+  u.uCore.value = 1 / Math.max(1, visual.sparkRing);
+  u.uWidth.value = visual.sparkWidth;
+  u.uTone.value = Math.round(visual.sparkTone);
+  u.uRingTone.value = Math.round(visual.sparkRingTone);
+}
+
+export function syncHarnessUniforms(material: THREE.ShaderMaterial, visual: HarnessVisual) {
+  const u = material.uniforms;
+
+  u.uInTone.value = Math.round(visual.inTone);
+  u.uOutTone.value = Math.round(visual.outTone);
+  u.uBackFade.value = Math.round(visual.backFade);
+  u.uBackHide.value = Math.round(visual.backHide);
+  u.uLevelFade.value = Math.round(visual.levelFade);
 }
 
 export function syncAnchorUniforms(material: THREE.ShaderMaterial, visual: AnchorVisual) {

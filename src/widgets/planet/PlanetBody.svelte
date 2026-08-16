@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { T, useTask, useThrelte } from '@threlte/core';
+  import { T, useThrelte } from '@threlte/core';
   import { onDestroy, type Snippet } from 'svelte';
-  import * as THREE from 'three';
   import { buildGeometry, trimGeometryCache } from './geometry';
   import { readInkRamp } from './ink';
   import {
@@ -15,6 +14,12 @@
     /** Pixels per world unit. The outline is authored in px, so it needs this. */
     zoom: number;
     /**
+     * How far the world has turned. Kept by the scene rather than here: the
+     * swarm reads it too, and a body that integrated its own angle would be a
+     * second clock for the same rotation.
+     */
+    spinAngle?: number;
+    /**
      * Drawn inside the body's tilt but outside its spin — orbits and markers
      * share the world's axis without being dragged round by its surface.
      */
@@ -26,14 +31,12 @@
     standing?: Snippet;
   }
 
-  let { visual, zoom, children, standing }: Props = $props();
+  let { visual, zoom, spinAngle = 0, children, standing }: Props = $props();
 
   const { invalidate } = useThrelte();
   const ramp = readInkRamp();
   const surface = createSurfaceMaterial();
   const outline = createOutlineMaterial();
-
-  let spinner: THREE.Group | undefined = $state();
 
   /** Reads only the shape fields, so band sliders never rebuild the mesh. */
   const geometry = $derived.by(() => {
@@ -50,13 +53,6 @@
     invalidate();
   });
 
-  useTask((delta) => {
-    if (!spinner || !visual.spin) return;
-
-    spinner.rotation.y += visual.spin * delta;
-    invalidate();
-  });
-
   onDestroy(() => {
     surface.dispose();
     outline.dispose();
@@ -64,7 +60,7 @@
 </script>
 
 <T.Group rotation.x={visual.tilt}>
-  <T.Group bind:ref={spinner}>
+  <T.Group rotation.y={spinAngle}>
     {#if visual.outline > 0}
       <T.Mesh {geometry} material={outline} />
     {/if}

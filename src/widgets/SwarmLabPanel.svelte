@@ -11,7 +11,7 @@
   /** Counts, not authoring — so they sit above the groups `copy` prints. */
   const counts = [
     { key: 'bands', label: 'Cohorts', min: 1, max: 8 },
-    { key: 'per', label: 'Souls each', min: 0, max: 32 },
+    { key: 'per', label: 'Souls each', min: 0, max: 100 },
   ] as const;
 
   async function copy() {
@@ -51,5 +51,11 @@
         <span class="num">{size[count.key]}</span>
       </label>
     {/each}
+
+    <!-- `Riders` is a share and the harness is bought a soul at a time, so the
+         number that matters is the one the share came out as. -->
+    <div class="row">
+      <span class="id">{swarmLab.riders} of {swarmLab.souls} riding</span>
+    </div>
   {/snippet}
 </LabPanel>

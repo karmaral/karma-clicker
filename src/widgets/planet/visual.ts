@@ -47,6 +47,69 @@ export interface PlanetVisual {
   detail: number;
 
   /**
+   * Features instead of octaves. Each tier drops a count of round caps of a size
+   * in radians onto the sphere — 3 at 0.42 is three continents — and `caps`
+   * blends the terrain from the noise to their sum. It is a blend rather than a
+   * sum so the noise survives as the *coast* on the caps' landforms; at 1 there
+   * is nothing but smooth domes, and everything between is a shaped world with
+   * a rough shoreline. `warp` bends the caps too, which is what stops a
+   * continent being a circle. At 0 the whole system is inert.
+   *
+   * `lift` is signed per tier: positive raises, negative sinks, so the same
+   * three sliders make continents at one end and craters at the other. The sum
+   * is normalised on its own before the blend, so half really is half.
+   */
+  caps: number;
+  /**
+   * A ring just outside every cap, running against its lift and back to nothing.
+   * It exists so the ground *between* caps is not one constant: a constant has no
+   * band boundary in it, so at a high blend the water goes dead and `contour` has
+   * nothing to draw. With it, the water within reach of a coast has a gradient,
+   * and the bands quantise it into shallows the hairline rings.
+   *
+   * One number for all three tiers, and the reach is fixed at half each cap's own
+   * radius — the slider is the ring's depth, which is the part that decides
+   * whether it survives at 80px.
+   *
+   * Signed, because the ring is the *only* thing that says which way the ground
+   * leans as it leaves a cap and both readings are wanted. Positive digs: a
+   * trough hugging every coast, drawn below the open water, which is the dark
+   * coastal band an engraved map uses — and on a crater it is the raised rim a
+   * crater actually has. Negative banks it the other way, a shoal ringing the
+   * land lighter than the sea it sits in.
+   *
+   * It reaches as far as a coast does. What is further out than that is
+   * `capSwell`'s.
+   */
+  capSkirt: number;
+  /**
+   * The open sea. `capSkirt` grades the water a coast can reach and no further,
+   * which leaves the rest of it one flat tone — so this is a long, low set of
+   * bands laid across the water alone, masked out wherever a cap has said
+   * anything. Warped latitude, the same term `strata` uses, so `warp` swirls it
+   * and it is swell rather than a ruled grid.
+   *
+   * It goes in as height, not as a normal, and that is the useful way round: with
+   * `clip` at 1 the sea is flattened onto the sphere and is not deformed by this
+   * at all, so the swell survives purely as tone and as whatever `contour` draws
+   * along its band edges — line work on a sea that stays perfectly smooth.
+   *
+   * `capSwellBands` competes with `detail` exactly as `strataFrequency` does:
+   * the field is read per vertex, so bands finer than the mesh read as polygons.
+   */
+  capSwell: number;
+  capSwellBands: number;
+  capCoarse: number;
+  capCoarseSize: number;
+  capCoarseLift: number;
+  capMid: number;
+  capMidSize: number;
+  capMidLift: number;
+  capFine: number;
+  capFineSize: number;
+  capFineLift: number;
+
+  /**
    * Two layers, quantised separately.
    *
    * `land` is the *texture* — the terrain, read from a vertex attribute, so it
@@ -122,7 +185,7 @@ export interface PlanetVisual {
   tilt: number;
 }
 
-export type VisualGroup = 'Shape' | 'Texture' | 'Shade' | 'Outline' | 'Motion';
+export type VisualGroup = 'Shape' | 'Caps' | 'Texture' | 'Shade' | 'Outline' | 'Motion';
 
 export interface VisualParam {
   key: keyof PlanetVisual;
@@ -149,6 +212,20 @@ export const VISUAL_PARAMS: VisualParam[] = [
   { key: 'clip', label: 'Clip', group: 'Shape', min: 0, max: 1, step: 0.01, shape: true },
   { key: 'detail', label: 'Detail', group: 'Shape', min: 1, max: 48, step: 1, shape: true },
 
+  { key: 'caps', label: 'Caps', group: 'Caps', min: 0, max: 1, step: 0.01, shape: true },
+  { key: 'capSkirt', label: 'Skirt', group: 'Caps', min: -1, max: 1, step: 0.01, shape: true },
+  { key: 'capSwell', label: 'Swell', group: 'Caps', min: 0, max: 1, step: 0.01, shape: true },
+  { key: 'capSwellBands', label: 'Swell bands', group: 'Caps', min: 1, max: 16, step: 0.5, shape: true },
+  { key: 'capCoarse', label: 'Coarse count', group: 'Caps', min: 0, max: 8, step: 1, shape: true },
+  { key: 'capCoarseSize', label: 'Coarse size', group: 'Caps', min: 0.05, max: 1.4, step: 0.01, shape: true },
+  { key: 'capCoarseLift', label: 'Coarse lift', group: 'Caps', min: -1, max: 1, step: 0.01, shape: true },
+  { key: 'capMid', label: 'Mid count', group: 'Caps', min: 0, max: 16, step: 1, shape: true },
+  { key: 'capMidSize', label: 'Mid size', group: 'Caps', min: 0.03, max: 0.8, step: 0.005, shape: true },
+  { key: 'capMidLift', label: 'Mid lift', group: 'Caps', min: -1, max: 1, step: 0.01, shape: true },
+  { key: 'capFine', label: 'Fine count', group: 'Caps', min: 0, max: 32, step: 1, shape: true },
+  { key: 'capFineSize', label: 'Fine size', group: 'Caps', min: 0.02, max: 0.4, step: 0.005, shape: true },
+  { key: 'capFineLift', label: 'Fine lift', group: 'Caps', min: -1, max: 1, step: 0.01, shape: true },
+
   { key: 'land', label: 'Land', group: 'Texture', min: 0, max: 1.5, step: 0.01 },
   { key: 'bias', label: 'Bias', group: 'Texture', min: -0.6, max: 0.6, step: 0.01 },
   { key: 'steps', label: 'Steps', group: 'Texture', min: 1, max: 8, step: 1 },
@@ -172,7 +249,7 @@ export const VISUAL_PARAMS: VisualParam[] = [
   { key: 'tilt', label: 'Tilt', group: 'Motion', min: -0.8, max: 0.8, step: 0.01 },
 ];
 
-export const VISUAL_GROUPS: VisualGroup[] = ['Shape', 'Texture', 'Shade', 'Outline', 'Motion'];
+export const VISUAL_GROUPS: VisualGroup[] = ['Shape', 'Caps', 'Texture', 'Shade', 'Outline', 'Motion'];
 
 export const DEFAULT_VISUAL: PlanetVisual = {
   seed: 1,
@@ -188,6 +265,21 @@ export const DEFAULT_VISUAL: PlanetVisual = {
   amplitude: 0.07,
   clip: 0,
   detail: 28,
+
+  /** Off. The tiers below are the shape the slider opens onto, not a shape in effect. */
+  caps: 0,
+  capSkirt: 0.45,
+  capSwell: 0.12,
+  capSwellBands: 7,
+  capCoarse: 3,
+  capCoarseSize: 0.42,
+  capCoarseLift: 1,
+  capMid: 6,
+  capMidSize: 0.2,
+  capMidLift: 0.5,
+  capFine: 7,
+  capFineSize: 0.09,
+  capFineLift: -0.6,
 
   rim: 0.7,
   rimGamma: 2.4,
@@ -221,6 +313,10 @@ export function keyShape(visual: PlanetVisual) {
     visual.seed, visual.frequency, visual.octaves, visual.lacunarity, visual.gain,
     visual.ridge, visual.warp, visual.strata, visual.strataFrequency,
     visual.amplitude, visual.clip, visual.relief, visual.detail,
+    visual.caps, visual.capSkirt, visual.capSwell, visual.capSwellBands,
+    visual.capCoarse, visual.capCoarseSize, visual.capCoarseLift,
+    visual.capMid, visual.capMidSize, visual.capMidLift,
+    visual.capFine, visual.capFineSize, visual.capFineLift,
   ].join('/');
 }
 

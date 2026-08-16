@@ -1,3 +1,4 @@
+import { buildCaps, sampleCaps, sampleCoverage } from './caps';
 import { createNoise3D, sampleFbm } from './noise';
 import type { PlanetVisual } from './visual';
 
@@ -38,9 +39,9 @@ const WARP_OFFSETS = [
  * Maps the field's own reachable range onto −1…1. Without this `land` is worth
  * whatever the octave settings happen to leave it — measured, that was half a
  * band step on two of the authored worlds, which is why their terrain never
- * crossed a contour. It is also what lets `ridge` and `strata` be added at all:
- * each changes the raw range, and normalisation absorbs the change instead of
- * making every existing band setting mean something new.
+ * crossed a contour. It is also what lets `ridge`, `strata` and the caps be
+ * added at all: each changes the raw range, and normalisation absorbs the change
+ * instead of making every existing band setting mean something new.
  */
 function measureRange(sample: (x: number, y: number, z: number) => number) {
   let min = Infinity;
@@ -74,7 +75,9 @@ export function createSurfaceField(visual: PlanetVisual): SurfaceField {
     ridge: visual.ridge,
   };
 
-  const { warp, strata, strataFrequency } = visual;
+  const { warp, strata, strataFrequency, caps: capWeight } = visual;
+  const { capSwell, capSwellBands } = visual;
+  const caps = buildCaps(visual);
 
   // The warped direction. Held here rather than returned, so the hot loop that
   // builds the mesh allocates nothing.
@@ -116,13 +119,40 @@ export function createSurfaceField(visual: PlanetVisual): SurfaceField {
   function rawHeight(x: number, y: number, z: number) {
     warpAt(x, y, z);
 
-    const terrain = sampleFbm(noise, wx, wy, wz, options);
-    if (strata <= 0) return terrain;
+    let height = sampleFbm(noise, wx, wy, wz, options);
 
-    // Latitude of the *warped* point, so the bands inherit the swirl.
-    const stripe = Math.sin(wy * strataFrequency * Math.PI);
+    // Blended rather than added, so the noise survives as the coast on the caps'
+    // landforms instead of piling a second landscape on top of them. Read at the
+    // warped direction, which is what keeps a continent off a circle.
+    if (capWeight > 0) {
+      const land = sampleCaps(caps, wx, wy, wz);
+      height += (land - height) * capWeight;
 
-    return terrain + (stripe - terrain) * strata;
+      /**
+       * The open sea. The skirt only grades water a coast can reach, so the rest
+       * of it is left as one flat tone with no band boundary in it — this is the
+       * long swell laid across that, and it is added rather than blended because
+       * it is a ripple *on* the water and not another thing the water could be.
+       *
+       * Masked by the caps' coverage and not by their sum: the sum is 0 both far
+       * out at sea and exactly on a coast, so a mask built from it would open at
+       * the shoreline. Coverage is monotone from a cap's centre to the outer edge
+       * of its skirt, so the swell fades in as the sea does.
+       */
+      if (capSwell > 0) {
+        const open = 1 - sampleCoverage(caps, wx, wy, wz);
+        height += Math.sin(wy * capSwellBands * Math.PI) * capSwell * open;
+      }
+    }
+
+    // Latitude of the *warped* point, so the bands inherit the swirl. Last, so a
+    // gas giant's stripes win over whatever shape the world had underneath.
+    if (strata > 0) {
+      const stripe = Math.sin(wy * strataFrequency * Math.PI);
+      height += (stripe - height) * strata;
+    }
+
+    return height;
   }
 
   const { scale, offset } = measureRange(rawHeight);

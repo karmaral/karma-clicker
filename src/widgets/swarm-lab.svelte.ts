@@ -1,4 +1,6 @@
-import { cloneSwarm, DEFAULT_SWARM, printSwarm, type SwarmVisual } from './planet';
+import {
+  cloneSwarm, DEFAULT_SWARM, printSwarm, riderCount, SOUL_CAPACITY, type SwarmVisual,
+} from './planet';
 
 /**
  * The lab's working copy of the swarm. One record rather than the planet lab's
@@ -16,6 +18,15 @@ function createSwarmLab() {
   const size = $state({ bands: 4, per: 12 });
 
   const counts = $derived(Array.from({ length: size.bands }, () => size.per));
+
+  /** What the sliders actually come to, capped as `createSouls` caps it. */
+  const souls = $derived(Math.min(SOUL_CAPACITY, size.bands * size.per));
+
+  /**
+   * The share of the swarm on the lines, as the whole souls it buys — a share
+   * that buys no further soul changed nothing, and the slider cannot say so.
+   */
+  const riders = $derived(riderCount(draft, souls));
 
   function resize(key: 'bands' | 'per', value: number) {
     if (!Number.isFinite(value)) return;
@@ -46,6 +57,8 @@ function createSwarmLab() {
     get current() { return draft; },
     get size() { return size; },
     get counts() { return counts; },
+    get souls() { return souls; },
+    get riders() { return riders; },
     resize,
     set,
     reset,

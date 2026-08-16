@@ -78,6 +78,12 @@ export interface AnchorNode {
 export interface AnchorPlacement extends AnchorNode {
   /** Where the solid's base sits along its own direction, in object units. */
   base: number;
+  /**
+   * And where its tip does — what the harness ties its lines to. `chamfer` cuts
+   * the apex back to a small flat cap, so this is that cap's centre rather than
+   * a point, which is the one place on the solid every line can meet.
+   */
+  peak: number;
   isPlaced: boolean;
 }
 
@@ -160,11 +166,16 @@ export function placeAnchors(
   anchored: boolean[],
   radiusAt: (x: number, y: number, z: number) => number,
 ): AnchorPlacement[] {
-  return nodesFor(anchored.length, visual.phase).map((node, i) => ({
-    ...node,
-    base: radiusAt(node.x, node.y, node.z) - visual.sink * visual.size,
-    isPlaced: anchored[i],
-  }));
+  return nodesFor(anchored.length, visual.phase).map((node, i) => {
+    const base = radiusAt(node.x, node.y, node.z) - visual.sink * visual.size;
+
+    return {
+      ...node,
+      base,
+      peak: base + visual.height * visual.size,
+      isPlaced: anchored[i],
+    };
+  });
 }
 
 export interface AnchorSolid {

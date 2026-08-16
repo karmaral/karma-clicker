@@ -60,15 +60,15 @@
 
       return [
         {
-          type: 'karma_positive' as YieldType,
-          value: now.positive,
-          trend: trendOf(now.positive, even.positive),
-        },
-        {
           type: 'karma_negative' as YieldType,
           value: now.negative,
           trend: trendOf(now.negative, even.negative),
         },
+        {
+          type: 'karma_positive' as YieldType,
+          value: now.positive,
+          trend: trendOf(now.positive, even.positive),
+        }
       ];
     });
   });
