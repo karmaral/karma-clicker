@@ -2,18 +2,27 @@
   import { Label } from '$ui';
   import { Canvas } from '@threlte/core'
   import Scene from './Scene.svelte';
+  import AnchorLabPanel from './AnchorLabPanel.svelte';
   import DotTypePreview from './DotTypePreview.svelte';
+  import LabRail from './LabRail.svelte';
   import PlanetLabPanel from './PlanetLabPanel.svelte';
   import SwarmLabPanel from './SwarmLabPanel.svelte';
   import { PlanetView } from './planet';
+  import { anchorLab } from './anchor-lab.svelte';
   import { planetLab } from './planet-lab.svelte';
   import { swarmLab } from './swarm-lab.svelte';
 
-  /** The sizes a planet actually ships at, plus one large enough to judge facets. */
+  /** The sizes a planet actually ships at, plus one large enough to judge terrain. */
   const trueSizes = [40, 56, 80, 120, 180];
 
   /** Souls per cohort, off the lab's sliders. One dot is one soul at these counts. */
   const cohorts = $derived(swarmLab.counts);
+
+  /** One flag per anchor, off the lab's two sliders. */
+  const anchored = $derived(anchorLab.anchored);
+
+  /** Every count at once, all placed — the figures side by side. */
+  const figures = [2, 3, 4, 5, 6, 7, 8];
 
   /** Rim-hugging orbits still need more room than a bare body. */
   const swarmFrame = 3.2;
@@ -126,6 +135,71 @@
     </div>
   </section>
 
+  <section id="anchors">
+    <h2>Anchors — the harness poles</h2>
+    <p class="note">
+      Solids driven into the surface, standing where <i>n</i> points on a sphere go when
+      they push each other as far apart as they can — the count alone names the figure, so
+      nothing is authored per world. Two states: <b>placed</b> is the fill and its edges,
+      <b>unplaced</b> the same edges dashed and hollow. The base reads
+      <code>field.sampleRadius</code>, so an anchor stands on the terrain rather than on
+      the sphere the terrain was displaced from.
+    </p>
+    <div class="canvas strip">
+      <div class="member">
+        <PlanetView
+          visual={planetLab.current}
+          px={420}
+          anchors={anchorLab.current}
+          {anchored}
+        />
+        <span class="spec">
+          {anchorLab.size.placed} of {anchorLab.size.count} placed
+        </span>
+      </div>
+      <div class="member">
+        <PlanetView
+          visual={planetLab.current}
+          px={200}
+          frame={swarmFrame}
+          anchors={anchorLab.current}
+          {anchored}
+          swarm={swarmLab.current}
+          {cohorts}
+        />
+        <span class="spec">with souls</span>
+      </div>
+    </div>
+    <div class="canvas strip">
+      {#each figures as count (count)}
+        <div class="member">
+          <PlanetView
+            visual={planetLab.current}
+            px={160}
+            anchors={anchorLab.current}
+            anchored={Array.from({ length: count }, () => true)}
+          />
+          <span class="spec">{count}</span>
+        </div>
+      {/each}
+    </div>
+    <div class="canvas sizes">
+      {#each trueSizes as px (px)}
+        <div class="member">
+          <PlanetView
+            visual={planetLab.current}
+            {px}
+            frame={2.5}
+            backgroundToken="--surface"
+            anchors={anchorLab.current}
+            {anchored}
+          />
+          <span class="spec">{px}px</span>
+        </div>
+      {/each}
+    </div>
+  </section>
+
   <section>
     <h2>Swarm — existing</h2>
     <p class="note">Perspective, stencil-inverted dots. Predates the planet work.</p>
@@ -142,8 +216,14 @@
   </section>
 </div>
 
-<PlanetLabPanel />
-<SwarmLabPanel />
+<LabRail side="right">
+  <PlanetLabPanel />
+</LabRail>
+
+<LabRail side="left">
+  <SwarmLabPanel />
+  <AnchorLabPanel />
+</LabRail>
 
 <style>
   .viewport {

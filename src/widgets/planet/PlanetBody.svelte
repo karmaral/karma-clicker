@@ -19,9 +19,14 @@
      * share the world's axis without being dragged round by its surface.
      */
     children?: Snippet;
+    /**
+     * Inside the spin, for anything that is *on* the surface rather than around
+     * it. The same slot the terrain occupies, so it turns with the ground.
+     */
+    standing?: Snippet;
   }
 
-  let { visual, zoom, children }: Props = $props();
+  let { visual, zoom, children, standing }: Props = $props();
 
   const { invalidate } = useThrelte();
   const ramp = readInkRamp();
@@ -64,6 +69,8 @@
       <T.Mesh {geometry} material={outline} />
     {/if}
     <T.Mesh {geometry} material={surface} />
+
+    {@render standing?.()}
   </T.Group>
 
   {@render children?.()}

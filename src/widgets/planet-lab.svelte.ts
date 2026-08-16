@@ -28,15 +28,6 @@ function createPlanetLab() {
     drafts[selected][key] = planetVisuals[selected][key];
   }
 
-  /** Clamped to the unit disc — outside it there is no z left to point with. */
-  function aim(x: number, y: number) {
-    const reach = Math.hypot(x, y);
-    const scale = reach > 1 ? 1 / reach : 1;
-
-    drafts[selected].keyX = x * scale;
-    drafts[selected].keyY = y * scale;
-  }
-
   function reseed() {
     drafts[selected].seed = Math.floor(Math.random() * 100000);
   }
@@ -58,7 +49,6 @@ function createPlanetLab() {
     select,
     set,
     reset,
-    aim,
     reseed,
     revert,
     print,

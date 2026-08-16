@@ -1,6 +1,6 @@
 <script lang="ts">
   import LabPanel from './LabPanel.svelte';
-  import { VISUAL_GROUPS, VISUAL_PARAMS, type PlanetVisual } from './planet';
+  import { keyLight, VISUAL_GROUPS, VISUAL_PARAMS, type PlanetVisual } from './planet';
   import { planetLab } from './planet-lab.svelte';
 
   let copied = $state(false);
@@ -16,7 +16,7 @@
 
     const box = puck.getBoundingClientRect();
 
-    planetLab.aim(
+    keyLight.point(
       ((event.clientX - box.left) / box.width) * 2 - 1,
       -(((event.clientY - box.top) / box.height) * 2 - 1),
     );
@@ -61,11 +61,15 @@
     </div>
   {/snippet}
 
-  <!-- Directly under its weight: the puck does nothing while Key is 0. -->
+  <!--
+    Under the weight it aims, but it is not the world's: one light serves every
+    planet and the anchors on it, so this puck moves them all at once and a
+    world with Key at 0 still feels it through its poles.
+  -->
   {#snippet under(key: string)}
     {#if key === 'key'}
-      <div class={['row', 'aim', { inert: !current.key }]}>
-        <span class="id">{current.key ? 'Direction' : 'Direction (Key 0)'}</span>
+      <div class="row aim">
+        <span class="id">Direction (shared)</span>
         <button
           class="puck"
           type="button"
@@ -79,12 +83,12 @@
         >
           <span
             class="knob"
-            style:left="{50 + current.keyX * 50}%"
-            style:top="{50 - current.keyY * 50}%"
+            style:left="{50 + keyLight.x * 50}%"
+            style:top="{50 - keyLight.y * 50}%"
           ></span>
         </button>
         <span class="num">
-          {current.keyX.toFixed(2)}<br />{current.keyY.toFixed(2)}
+          {keyLight.x.toFixed(2)}<br />{keyLight.y.toFixed(2)}
         </span>
       </div>
     {/if}
@@ -96,10 +100,6 @@
   .aim {
     align-items: flex-start;
     padding: var(--sp-1) 0;
-  }
-
-  .aim.inert {
-    opacity: .45;
   }
 
   .puck {

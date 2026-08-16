@@ -66,5 +66,5 @@
   bind:ref={mesh}
   args={[geometry, material, SOUL_CAPACITY]}
   frustumCulled={false}
-  renderOrder={2}
+  renderOrder={3}
 />

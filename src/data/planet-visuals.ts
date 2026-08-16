@@ -1,20 +1,23 @@
-import type { PlanetVisual } from '$widgets/planet';
+﻿import type { PlanetVisual } from '$widgets/planet';
 
 /**
  * Authored in the widget lab (`?widgets`) and pasted here. Keyed by planet id,
  * so a world's picture and its numbers stay separate files — `Planet` never
  * reads this.
  *
- * **`first` and `second` are current** — re-authored after the texture/shade
- * split, and the only two with a `shadeDepth` above zero.
+ * **`first`, `second`, `third` and `cool_1` are current** — all re-authored
+ * after the texture/shade split, and the four with a `shadeDepth` above zero.
  *
- * **The other four are stale.** They were tuned when `rim`, `land` and `key`
- * were summed into one band coordinate; the two are now quantised separately,
- * and `shadeDepth: 0` leaves the shade out entirely. So each is currently its
- * texture alone — which on `third` and `cool_1` is very little, because their
- * terrain was measured at under one band step and the view terms were doing the
- * drawing. Nothing is lost: `rim`, `key` and the key's aim are untouched, and
- * raising `shadeDepth` brings them back. They want a pass in the lab.
+ * **`ridged` and `banded` are stale.** They were tuned when `rim`, `land` and
+ * `key` were summed into one band coordinate; the two are now quantised
+ * separately, and `shadeDepth: 0` leaves the shade out entirely, so each is
+ * currently its texture alone. Nothing is lost — `rim` and `key` are untouched
+ * and raising `shadeDepth` brings them back — but they want a pass in the lab.
+ *
+ * The key's *aim* is no longer authored here. There is one light in the system
+ * and it lives in `light.svelte.ts`; a world still says how much of it it takes,
+ * through `key`. The four aims these entries carried all sat within a few
+ * degrees of each other, so nothing was ever being said by their differing.
  *
  * `ridged` and `banded` are specimens, not worlds — they exist so the two field
  * modes have something in the family strip.
@@ -33,13 +36,10 @@ const data: Record<string, PlanetVisual> = {
     amplitude: -0.075,
     clip: 1,
     detail: 26,
-    faceting: 0,
     rim: 0.25,
     rimGamma: 3.5,
     land: 0.82,
     key: 1.03,
-    keyX: 0.619,
-    keyY: 0.622,
     bias: 0.05,
     steps: 4,
     toneFloor: 2,
@@ -68,13 +68,10 @@ const data: Record<string, PlanetVisual> = {
     amplitude: 0.005,
     clip: 0.18,
     detail: 28,
-    faceting: 0,
     rim: -1.27,
     rimGamma: 7.05,
     land: 0.17,
     key: 1.5,
-    keyX: 0.619,
-    keyY: 0.6538,
     bias: 0.07,
     steps: 5,
     toneFloor: 0,
@@ -92,35 +89,32 @@ const data: Record<string, PlanetVisual> = {
   },
   /** Land-driven continents, sitting darker on the ramp. */
   'third': {
-    seed: 137,
-    frequency: 2.6,
-    octaves: 4,
-    lacunarity: 2.1,
-    gain: 0.5,
-    ridge: 0,
+    seed: 8443,
+    frequency: 1.95,
+    octaves: 2,
+    lacunarity: 3.55,
+    gain: 0.85,
+    ridge: 0.35,
     warp: 0,
     strata: 0,
-    strataFrequency: 4,
-    amplitude: 0.105,
-    clip: 0,
+    strataFrequency: 1,
+    amplitude: 0.045,
+    clip: 1,
     detail: 28,
-    faceting: 0,
-    rim: 0.3,
-    rimGamma: 1.8,
-    land: 0.2624,
-    key: 0.6,
-    keyX: -0.45,
-    keyY: 0.45,
-    bias: -0.0017,
-    steps: 5,
-    toneFloor: 1,
+    rim: -0.2,
+    rimGamma: 2.45,
+    land: 1.18,
+    key: 1.28,
+    bias: -0.6,
+    steps: 4,
+    toneFloor: 0,
     toneCeil: 6,
-    contour: 0,
+    contour: 1.5,
     contourTone: 6,
     contourShadowTone: 6,
-    shadeSteps: 2,
-    shadeDepth: 0,
-    relief: 0,
+    shadeSteps: 4,
+    shadeDepth: 0.5,
+    relief: 0.02,
     outline: 2,
     outlineTone: 6,
     spin: 0.07,
@@ -128,34 +122,31 @@ const data: Record<string, PlanetVisual> = {
   },
   'cool_1': {
     seed: 14781,
-    frequency: 2.55,
-    octaves: 3,
-    lacunarity: 2.1,
-    gain: 0.4,
+    frequency: 1.4,
+    octaves: 2,
+    lacunarity: 2.6,
+    gain: 0.67,
     ridge: 0,
-    warp: 0,
+    warp: 0.215,
     strata: 0,
     strataFrequency: 4,
-    amplitude: 0,
-    clip: 0,
-    detail: 34,
-    faceting: 0,
-    rim: 0.23,
-    rimGamma: 3.95,
-    land: 0.1525,
-    key: 0,
-    keyX: -0.45,
-    keyY: 0.45,
-    bias: 0.3907,
-    steps: 6,
-    toneFloor: 6,
-    toneCeil: 0,
-    contour: 0,
+    amplitude: -0.08,
+    clip: 1,
+    detail: 28,
+    rim: 1.5,
+    rimGamma: 4.75,
+    land: 1.02,
+    key: 1.5,
+    bias: 0.53,
+    steps: 4,
+    toneFloor: 0,
+    toneCeil: 1,
+    contour: 1.5,
     contourTone: 6,
-    contourShadowTone: 6,
-    shadeSteps: 2,
-    shadeDepth: 0,
-    relief: 0,
+    contourShadowTone: 1,
+    shadeSteps: 4,
+    shadeDepth: 1,
+    relief: -0.005,
     outline: 2,
     outlineTone: 6,
     spin: 0.125,
@@ -183,13 +174,10 @@ const data: Record<string, PlanetVisual> = {
     amplitude: 0.18,
     clip: 0,
     detail: 28,
-    faceting: 0,
     rim: 0.25,
     rimGamma: 2,
     land: 0.7,
     key: 0.5,
-    keyX: -0.45,
-    keyY: 0.45,
     bias: -0.08,
     steps: 5,
     toneFloor: 1,
@@ -223,13 +211,10 @@ const data: Record<string, PlanetVisual> = {
     amplitude: 0.02,
     clip: 0,
     detail: 36,
-    faceting: 0,
     rim: 0.2,
     rimGamma: 3,
     land: 0.7,
     key: 0.25,
-    keyX: -0.4,
-    keyY: 0.5,
     bias: -0.05,
     steps: 6,
     toneFloor: 0,

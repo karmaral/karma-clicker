@@ -22,14 +22,13 @@
     value: (key: string) => number;
     set: (key: string, value: number) => void;
     reset: (key: string) => void;
-    side?: 'left' | 'right';
     /** Rows above the sliders — whatever this lab is per-subject about. */
     header?: Snippet;
     /** Extra control belonging to one slider, drawn directly under it. */
     under?: Snippet<[string]>;
   }
 
-  let { title, groups, params, value, set, reset, side = 'right', header, under }: Props = $props();
+  let { title, groups, params, value, set, reset, header, under }: Props = $props();
 
   let open = $state(true);
 
@@ -38,7 +37,7 @@
   }
 </script>
 
-<aside class={['lab', side, { open }]}>
+<aside class={['lab', { open }]}>
   <button class="toggle" onclick={() => (open = !open)}>{title}</button>
 
   {#if open}
@@ -71,31 +70,26 @@
 </aside>
 
 <style>
+  /* A panel is laid out by its rail, so it owns no position of its own — which
+     is what lets two of them share a side. */
   .lab {
-    position: fixed;
-    top: var(--sp-3);
-    bottom: var(--sp-3);
-    z-index: 40;
     width: 20rem;
     display: flex;
     flex-direction: column;
+    /* Open panels share the rail's height; without this the scrolling body
+       cannot shrink and the last panel falls off the page. */
+    flex: 1 1 auto;
+    min-height: 0;
     background: var(--surface);
     border: var(--rule-card);
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: var(--fs-xs);
   }
 
-  .right {
-    right: var(--sp-3);
-  }
-
-  .left {
-    left: var(--sp-3);
-  }
-
   .lab:not(.open) {
-    bottom: auto;
+    flex: none;
     width: auto;
+    align-self: flex-start;
   }
 
   .toggle {

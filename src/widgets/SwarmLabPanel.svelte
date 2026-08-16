@@ -23,7 +23,6 @@
 
 <LabPanel
   title="swarm lab"
-  side="left"
   groups={SWARM_GROUPS}
   params={SWARM_PARAMS}
   value={(key) => current[key as keyof SwarmVisual]}

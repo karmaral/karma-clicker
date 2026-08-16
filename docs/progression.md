@@ -334,13 +334,80 @@ planet's outline already makes. Its ink is derived from the fill rather than
 authored, because a fourth authored tone would need setting once per place a soul
 can be and would still be wrong for one of them.
 
+### Anchors on the surface
+
+The harness poles, and the first thing that is *on* the planet rather than
+around it. Five decisions.
+
+**Placement is the count.** Anchors stand where n points on a sphere go when
+they push each other as far apart as they can — the optimal spherical codes,
+every one of which is a named symmetric figure at these counts: antipodal,
+triangle, tetrahedron, triangular bipyramid, octahedron, pentagonal bipyramid,
+square antiprism. So the count alone fixes the picture and nothing is authored
+per world, which is the argument `bandAt` already makes for the swarm. The design
+handoff specified an equator ring; that is superseded, because eight anchors on
+one great circle put all twenty-eight future loops in the same family of planes,
+and the point of the 3D rebuild was that a loop can now genuinely go behind.
+Two and three come out as a ring either way, which is the case the 2D drawing
+was tuned against, so nothing that was judged is lost.
+
+**A chamfered pyramid is three rings.** A sharp pyramid's profile has exactly two
+corners — the base rim and the apex — and one `chamfer` cuts back both. At 0 it
+is a plain n-gonal pyramid, at 0.5 the cuts meet and it is two frusta base to
+base, and in between the silhouette is the cut-cornered polygon the 2D mark
+draws. One knob, and the 3-sided cone the handoff specifies is one setting of it.
+
+**Anchors stand on the terrain, not on the sphere.** The base reads
+`field.sampleRadius`, so a pole and the ground under it cannot disagree — the
+reason the field is one implementation and never duplicated. The reference parks
+them at a flat 0.99 of the node, which on an engraved world would float a pole
+over its own pit.
+
+**One magnitude, and it is where scale will arrive.** Base radius and height are
+the authored proportion and are not on the panel; a single `size` multiplies
+both, and `sink` with them, so a bigger anchor is the same anchor. This is the
+hook for the parked world-scale parameter: anchors sized against the body cannot
+say how big the body is, and anchors sized against the screen can — small poles
+read as a large world.
+
+**The two states are a fill and its absence.** Placed is the solid with its
+edges; unplaced is the same edges, dashed, hollow, and **never occluded** — an
+anchor's *place* does not stop existing when the world turns away from it, so
+hiding the far ones would be hiding the information the ghost exists to carry.
+It says it is far by fading toward the middle of the ramp instead. Its ink is
+chosen by place and not by state — paper over the body, ink over the canvas —
+so it inverts against whatever it crosses rather than picking one grey and
+losing half of it. That front/back reading is taken from the anchor's origin and
+not per fragment, which is the opposite of the souls' rule and for a reason: a
+dot straddling the silhouette should be cut in half, but an anchor is a place,
+and a place is on one side or the other.
+
+### One light, and worlds only choose how much
+
+The key's *aim* is a system token now, sitting beside the ink ramp rather than
+inside `PlanetVisual`, and read the same ambient way. There is one fake light;
+worlds differing on where it comes from was never saying anything — every world
+that had actually been aimed sat in the same quadrant, and the ones that
+differed differed only by never having been touched. The anchors made it a real
+problem, since a pole lit from somewhere other than the ground it stands on
+reads as a paste-up. What stays per world is `key`, the weight: how much of the
+light a world takes is a property of the world.
+
+**Faceting is gone.** The shade is unconditionally the field's own surface
+normal. A low-poly reading was one slider away for several sessions and was never
+wanted; keeping it cost a varying, a per-fragment cross product and a false
+promise in `detail`'s doc comment, which claimed coarse meshes had a use.
+
 ### Open
 
-Nothing in the game draws a planet yet — the medium, the swarm and two labs
-exist; the placement does not. Surface objects do not exist, only the field they
-would query. No parameter sizes a world against another, so the swarm has nothing
-to scale with. And each view is its own WebGL context, which the workbench can
-afford and an Overview list of one canvas per row cannot.
+Nothing in the game draws a planet yet — the medium, the swarm, the anchors and
+three labs exist; the placement does not. **The loops between anchors are the
+next thing and are unbuilt**; the pair-family construction is specified in the
+design handoff (§2, arc + sine bulge + a twist about the chord, which is what
+stops a planar loop collapsing to a needle edge-on). Surface objects do not
+exist, only the field they would query. No parameter sizes a world against
+another. And each view is its own WebGL context, which the workbench can afford
+and an Overview list of one canvas per row cannot.
 
 ## Aim
 

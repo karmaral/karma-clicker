@@ -57,28 +57,23 @@ export interface PlanetVisual {
    * band coordinate. They are composited afterwards as a shift along the ramp,
    * which is what keeps the pattern a property of the world instead of of where
    * the camera stands. `rim` is signed: positive darkens the limb, negative
-   * lightens it — the atmosphere reading. With `land` and `shadeDepth` both at
+   * lightens it — the atmosphere reading. With `land` and shadeDepth` both at
    * zero, nothing is left but a flat fill and the outline.
    *
-   * `faceting` at 0 is the field's own surface normal, so the shade follows the
-   * terrain's slope; at 1 it is the triangle's. Only the second reads as
-   * low-poly, and only it wants a coarse `detail` — smooth worlds should push
-   * `detail` as high as they can afford.
+   * The shading normal is always the field's own, so the shade follows the
+   * terrain's slope rather than the triangles under it — which is why `detail`
+   * should be pushed as high as a world can afford.
    */
-  faceting: number;
   rim: number;
   rimGamma: number;
   land: number;
   /**
-   * A key direction. Not a light — there is no light — but the same maths, and
-   * it is the only term that tells you which way a slope faces. Held in view
-   * space, so the planet turns under it instead of carrying it around.
-   * `keyX`/`keyY` are the direction projected on screen, inside the unit disc;
-   * z is whatever is left over, so the centre points straight at the camera.
+   * How much of the key this world takes. Not a light — there is no light — but
+   * the same maths, and the only term that tells you which way a slope faces.
+   * Where it comes from is not authored here: the aim is one token for the whole
+   * system, in `light.svelte.ts`, and the anchors read the same one.
    */
   key: number;
-  keyX: number;
-  keyY: number;
   bias: number;
   steps: number;
   toneFloor: number;
@@ -169,7 +164,6 @@ export const VISUAL_PARAMS: VisualParam[] = [
   { key: 'key', label: 'Key', group: 'Shade', min: 0, max: 1.5, step: 0.01 },
   { key: 'rim', label: 'Rim', group: 'Shade', min: -1.5, max: 1.5, step: 0.01 },
   { key: 'rimGamma', label: 'Rim sharpness', group: 'Shade', min: 0.25, max: 10, step: 0.05 },
-  { key: 'faceting', label: 'Faceting', group: 'Shade', min: 0, max: 1, step: 0.01 },
 
   { key: 'outline', label: 'Outline px', group: 'Outline', min: 0, max: 8, step: 0.25 },
   { key: 'outlineTone', label: 'Outline tone', group: 'Outline', min: 0, max: 6, step: 1 },
@@ -195,13 +189,10 @@ export const DEFAULT_VISUAL: PlanetVisual = {
   clip: 0,
   detail: 28,
 
-  faceting: 0,
   rim: 0.7,
   rimGamma: 2.4,
   land: 0.5,
   key: 0,
-  keyX: -0.45,
-  keyY: 0.45,
   bias: -0.1,
   steps: 4,
   toneFloor: 0,

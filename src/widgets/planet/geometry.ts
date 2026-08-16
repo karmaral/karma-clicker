@@ -4,13 +4,13 @@ import { keyShape, type PlanetVisual } from './visual';
 
 /**
  * An icosphere displaced on the CPU. Icosahedron rather than `SphereGeometry`:
- * a UV sphere pinches at the poles and bunches its quads, which is invisible
- * smooth-shaded and glaring under facets.
+ * a UV sphere pinches at the poles and bunches its quads, which shows the
+ * moment a contour crosses one.
  *
  * Normals are the real surface normals, derived from the field's slope rather
- * than from the triangles — so smooth shading follows the terrain instead of
- * reverting to the sphere underneath it. Facets come from screen derivatives in
- * the fragment shader, so the two are one slider apart.
+ * than from the triangles — so the shade follows the terrain instead of
+ * reverting to the sphere underneath it, and `detail` buys smoothness with no
+ * ceiling on it.
  */
 const cache = new Map<string, THREE.BufferGeometry>();
 

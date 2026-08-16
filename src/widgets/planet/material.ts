@@ -1,5 +1,7 @@
 import * as THREE from 'three';
+import type { AnchorVisual } from './anchor';
 import { readInkRamp, RAMP_SIZE, RAMP_SLOTS } from './ink';
+import { keyLight } from './light.svelte';
 import type { SwarmVisual } from './orbit';
 import type { PlanetVisual } from './visual';
 
@@ -29,7 +31,6 @@ const surfaceVertex = /* glsl */ `
   attribute float height;
 
   varying float vHeight;
-  varying vec3 vViewPos;
   varying vec3 vNormal;
 
   void main() {
@@ -38,16 +39,12 @@ const surfaceVertex = /* glsl */ `
     // The attribute is the field's own surface normal, baked in geometry.ts.
     vNormal = normalize(normalMatrix * normal);
 
-    vec4 viewPos = modelViewMatrix * vec4(position, 1.0);
-    vViewPos = viewPos.xyz;
-
-    gl_Position = projectionMatrix * viewPos;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `;
 
 const surfaceFragment = /* glsl */ `
   uniform vec3 uRamp[${RAMP_SLOTS}];
-  uniform float uFaceting;
   uniform float uRim;
   uniform float uRimGamma;
   uniform float uLand;
@@ -64,7 +61,6 @@ const surfaceFragment = /* glsl */ `
   uniform float uShadeDepth;
 
   varying float vHeight;
-  varying vec3 vViewPos;
   varying vec3 vNormal;
 
   ${rampRead}
@@ -92,14 +88,9 @@ const surfaceFragment = /* glsl */ `
   }
 
   void main() {
-    vec3 smoothN = normalize(vNormal);
-
-    // Per-facet normals for free — no second normal set, no split vertices.
-    vec3 derivative = cross(dFdx(vViewPos), dFdy(vViewPos));
-    vec3 flatN = length(derivative) > 1e-8 ? normalize(derivative) : smoothN;
-    flatN *= dot(flatN, smoothN) < 0.0 ? -1.0 : 1.0;
-
-    vec3 N = normalize(mix(smoothN, flatN, uFaceting));
+    // The field's own surface normal, so the shade follows the terrain's slope
+    // rather than the triangles it was tessellated into.
+    vec3 N = normalize(vNormal);
 
     // The texture. vHeight is a vertex attribute, so this is the only term that
     // turns with the surface — and it is quantised alone, so the pattern is a
@@ -264,6 +255,142 @@ const soulFragment = /* glsl */ `
   }
 `;
 
+/**
+ * An anchor's facets. No normal attribute: the normal comes from screen
+ * derivatives, which is exact here because every triangle of the solid really
+ * is flat. Lit by the system's one key, so a placed anchor takes its light from
+ * the same place the ground it stands on does.
+ */
+const anchorVertex = /* glsl */ `
+  varying vec3 vViewPos;
+
+  void main() {
+    vec4 viewPos = modelViewMatrix * vec4(position, 1.0);
+    vViewPos = viewPos.xyz;
+
+    gl_Position = projectionMatrix * viewPos;
+  }
+`;
+
+const anchorFragment = /* glsl */ `
+  uniform vec3 uRamp[${RAMP_SLOTS}];
+  uniform vec3 uKeyDir;
+  uniform float uTone;
+  uniform float uShade;
+
+  varying vec3 vViewPos;
+
+  ${rampRead}
+
+  void main() {
+    vec3 facet = normalize(cross(dFdx(vViewPos), dFdy(vViewPos)));
+
+    // Front faces of a convex solid all face the camera under an orthographic
+    // projection, so this fixes the derivative's sign without a second normal.
+    facet *= facet.z < 0.0 ? -1.0 : 1.0;
+
+    // One knob is both the depth and the granularity: at 1 a facet is paper or
+    // the next slot down, and nothing between.
+    float key = 0.5 - 0.5 * dot(facet, uKeyDir);
+
+    gl_FragColor = vec4(readRamp(uTone + floor(key * uShade + 0.5)), 1.0);
+
+    #include <colorspace_fragment>
+  }
+`;
+
+/**
+ * The edges, shared by both states. `along` is arc length baked into the
+ * geometry; `vRel` is the fragment's offset from the body's centre in camera
+ * axes — everything between the two is rotation, so the world origin is the
+ * body's own.
+ *
+ * `vBack` is taken from the anchor's *origin* instead, which makes it one answer
+ * for the whole solid. A soul straddling the silhouette wants cutting in half;
+ * an anchor is a place, and a place is on one side or the other. Reading it per
+ * fragment would also call a sunk base far-side while its tip was near.
+ */
+const anchorEdgeVertex = /* glsl */ `
+  attribute float along;
+
+  varying float vAlong;
+  varying float vBack;
+  varying vec3 vRel;
+
+  void main() {
+    vAlong = along;
+
+    vec3 centre = (viewMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+    vec4 origin = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+    vec4 viewPos = modelViewMatrix * vec4(position, 1.0);
+
+    vBack = step(origin.z - centre.z, 0.0);
+    vRel = viewPos.xyz - centre;
+
+    gl_Position = projectionMatrix * viewPos;
+  }
+`;
+
+/** A placed anchor's edges: one ink, and the depth buffer hides the far ones. */
+const anchorEdgeFragment = /* glsl */ `
+  uniform vec3 uRamp[${RAMP_SLOTS}];
+  uniform float uTone;
+
+  ${rampRead}
+
+  void main() {
+    gl_FragColor = vec4(readRamp(uTone), 1.0);
+
+    #include <colorspace_fragment>
+  }
+`;
+
+/**
+ * The unplaced ghost. Never depth-tested — an anchor's *place* does not stop
+ * existing when the world turns, so the far ones stay drawn and say they are far
+ * by fading toward the middle of the ramp instead of by disappearing.
+ *
+ * Two inks by place, the way the souls take theirs, so the ghost inverts against
+ * whatever it crosses rather than picking one grey and losing half of it. The
+ * dash is measured in pixels: an anchor is *structure*, so its rhythm must hold
+ * at 40px and at 420px alike, exactly as the outline's weight does.
+ */
+const anchorGhostFragment = /* glsl */ `
+  uniform vec3 uRamp[${RAMP_SLOTS}];
+  uniform float uTone;
+  uniform float uOutTone;
+  uniform float uFade;
+  uniform float uDash;
+  uniform float uDuty;
+  uniform float uZoom;
+
+  varying float vAlong;
+  varying float vBack;
+  varying vec3 vRel;
+
+  ${rampRead}
+
+  void main() {
+    if (fract(vAlong * uZoom / uDash) > uDuty) discard;
+
+    // Which ink, per fragment: the body as a unit sphere. A ghost at the rim is
+    // genuinely half over paper, and cutting it there is the rule the harness
+    // already draws by — the mean radius, not the terrain, because a ghost is a
+    // mark about a place rather than about the ground at it.
+    float over = step(dot(vRel.xy, vRel.xy), 1.0);
+
+    float tone = mix(uOutTone, uTone, over);
+
+    // Toward mid-ramp, which is away from whichever end this ink was chosen
+    // for — so both halves of the rule fade by the same gesture.
+    tone += vBack * uFade * sign(3.0 - tone);
+
+    gl_FragColor = vec4(readRamp(tone), 1.0);
+
+    #include <colorspace_fragment>
+  }
+`;
+
 export function createSurfaceMaterial() {
   return new THREE.ShaderMaterial({
     vertexShader: surfaceVertex,
@@ -271,7 +398,6 @@ export function createSurfaceMaterial() {
     side: THREE.FrontSide,
     uniforms: {
       uRamp: { value: readInkRamp() },
-      uFaceting: { value: 1 },
       uRim: { value: 0.75 },
       uRimGamma: { value: 3 },
       uLand: { value: 0.35 },
@@ -321,6 +447,83 @@ export function createSoulMaterial() {
   });
 }
 
+export function createAnchorMaterial() {
+  return new THREE.ShaderMaterial({
+    vertexShader: anchorVertex,
+    fragmentShader: anchorFragment,
+    side: THREE.FrontSide,
+    // The edges lie exactly on these faces. Without the offset they z-fight,
+    // and with it the two need no render order between them.
+    polygonOffset: true,
+    polygonOffsetFactor: 1,
+    polygonOffsetUnits: 1,
+    uniforms: {
+      uRamp: { value: readInkRamp() },
+      uKeyDir: { value: new THREE.Vector3(0, 0, 1) },
+      uTone: { value: 0 },
+      uShade: { value: 1 },
+    },
+  });
+}
+
+export function createAnchorEdgeMaterial() {
+  return new THREE.ShaderMaterial({
+    vertexShader: anchorEdgeVertex,
+    fragmentShader: anchorEdgeFragment,
+    uniforms: {
+      uRamp: { value: readInkRamp() },
+      uTone: { value: 6 },
+    },
+  });
+}
+
+export function createAnchorGhostMaterial() {
+  return new THREE.ShaderMaterial({
+    vertexShader: anchorEdgeVertex,
+    fragmentShader: anchorGhostFragment,
+    // The shader decides what the body hides, and the answer is nothing.
+    depthTest: false,
+    depthWrite: false,
+    uniforms: {
+      uRamp: { value: readInkRamp() },
+      uTone: { value: 0 },
+      uOutTone: { value: 6 },
+      uFade: { value: 2 },
+      uDash: { value: 3 },
+      uDuty: { value: 0.5 },
+      uZoom: { value: 100 },
+    },
+  });
+}
+
+export function syncAnchorUniforms(material: THREE.ShaderMaterial, visual: AnchorVisual) {
+  const u = material.uniforms;
+  const key = keyLight.direction;
+
+  u.uKeyDir.value.set(key.x, key.y, key.z);
+  u.uTone.value = Math.round(visual.faceTone);
+  u.uShade.value = Math.round(visual.faceShade);
+}
+
+export function syncAnchorEdgeUniforms(material: THREE.ShaderMaterial, visual: AnchorVisual) {
+  material.uniforms.uTone.value = Math.round(visual.edgeTone);
+}
+
+export function syncAnchorGhostUniforms(
+  material: THREE.ShaderMaterial,
+  visual: AnchorVisual,
+  zoom: number,
+) {
+  const u = material.uniforms;
+
+  u.uTone.value = Math.round(visual.ghostTone);
+  u.uOutTone.value = Math.round(visual.ghostOutTone);
+  u.uFade.value = Math.round(visual.ghostFade);
+  u.uDash.value = Math.max(0.5, visual.dash);
+  u.uDuty.value = visual.duty;
+  u.uZoom.value = zoom;
+}
+
 export function syncSoulUniforms(material: THREE.ShaderMaterial, visual: SwarmVisual) {
   const u = material.uniforms;
 
@@ -333,23 +536,16 @@ export function syncSoulUniforms(material: THREE.ShaderMaterial, visual: SwarmVi
 export function syncSurfaceUniforms(material: THREE.ShaderMaterial, visual: PlanetVisual) {
   const u = material.uniforms;
 
-  u.uFaceting.value = visual.faceting;
   u.uRim.value = visual.rim;
   u.uRimGamma.value = visual.rimGamma;
   u.uLand.value = visual.land;
   u.uKey.value = visual.key;
   u.uBias.value = visual.bias;
 
-  // The puck only carries x and y; z is what makes it a unit direction.
-  let x = visual.keyX;
-  let y = visual.keyY;
-  const reach = Math.hypot(x, y);
-  if (reach > 1) {
-    x /= reach;
-    y /= reach;
-  }
+  // The aim is the system's, not the world's — read ambiently, as the ramp is.
+  const key = keyLight.direction;
+  u.uKeyDir.value.set(key.x, key.y, key.z);
 
-  u.uKeyDir.value.set(x, y, Math.sqrt(Math.max(0, 1 - x * x - y * y)));
   u.uSteps.value = Math.max(1, Math.round(visual.steps));
   u.uToneFloor.value = Math.round(visual.toneFloor);
   u.uToneCeil.value = Math.round(visual.toneCeil);

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Canvas } from '@threlte/core';
   import PlanetScene from './PlanetScene.svelte';
+  import type { AnchorVisual } from './anchor';
   import type { SwarmVisual } from './orbit';
   import type { PlanetVisual } from './visual';
 
@@ -12,6 +13,8 @@
     backgroundToken?: string;
     swarm?: SwarmVisual;
     cohorts?: number[];
+    anchors?: AnchorVisual;
+    anchored?: boolean[];
   }
 
   let {
@@ -21,6 +24,8 @@
     backgroundToken = '--canvas',
     swarm,
     cohorts,
+    anchors,
+    anchored,
   }: Props = $props();
 
   let host: HTMLDivElement | undefined = $state();
@@ -49,7 +54,7 @@
 <div class="planet-view" bind:this={host} style:width="{px}px" style:height="{px}px">
   {#if shown}
     <Canvas renderMode="on-demand">
-      <PlanetScene {visual} {frame} {backgroundToken} {swarm} {cohorts} />
+      <PlanetScene {visual} {frame} {backgroundToken} {swarm} {cohorts} {anchors} {anchored} />
     </Canvas>
   {/if}
 </div>
