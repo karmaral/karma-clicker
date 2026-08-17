@@ -8,9 +8,17 @@
  * 2  placed anchor  depth-tested, so the solid caps the lines that end in it
  * 3  ghost anchor   no depth test: a place does not stop existing when it turns away
  * 4  souls          discard what is behind the world themselves
- * 5  halo           the click, around the world and outside every group's rotation
- * 6  spark          the click, on the surface and drawn through the body on purpose
+ * 5  halo           the click, around the world and behind it, inverting what it crosses
+ * 6  spark          the click, lying in the terrain and drawn through the body on purpose
+ * 7  flare          the same spark standing up off it
+ * 8  spark outline  both again, grown, on the plane behind — so the depth test
+ * 9  flare outline  rejects the ink under the mark and leaves its border
  * ```
+ *
+ * The two outlines come *after* what they outline rather than before it. On the
+ * plane behind and drawn second, every pixel the mark claimed rejects them and
+ * what is left is the border of the union of all four shapes; drawn first, the
+ * mark's own fade would let them back through its middle.
  *
  * The design handoff draws anchors last, at 3/4. That is reversed here because
  * its souls had no depth cue of their own; ours discard everything behind the
@@ -28,4 +36,7 @@ export const RENDER_ORDER = {
   soul: 4,
   halo: 5,
   spark: 6,
+  flare: 7,
+  sparkOutline: 8,
+  flareOutline: 9,
 };

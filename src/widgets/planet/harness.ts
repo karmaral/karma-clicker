@@ -103,6 +103,13 @@ export interface HarnessLoop {
   points: Float32Array;
   /** 0 innermost … 1 outermost. Drives the ink's fade and the loop's bulge. */
   level: number;
+  /**
+   * How far round it is, in world units — the polyline's own length. A rider
+   * covers all of it in one turn of its orbit, so this is what says how fast
+   * that is: without it, a soul stepping onto a short loop keeps its *angular*
+   * rate and loses most of its speed across the screen.
+   */
+  length: number;
 }
 
 export interface HarnessLines {
@@ -433,6 +440,25 @@ function planLoops(visual: HarnessVisual, nodes: HarnessNode[]): LoopPlan[] {
   return plans;
 }
 
+/**
+ * The polyline's length, measured on the same samples a rider is read from — so
+ * the figure is exactly the distance a rider covers, chords and all, rather than
+ * the length of the ideal curve under them.
+ */
+function lengthOf(points: Float32Array) {
+  let total = 0;
+
+  for (let i = 3; i < points.length; i += 3) {
+    total += Math.hypot(
+      points[i] - points[i - 3],
+      points[i + 1] - points[i - 2],
+      points[i + 2] - points[i - 1],
+    );
+  }
+
+  return total;
+}
+
 const cache = new Map<string, HarnessLoop[]>();
 
 /** The loop fields and the nodes — everything the curves are, and nothing else. */
@@ -458,12 +484,13 @@ export function buildLoops(visual: HarnessVisual, nodes: HarnessNode[]): Harness
   const hit = cache.get(key);
   if (hit) return hit;
 
-  const loops = planLoops(visual, nodes).map((plan) => ({
-    level: plan.level.level,
-    points: plan.b
+  const loops = planLoops(visual, nodes).map((plan) => {
+    const points = plan.b
       ? arcLoop(plan.a, plan.b, plan.turn, plan.level)
-      : petalLoop(plan.a, plan.turn, visual.reach, plan.level),
-  }));
+      : petalLoop(plan.a, plan.turn, visual.reach, plan.level);
+
+    return { level: plan.level.level, points, length: lengthOf(points) };
+  });
 
   cache.set(key, loops);
 

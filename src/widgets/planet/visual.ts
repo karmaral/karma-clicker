@@ -7,6 +7,24 @@ export interface PlanetVisual {
   seed: number;
 
   /**
+   * How big this world *is*, which is the one thing the body itself cannot say:
+   * it is drawn to the framing whatever it is, so a picture of a sphere alone
+   * carries no scale at all. What carries it is everything standing beside it —
+   * so this **divides** the marks rather than multiplying the body. A large
+   * world wears fine souls and low poles; a small one wears coarse ones.
+   *
+   * Sizes in body radii are what move: the souls' dots, the anchors' solids and
+   * the sparks. What is authored in *pixels* does not — the outline, the
+   * contour, the dash and the dot floor are the drawn edges of the widget, and
+   * a widget does not get a heavier line for holding a smaller planet.
+   *
+   * The orbits stay where they were authored too. `radius` is rim-hugging by
+   * design, and a world that pulled its swarm inward would stop crossing its own
+   * silhouette — which is the whole of the souls' depth cue.
+   */
+  size: number;
+
+  /**
    * Shape — the noise field, which both displaces the sphere radially and feeds
    * the `land` band. It is normalised to its own measured range, so every one of
    * these changes the picture's character without changing how much of the band
@@ -200,6 +218,9 @@ export interface VisualParam {
 
 /** The lab's whole control surface. A new knob is a line here and a uniform. */
 export const VISUAL_PARAMS: VisualParam[] = [
+  // Not `shape` — the mesh is identical at every value. What moves is what
+  // stands on it, which is why the body's own sliders cannot say this.
+  { key: 'size', label: 'Size', group: 'Shape', min: 0.25, max: 4, step: 0.05 },
   { key: 'frequency', label: 'Frequency', group: 'Shape', min: 0.2, max: 8, step: 0.05, shape: true },
   { key: 'octaves', label: 'Octaves', group: 'Shape', min: 1, max: 6, step: 1, shape: true },
   { key: 'lacunarity', label: 'Lacunarity', group: 'Shape', min: 1, max: 4, step: 0.05, shape: true },
@@ -254,6 +275,7 @@ export const VISUAL_GROUPS: VisualGroup[] = ['Shape', 'Caps', 'Texture', 'Shade'
 export const DEFAULT_VISUAL: PlanetVisual = {
   seed: 1,
 
+  size: 1,
   frequency: 1.8,
   octaves: 3,
   lacunarity: 2,

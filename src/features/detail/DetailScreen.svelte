@@ -4,7 +4,8 @@
   import { f } from '$lib/utils';
   import { pulse } from '$lib/loop';
   import type Building from '$lib/buildings/base.svelte';
-  import Disc from '../Disc.svelte';
+
+  import PlanetStage from '../PlanetStage.svelte';
   import Log from '../Log.svelte';
   import RevealStub from '../RevealStub.svelte';
   import CohortTable from './CohortTable.svelte';
@@ -18,8 +19,6 @@
   const click = $derived(BuildingManager.getBuilding(CLICK));
   const clickYield = $derived(click?.production.experience ?? 0);
 
-  const cohortCount = $derived(BuildingManager.countSouls());
-
   const cohorts = $derived.by(() => {
     const rows: Building[] = [];
     for (const id of BuildingManager.buildings) {
@@ -31,6 +30,9 @@
 
     return rows;
   });
+
+  /** The same rows as counts — the swarm draws one band per cohort. */
+  const soulsPerCohort = $derived(cohorts.map((cohort) => cohort.count));
 
   const planet = $derived(PlanetManager.getActive());
 
@@ -57,31 +59,13 @@
 
 <div class="detail view-layout">
 
-  <div class="cohort">
-    {#if progression.isRevealed('detail.cohortTable')}
-      <CohortTable
-        {cohorts}
-        affordable={(id) => BuildingManager.canAfford(id, 1)}
-        showAim={progression.isRevealed('detail.aimPerRow')}
-        onbuy={buy}
-      />
-    {/if}
-
-    {#if progression.isRevealed('detail.aimGlobal')}
-      <AimSection />
-    {/if}
-
-    <RevealStub name="detail.split" note="the soul split — Phase D" />
-    <RevealStub name="detail.field" note="the anchoring field — Phase D" />
-  </div>
-
-
   <div class="planet">
-    {#if progression.isRevealed('detail.disc')}
-      <Disc
-        count={cohortCount}
+    {#if progression.isRevealed('detail.disc') && planet}
+      <PlanetStage
+        id={planet.id}
+        cohorts={soulsPerCohort}
         sub="+{f(clickYield)} experience"
-        onincarnate={incarnate}
+        onclickaction={incarnate}
       />
     {/if}
 
@@ -103,6 +87,26 @@
     {/if}
   </div>
 
+  <div class="cohort">
+    {#if progression.isRevealed('detail.cohortTable')}
+      <CohortTable
+        {cohorts}
+        affordable={(id) => BuildingManager.canAfford(id, 1)}
+        showAim={progression.isRevealed('detail.aimPerRow')}
+        onbuy={buy}
+      />
+    {/if}
+
+    {#if progression.isRevealed('detail.aimGlobal')}
+      <AimSection />
+    {/if}
+
+    <RevealStub name="detail.split" note="the soul split — Phase D" />
+    <RevealStub name="detail.field" note="the anchoring field — Phase D" />
+  </div>
+
+
+
 </div>
 
 <style>
@@ -110,7 +114,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--sp-5);
-    padding: var(--sp-5) var(--sp-4);
+    padding: 0 var(--sp-4);
     border-right: var(--rule-card);
     min-width: 0;
   }

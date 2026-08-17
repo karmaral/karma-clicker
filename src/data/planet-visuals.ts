@@ -31,6 +31,7 @@
 const data: Record<string, PlanetVisual> = {
   'first': {
     seed: 12302,
+    size: 1,
     frequency: 6.3,
     octaves: 3,
     lacunarity: 3,
@@ -76,6 +77,7 @@ const data: Record<string, PlanetVisual> = {
   },
   'second': {
     seed: 33481,
+    size: 1,
     frequency: 0.2,
     octaves: 5,
     lacunarity: 2.9,
@@ -122,6 +124,7 @@ const data: Record<string, PlanetVisual> = {
   /** Land-driven continents, sitting darker on the ramp. */
   'third': {
     seed: 8443,
+    size: 1,
     frequency: 2.75,
     octaves: 2,
     lacunarity: 2.85,
@@ -167,6 +170,7 @@ const data: Record<string, PlanetVisual> = {
   },
   'cool_1': {
     seed: 14781,
+    size: 1,
     frequency: 1.4,
     octaves: 2,
     lacunarity: 2.6,
@@ -212,6 +216,7 @@ const data: Record<string, PlanetVisual> = {
   },
   'cool_2': {
     seed: 4177,
+    size: 1,
     frequency: 2.8,
     octaves: 4,
     lacunarity: 2.2,
@@ -257,6 +262,7 @@ const data: Record<string, PlanetVisual> = {
   },
   'cool_3': {
     seed: 4177,
+    size: 1,
     frequency: 2.4,
     octaves: 3,
     lacunarity: 2.2,
@@ -311,6 +317,7 @@ const data: Record<string, PlanetVisual> = {
    */
   'ridged': {
     seed: 64504,
+    size: 1,
     frequency: 1.2,
     octaves: 2,
     lacunarity: 1.9,
@@ -361,6 +368,7 @@ const data: Record<string, PlanetVisual> = {
    */
   'banded': {
     seed: 9042,
+    size: 1,
     frequency: 1.6,
     octaves: 3,
     lacunarity: 2.1,
@@ -417,6 +425,7 @@ const data: Record<string, PlanetVisual> = {
    */
   'capped': {
     seed: 4177,
+    size: 1,
     frequency: 2.4,
     octaves: 3,
     lacunarity: 2.2,

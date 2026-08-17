@@ -67,6 +67,21 @@
   const hasAnchors = $derived(Boolean(anchors && anchored?.length));
 
   /**
+   * How big this world says it is. Everything standing beside the body is
+   * divided by it — the body is drawn to the framing whatever it is, so scale
+   * is carried entirely by what is next to it.
+   */
+  const worldSize = $derived(Math.max(0.05, visual.size));
+
+  /**
+   * The anchors as this world wears them. Adjusted here rather than inside
+   * `Anchors`, because `placeAnchors` is read from both places and a solid built
+   * at one size standing on a placement computed at another is the one way this
+   * can go wrong.
+   */
+  const poles = $derived(anchors ? { ...anchors, size: anchors.size / worldSize } : undefined);
+
+  /**
    * A second read of the same field the mesh was built from — same seed, same
    * settings, same answer. Built here rather than lifted out of `geometry.ts`
    * because only a world with anchors pays for it, and the cost is the range
@@ -84,8 +99,8 @@
    * the top of the pole as the terrain under it actually left it.
    */
   const strung = $derived(
-    anchors && anchored?.length && field
-      ? placeAnchors(anchors, anchored, field.sampleRadius).filter((node) => node.isPlaced)
+    poles && anchored?.length && field
+      ? placeAnchors(poles, anchored, field.sampleRadius).filter((node) => node.isPlaced)
       : [],
   );
 
@@ -176,18 +191,25 @@
       <Harness visual={harness} {loops} />
     {/if}
 
-    {#if anchors && anchored?.length && field}
-      <Anchors visual={anchors} {anchored} {field} {zoom} />
+    {#if poles && anchored?.length && field}
+      <Anchors visual={poles} {anchored} {field} {zoom} />
     {/if}
 
     <!-- Inside the spin, because a spark is a mark on the ground it hit. -->
     {#if pulse}
-      <Sparks visual={pulse} {pulses} />
+      <Sparks visual={pulse} {pulses} size={worldSize} />
     {/if}
   {/snippet}
 
   {#if swarm && cohorts?.length}
-    <SoulSwarm visual={swarm} counts={cohorts} {zoom} {loops} {spinAngle} />
+    <SoulSwarm
+      visual={swarm}
+      counts={cohorts}
+      {zoom}
+      {loops}
+      {spinAngle}
+      size={worldSize}
+    />
   {/if}
 </PlanetBody>
 

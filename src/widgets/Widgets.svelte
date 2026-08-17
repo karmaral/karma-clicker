@@ -39,6 +39,21 @@
 
   /** The halo is meant to leave the frame, so this only decides how long it takes. */
   const pulseFrame = 3.2;
+
+  /**
+   * The jump bar, authored beside the sections rather than scraped off them —
+   * a section without a line here is one that cannot be reached, which is the
+   * failure worth being told about at the source.
+   */
+  const sections = [
+    { id: 'subject', label: 'Subject' },
+    { id: 'family', label: 'Family' },
+    { id: 'true-size', label: 'True size' },
+    { id: 'souls', label: 'Souls' },
+    { id: 'anchors', label: 'Anchors' },
+    { id: 'harness', label: 'Harness' },
+    { id: 'pulse', label: 'Pulse' },
+  ];
 </script>
 
 <svelte:head>
@@ -54,7 +69,13 @@
     <p>Develop visual components here, rendered in isolation.</p>
   </header>
 
-  <section>
+  <nav class="jump">
+    {#each sections as section (section.id)}
+      <a href="#{section.id}">{section.label}</a>
+    {/each}
+  </nav>
+
+  <section id="subject">
     <h2>Planet — subject</h2>
     <p class="note">
       Orthographic, no lights. The bands are a view fresnel — how far a facet turns from
@@ -63,11 +84,11 @@
       the outline.
     </p>
     <div class="canvas subject">
-      <PlanetView visual={planetLab.current} px={420} />
+      <PlanetView visual={planetLab.current} widthPx={420} />
     </div>
   </section>
 
-  <section>
+  <section id="family">
     <h2>Planet — family</h2>
     <p class="note">
       All worlds at once. Planets authored one at a time come out as unrelated illustrations;
@@ -77,14 +98,14 @@
     <div class="canvas strip">
       {#each planetLab.ids as id (id)}
         <div class="member">
-          <PlanetView visual={planetLab.drafts[id]} px={200} />
+          <PlanetView visual={planetLab.drafts[id]} widthPx={200} />
           <span class="spec">{id}</span>
         </div>
       {/each}
     </div>
   </section>
 
-  <section>
+  <section id="true-size">
     <h2>Planet — true size</h2>
     <p class="note">
       The selected world at the sizes it ships at, on <code>--surface</code> rather than
@@ -96,7 +117,7 @@
         <div class="member">
           <PlanetView
             visual={planetLab.current}
-            {px}
+            widthPx={px}
             frame={2.5}
             backgroundToken="--surface"
           />
@@ -119,15 +140,15 @@
     </p>
     <div class="canvas strip">
       <div class="member">
-        <PlanetView visual={planetLab.current} px={420} frame={swarmFrame} swarm={swarmLab.current} {cohorts} />
+        <PlanetView visual={planetLab.current} widthPx={420} frame={swarmFrame} swarm={swarmLab.current} {cohorts} />
         <span class="spec">{cohorts.length} cohorts · {cohorts.reduce((n, c) => n + c, 0)} souls</span>
       </div>
       <div class="member">
-        <PlanetView visual={planetLab.current} px={200} frame={swarmFrame} swarm={swarmLab.current} cohorts={cohorts.slice(0, 1)} />
+        <PlanetView visual={planetLab.current} widthPx={200} frame={swarmFrame} swarm={swarmLab.current} cohorts={cohorts.slice(0, 1)} />
         <span class="spec">one cohort</span>
       </div>
       <div class="member">
-        <PlanetView visual={planetLab.current} px={200} frame={swarmFrame} swarm={swarmLab.current} cohorts={cohorts.slice(0, 2)} />
+        <PlanetView visual={planetLab.current} widthPx={200} frame={swarmFrame} swarm={swarmLab.current} cohorts={cohorts.slice(0, 2)} />
         <span class="spec">two</span>
       </div>
     </div>
@@ -136,7 +157,7 @@
         <div class="member">
           <PlanetView
             visual={planetLab.current}
-            {px}
+            widthPx={px}
             frame={swarmFrame}
             backgroundToken="--surface"
             swarm={swarmLab.current}
@@ -162,7 +183,7 @@
       <div class="member">
         <PlanetView
           visual={planetLab.current}
-          px={420}
+          widthPx={420}
           anchors={anchorLab.current}
           {anchored}
         />
@@ -173,7 +194,7 @@
       <div class="member">
         <PlanetView
           visual={planetLab.current}
-          px={200}
+          widthPx={200}
           frame={swarmFrame}
           anchors={anchorLab.current}
           {anchored}
@@ -188,7 +209,7 @@
         <div class="member">
           <PlanetView
             visual={planetLab.current}
-            px={160}
+            widthPx={160}
             anchors={anchorLab.current}
             anchored={Array.from({ length: count }, () => true)}
           />
@@ -201,7 +222,7 @@
         <div class="member">
           <PlanetView
             visual={planetLab.current}
-            {px}
+            widthPx={px}
             frame={2.5}
             backgroundToken="--surface"
             anchors={anchorLab.current}
@@ -237,7 +258,7 @@
       <div class="member">
         <PlanetView
           visual={planetLab.current}
-          px={420}
+          widthPx={420}
           frame={harnessFrame}
           anchors={anchorLab.current}
           {anchored}
@@ -250,7 +271,7 @@
       <div class="member">
         <PlanetView
           visual={planetLab.current}
-          px={420}
+          widthPx={420}
           frame={harnessFrame}
           anchors={anchorLab.current}
           {anchored}
@@ -264,16 +285,20 @@
     <p class="note">
       <code>Riders</code> is the share of the swarm on the lines, and a share is a
       count — each rider is fully on its loop and the rest run their own orbits. A soul
-      reads its loop at the phase it was already at, so joining the harness changes where
-      it is and not how fast it goes. The swarm sits outside the world's spin and the
-      harness inside it, which is why the scene keeps one angle and hands it to both.
+      reads its loop at the phase it was already at, <b>rescaled by how much shorter the
+      loop is than the orbit it left</b>: a loop is a fraction of an orbit's circumference,
+      so at the raw phase a rider crawled. At four anchors it ran at 22% to 36% of its own
+      speed. What is held constant is the thing the eye measures — distance per second —
+      so joining the harness changes where a soul is and not how fast it goes. The swarm
+      sits outside the world's spin and the harness inside it, which is why the scene keeps
+      one angle and hands it to both.
     </p>
     <div class="canvas strip">
       {#each strungCounts as count (count)}
         <div class="member">
           <PlanetView
             visual={planetLab.current}
-            px={160}
+            widthPx={160}
             frame={harnessFrame}
             anchors={anchorLab.current}
             anchored={Array.from({ length: count }, () => true)}
@@ -288,7 +313,7 @@
         <div class="member">
           <PlanetView
             visual={planetLab.current}
-            {px}
+            widthPx={px}
             frame={harnessFrame}
             backgroundToken="--surface"
             anchors={anchorLab.current}
@@ -305,24 +330,40 @@
     <h2>Pulse — the click</h2>
     <p class="note">
       <b>Click a world in this section.</b> One click is one <b>flash</b>, and it leaves two
-      marks. The <b>halo</b> is a ring around the whole world, facing the camera and outside
-      both the tilt and the spin, born just off the silhouette and growing past the frame —
-      so it reads as something leaving rather than as a band drawn on the body. Its stroke
-      is authored in <b>pixels</b>, like the outline and the contour, so it holds its weight
-      the whole way out. The <b>sparks</b> are struck at random directions and sit at
-      <code>field.sampleRadius</code>, on the terrain rather than on the sphere it was
-      displaced from, inside the spin so they travel with the ground — a white dot with a
-      ring leaving its edge. They carry <b>no silhouette test at all</b>: a flash on the far
-      side shows through the world, which is the one place this medium's ink rule is
-      deliberately not applied. Both fade on alpha rather than by stepping along the ramp,
-      the other place it is bent, and both live in one instanced draw apiece, so a fast
-      clicker stacks thirty-two of them without mounting anything.
+      marks. The <b>halo</b> is a pair of rings around the whole world, facing the camera and
+      outside both the tilt and the spin, born just off the silhouette and growing past the
+      frame — so it reads as something leaving rather than as a band drawn on the body. It
+      carries <b>no ink at all</b>: it <b>inverts</b> what it crosses, so a soul under it goes
+      pale, the canvas goes dark, and the mark cannot be the wrong tone for its background.
+      Fading is inverting less. The body stops it outright — a halo is always <i>behind</i>
+      the world, cut at the same silhouette the harness is. The second ring, the <b>echo</b>,
+      is the only thing here that is not a circle: its radius is warped by three sines that
+      do not divide, and it inverts only as deep as <code>Depth</code> asks. Every flash
+      turns that warp by a random angle and draws its own lobe count off
+      <code>Scatter</code>, so two clicks in a row leave two different rings out of one
+      authored shape — the count and not the warp, because the quad is sized off the warp.
+      The <b>sparks</b> are struck at random directions and sit at
+      <code>field.sampleRadius</code>, inside the spin so they travel with the ground. The
+      dot and its ring now <b>lie in the terrain</b> rather than facing the camera, so a
+      spark near the limb foreshortens into the surface; the <b>flare</b> is two quads
+      crossed about the surface normal and widened at the base, standing on the dot and
+      <b>travelling</b> between its two heights and its two tapers as it goes. The
+      cross vanishes seen straight down its own axis, which is exactly where the ring is
+      seen full-on — the two cover each other's worst angle. They carry <b>no silhouette
+      test</b>: a flash on the far side shows through the world, which is the one place this
+      medium's ink rule is deliberately not applied. What the silhouette <i>does</i> decide is
+      the ink, which <b>inverts</b> past it; how far <i>back</i> a mark is decides its weight,
+      which is <code>Far side</code>. The dot, its ring and both blades are flattened onto
+      <b>one depth plane</b> at the near clip and drawn strictly nearest-first, so they come
+      out as a single silhouette instead of a stack of overlaps compounding into a bruise.
+      All of it lives in one instanced draw per mark, so a fast clicker stacks thirty-two
+      without mounting anything.
     </p>
     <div class="canvas strip">
       <div class="member">
         <PlanetView
           visual={planetLab.current}
-          px={420}
+          widthPx={420}
           frame={pulseFrame}
           pulse={pulseLab.current}
         />
@@ -331,7 +372,7 @@
       <div class="member">
         <PlanetView
           visual={planetLab.current}
-          px={420}
+          widthPx={420}
           frame={pulseFrame}
           pulse={pulseLab.current}
           swarm={swarmLab.current}
@@ -348,7 +389,7 @@
         <div class="member">
           <PlanetView
             visual={planetLab.current}
-            {px}
+            widthPx={px}
             frame={pulseFrame}
             backgroundToken="--surface"
             pulse={pulseLab.current}
@@ -409,6 +450,38 @@
     display: flex;
     flex-direction: column;
     gap: var(--sp-3);
+    /* Clear of the jump bar, which is what a jump would otherwise land under. */
+    scroll-margin-top: 3.5rem;
+  }
+
+  /* Sticky against `.page`, which is the scroller here and not the document.
+     On `--surface` rather than the page's own `--canvas`, so it reads as a bar
+     over the sections passing under it instead of merging with them. */
+  .jump {
+    position: sticky;
+    top: calc(var(--sp-4) * -1);
+    z-index: 30;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-1) var(--sp-4);
+    background: var(--surface);
+    border-bottom: var(--rule-strong);
+    padding: var(--sp-2) var(--sp-3);
+    /* The page's own 44px gap would leave a band of canvas under the bar. */
+    margin-bottom: -32px;
+  }
+
+  .jump a {
+    font-size: var(--fs-label-sm);
+    letter-spacing: var(--ls-label);
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--ink-400);
+    text-decoration: none;
+  }
+
+  .jump a:hover {
+    color: var(--ink-900);
   }
 
   h2 {

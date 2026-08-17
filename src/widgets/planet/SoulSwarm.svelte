@@ -23,9 +23,15 @@
      * world has since carried it.
      */
     spinAngle?: number;
+    /**
+     * The world's own size. A soul is the same soul on every planet, so a big
+     * world wears fine ones — this divides the dots, and leaves the orbits and
+     * the px floor alone.
+     */
+    size?: number;
   }
 
-  let { visual, counts, zoom, loops, spinAngle = 0 }: Props = $props();
+  let { visual, counts, zoom, loops, spinAngle = 0, size = 1 }: Props = $props();
 
   const { invalidate } = useThrelte();
   const material = createSoulMaterial();
@@ -75,13 +81,25 @@
       if (soul.place < riders) {
         const line = lines[Math.floor(i * stride) % lines.length];
 
-        sampleLoop(line, phaseOf(soul, elapsed), dummy.position);
+        // A rider covers its whole loop in one turn of the orbit it left, and a
+        // loop is shorter than that orbit — a crown petal by several times — so
+        // reading it at the soul's own phase costs it most of its speed. The
+        // rate is scaled by the ratio of the two paths, which keeps what the
+        // eye actually measures, distance per second, the same on a line as off
+        // one. It is the phase that is rescaled and not the clock, so the soul
+        // stays on its own loop rather than sharing a lane with its neighbours.
+        const around = Math.PI * 2 * soul.radius;
+        const rate = line.length > 1e-6 ? around / line.length : 1;
+
+        sampleLoop(line, phaseOf(soul, elapsed * rate), dummy.position);
         dummy.position.applyAxisAngle(AXIS, spinAngle);
       } else {
         placeSoul(soul, elapsed, dummy.position);
       }
 
-      dummy.scale.setScalar(Math.max(soul.size, floor));
+      // The floor is in px and stays there: a small widget wants dots and not
+      // dust whatever size the world it is holding claims to be.
+      dummy.scale.setScalar(Math.max(soul.size / Math.max(0.05, size), floor));
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
     });

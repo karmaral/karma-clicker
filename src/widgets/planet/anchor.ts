@@ -54,15 +54,17 @@ export interface AnchorVisual {
    * The unplaced ghost: the same edges, no fill, dashed, and never hidden — it
    * marks a place, and a place does not stop existing when the world turns.
    *
-   * Two inks, by where a fragment falls rather than by what state it is in, so
-   * the ghost inverts against whatever it crosses instead of picking one grey
-   * and losing half of it. Behind the body both step `ghostFade` slots toward
-   * the middle of the ramp, which is away from the thing they contrast with —
-   * the whole depth cue, and the only one the ghost has.
+   * It has **no tone of its own**. The dash *inverts* what it crosses, the way
+   * the halo does, so a place is legible over a dark world, over a white one
+   * and over the canvas by the same rule — a pair of authored inks could always
+   * be authored the same as the surface they landed on, and on a `--surface`
+   * world one of them was.
+   *
+   * What is left to author is the far half: how much of the inversion an anchor
+   * behind the body keeps, 0…1. The whole depth cue, and the only one the ghost
+   * has — `sparkBack`'s argument, one mark at two weights.
    */
-  ghostTone: number;
-  ghostOutTone: number;
-  ghostFade: number;
+  ghostBack: number;
   /** Dash cycle in pixels — structure, so authored on screen and not in radii. */
   dash: number;
   /** Share of a cycle that is inked. */
@@ -296,9 +298,9 @@ export const ANCHOR_PARAMS: AnchorParam[] = [
   { key: 'faceTone', label: 'Face', group: 'Ink', min: 0, max: 6, step: 1 },
   { key: 'faceShade', label: 'Face shade', group: 'Ink', min: 0, max: 4, step: 1 },
   { key: 'edgeTone', label: 'Edge', group: 'Ink', min: 0, max: 6, step: 1 },
-  { key: 'ghostTone', label: 'Ghost on body', group: 'Ink', min: 0, max: 6, step: 1 },
-  { key: 'ghostOutTone', label: 'Ghost off body', group: 'Ink', min: 0, max: 6, step: 1 },
-  { key: 'ghostFade', label: 'Ghost behind', group: 'Ink', min: 0, max: 3, step: 1 },
+  // The ghost inverts, so it has no ink to author — only how much of the
+  // inversion the far half keeps.
+  { key: 'ghostBack', label: 'Ghost behind', group: 'Ink', min: 0, max: 1, step: 0.05 },
   { key: 'dash', label: 'Dash px', group: 'Ink', min: 1, max: 12, step: 0.5 },
   { key: 'duty', label: 'Dash duty', group: 'Ink', min: 0.1, max: 0.9, step: 0.05 },
 ];
@@ -316,9 +318,7 @@ export const DEFAULT_ANCHOR: AnchorVisual = {
   faceTone: 0,
   faceShade: 1,
   edgeTone: 6,
-  ghostTone: 0,
-  ghostOutTone: 6,
-  ghostFade: 2,
+  ghostBack: 0.45,
   dash: 3,
   duty: 0.5,
 };

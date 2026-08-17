@@ -62,6 +62,44 @@ in `labels.ts` is the worked example.
 `window.karma`. Yields are low and the later beats trigger at high figures, so
 this is the only practical way to reach them by hand.
 
+**The widget work is verified by probe rather than by eye.** `esbuild --bundle
+--platform=node --format=cjs` the model modules into the scratchpad and run them
+under node — seconds, no browser. `pulse.ts`, `harness.ts`, `anchor.ts`,
+`orbit.ts`, `visual.ts` and `field.ts` **never import three.js**, which is what
+makes this possible; keeping it that way is worth more than any single check the
+probe has caught. It found the halo's growth curve, the swell's mask, and the
+rider rate, all before anything was drawn.
+
+What it cannot reach is anything inside a shader, because a shader is a string.
+A fragment reading a `uniform` its material never supplied typechecks, builds,
+probes clean and draws a solid quad — which is exactly what happened to the
+sparks. The one automation worth adding is a regex matching every `uniform`
+declared in a shader against the `uniforms` of the material that compiles it.
+
+### Screenshots
+
+`chrome --headless --screenshot` silently produces no file for an `http://` URL
+in this environment. Driving Chrome over **CDP** does work:
+
+```
+chrome --headless=new --remote-debugging-port=9222 --remote-allow-origins=*
+       --no-sandbox --no-proxy-server --enable-unsafe-swiftshader
+       --use-gl=angle --use-angle=swiftshader --hide-scrollbars
+       --force-device-scale-factor=1 --user-data-dir=<fresh> about:blank
+```
+
+then over the websocket from `/json/list`: `Emulation.setDeviceMetricsOverride`,
+`Page.navigate`, wait ~9s for the contexts, `Page.captureScreenshot` with a
+`clip` from `getBoundingClientRect`. Two gotchas: the workbench scrolls its inner
+`.page` div and not the document, so `captureBeyondViewport` is useless and you
+must `scrollIntoView` first; and the `PlanetView`s exceed the WebGL context cap,
+so the console fills with "Too many active WebGL contexts" and the oldest
+canvases go blank.
+
+**Use it for a genuine doubt and not to confirm an edit landed** — *"You get
+really wound up trying to corroborate with screenshots. It's not that necessary.
+I have the dev server up and I'm watching all the time."*
+
 ## Parked
 
 Design decisions deferred on purpose. None of these are oversights.
@@ -494,13 +532,36 @@ read as a large world.
 edges; unplaced is the same edges, dashed, hollow, and **never occluded** — an
 anchor's *place* does not stop existing when the world turns away from it, so
 hiding the far ones would be hiding the information the ghost exists to carry.
-It says it is far by fading toward the middle of the ramp instead. Its ink is
-chosen by place and not by state — paper over the body, ink over the canvas —
-so it inverts against whatever it crosses rather than picking one grey and
-losing half of it. That front/back reading is taken from the anchor's origin and
-not per fragment, which is the opposite of the souls' rule and for a reason: a
-dot straddling the silhouette should be cut in half, but an anchor is a place,
-and a place is on one side or the other.
+It says it is far by inverting less instead. That front/back reading is taken
+from the anchor's origin and not per fragment, which is the opposite of the
+souls' rule and for a reason: a dot straddling the silhouette should be cut in
+half, but an anchor is a place, and a place is on one side or the other.
+
+**The ghost carries no ink**, and this is the second mark to give one up. It used
+to hold two authored tones chosen by *place* — paper over the body, ink over the
+canvas — which was already the right shape of answer and still the wrong kind of
+one: paper over the body is `--surface`, and on a world whose surface is
+`--surface` the ghost was drawn in the colour of the thing it was drawn on.
+Session 13 found it that way, on the white worlds. No pair of tones survives
+every planet a type table can produce, because the pair is a guess about the body
+and the body is authored somewhere else.
+
+So it takes the halo's blend: it writes a factor, the framebuffer supplies the
+colour, and a dash comes out as whatever it crossed, reversed. `ghostTone` and
+`ghostOutTone` are gone the way `haloTone` went, and `ghostFade` — which stepped
+toward mid-ramp, an idea that needs a ramp — becomes `ghostBack`, the share of
+the inversion the far half keeps, on `sparkBack`'s argument and in its units.
+
+**What an inversion cannot do is contrast with mid-grey.** `src·(1−dst) +
+dst·(1−src)` is 0.5 at dst 0.5 whatever `src` says, so a ghost over `--ink-400`
+is the fixed point of its own rule and disappears there exactly as surely as it
+used to disappear on white. This is a real trade and not a strictly better
+answer: it exchanges a failure at one end of the ramp for a failure in the
+middle, and it buys that the failure is now *narrow* and *the same on every
+world* rather than depending on which planet is on screen. If it shows on a real
+world, the answer is a cased line — the dash drawn twice, wide in one ink and
+narrow in the other, which is what the spark's outline does — and not a return to
+authored tones.
 
 ### The harness lines
 
@@ -664,6 +725,13 @@ default is 1.4. What that buys, one to eight anchors: 0, 1, 3, 6, 9, 12, 15, 16
 links — against 0, 1, 3, 6, 10, 15, 21, 28 pairs. Counts one to four are
 untouched, because at those every pair already is an edge.
 
+At `span` 1 — where `DEFAULT_HARNESS` actually sits — the counts are 0, 1, 3, 6,
+6, 12, 5, 16, and **seven anchors draw fewer lines than six**. That is `span`
+doing what it says and not a fault: the pentagonal bipyramid's closest pair is
+one of the ring's, and both poles' links are longer than it, so almost everything
+fails a test measured against that pair. Dragging to 1.6 gives 20 at eight and
+2.6 gives all 28. Worth knowing before someone reads the dip as a bug.
+
 The other half of it is the flower, and it is built: **every anchor carries a
 crown** and the links are what *connect* crowns rather than what the harness
 mostly is. That gives the two constructions one voice instead of making one
@@ -738,7 +806,71 @@ nothing: the same derivative measure `contourAt` draws a band boundary with make
 a px stroke px-wide at any radius, so the instance's scale is the only thing that
 grows.
 
-**A spark is on the ground it hit.** A white dot with a ring leaving its own edge,
+**And it is always behind the world.** The fragment's own distance from the
+centre in body radii is `q · vRadius`, and anything under 1 is discarded — the
+same unit-sphere silhouette the harness and the souls are cut at. This costs
+nothing while `haloFrom` is above 1, and is what makes dragging it below 1 a real
+setting rather than a ring drawn across the planet's face.
+
+**The quad has to be bigger than the ring it holds.** The ring lands on the
+quad's *inscribed* circle, so a stroke centred there has its outer half cut off
+at the four cardinal points — a halo with four flat spots, which is exactly what
+was reported after the first sitting. Every ring quad is now built `haloSpreadOf`
+times wider than the furthest thing on it and the shader divides that back out,
+so `q` is still 1.0 on the ring. At a 420px view the overhang measured 1.5px at
+every radius — small, and the four places it happened were the four places the
+eye checks a circle.
+
+**The echo is the only thing here that is not a circle.** A second ring at a
+multiple of the first's radius, its radius pushed by three sines whose
+frequencies do not divide — so it never closes into a rosette however many lobes
+it is given. It is the *subtler* of the two by inverting only as deep as
+`echoDepth` asks, which is a fraction the main ring does not have. Warp is
+authored as a share of the ring's own radius rather than in body radii, so the
+wobble grows with the mark instead of flattening out as it leaves.
+
+**And no two echoes are the same echo.** One authored shape drawn twice in a row
+is a stamp, not a strike, so every flash turns the warp by a random angle and
+draws its own lobe count off `echoScatter`. The scatter is on the *count* and not
+on the warp, and that is the whole of why it is free: the quad is sized off
+`echoWarp`, so a scattered warp would have to reserve room for its own widest
+possible draw and every ring would pay for the one that never happened. A
+scattered count changes the rhythm inside a quad that was already the right size.
+
+The mark stores the *draw* — a signed unit — rather than the count it produced,
+so `echoScatter` moved while a flash is still in the air reaches that flash too.
+That is the same reason the radius sampled at a spark is frozen and everything
+else about it is not: a slider is a thing being designed, and a mark in flight is
+the only place you can see what you just changed.
+
+**A lobe count has to be a whole number, and for a while this one was not.** The
+warp is a function of `atan`, which runs −π to π and jumps at the far side of the
+ring; the pattern was sampled at whatever fractional count the slider and the
+scatter produced, so it met its own start mid-stride there. Measured across the
+whole slider, the step at the seam reached **1.91** against a warp normalised to
+about ±1 — very nearly the full range, a notch in the echo that stayed where it
+was while the flash turned under it. Session 13 found it as *the polar seam*, and
+it was not a bug in the noise. It was the slider saying something true: 5.4 lobes
+cannot go round a closed ring.
+
+So the warp is built at whole counts only — **all three harmonics**, not just the
+first, since any one of them landing off a whole count reopens the seam by
+itself — and a fractional count is the **value blend of the two whole ones on
+either side**. A mix of two patterns that close is a pattern that closes, so the
+slider and the scatter stay continuous while every shape they land on is exactly
+periodic. The measured step is now 2.8e-14, which is float noise. Rounding does
+not cost the rosette argument either: 5 lobes carries 9 and 15, which share no
+factor.
+
+What it does cost is a little amplitude at half-steps, where the blend is 50/50
+between two decorrelated patterns. Probed: the peak warp holds at 0.93–0.99 for
+whole counts and for half-steps at five lobes and up, and dips to **0.71** at 1.5
+lobes, where there are only two patterns and they have nowhere to agree. The
+authored `echoWarp` was tuned with the seam in it and at `echoBands` 1 with full
+scatter, which is exactly the range that softens — if the echo now reads flatter
+than it did, that is where it went, and the number to move is `echoWarp`.
+
+**A spark is on the ground it hit.** A dot with a ring leaving its own edge,
 placed at a random direction and sitting at `field.sampleRadius` — on the terrain,
 not on the sphere the terrain was displaced from — and inside the spin, so it
 travels with the surface. The direction is `Math.random` and not the seeded stream
@@ -746,20 +878,168 @@ the swarm and the caps draw from, because a flash is an *event*: two clicks land
 in the same place is the failure here, not the unreproducibility. The radius is
 sampled once, at the flash, so a flash never outlives a slider.
 
-**Sparks carry no silhouette test**, which is the one deliberate exception to the
-rule every other mark obeys. The souls discard their far half, the harness fades
-it, the anchors' ghost steps toward mid-ramp — a spark on the far side simply
-shows through the world. The reasoning is that a strike is an event and not an
-object: it says *the world was hit here*, and hiding half of them would mean half
-of all clicks produced no answer at all.
+**And it lies in the ground rather than facing the camera.** Billboarded, a spark
+at the limb was a full circle floating beside the world; turned into the terrain's
+own tangent plane it foreshortens into the surface, and the ring becomes the thing
+that says which way the ground faces. One quaternion from +Y to the sampled
+direction does it, which is the turn `Anchors` already makes for the same reason.
 
-**Both fade on alpha**, which is the second bend. Every other tone in this medium
-is a whole slot of the ink ramp, and the in-medium ways to say *leaving* are to
-walk the tone toward paper or to thin the stroke to nothing. Neither survives the
-background changing: at tone 0 a halo is `--surface`, so it vanishes correctly on
-the canvas and turns into a bright ring over a dark body. Alpha is the only fade
-that means the same thing wherever the mark happens to be. It is one uniform to
-reverse if the exception costs more than it buys.
+**The flare is what stops the mark from being a sticker.** Two quads crossed about
+the surface normal, each widened at the base, so the pair reads as a small cone
+struck off the ground. The taper is applied in the vertex shader rather than
+baked, so a slider moves it without rebuilding anything.
+
+A cross of two quads has one bad angle — seen straight down its own axis it is two
+edges and nothing else. That angle is *exactly* where the dot and ring lying in the
+terrain are seen full-on, and the terrain quad's own bad angle, at the limb, is
+where the cross opens up. The two marks cover each other, and neither needed a
+third quad to do it.
+
+**A flare that holds one shape is a decal.** It has two heights and two tapers —
+`From` and `To`, the halo's own vocabulary — and travels between them on `growOf`,
+the same curve the ring leaves the dot by. The height is a scale and is written
+into the instance matrix; the taper is a *shape* and stays in the vertex shader,
+reading the `grow` attribute the ring already writes rather than a second one
+timed slightly differently. Wide-to-narrow is a flame collapsing into a spike;
+narrow-to-wide is one opening out. Both rises at 0 is the flare off and the old
+mark back.
+
+**The flare is on the near half only, and it is the only part of a mark that
+is.** Watched, the far-side flares were the thing that read wrong: a dot and a
+ring lying in the ground on the back of the world foreshorten, so they *say*
+they are on the back even while showing through it — but a cone struck away from
+the camera is drawn identically to one struck towards it, and no weight fixes
+that. It is not too loud on the far side, it is facing the wrong way, and
+`sparkBack` can only make a wrong shape quieter. So the flare drops out there and
+`sparkBack` no longer reaches it; the dot and the ring keep the far side and keep
+their weight.
+
+**The foot decides, not the vertex.** The near-half test is taken once at the
+point the cross stands on, normalised off the body's centre, and passed down as a
+varying — so a blade leaning its tip across the limb cannot buy its own mark back
+or lose it. Per fragment, which is right for the ring being *cut* at the
+silhouette, is wrong for a solid that either belongs to this half or does not.
+The *ink* is still per fragment: the part of a blade standing out over open sky
+inverts exactly where everything else does.
+
+It fades over the last `FLARE_LIMB` of the near half rather than switching off at
+the limb, because the world turns under these marks. A hard cull would pop a
+whole cross out of existence on a mark that had not moved, at a moment nothing
+else on screen was doing anything. The band is a cosine off the view axis and not
+a distance, so it is the same angle on a mark that landed in a trough as on one
+that landed on a peak.
+
+**One mark is one silhouette.** The dot, the ring leaving it and the two blades
+standing over both are four overlapping things drawn with alpha, and alpha over
+alpha *compounds*: at half fade, two overlapping halves come out at three
+quarters, so a fading spark grows a bruise exactly where its own parts meet. The
+fix is that every ground mark is flattened onto **one depth plane** at the near
+clip and the group is drawn with `LessDepth` — the first fragment to reach a
+pixel claims it, every later one is rejected, and the union is drawn instead of
+the sum.
+
+Depth rather than stencil because nothing in the scene draws after these: the
+sparks and the flare are the last entries in `RENDER_ORDER`, so the buffer they
+leave behind is nobody else's, and a stencil buffer is not guaranteed to have
+been asked for at context creation. It costs one line in each vertex shader and
+three flags on each material.
+
+**And the outline is that same plane, used twice.** The ask was for a mark that
+always stands out, and then — having seen each piece outlined on its own — for
+the outline of *the three pieces together*. Which is the same word as before:
+what an outline goes round is a silhouette, and this group already knew how to
+make four shapes into one.
+
+So both meshes are drawn a second time, each shape grown by `sparkOutline`
+pixels, on a plane a hair behind the fill and **after** it. Every pixel the mark
+already claimed rejects the ink by the same strictly-less test, the second pass
+unions among itself by that test as well, and what survives is the border of the
+union — one line round the dot, the ring, and both blades, with nothing drawn
+where a blade crosses the dot it stands on. No new shape, no distance field, no
+second geometry: two more materials and two more draws off the *same* geometry
+and the *same* instance matrices, because an outline that disagreed with its mark
+about the taper, the travel or the limb would be a second mark, and the one thing
+it has to be is the same one.
+
+Three things fall out of it that are worth stating.
+
+**The ink is arithmetic, not an authored tone.** The outline is `sparkTone`
+flipped, then flipped again by the silhouette — so over the body it is the far
+end of the ramp from the dot, off the body it is the near end, and it is opposite
+the fill in both places. There is deliberately no `sparkOutlineTone`: an outline
+that could be authored is an outline that could be authored the same as its own
+fill, which is a slider whose whole range but one value is correct.
+
+**Pixels, through the derivative.** Both passes convert `sparkOutline` to shape
+units with `fwidth`, never with a scale. That is not tidiness — the flare's taper
+stretches a blade's base up to three times wider than its tip, so a fixed step in
+uv is a much longer walk on screen down there, and an outline built that way
+comes out a wedge. The derivative already knows the local stretch, so the same
+number of pixels is the same number of pixels at the foot, at the tip, and on a
+dot foreshortened flat into the limb.
+
+**The order costs a hairline, and the other order costs the bruise.** The fill's
+antialiased rim writes depth at whatever alpha it has, so the outline starts
+about half a pixel outside where the mark stops being opaque and the ground shows
+through the join. The alternative — outline first, fill over it — has no hairline
+and is much worse: the fill is *faded*, so at half life the ink underneath comes
+back through the middle of the mark at a quarter weight, which is the bruise this
+whole plane was built to prevent. If the hairline reads at 1× DPR the fix is a
+tighter antialias on the fill's outer edge alone, not a change of order.
+
+Two things follow from it and are worth knowing before they surprise anyone.
+Overlaps *between* marks resolve the same way — two sparks crossing merge rather
+than darken, which is the same answer and probably the wanted one. And the
+winner is whichever fragment arrived first, which is instance order and not
+depth order, so a faint old mark can claim a pixel from a fresh one. At 6px dots
+scattered over a sphere that is rare; if it starts showing, the fix is to fill
+the instance buffer nearest-first, which needs the camera in `Sparks`.
+
+**The dot and the ring still carry no silhouette test**, which remains the one
+deliberate exception to the rule every other mark obeys. The souls discard their
+far half, the harness fades it, the anchors' ghost steps toward mid-ramp — a
+spark on the far side simply shows through the world. The reasoning is that a
+strike is an event and not an object: it says *the world was hit here*, and
+hiding half of them would mean half of all clicks produced no answer at all. The
+flare is not covered by that argument, because the event is still reported by the
+dot underneath it — dropping the blades loses no click, only an ornament that had
+nothing to say at that angle.
+
+What the silhouette *does* now decide is the **ink**. Past it both the dot's tone
+and the ring's flip to the far end of the ramp, `6 − tone`, per fragment — so a
+ring standing out past the limb is cut at the silhouette rather than switched
+whole. That is the rule the harness and the souls already draw by, and it costs no
+new parameter: the authored tone is the one over the body, and the other end is
+arithmetic.
+
+What it could not decide is *depth*. A spark on the back of the world sits inside
+the silhouette, takes the front ink and comes out indistinguishable from one on
+the face of it — which made half of every burst read as noise. `sparkBack` is what
+the far half keeps, applied per fragment on `vRel.z`, so the near and far sides
+of one flash are the same mark at two weights. Alpha and not a step along the
+ramp, which is what the harness and the ghost use for the same reading: a mark
+that is *behind* is quieter, and the ramp only has seven answers, all of which a
+spark may legitimately already be sitting on.
+
+**The halo carries no ink at all**, and this is what retired the exception that
+used to sit here. The old argument was that alpha is the only fade meaning the
+same thing over the canvas and over a dark body, because at tone 0 a halo is
+`--surface` — correct on the canvas and a *bright ring* over the planet. An
+inversion has no such problem, because it has no tone of its own to be wrong
+about: the ring writes a blend factor and the framebuffer supplies the colour.
+`src·(1−dst) + dst·(1−src)` with a grey `src` is exactly `mix(dst, 1−dst, f)`, so
+one `CustomBlending` gives a smooth, antialiased, *fading* inversion out of a
+single draw. A soul under the ring goes pale; the canvas goes dark; a harness line
+becomes whatever it was not. Fading is inverting less.
+
+Two consequences worth stating. The fragment must **not** run
+`colorspace_fragment` — what it emits is a factor, not a colour, and encoding it
+would bend the inversion. And the blend's alpha channel is pinned to
+`Zero`/`One`, because the same factors applied to alpha would drive it to zero
+wherever the ring drew: a hole punched through the canvas on any context that has
+an alpha channel.
+
+That leaves **one** acknowledged exception in this medium rather than two.
 
 **The curves were chosen by probe, not by eye.** A cubic-out growth against a
 squared fade put the halo at 99% of its travel while still a quarter visible —
@@ -793,13 +1073,155 @@ has to be a phase offset in the sampling and never a rebuild, since `buildLoops`
 is cached precisely because rebuilding is the expensive path. Not built, and it
 wants the rider count to have been looked at first.
 
+### A world's size is everything except the world
+
+The body cannot say how big it is. It is drawn to the framing whatever it is, so
+a picture of a sphere alone carries no scale at all — and no slider on the body
+can change that, because changing the body changes the framing with it.
+
+What carries scale is everything standing *beside* it. So `PlanetVisual.size`
+**divides the marks** rather than multiplying the body: a large world wears fine
+souls and low poles, a small one wears coarse ones. The number says the thing
+being authored — how big this world is — and the marks move the other way, which
+is the direction the handoff already argued for when it said *a world with small
+poles reads large*.
+
+Three sizes move, all of them authored in body radii: the souls' dots, the
+anchors' whole solid, and the sparks. What is authored in **pixels** does not —
+the outline, the contour, the ghost's dash, the dots' px floor. Those are the
+drawn edges of the widget, and a widget does not get a heavier line for holding a
+smaller planet.
+
+**The orbits stay where they were authored too**, which was a deliberate call and
+not an omission. `radius` is rim-hugging by design, at 1.3 against a body of 1, so
+a soul crosses the silhouette twice an orbit and the ink rule does its work.
+Dividing that by a size of 2 puts the band at 0.65 — inside the body, where the
+rule never fires and the whole depth cue is gone. Size is about the marks, and the
+swarm's shell is about the ink.
+
+The division happens in exactly one place per subject. The anchors get an adjusted
+`AnchorVisual` built in `PlanetScene`, because `placeAnchors` is read there and
+`buildAnchorSolid` inside `Anchors` — a solid built at one size standing on a
+placement computed at another is the single way this could have gone wrong. The
+souls and the sparks take a `size` prop instead, since neither rebuilds anything
+from it and a derived copy would throw away eight hundred souls on every drag.
+
+### A rider's speed is a distance, not an angle
+
+A soul reads its harness loop at the phase it was already at. That was written up
+as *joining the harness changes where a soul is and not how fast it goes*, and it
+was wrong — it holds the **angular** rate constant, and a loop is not the same
+length as the orbit it replaced.
+
+Measured at four anchors on the authored `DEFAULT_HARNESS`: the loops run 1.73 to
+2.74 world units and the orbit they were drawn from is 7.68 around. So a rider was
+covering between **22% and 36%** of its own speed across the screen. That is not a
+subtlety; it is the swarm visibly stalling the moment it reaches a line.
+
+The fix is one ratio. `HarnessLoop` now carries its `length`, measured on the same
+polyline samples a rider is read from — the distance a rider actually covers,
+chords and all, rather than the length of the ideal curve under them — and the
+phase is scaled by `orbitCircumference / loopLength`. What is held constant is the
+thing the eye measures. Mean speed now lands within 0.31% of the orbital speed on
+every loop.
+
+It is the **phase** that is rescaled and not the clock: scaling the shared clock
+would drag every soul on that line into the same lane. And the instantaneous rate
+still wanders by about ±10%, because `sampleLoop` walks the polyline by index and
+the samples are not evenly spaced in arc length — that is the loop's own bulge and
+twist and it was there before this. Arc-length reparameterisation would remove it
+and costs a table per loop; nothing has asked yet.
+
+**The A → B seam is untouched and is now measurable.** A rider reaching the far
+anchor of an arc reappears at the near one, and the step that wraps covers the
+loop's whole chord. The probe skips it explicitly rather than folding it into a
+speed, because it is a pop and not a rate.
+
+### The flare is parked, not removed
+
+The author watched the click run and did not want the flare on the flashes. It is
+off by the switch the code already had — `sparkRiseFrom` and `sparkRiseTo` at 0 in
+`DEFAULT_PULSE`, which draws neither the blades nor their outline. Everything else
+stands: the two shaders, the two materials, the four sliders, the near-half rule
+and the limb fade. Raising either rise in the pulse lab brings it back, and the
+heights it was authored at — 0.6 → 2.4 over a 3.2 → 1.4 base — are recorded beside
+the zeroes so what was judged can be judged again.
+
+Off by a value rather than by deletion because the flare is not wrong, it is
+unwanted *here*: a mark that stands off the surface is the obvious thing to want
+back when a spark has to read at 80px, and nothing about it is cheap to rebuild.
+
+### The world takes the click
+
+`Disc.svelte` is no longer rendered. The detail screen's click target is
+`PlanetStage`, which is the whole of the join between the game and the widget: an
+active planet id becomes a `PlanetVisual` out of `planet-visuals.ts`, the cohort
+rows become `cohorts` as counts, and one press is both a flash and a purchase.
+
+Three things were decided to place it.
+
+**The planet replaces the disc rather than sitting above it.** Two round things
+stacked, only one of them clickable, is a worse screen than one — and the widget
+was built around answering its own click, so a portrait above a separate button
+would leave the part that took eight sessions unused.
+
+**The disc's ring of dots is retired in favour of the swarm.** Both were the same
+reading of the same number; the ring capped at 28 and the swarm draws one band per
+cohort, which is the split the table already shows. `countSouls` is no longer read
+here — `soulsPerCohort` is, off the same rows.
+
+**`PlanetView` gained `clickActionLabel` and `onclickaction`.** The flash was
+already the view's own event and stays that way; the callback runs beside it, so
+the widget still does not know what a click buys. The aria-label was hardcoded
+`Incarnate` and is now that prop's default, so the lab's forty-four views are
+unchanged.
+
+The framing is held at the swarm's 3.2 whether or not there are cohorts. A world
+that shrank the moment the first cohort arrived would read as the planet moving
+away from the player, which is the opposite of what a first purchase should feel
+like.
+
+**The canvas is `--surface`, not the page's `--canvas`.** The panels around it are
+that colour, and a world on a different ground than the cards beside it reads as a
+hole in the column. It is also the ground the true-size strips have always been
+judged on, so nothing about the ink is newly untested — and the halo inverts, so
+it cannot be wrong against either.
+
+**The canvas takes the column, at 511:380.** `widthPx` is the stage's own measured
+width rather than an authored size — `bind:clientWidth`, rounded, and nothing
+renders until it is known. `PlanetView` sizes a real buffer and not a CSS box, so
+measuring is the only way its canvas can be responsive at all; the outline is
+authored in px and holds its weight at whatever the column gives it.
+
+The stage is no longer square. The author sat with it and found the world at
+**511 across, 380 down**, which is held as a ratio rather than as the two numbers:
+the width is whatever the column gives, and the height follows it. `PlanetView`
+gained `heightPx` for this and `px` became `widthPx`, since a prop that means the
+width should not be named as though it means both. `heightPx` absent is square, so
+the lab's forty-four views are unchanged.
+
+The world is sized by the **shorter** axis — `zoom` is `min(width, height) / frame`
+— so on a landscape stage the height is what decides how big the planet is and the
+extra width is room around it. That is the coupling to know before touching either
+number: widening the column grows the world here, because the ratio carries the
+height up with it.
+
+The caption floats over the bottom of the canvas instead of sitting under it, which
+buys the world the row it would otherwise have spent, and it is `pointer-events:
+none` so the press still reaches the canvas everywhere the words cover.
+
+`Disc.svelte` is left in the tree. It is the only other thing that has ever been
+the click target, and the decision to drop the dot ring is one sitting old.
+
 ### Open
 
-Nothing in the game draws a planet yet — the medium, the swarm, the anchors, the
-harness and four labs exist; the placement does not. Surface objects do not
-exist, only the field they would query. No parameter sizes a world against
-another. And each view is its own WebGL context, which the workbench can afford
-and an Overview list of one canvas per row cannot.
+The planet is in the game, on the detail screen only — the Overview's rows still
+draw nothing, and each view is its own WebGL context, which the workbench can
+afford and a list of one canvas per row cannot. Surface objects do not exist, only
+the field they would query.
+
+**A parameter sizes a world against another now** — `PlanetVisual.size`, above.
+Every entry in `planet-visuals.ts` carries it at 1, so no authored world moved.
 
 The first three things that came back from seeing the harness run are built:
 `twist` runs to 2π, the souls' blend is a rider count, and the many-anchor figure
@@ -813,10 +1235,23 @@ poles' tips, the swarm's per-band slider reaches a hundred, and `backHide` drops
 the far side of the harness. Typechecked, built and probed; not yet seen.
 
 The click is built too — a halo and its sparks, above — and it is the first thing
-here that is not an authoring surface. It is also the first with two acknowledged
-exceptions to the medium's rules written into it: alpha as a fade, and no
-silhouette test on a spark. Both are one uniform to reverse and neither has been
-seen running.
+here that is not an authoring surface. It went out with two acknowledged
+exceptions to the medium's rules and **came back with one**: the author saw it run
+and the first round of notes off that sitting replaced the alpha fade with a true
+inversion, which needs no exception because it owns no tone. What is left is the
+spark's missing silhouette test, and that one is deliberate rather than
+provisional.
+
+The same sitting is where the halo's crop, the terrain-lying sparks, the flare,
+the echo and the ink inversion came from.
+
+A second round of notes then came back off the *sparks specifically*, and every
+one of them named something real: a fragment shader was reading a uniform its
+material never supplied, so `q` was 0 everywhere and every dot drew as a solid
+quad — which is also what made the overlaps loud enough to report. That is fixed,
+and with it the group is now one silhouette on one depth plane, the flare travels
+between two heights and two tapers, the far half of a burst is quieter, and the
+echo turns and scatters per flash. None of *that* has been seen running either.
 
 ## Aim
 

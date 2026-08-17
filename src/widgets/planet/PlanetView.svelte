@@ -9,8 +9,8 @@
 
   interface Props {
     visual: PlanetVisual;
-    /** Rendered square, in px. Not a CSS scale — the outline must be drawn at this size. */
-    px?: number;
+    widthPx?: number;
+    heightPx?: number;
     frame?: number;
     backgroundToken?: string;
     swarm?: SwarmVisual;
@@ -18,16 +18,15 @@
     anchors?: AnchorVisual;
     anchored?: boolean[];
     harness?: HarnessVisual;
-    /**
-     * What a click leaves behind. Giving it is also what makes the view a click
-     * target at all — a world that cannot answer a click should not take one.
-     */
     pulse?: PulseVisual;
+    clickActionLabel?: string;
+    onclickaction?: () => void;
   }
 
   let {
     visual,
-    px = 240,
+    widthPx = 240,
+    heightPx,
     frame = 2.7,
     backgroundToken = '--canvas',
     swarm,
@@ -36,6 +35,8 @@
     anchored,
     harness,
     pulse,
+    clickActionLabel = 'Incarnate',
+    onclickaction,
   }: Props = $props();
 
   let host: HTMLDivElement | undefined = $state();
@@ -68,7 +69,12 @@
   });
 </script>
 
-<div class="planet-view" bind:this={host} style:width="{px}px" style:height="{px}px">
+<div
+  class="planet-view"
+  bind:this={host}
+  style:width="{widthPx}px"
+  style:height="{heightPx ?? widthPx}px"
+>
   {#if shown}
     <Canvas renderMode="on-demand">
       <PlanetScene
@@ -86,12 +92,14 @@
     </Canvas>
   {/if}
 
-  <!-- A real button over the canvas rather than a handler on the div: the click
-       target is the whole point of the widget, and it has to be reachable by
-       keyboard the moment it is placed in the game. `onclick` and not
-       `onpointerdown`, so Enter and Space flash the world too. -->
+  <!-- A real button over the canvas rather than a handler on the div, and
+       `onclick` rather than `onpointerdown`, so Enter and Space flash it too. -->
   {#if pulse}
-    <button class="press" onclick={() => flashes++} aria-label="Incarnate"></button>
+    <button
+      class="press"
+      onclick={() => { flashes++; onclickaction?.(); }}
+      aria-label={clickActionLabel}
+    ></button>
   {/if}
 </div>
 

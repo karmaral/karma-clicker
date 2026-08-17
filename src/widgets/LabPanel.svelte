@@ -70,26 +70,27 @@
 </aside>
 
 <style>
-  /* A panel is laid out by its rail, so it owns no position of its own — which
-     is what lets two of them share a side. */
   .lab {
-    width: 20rem;
     display: flex;
     flex-direction: column;
-    /* Open panels share the rail's height; without this the scrolling body
-       cannot shrink and the last panel falls off the page. */
-    flex: 1 1 auto;
-    min-height: 0;
     background: var(--surface);
     border: var(--rule-card);
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: var(--fs-xs);
   }
 
+  /* An open panel takes the **whole** rail and covers whatever else is in it.
+     Four subjects sharing one column left every one of them too short to work
+     in; a rail is one subject at a time, and minimising is how you choose which.
+     The closed ones are their title bars alone, in flow underneath. */
+  .lab.open {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+  }
+
   .lab:not(.open) {
     flex: none;
-    width: auto;
-    align-self: flex-start;
   }
 
   .toggle {
@@ -108,6 +109,10 @@
     flex-direction: column;
     gap: var(--sp-1);
     padding: var(--sp-3);
+    /* Takes what the title bar leaves and scrolls inside it — without the
+       `min-height` a long list of sliders grows the panel past the rail. */
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
   }
 
