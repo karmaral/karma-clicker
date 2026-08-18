@@ -1,31 +1,23 @@
 <script lang="ts">
   import LabPanel from './LabPanel.svelte';
-  import { keyLight, VISUAL_GROUPS, VISUAL_PARAMS, type PlanetVisual } from './planet';
+  import Puck from './Puck.svelte';
+  import {
+    keyLight, LEAN_REACH, TILT_REACH, VISUAL_GROUPS, VISUAL_PARAMS, type PlanetVisual,
+  } from './planet';
   import { planetLab } from './planet-lab.svelte';
 
   let copied = $state(false);
 
   const current = $derived(planetLab.current);
 
-  let puck: HTMLButtonElement | undefined = $state();
-  let aiming = $state(false);
-
-  /** Screen y runs down, the key direction runs up. */
-  function aimAt(event: PointerEvent) {
-    if (!puck) return;
-
-    const box = puck.getBoundingClientRect();
-
-    keyLight.point(
-      ((event.clientX - box.left) / box.width) * 2 - 1,
-      -(((event.clientY - box.top) / box.height) * 2 - 1),
-    );
+  function hold(lean: number, tilt: number) {
+    planetLab.set('lean', lean);
+    planetLab.set('tilt', tilt);
   }
 
-  function grab(event: PointerEvent) {
-    aiming = true;
-    puck?.setPointerCapture(event.pointerId);
-    aimAt(event);
+  function resetHold() {
+    planetLab.reset('lean');
+    planetLab.reset('tilt');
   }
 
   async function copy() {
@@ -61,34 +53,45 @@
     </div>
   {/snippet}
 
-  <!--
-    Under the weight it aims, but it is not the world's: one light serves every
-    planet and the anchors on it, so this puck moves them all at once and a
-    world with Key at 0 still feels it through its poles.
-  -->
   {#snippet under(key: string)}
+    <!--
+      Under the weight it aims, but it is not the world's: one light serves every
+      planet and the anchors on it, so this puck moves them all at once and a
+      world with Key at 0 still feels it through its poles.
+    -->
     {#if key === 'key'}
       <div class="row aim">
         <span class="id">Direction (shared)</span>
-        <button
-          class="puck"
-          type="button"
-          aria-label="Key direction"
-          bind:this={puck}
-          onpointerdown={grab}
-          onpointermove={(e) => aiming && aimAt(e)}
-          onpointerup={() => (aiming = false)}
-          onlostpointercapture={() => (aiming = false)}
-          onpointercancel={() => (aiming = false)}
-        >
-          <span
-            class="knob"
-            style:left="{50 + keyLight.x * 50}%"
-            style:top="{50 - keyLight.y * 50}%"
-          ></span>
-        </button>
+        <Puck
+          label="Key direction"
+          x={keyLight.x}
+          y={keyLight.y}
+          set={(x, y) => keyLight.point(x, y)}
+          reset={() => keyLight.revert()}
+        />
         <span class="num">
           {keyLight.x.toFixed(2)}<br />{keyLight.y.toFixed(2)}
+        </span>
+      </div>
+    {/if}
+
+    <!-- Across is the lean, down is the tilt — and the light stays where it is,
+         because the key is aimed in view space and the world turns under it. -->
+    {#if key === 'spin'}
+      <div class="row aim">
+        <span class="id">Lean · Tilt</span>
+        <Puck
+          label="How the world is held"
+          shape="square"
+          x={current.lean}
+          y={current.tilt}
+          xReach={LEAN_REACH}
+          yReach={TILT_REACH}
+          set={hold}
+          reset={resetHold}
+        />
+        <span class="num">
+          {current.lean.toFixed(2)}<br />{current.tilt.toFixed(2)}
         </span>
       </div>
     {/if}
@@ -96,7 +99,7 @@
 </LabPanel>
 
 <style>
-  /* Layout for these rows comes from LabPanel; only the puck and this are local. */
+  /* Layout for these rows comes from LabPanel; the pucks style themselves. */
 
   /**
    * The ids run past the panel rather than wrapping. Wrapping would push the
@@ -130,34 +133,4 @@
     padding: var(--sp-1) 0;
   }
 
-  .puck {
-    position: relative;
-    flex: none;
-    width: 4.5rem;
-    height: 4.5rem;
-    padding: 0;
-    border: var(--rule-card);
-    border-radius: 50%;
-    background: var(--surface-alt);
-    cursor: crosshair;
-    touch-action: none;
-  }
-
-  /** A horizon, so the disc reads as a hemisphere rather than a dial. */
-  .puck::after {
-    content: '';
-    position: absolute;
-    inset: 25%;
-    border: 1px dashed var(--line-300);
-    border-radius: 50%;
-  }
-
-  .knob {
-    position: absolute;
-    width: 9px;
-    height: 9px;
-    margin: -4.5px 0 0 -4.5px;
-    border-radius: 50%;
-    background: var(--ink-900);
-  }
 </style>

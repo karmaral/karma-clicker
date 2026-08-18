@@ -3,8 +3,10 @@
  * stated once rather than as four numbers that have to agree.
  *
  * ```
+ * -1 burst          the click, the world's own shape thrown out behind it
  * 0  body           writes depth, so the far side of everything solid is hidden
  * 1  harness        no depth test — the ink rule is its whole depth cue
+ *                   (quads, not lines: a line has no width to carry)
  * 2  placed anchor  depth-tested, so the solid caps the lines that end in it
  * 3  ghost anchor   no depth test: a place does not stop existing when it turns away
  * 4  souls          discard what is behind the world themselves
@@ -29,9 +31,16 @@
  * newest thing on screen for as long as it lasts, and anything it went behind
  * would read as having happened somewhere else.
  */
+/**
+ * The burst is the one negative, and it is behind the body rather than in front
+ * of it — the only mark here that is. Being transparent, three draws it after
+ * the opaque pass whatever this says; what the order buys is that it is first
+ * among the transparent marks, so the halo and the sparks land over it.
+ */
 export const RENDER_ORDER = {
-  harness: 1,
-  anchor: 2,
+  burst: -1,
+  anchor: 1,
+  harness: 2,
   ghost: 3,
   soul: 4,
   halo: 5,

@@ -20,7 +20,7 @@
   const activeName = $derived(planetTexts[PlanetManager.selected]?.title ?? '—');
 
   const isHere = $derived(id === PlanetManager.selected);
-  const isAhead = $derived(!isHere && Boolean(planet) && !planet.harvested);
+  const isAhead = $derived(!isHere && Boolean(planet) && !planet.isHarvested);
 
   function getBandLabel() {
     if (isHere) {
@@ -37,7 +37,7 @@
   function getStatus() {
     if (!planet) return '';
 
-    if (planet.harvested) {
+    if (planet.isHarvested) {
       return `${f(planet.merged)} merged`;
     }
 
@@ -51,7 +51,7 @@
   );
 
   /** Only the world you are on can be harvested; the rest are places to go. */
-  const isOffered = $derived(isHere && Boolean(planet) && !planet.harvested);
+  const isOffered = $derived(isHere && Boolean(planet) && !planet.isHarvested);
 </script>
 
 <Section label={getBandLabel()} title={name}>

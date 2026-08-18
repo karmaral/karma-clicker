@@ -1,5 +1,6 @@
 <script lang="ts">
   import { T, useTask, useThrelte } from '@threlte/core';
+  import { untrack } from 'svelte';
   import { fromStore } from 'svelte/store';
   import * as THREE from 'three';
   import Anchors from './Anchors.svelte';
@@ -65,6 +66,19 @@
   const zoom = $derived(Math.min(size.current.width, size.current.height) / frame);
 
   const hasAnchors = $derived(Boolean(anchors && anchored?.length));
+
+  /**
+   * How far the body's own outline bleeds past its surface, in body radii. It is
+   * authored in px, so it is only a radius once there is a zoom — and it is the
+   * whole of the difference between where the world is modelled and where it is
+   * seen to end. Worked out here because the *body's* outline decides it: a mark
+   * standing beside the world should not read a `PlanetVisual` to find out where
+   * the world stops.
+   */
+  const bleed = $derived(zoom > 0 ? Math.max(0, visual.outline) / zoom : 0);
+
+  /** And that end itself. Both halves of the harness's ink rule cut here. */
+  const rim = $derived(1 + bleed);
 
   /**
    * How big this world says it is. Everything standing beside the body is
@@ -156,7 +170,17 @@
     // Clamped to the buffer: a burst longer than it would only overwrite its own
     // oldest marks, and every one of those is a field sample.
     for (let i = Math.max(answered, at - PULSE_CAPACITY); i < at; i++) {
-      pulses.flash(Math.round(pulse.sparks), field);
+      // Untracked: where the world is held is read *at* the click and is not
+      // something this effect answers to. Subscribing would re-run it on every
+      // frame the spin advances and on every drag of the hold's puck.
+      const held = untrack(() => ({
+        lean: visual.lean,
+        tilt: visual.tilt,
+        turn: visual.turn,
+        spin: spinAngle,
+      }));
+
+      pulses.flash(Math.round(pulse.sparks), field, pulse.sparkFace, held);
     }
 
     answered = at;
@@ -172,7 +196,7 @@
 
     pulses.advance(delta);
 
-    if (pulses.isLive(Math.max(pulse.haloLife, pulse.sparkLife))) {
+    if (pulses.isLive(Math.max(pulse.burstLife, pulse.haloLife, pulse.sparkLife))) {
       invalidate();
     }
   });
@@ -185,14 +209,14 @@
 
 <T.OrthographicCamera makeDefault position={[0, 0, 5]} {zoom} />
 
-<PlanetBody {visual} {zoom} {spinAngle}>
+<PlanetBody {visual} {zoom} {spinAngle} {pulse} {pulses}>
   {#snippet standing()}
     {#if harness && loops}
-      <Harness visual={harness} {loops} />
+      <Harness visual={harness} {loops} {zoom} {rim} size={worldSize} />
     {/if}
 
     {#if poles && anchored?.length && field}
-      <Anchors visual={poles} {anchored} {field} {zoom} />
+      <Anchors visual={poles} {anchored} {field} {zoom} size={worldSize} />
     {/if}
 
     <!-- Inside the spin, because a spark is a mark on the ground it hit. -->
@@ -208,13 +232,14 @@
       {zoom}
       {loops}
       {spinAngle}
+      {bleed}
       size={worldSize}
     />
   {/if}
 </PlanetBody>
 
 <!-- Outside the body altogether: the halo is about the world, not on it, so
-     neither the tilt nor the spin may reach it. -->
+     neither how it is held nor the spin may reach it. -->
 {#if pulse}
   <Halo visual={pulse} {pulses} />
 {/if}

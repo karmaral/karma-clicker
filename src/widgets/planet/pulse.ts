@@ -53,7 +53,47 @@ export interface Spark extends Mark {
   r: number;
 }
 
+/**
+ * How the world is held at the moment of a click, in `PlanetBody`'s own three
+ * angles plus where the spin has got to. A spark is placed on the face the
+ * camera can see, and this is what says which ground that is.
+ */
+export interface Facing {
+  lean: number;
+  tilt: number;
+  turn: number;
+  spin: number;
+}
+
 export interface PulseVisual {
+  /**
+   * The burst: the world's own shape thrown out behind it as a thick band, in
+   * px, and the planet's outline flashing to `burstEdge` over the top of it.
+   * 0 is the whole thing off.
+   *
+   * It is the halo's opposite and the reason both exist. A halo is a *circle*
+   * about the world and says nothing about which world it is around; the burst
+   * is the silhouette, terrain and all, so it is the same mark on a smooth ball
+   * and on a ridged one only if those two read the same in the first place.
+   *
+   * The hull is the outline's construction at a much greater width — radially
+   * offset, so it provably cannot self-intersect however lumpy the body is.
+   */
+  burstWidth: number;
+  /** Its ink. 6 is the dark end of the ramp, which is what was asked for. */
+  burstTone: number;
+  /**
+   * What the body's *own* outline flashes to while the burst is up. 0 is the
+   * paper end, so the world is drawn white-edged against its own shadow.
+   *
+   * It is the only place anything writes over an authored `outlineTone`, and it
+   * is a flash rather than a state: at the end of `burstLife` the outline is
+   * exactly what the world authored, with nothing to restore.
+   */
+  burstEdge: number;
+  /** Seconds from the flash to gone. Short — this is a blink, not a halo. */
+  burstLife: number;
+
   /**
    * Where the halo is born and where it has got to when it dies, in body radii.
    * Born outside the silhouette: a ring that starts on the world reads as a
@@ -132,12 +172,28 @@ export interface PulseVisual {
   sparkFlareTo: number;
 
   /**
+   * Where on the world a mark may land, as the cosine of its angle off the
+   * camera. 0 is the visible half exactly; above that it also keeps marks off
+   * the limb, where the ground is edge-on and a dot foreshortens into the
+   * silhouette; −1 is the whole sphere, which is where this started.
+   *
+   * Sampled in view space and turned back into the body's frame, so the hold
+   * and the spin decide which ground is facing you *at the click*. A cutoff
+   * taken on the body's own axes would pin marks to a fixed patch and let the
+   * spin carry them away.
+   */
+  sparkFace: number;
+
+  /**
    * What the *dot and its ring* keep on the far side of the body, 0…1. The
    * silhouette decides the ink; this decides how much of it, because a mark on
    * the back of the world sits inside the silhouette and would otherwise be
    * indistinguishable from one on the front. 1 is the far side as loud as the
    * near, 0 is the near half only — and it is the near half only for the flare
    * either way.
+   *
+   * It only says anything while `sparkFace` is below 0 and marks reach the back
+   * at all.
    */
   sparkBack: number;
 
@@ -219,6 +275,14 @@ export function createPulses() {
     born: -Infinity, x: 0, y: 1, z: 0, r: 1,
   }));
 
+  /**
+   * One, and restarted rather than queued. The burst is the *world's* shape,
+   * and there is one world — thirty-two of them would be the same silhouette
+   * drawn thirty-two times, so a second click restarts the blink instead of
+   * stacking another on it.
+   */
+  const burst: Mark = { born: -Infinity };
+
   let now = 0;
   let nextHalo = 0;
   let nextSpark = 0;
@@ -237,28 +301,45 @@ export function createPulses() {
    * swarm and the caps use: a flash is an *event*, so two clicks landing in the
    * same place is the failure, not the unreproducibility.
    */
-  function flash(count: number, field: SurfaceField) {
+  function flash(count: number, field: SurfaceField, face: number, held: Facing) {
     const halo = halos[nextHalo];
 
+    burst.born = now;
     halo.born = now;
     halo.turn = Math.random() * Math.PI * 2;
     halo.scatter = Math.random() * 2 - 1;
 
     nextHalo = (nextHalo + 1) % PULSE_CAPACITY;
 
+    const lean = Math.cos(held.lean), leanS = Math.sin(held.lean);
+    const tilt = Math.cos(held.tilt), tiltS = Math.sin(held.tilt);
+    const round = -(held.turn + held.spin);
+    const spun = Math.cos(round), spunS = Math.sin(round);
+
     for (let i = 0; i < count; i++) {
       const mark = sparks[nextSpark];
 
-      // Uniform on the sphere: the axis component first, then a point on the
-      // ring of the radius that leaves. Y, because the world spins about it.
-      const y = Math.random() * 2 - 1;
+      // Uniform on the cap the camera can see: the view axis first, then a
+      // point on the ring of the radius that leaves.
+      const az = face + Math.random() * (1 - face);
       const around = Math.random() * Math.PI * 2;
-      const ring = Math.sqrt(Math.max(0, 1 - y * y));
+      const ring = Math.sqrt(Math.max(0, 1 - az * az));
+      const ax = Math.cos(around) * ring;
+      const ay = Math.sin(around) * ring;
+
+      // And back into the body's frame. `PlanetBody` nests Rz(−lean), Rx(tilt)
+      // and Ry(turn + spin) in that order, so this is the same chain read
+      // backwards — written out rather than taken from three, because nothing
+      // here may import it and stay probeable.
+      const bx = ax * lean - ay * leanS;
+      const by = ax * leanS + ay * lean;
+      const cy = by * tilt + az * tiltS;
+      const cz = az * tilt - by * tiltS;
 
       mark.born = now;
-      mark.x = Math.cos(around) * ring;
-      mark.y = y;
-      mark.z = Math.sin(around) * ring;
+      mark.x = bx * spun + cz * spunS;
+      mark.y = cy;
+      mark.z = cz * spun - bx * spunS;
       mark.r = field.sampleRadius(mark.x, mark.y, mark.z);
 
       nextSpark = (nextSpark + 1) % PULSE_CAPACITY;
@@ -267,11 +348,13 @@ export function createPulses() {
 
   /** Whether anything is still drawing, so a quiet world stops asking for frames. */
   function isLive(life: number) {
-    return halos.some((mark) => now - mark.born < life)
+    return now - burst.born < life
+      || halos.some((mark) => now - mark.born < life)
       || sparks.some((mark) => now - mark.born < life);
   }
 
   return {
+    burst,
     halos,
     sparks,
     get now() { return now; },
@@ -283,7 +366,7 @@ export function createPulses() {
 
 export type Pulses = ReturnType<typeof createPulses>;
 
-export type PulseGroup = 'Halo' | 'Echo' | 'Spark';
+export type PulseGroup = 'Burst' | 'Halo' | 'Echo' | 'Spark';
 
 export interface PulseParam {
   key: keyof PulseVisual;
@@ -294,10 +377,16 @@ export interface PulseParam {
   step: number;
 }
 
-export const PULSE_GROUPS: PulseGroup[] = ['Halo', 'Echo', 'Spark'];
+export const PULSE_GROUPS: PulseGroup[] = ['Burst', 'Halo', 'Echo', 'Spark'];
 
 /** Shaped like `SWARM_PARAMS`, so wiring a panel onto it is mechanical. */
 export const PULSE_PARAMS: PulseParam[] = [
+  // 0 is the burst off, so the three below need no switch of their own.
+  { key: 'burstWidth', label: 'Hull px', group: 'Burst', min: 0, max: 80, step: 0.5 },
+  { key: 'burstTone', label: 'Hull ink', group: 'Burst', min: 0, max: 6, step: 1 },
+  { key: 'burstEdge', label: 'Edge ink', group: 'Burst', min: 0, max: 6, step: 1 },
+  { key: 'burstLife', label: 'Life', group: 'Burst', min: 0.05, max: 2, step: 0.05 },
+
   { key: 'haloFrom', label: 'From', group: 'Halo', min: 0.5, max: 3, step: 0.01 },
   // Past the framing on purpose: a halo that stops inside the frame reads as a
   // ring that was drawn and rubbed out, not as one that left.
@@ -326,6 +415,10 @@ export const PULSE_PARAMS: PulseParam[] = [
   { key: 'sparkFlareFrom', label: 'Base from', group: 'Spark', min: 1, max: 6, step: 0.05 },
   { key: 'sparkFlareTo', label: 'Base to', group: 'Spark', min: 1, max: 6, step: 0.05 },
   { key: 'sparkLife', label: 'Life', group: 'Spark', min: 0.05, max: 3, step: 0.05 },
+  // −1 is the whole sphere, 0 the visible half, and it stops at 0.9 because a
+  // cap any tighter than that is one point and the slider would stop meaning
+  // anything before its end.
+  { key: 'sparkFace', label: 'Face', group: 'Spark', min: -1, max: 0.9, step: 0.02 },
   { key: 'sparkBack', label: 'Far side', group: 'Spark', min: 0, max: 1, step: 0.02 },
   { key: 'sparkTone', label: 'Dot ink', group: 'Spark', min: 0, max: 6, step: 1 },
   { key: 'sparkRingTone', label: 'Ring ink', group: 'Spark', min: 0, max: 6, step: 1 },
@@ -335,12 +428,16 @@ export const PULSE_PARAMS: PulseParam[] = [
 ];
 
 export const DEFAULT_PULSE: PulseVisual = {
-  haloFrom: 0.88,
-  haloTo: 2.11,
+  burstWidth: 6,
+  burstTone: 6,
+  burstEdge: 0,
+  burstLife: 0.15,
+  haloFrom: 0.78,
+  haloTo: 1.15,
   haloLife: 0.9,
-  haloWidth: 12,
-  echoWidth: 0.75,
-  echoScale: 0.81,
+  haloWidth: 0,
+  echoWidth: 1.75,
+  echoScale: 1.12,
   echoWarp: 0.26,
   echoBands: 1,
   echoScatter: 1,
@@ -349,19 +446,16 @@ export const DEFAULT_PULSE: PulseVisual = {
   sparkDot: 0.045,
   sparkRing: 4,
   sparkWidth: 1.5,
-  // The flare is off: both heights at 0 and neither draw runs. Parked, not
-  // removed — the shaders, the materials and the four sliders are all still
-  // there, so raising either rise brings it back. It was authored at 0.6 → 2.4
-  // over a 3.2 → 1.4 base, which is where to put it back to see what was judged.
   sparkRiseFrom: 0,
   sparkRiseTo: 0,
   sparkFlareFrom: 3.2,
   sparkFlareTo: 1.4,
   sparkLife: 0.8,
+  sparkFace: 0.45,
   sparkBack: 0.25,
   sparkTone: 0,
   sparkRingTone: 0,
-  sparkOutline: 1.5,
+  sparkOutline: 1,
 };
 
 export function clonePulse(visual: PulseVisual): PulseVisual {

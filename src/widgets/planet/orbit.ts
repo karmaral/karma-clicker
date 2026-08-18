@@ -29,7 +29,11 @@ export interface SwarmVisual {
   radius: number;
   /** Between one band and the next, so cohorts do not share a lane. */
   spacing: number;
-  /** Where the ink switches, in body radii. The sphere, ignoring terrain. */
+  /**
+   * Where the ink switches, in body radii: the sphere, ignoring terrain. The
+   * body's outline is added to it by the scene, because a slider cannot know how
+   * wide a px-authored edge came out at this widget's size.
+   */
   rim: number;
 
   /**

@@ -79,6 +79,21 @@ export interface HarnessVisual {
   levelFade: number;
 
   /**
+   * How heavy a line is, in px at size 1, and the two bounds that hold it there.
+   * Divided by the world's size like every other mark, so a cage on a large
+   * world is drawn in finer ink than one on a small world.
+   *
+   * The **ceiling** is what the anchors do not need. A harness spans the *body*,
+   * and the body is drawn to the framing at every size — so as a world is
+   * authored smaller there is nothing underneath the line getting bigger to
+   * carry the weight the division keeps adding, and past a point 192 loops stop
+   * being a cage and become a fill.
+   */
+  width: number;
+  floor: number;
+  ceiling: number;
+
+  /**
    * Or drop the far side entirely: 1 hides the stretch of every line that runs
    * behind the body, which is the whole of what `backFade` can only pale. Cut at
    * the same silhouette the ink switches at, and by the same test the souls
@@ -597,6 +612,10 @@ export const HARNESS_PARAMS: HarnessParam[] = [
   // A toggle, drawn as the panel draws every other integer field.
   { key: 'backHide', label: 'Behind hidden', group: 'Ink', min: 0, max: 1, step: 1 },
   { key: 'levelFade', label: 'Outer fade', group: 'Ink', min: 0, max: 3, step: 1 },
+  // 0 is no harness drawn, and the floor does not overrule it — see `weightOf`.
+  { key: 'width', label: 'Line px', group: 'Ink', min: 0, max: 6, step: 0.1 },
+  { key: 'floor', label: 'Floor px', group: 'Ink', min: 0.1, max: 3, step: 0.1 },
+  { key: 'ceiling', label: 'Ceiling px', group: 'Ink', min: 0.5, max: 10, step: 0.25 },
 ];
 
 export const DEFAULT_HARNESS: HarnessVisual = {
@@ -613,6 +632,9 @@ export const DEFAULT_HARNESS: HarnessVisual = {
   backFade: 3,
   backHide: 1,
   levelFade: 2,
+  width: 1,
+  floor: 0.6,
+  ceiling: 2.5,
 };
 
 export function cloneHarness(visual: HarnessVisual): HarnessVisual {

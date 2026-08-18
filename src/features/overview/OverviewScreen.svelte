@@ -20,13 +20,13 @@
   const selected = $derived(picked || PlanetManager.selected);
   const active = $derived(PlanetManager.getPlanet(PlanetManager.selected));
   const isOffered = $derived(
-    selected === PlanetManager.selected && Boolean(active) && !active.harvested,
+    selected === PlanetManager.selected && Boolean(active) && !active.isHarvested,
   );
 
   function getHereStat(id: string) {
     const planet = PlanetManager.getPlanet(id);
 
-    if (planet.harvested) {
+    if (planet.isHarvested) {
       return `${f(planet.merged)} merged`;
     }
 

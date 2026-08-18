@@ -331,7 +331,7 @@
     <p class="note">
       <b>Click a world in this section.</b> One click is one <b>flash</b>, and it leaves two
       marks. The <b>halo</b> is a pair of rings around the whole world, facing the camera and
-      outside both the tilt and the spin, born just off the silhouette and growing past the
+      outside both the hold and the spin, born just off the silhouette and growing past the
       frame — so it reads as something leaving rather than as a band drawn on the body. It
       carries <b>no ink at all</b>: it <b>inverts</b> what it crosses, so a soul under it goes
       pale, the canvas goes dark, and the mark cannot be the wrong tone for its background.

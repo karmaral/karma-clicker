@@ -32,7 +32,7 @@ export {
 export { buildGeometry } from './geometry';
 export { readInkHexes, RAMP_SIZE } from './ink';
 export {
-  DEFAULT_VISUAL, VISUAL_GROUPS, VISUAL_PARAMS,
+  DEFAULT_VISUAL, LEAN_REACH, TILT_REACH, VISUAL_GROUPS, VISUAL_PARAMS,
   cloneVisual, printVisual,
   type PlanetVisual, type VisualGroup, type VisualParam,
 } from './visual';

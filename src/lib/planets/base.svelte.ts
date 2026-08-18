@@ -12,7 +12,7 @@ export default class Planet {
   #id: string;
   #data: PlanetData;
   #experience = new Experience();
-  #harvested = $state(false);
+  #isHarvested = $state(false);
   #merged = $state(0);
   #polarity = $state<Polarity>(0);
   #emitter = $state<ResourceEmitter>();
@@ -62,20 +62,20 @@ export default class Planet {
    * the polarity read here locks what the recurring harvest pays.
    */
   completeFirstHarvest(merged: number, polarity: Polarity) {
-    if (this.#harvested) return;
+    if (this.#isHarvested) return;
 
-    this.#harvested = true;
+    this.#isHarvested = true;
     this.#merged = Math.max(0, Math.trunc(merged));
     this.#polarity = polarity;
 
-    const { yields, duration } = this.#data;
-    if (!yields) return;
+    const { harvest } = this.#data;
+    if (!harvest) return;
 
     this.#emitter = new ResourceEmitter(() => {
-      Object.keys(yields).forEach((type: ResourceType) => {
-        ResourceManager.add(type, yields[type]);
+      Object.keys(harvest.yields).forEach((type: ResourceType) => {
+        ResourceManager.add(type, harvest.yields[type]);
       });
-    }, duration);
+    }, harvest.duration);
 
     this.#emitter.toggleAutonomy(true);
     this.#emitter.queue();
@@ -131,14 +131,14 @@ export default class Planet {
   get id() { return this.#id; }
   get data() { return this.#data; }
   get experience() { return this.#experience.amount; }
-  get harvested() { return this.#harvested; }
+  get isHarvested() { return this.#isHarvested; }
   get merged() { return this.#merged; }
   get polarity() { return this.#polarity; }
   get emitter() { return this.#emitter; }
 
   /** The conditions still standing in the way, for the UI to name. */
   get unmetFirstHarvestConditions() { return this.#unmet; }
-  get isFirstHarvestReady() { return !this.#harvested && this.#unmet.length === 0; }
+  get isFirstHarvestReady() { return !this.#isHarvested && this.#unmet.length === 0; }
 
   get phases() { return this.#currentPhases; }
   get phasesPerAge() { return this.#phasesPerAge; }

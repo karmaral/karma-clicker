@@ -74,6 +74,8 @@ const data: Record<string, PlanetVisual> = {
     outlineTone: 6,
     spin: 0.185,
     tilt: -0.15,
+    lean: 0,
+    turn: 0,
   },
   'second': {
     seed: 33481,
@@ -120,6 +122,8 @@ const data: Record<string, PlanetVisual> = {
     outlineTone: 3,
     spin: 0.09,
     tilt: 0.18,
+    lean: 0,
+    turn: 0,
   },
   /** Land-driven continents, sitting darker on the ramp. */
   'third': {
@@ -167,6 +171,8 @@ const data: Record<string, PlanetVisual> = {
     outlineTone: 6,
     spin: 0.07,
     tilt: 0.24,
+    lean: 0,
+    turn: 0,
   },
   'cool_1': {
     seed: 14781,
@@ -213,6 +219,8 @@ const data: Record<string, PlanetVisual> = {
     outlineTone: 6,
     spin: 0.125,
     tilt: 0.31,
+    lean: 0,
+    turn: 0,
   },
   'cool_2': {
     seed: 4177,
@@ -259,6 +267,8 @@ const data: Record<string, PlanetVisual> = {
     outlineTone: 6,
     spin: 0.1,
     tilt: 0.2,
+    lean: 0,
+    turn: 0,
   },
   'cool_3': {
     seed: 4177,
@@ -305,6 +315,8 @@ const data: Record<string, PlanetVisual> = {
     outlineTone: 6,
     spin: 0.1,
     tilt: 0.2,
+    lean: 0,
+    turn: 0,
   },
   /**
    * Specimen. Creased highlands — `ridge` at 1, `land` high enough that the
@@ -360,6 +372,8 @@ const data: Record<string, PlanetVisual> = {
     outlineTone: 6,
     spin: 0.08,
     tilt: 0.22,
+    lean: 0,
+    turn: 0,
   },
   /**
    * Specimen. Latitude bands pulled out of true by `warp`. `detail` is high
@@ -411,6 +425,8 @@ const data: Record<string, PlanetVisual> = {
     outlineTone: 6,
     spin: 0.11,
     tilt: 0.26,
+    lean: 0,
+    turn: 0,
   },
   /**
    * Specimen, and **not yet seen rendered** — authored blind in session 10 so the
@@ -468,6 +484,8 @@ const data: Record<string, PlanetVisual> = {
     outlineTone: 6,
     spin: 0.1,
     tilt: 0.2,
+    lean: 0,
+    turn: 0,
   },
 };
 

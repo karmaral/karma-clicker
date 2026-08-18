@@ -8,8 +8,8 @@ export default class ResourceEmitter {
   #payout: () => void;
   #getDuration: () => number;
   #duration = $derived.by(() => this.#getDuration());
-  #autonomous = $state(false);
-  #inProgress = $state(false);
+  #isAutonomous = $state(false);
+  #isInProgress = $state(false);
 
   #listeners: Record<string, Listener[]> = {
     queue: [],
@@ -22,7 +22,7 @@ export default class ResourceEmitter {
   }
 
   queue() {
-    this.#inProgress = true;
+    this.#isInProgress = true;
 
     const duration = this.#duration;
     if (!duration) {
@@ -39,21 +39,23 @@ export default class ResourceEmitter {
     this.#payout();
     this.#runCallbacks('action');
 
-    this.#inProgress = false;
+    this.#isInProgress = false;
 
-    if (this.#autonomous) {
+    // A clock with no interval is not a clock. Queueing emits at once when the
+    // duration is 0, so re-queueing here would recurse until the stack goes.
+    if (this.#isAutonomous && this.#duration) {
       this.queue();
     }
   }
 
   /** Flips the flag only. When it may start is the owner's call. */
   toggleAutonomy(toggle?: boolean) {
-    this.#autonomous = toggle ?? !this.#autonomous;
+    this.#isAutonomous = toggle ?? !this.#isAutonomous;
   }
 
   get duration() { return this.#duration; }
-  get autonomous() { return this.#autonomous; }
-  get inProgress() { return this.#inProgress; }
+  get isAutonomous() { return this.#isAutonomous; }
+  get isInProgress() { return this.#isInProgress; }
 
   addListener(identifier: string, fn: Listener) {
     this.#listeners[identifier].push(fn);

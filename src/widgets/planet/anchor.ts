@@ -49,6 +49,19 @@ export interface AnchorVisual {
   faceTone: number;
   faceShade: number;
   edgeTone: number;
+  /**
+   * And how heavy that edge is, in px at size 1. Divided by the *world's* size
+   * the way the solid itself is, so the ink and the shape it draws stay on one
+   * footing — a large world's poles are small and drawn fine, and that is the
+   * soul's ring rule spent on a mark that had no width to spend it on.
+   *
+   * The floor is in px and holds: however large the world, an anchor that is
+   * drawn at all is drawn in ink a screen can carry. There is no ceiling to go
+   * with it, because the small world that thickens the line is the same world
+   * that made the solid big enough to take it.
+   */
+  edgeWidth: number;
+  edgeFloor: number;
 
   /**
    * The unplaced ghost: the same edges, no fill, dashed, and never hidden — it
@@ -298,6 +311,10 @@ export const ANCHOR_PARAMS: AnchorParam[] = [
   { key: 'faceTone', label: 'Face', group: 'Ink', min: 0, max: 6, step: 1 },
   { key: 'faceShade', label: 'Face shade', group: 'Ink', min: 0, max: 4, step: 1 },
   { key: 'edgeTone', label: 'Edge', group: 'Ink', min: 0, max: 6, step: 1 },
+  // 0 is edges off — a solid drawn in facets alone. The floor never overrules
+  // that: it rescues a stroke a large world divided away, and nothing else.
+  { key: 'edgeWidth', label: 'Edge px', group: 'Ink', min: 0, max: 8, step: 0.1 },
+  { key: 'edgeFloor', label: 'Edge floor px', group: 'Ink', min: 0.1, max: 4, step: 0.1 },
   // The ghost inverts, so it has no ink to author — only how much of the
   // inversion the far half keeps.
   { key: 'ghostBack', label: 'Ghost behind', group: 'Ink', min: 0, max: 1, step: 0.05 },
@@ -308,18 +325,18 @@ export const ANCHOR_PARAMS: AnchorParam[] = [
 export const DEFAULT_ANCHOR: AnchorVisual = {
   phase: 0.4,
   sink: 0.02,
-
   size: 1,
   sides: 4,
   radius: 0.105,
   height: 0.17,
   chamfer: 0.25,
-
   faceTone: 0,
   faceShade: 1,
   edgeTone: 6,
-  ghostBack: 0.45,
-  dash: 3,
+  edgeWidth: 0.7,
+  edgeFloor: 0.75,
+  ghostBack: 0.7,
+  dash: 7.5,
   duty: 0.5,
 };
 

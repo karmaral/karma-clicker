@@ -200,7 +200,21 @@ export interface PlanetVisual {
 
   /** Motion. */
   spin: number;
+
+  /**
+   * How the world is held: three angles, applied outermost first so each means
+   * the same thing whatever the other two are. The key is view-space, so none of
+   * them moves the light — the world turns under it.
+   *
+   * `tilt` tips the pole at the camera: foreshortening, not a move across the
+   * screen. `lean` is its lean in the screen plane, positive to the right,
+   * outside the tilt so it stays a screen lean. `turn` is which face is forward,
+   * inside the tilt and outside the spin — a starting phase on a world that
+   * turns, the whole choice of what a seed shows on one that does not.
+   */
   tilt: number;
+  lean: number;
+  turn: number;
 }
 
 export type VisualGroup = 'Shape' | 'Caps' | 'Texture' | 'Shade' | 'Outline' | 'Motion';
@@ -267,8 +281,17 @@ export const VISUAL_PARAMS: VisualParam[] = [
   { key: 'outlineTone', label: 'Outline tone', group: 'Outline', min: 0, max: 6, step: 1 },
 
   { key: 'spin', label: 'Spin', group: 'Motion', min: -0.6, max: 0.6, step: 0.005 },
-  { key: 'tilt', label: 'Tilt', group: 'Motion', min: -0.8, max: 0.8, step: 0.01 },
+  // No row for `tilt` or `lean`: they are one puck under this one. `turn` keeps a
+  // slider — it is a phase, and a phase reads along a line.
+  { key: 'turn', label: 'Turn', group: 'Motion', min: -Math.PI, max: Math.PI, step: 0.01 },
 ];
+
+/**
+ * The puck's reach. Lean goes past the pole horizontal both ways; further is
+ * upside-down, which tilt at ±0.8 cannot meet and so has no picture to pair with.
+ */
+export const TILT_REACH = 0.8;
+export const LEAN_REACH = 1.6;
 
 export const VISUAL_GROUPS: VisualGroup[] = ['Shape', 'Caps', 'Texture', 'Shade', 'Outline', 'Motion'];
 
@@ -323,6 +346,8 @@ export const DEFAULT_VISUAL: PlanetVisual = {
 
   spin: 0.1,
   tilt: 0.2,
+  lean: 0,
+  turn: 0,
 };
 
 /**

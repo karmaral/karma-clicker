@@ -61,7 +61,7 @@ export default class Building {
   add(n: number = 1) {
     const amt = Math.trunc(n);
     this.#count += amt;
-    if (this.#total === 0 && this.#emitter.autonomous) {
+    if (this.#total === 0 && this.#emitter.isAutonomous) {
       this.queueAction();
     }
     this.#total += amt;
@@ -225,8 +225,8 @@ export default class Building {
 
   get duration() { return this.#duration; }
   get modifiers() { return this.#modifiers.modifiers; }
-  get autonomous() { return this.#emitter.autonomous; }
-  get inProgress() { return this.#emitter.inProgress; }
+  get isAutonomous() { return this.#emitter.isAutonomous; }
+  get isInProgress() { return this.#emitter.isInProgress; }
 
   get isMaxLevel() {
     const threshold = this.#data.upgrade_threshold;

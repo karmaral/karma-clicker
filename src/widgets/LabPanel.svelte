@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import Slider from './Slider.svelte';
 
   /** Structurally what `VisualParam` and `SwarmParam` already are. */
   interface LabParam {
@@ -48,19 +49,15 @@
         <p class="group">{group}</p>
 
         {#each paramsIn(group) as param (param.key)}
-          <label class="row">
-            <span class="id">{param.label}</span>
-            <input
-              type="range"
-              min={param.min}
-              max={param.max}
-              step={param.step}
-              value={value(param.key)}
-              oninput={(e) => set(param.key, Number(e.currentTarget.value))}
-              ondblclick={() => reset(param.key)}
-            />
-            <span class="num">{Number(value(param.key).toFixed(3))}</span>
-          </label>
+          <Slider
+            label={param.label}
+            min={param.min}
+            max={param.max}
+            step={param.step}
+            value={value(param.key)}
+            set={(next) => set(param.key, next)}
+            reset={() => reset(param.key)}
+          />
 
           {@render under?.(param.key)}
         {/each}
@@ -127,32 +124,21 @@
     padding-bottom: 2px;
   }
 
-  .num {
-    flex: none;
-    width: 3rem;
-    text-align: right;
-    color: var(--ink-300);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .body :global(input[type='range']),
-  input[type='range'] {
+  .body :global(input[type='range']) {
     flex: 1;
     min-width: 0;
     accent-color: var(--ink-900);
   }
 
-  /* The rows a lab renders into `header`/`under` are styled from here too, so
-     the two panels cannot drift apart. */
-  .body :global(.row),
-  .row {
+  /* `Slider`'s row and the ones a lab renders into `header`/`under` are all
+     styled from here, so no panel can drift from another. */
+  .body :global(.row) {
     display: flex;
     align-items: center;
     gap: var(--sp-2);
   }
 
-  .body :global(.id),
-  .id {
+  .body :global(.id) {
     flex: none;
     width: 7rem;
     color: var(--ink-400);

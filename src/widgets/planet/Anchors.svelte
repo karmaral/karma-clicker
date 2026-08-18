@@ -8,6 +8,7 @@
     createAnchorEdgeMaterial, createAnchorGhostMaterial, createAnchorMaterial,
     syncAnchorEdgeUniforms, syncAnchorGhostUniforms, syncAnchorUniforms,
   } from './material';
+  import { buildRibbon } from './ribbon';
   import { RENDER_ORDER } from './stack';
 
   interface Props {
@@ -16,11 +17,17 @@
     anchored: boolean[];
     /** The surface they stand on, so an anchor and its terrain cannot disagree. */
     field: SurfaceField;
-    /** Pixels per world unit. Only the ghost's dash is authored in px. */
+    /** Pixels per world unit. The ghost's dash and the edge's weight are in px. */
     zoom: number;
+    /**
+     * The world's own size. `visual` already carries it folded into the solid —
+     * the geometry and the placement have to be built at one size — but the ink
+     * is a uniform and nothing rebuilds from it, so it divides here instead.
+     */
+    size?: number;
   }
 
-  let { visual, anchored, field, zoom }: Props = $props();
+  let { visual, anchored, field, zoom, size = 1 }: Props = $props();
 
   const { invalidate } = useThrelte();
 
@@ -42,9 +49,18 @@
     body.setAttribute('position', new THREE.BufferAttribute(built.positions, 3));
     body.setIndex(new THREE.BufferAttribute(built.indices, 1));
 
+    // The edges widened to quads — a line has no weight to give, `ribbon.ts`.
+    // Both ends of the arc length ride every vertex so a cap can put back what
+    // it took off the dash.
+    const ribbon = buildRibbon(built.edges, built.along);
+
     const lines = new THREE.BufferGeometry();
-    lines.setAttribute('position', new THREE.BufferAttribute(built.edges, 3));
-    lines.setAttribute('along', new THREE.BufferAttribute(built.along, 1));
+    lines.setAttribute('position', new THREE.BufferAttribute(ribbon.positions, 3));
+    lines.setAttribute('toward', new THREE.BufferAttribute(ribbon.toward, 3));
+    lines.setAttribute('side', new THREE.BufferAttribute(ribbon.sides, 1));
+    lines.setAttribute('along', new THREE.BufferAttribute(ribbon.marks, 1));
+    lines.setAttribute('alongTo', new THREE.BufferAttribute(ribbon.marksTo, 1));
+    lines.setIndex(new THREE.BufferAttribute(ribbon.indices, 1));
 
     solid = { body, lines };
     invalidate();
@@ -72,8 +88,8 @@
 
   $effect(() => {
     syncAnchorUniforms(face, visual);
-    syncAnchorEdgeUniforms(edge, visual);
-    syncAnchorGhostUniforms(ghost, visual, zoom);
+    syncAnchorEdgeUniforms(edge, visual, zoom, size);
+    syncAnchorGhostUniforms(ghost, visual, zoom, size);
     invalidate();
   });
 
@@ -90,17 +106,9 @@
     <T.Group position={anchor.position} quaternion={anchor.quaternion}>
       {#if anchor.isPlaced}
         <T.Mesh geometry={solid.body} material={face} renderOrder={RENDER_ORDER.anchor} />
-        <T.LineSegments
-          geometry={solid.lines}
-          material={edge}
-          renderOrder={RENDER_ORDER.anchor}
-        />
+        <T.Mesh geometry={solid.lines} material={edge} renderOrder={RENDER_ORDER.anchor} />
       {:else}
-        <T.LineSegments
-          geometry={solid.lines}
-          material={ghost}
-          renderOrder={RENDER_ORDER.ghost}
-        />
+        <T.Mesh geometry={solid.lines} material={ghost} renderOrder={RENDER_ORDER.ghost} />
       {/if}
     </T.Group>
   {/each}

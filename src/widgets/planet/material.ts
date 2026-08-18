@@ -5,6 +5,7 @@ import { readInkRamp, RAMP_SIZE, RAMP_SLOTS } from './ink';
 import { keyLight } from './light.svelte';
 import type { SwarmVisual } from './orbit';
 import { haloSpreadOf, STROKE_ROOM, type PulseVisual } from './pulse';
+import { weightOf } from './ribbon';
 import type { PlanetVisual } from './visual';
 
 /**
@@ -20,6 +21,50 @@ const rampRead = /* glsl */ `
     }
 
     return uRamp[0];
+  }
+`;
+
+/**
+ * A segment widened into a quad — see `ribbon.ts` for why anything drawn as a
+ * line needs this to carry a weight at all. Shared by the harness and by both
+ * states of an anchor's edges, so the three cannot drift apart on what a stroke
+ * of a given width comes out as.
+ *
+ * Exact under an orthographic camera and only there: view units are pixels over
+ * zoom whatever the depth, so a swing perpendicular in view xy is the same
+ * weight wherever the segment points and however far away it is. No viewport
+ * uniform, no perspective divide.
+ *
+ * `uWidth` and `uCap` are declared by each shader that includes this, the way
+ * `rampRead` leaves `uRamp` to its callers — a uniform the join checker cannot
+ * see is a uniform that is silently 0.
+ */
+const ribbonPlace = /* glsl */ `
+  attribute vec3 toward;
+  attribute float side;
+
+  vec4 ribbonView(out float slip) {
+    vec4 here = modelViewMatrix * vec4(position, 1.0);
+    vec4 there = modelViewMatrix * vec4(toward, 1.0);
+
+    vec2 span = there.xy - here.xy;
+
+    // How long the segment is *on screen*, which is what both the direction and
+    // the cap are measured against.
+    float reach = length(span);
+
+    // Edge-on to the camera a segment is a point and has no direction to stand
+    // perpendicular to. It is also invisible, so any answer will do.
+    vec2 dir = reach > 1e-6 ? span / reach : vec2(1.0, 0.0);
+    float arm = uWidth * 0.5;
+
+    // Squared off, so the corners of a polyline fill instead of showing a nick
+    // at every one. How far that pushed this end past its own endpoint goes back
+    // as a share of the span, for anything measured along the line to undo.
+    float cap = arm * uCap;
+    slip = reach > 1e-6 ? -cap / reach : 0.0;
+
+    return here + vec4(vec2(-dir.y, dir.x) * arm * side - dir * cap, 0.0, 0.0);
   }
 `;
 
@@ -154,11 +199,38 @@ const outlineVertex = /* glsl */ `
   }
 `;
 
+/**
+ * `uFlash` is the click reaching the world's own edge: at 1 the outline is
+ * `uFlashColor` and at 0 it is exactly the tone the world authored, so there is
+ * no state to restore when a burst ends.
+ */
 const outlineFragment = /* glsl */ `
   uniform vec3 uColor;
+  uniform vec3 uFlashColor;
+  uniform float uFlash;
 
   void main() {
-    gl_FragColor = vec4(uColor, 1.0);
+    gl_FragColor = vec4(mix(uColor, uFlashColor, uFlash), 1.0);
+
+    #include <colorspace_fragment>
+  }
+`;
+
+/**
+ * The burst: the same inverted hull at a much greater width, fading rather than
+ * travelling. It is drawn transparent and **never writes depth**, and its depth
+ * test is `LessDepth` — strictly less, the spark group's rule — so a fragment at
+ * the same depth as the body or as the body's own outline is rejected and what
+ * survives is only the band standing outside both.
+ */
+const burstFragment = /* glsl */ `
+  uniform vec3 uColor;
+  uniform float uFade;
+
+  void main() {
+    if (uFade <= 0.0) discard;
+
+    gl_FragColor = vec4(uColor, uFade);
 
     #include <colorspace_fragment>
   }
@@ -208,6 +280,9 @@ const soulVertex = /* glsl */ `
  * one hides it at exactly `uRim`, where the ink already switches, so the two
  * agree on where the silhouette is instead of the depth buffer cutting along
  * the terrain and the ink along the sphere.
+ *
+ * `uRim` is the body's *drawn* edge, outline included — see `syncSoulUniforms`.
+ * At the sphere alone a soul coming round the back reappeared inside the outline.
  */
 const soulFragment = /* glsl */ `
   uniform vec3 uRamp[${RAMP_SLOTS}];
@@ -258,23 +333,34 @@ const soulFragment = /* glsl */ `
 `;
 
 /**
- * The harness. One `LineSegments` for every loop, with `level` — 0 innermost,
+ * The harness. One ribbon for the whole of it, with `level` — 0 innermost,
  * 1 outermost — carried per vertex, and `vRel` the fragment's offset from the
  * body's centre in camera axes. Under an orthographic camera that makes xy the
  * silhouette and z the near/far test, which is the whole of what the ink rule
  * needs.
+ *
+ * `vRel` is read off the *swung* vertex rather than the centreline, so a stroke
+ * wide enough to straddle the silhouette is inked by where its own edge landed.
+ * The alternative would ink the whole width by the middle and leave a heavy line
+ * changing colour a half-width late.
  */
 const harnessVertex = /* glsl */ `
   attribute float level;
 
+  uniform float uWidth;
+  uniform float uCap;
+
   varying float vLevel;
   varying vec3 vRel;
+
+  ${ribbonPlace}
 
   void main() {
     vLevel = level;
 
+    float slip;
+    vec4 viewPos = ribbonView(slip);
     vec3 centre = (viewMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-    vec4 viewPos = modelViewMatrix * vec4(position, 1.0);
 
     vRel = viewPos.xyz - centre;
 
@@ -298,6 +384,7 @@ const harnessVertex = /* glsl */ `
  */
 const harnessFragment = /* glsl */ `
   uniform vec3 uRamp[${RAMP_SLOTS}];
+  uniform float uRim;
   uniform float uInTone;
   uniform float uOutTone;
   uniform float uBackFade;
@@ -310,9 +397,16 @@ const harnessFragment = /* glsl */ `
   ${rampRead}
 
   void main() {
-    // The body as a unit sphere, terrain ignored — a loop stands off the
-    // surface, so the mean radius is the only silhouette it can cross.
-    float over = step(dot(vRel.xy, vRel.xy), 1.0);
+    // The body's *drawn* edge, which is the mean sphere plus the outline's own
+    // weight — where a viewer sees the world end, not where it is modelled. Cut
+    // at the modelled radius, a line behind the world came back out inside the
+    // outline and crossed it, and a line in front took its off-body ink while
+    // still over the black edge.
+    //
+    // Terrain stays ignored: a loop stands off the surface, and at the
+    // amplitudes worlds are authored at that error is inside the weight this is
+    // now adding.
+    float over = step(dot(vRel.xy, vRel.xy), uRim * uRim);
     float back = step(vRel.z, 0.0);
 
     // Let the body hide what is behind it, if it is asked to. Per fragment, so
@@ -386,17 +480,28 @@ const anchorFragment = /* glsl */ `
  */
 const anchorEdgeVertex = /* glsl */ `
   attribute float along;
+  attribute float alongTo;
+
+  uniform float uWidth;
+  uniform float uCap;
 
   varying float vAlong;
   varying float vBack;
   varying vec3 vRel;
 
+  ${ribbonPlace}
+
   void main() {
-    vAlong = along;
+    float slip;
+    vec4 viewPos = ribbonView(slip);
+
+    // The cap carried this end past the corner it belongs to, so the arc length
+    // it reports comes with it — or the ghost's dash would compress by a cap at
+    // every one of the twenty spans a solid is drawn from.
+    vAlong = mix(along, alongTo, slip);
 
     vec3 centre = (viewMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
     vec4 origin = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-    vec4 viewPos = modelViewMatrix * vec4(position, 1.0);
 
     vBack = step(origin.z - centre.z, 0.0);
     vRel = viewPos.xyz - centre;
@@ -931,6 +1036,24 @@ export function createOutlineMaterial() {
     uniforms: {
       uOffset: { value: 0 },
       uColor: { value: readInkRamp()[6] },
+      uFlashColor: { value: readInkRamp()[0] },
+      uFlash: { value: 0 },
+    },
+  });
+}
+
+export function createBurstMaterial() {
+  return new THREE.ShaderMaterial({
+    vertexShader: outlineVertex,
+    fragmentShader: burstFragment,
+    side: THREE.BackSide,
+    transparent: true,
+    depthWrite: false,
+    depthFunc: THREE.LessDepth,
+    uniforms: {
+      uOffset: { value: 0 },
+      uColor: { value: readInkRamp()[6] },
+      uFade: { value: 0 },
     },
   });
 }
@@ -958,12 +1081,18 @@ export function createHarnessMaterial() {
   return new THREE.ShaderMaterial({
     vertexShader: harnessVertex,
     fragmentShader: harnessFragment,
+    // A ribbon's winding follows whichever way its segment happens to run, so
+    // there is no consistent front to cull.
+    side: THREE.DoubleSide,
     // The lines behind the planet stay visible and pale rather than
     // disappearing, so the depth buffer must not have an opinion about them.
     depthTest: false,
     depthWrite: false,
     uniforms: {
       uRamp: { value: readInkRamp() },
+      uWidth: { value: 0 },
+      uCap: { value: 1 },
+      uRim: { value: 1 },
       uInTone: { value: 0 },
       uOutTone: { value: 6 },
       uBackFade: { value: 2 },
@@ -979,7 +1108,10 @@ export function createAnchorMaterial() {
     fragmentShader: anchorFragment,
     side: THREE.FrontSide,
     // The edges lie exactly on these faces. Without the offset they z-fight,
-    // and with it the two need no render order between them.
+    // and with it the two need no render order between them. The edges pull the
+    // other way by as much again, because a stroke with a width to it covers a
+    // band of a facet that falls away from the camera across it and one unit of
+    // clearance is only enough for a hairline.
     polygonOffset: true,
     polygonOffsetFactor: 1,
     polygonOffsetUnits: 1,
@@ -996,9 +1128,17 @@ export function createAnchorEdgeMaterial() {
   return new THREE.ShaderMaterial({
     vertexShader: anchorEdgeVertex,
     fragmentShader: anchorEdgeFragment,
+    side: THREE.DoubleSide,
+    // See `createAnchorMaterial`: the facets go back a unit, these come forward
+    // one, and a wide stroke keeps its clearance over the slope it lies on.
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -1,
     uniforms: {
       uRamp: { value: readInkRamp() },
       uTone: { value: 6 },
+      uWidth: { value: 0 },
+      uCap: { value: 1 },
     },
   });
 }
@@ -1012,6 +1152,7 @@ export function createAnchorGhostMaterial() {
   return new THREE.ShaderMaterial({
     vertexShader: anchorEdgeVertex,
     fragmentShader: anchorGhostFragment,
+    side: THREE.DoubleSide,
     transparent: true,
     blending: THREE.CustomBlending,
     blendEquation: THREE.AddEquation,
@@ -1029,6 +1170,11 @@ export function createAnchorGhostMaterial() {
       uDash: { value: 3 },
       uDuty: { value: 0.5 },
       uZoom: { value: 100 },
+      uWidth: { value: 0 },
+      // The one stroke here that is *not* capped. An inversion applied twice is
+      // no inversion, so a square cap filling a corner would punch a hole in the
+      // ghost at every one of them. Dashed lines have gaps at corners anyway.
+      uCap: { value: 0 },
     },
   });
 }
@@ -1209,9 +1355,28 @@ export function syncFlareOutlineUniforms(material: THREE.ShaderMaterial, visual:
   material.uniforms.uOutline.value = Math.max(0, visual.sparkOutline);
 }
 
-export function syncHarnessUniforms(material: THREE.ShaderMaterial, visual: HarnessVisual) {
+/**
+ * `size` is the world's, not the harness's: a cage on a large world is drawn in
+ * finer ink, the souls' rule. The ceiling is the harness's own — its loops span
+ * the *body*, which never changes size, so nothing shrinks underneath a stroke
+ * that keeps thickening as the world is authored smaller.
+ *
+ * `rim` is where the body is *seen* to end, in body radii. The scene works it
+ * out, because it is the body's outline that decides it and the harness has no
+ * business reading a `PlanetVisual`.
+ */
+export function syncHarnessUniforms(
+  material: THREE.ShaderMaterial,
+  visual: HarnessVisual,
+  zoom: number,
+  size: number,
+  rim: number,
+) {
   const u = material.uniforms;
+  const px = weightOf(visual.width, size, visual.floor, visual.ceiling);
 
+  u.uWidth.value = zoom > 0 ? px / zoom : 0;
+  u.uRim.value = rim;
   u.uInTone.value = Math.round(visual.inTone);
   u.uOutTone.value = Math.round(visual.outTone);
   u.uBackFade.value = Math.round(visual.backFade);
@@ -1228,27 +1393,55 @@ export function syncAnchorUniforms(material: THREE.ShaderMaterial, visual: Ancho
   u.uShade.value = Math.round(visual.faceShade);
 }
 
-export function syncAnchorEdgeUniforms(material: THREE.ShaderMaterial, visual: AnchorVisual) {
-  material.uniforms.uTone.value = Math.round(visual.edgeTone);
+/**
+ * `size` is the world's. The solid is already divided by it in `PlanetScene`, so
+ * this is what keeps the ink on the same footing as the shape it draws — no
+ * ceiling, because an anchor on a small world is a large anchor and can carry
+ * the heavier line the division hands it.
+ */
+export function syncAnchorEdgeUniforms(
+  material: THREE.ShaderMaterial,
+  visual: AnchorVisual,
+  zoom: number,
+  size: number,
+) {
+  const u = material.uniforms;
+  const px = weightOf(visual.edgeWidth, size, visual.edgeFloor);
+
+  u.uTone.value = Math.round(visual.edgeTone);
+  u.uWidth.value = zoom > 0 ? px / zoom : 0;
 }
 
 export function syncAnchorGhostUniforms(
   material: THREE.ShaderMaterial,
   visual: AnchorVisual,
   zoom: number,
+  size: number,
 ) {
   const u = material.uniforms;
+  const px = weightOf(visual.edgeWidth, size, visual.edgeFloor);
 
   u.uBack.value = visual.ghostBack;
   u.uDash.value = Math.max(0.5, visual.dash);
   u.uDuty.value = visual.duty;
   u.uZoom.value = zoom;
+  u.uWidth.value = zoom > 0 ? px / zoom : 0;
 }
 
-export function syncSoulUniforms(material: THREE.ShaderMaterial, visual: SwarmVisual) {
+/**
+ * `bleed` is how far the body's outline reaches past its surface, in body radii.
+ * Added to the authored rim rather than replacing it, so the slider keeps saying
+ * what it always said and the widget's own weight is stacked on top — the
+ * harness cuts at the same edge, worked out the same way.
+ */
+export function syncSoulUniforms(
+  material: THREE.ShaderMaterial,
+  visual: SwarmVisual,
+  bleed: number,
+) {
   const u = material.uniforms;
 
-  u.uRim.value = visual.rim;
+  u.uRim.value = visual.rim + bleed;
   u.uRing.value = visual.ring;
   u.uOutTone.value = Math.round(visual.outTone);
   u.uFrontTone.value = Math.round(visual.frontTone);
@@ -1289,4 +1482,21 @@ export function syncOutlineUniforms(
 ) {
   material.uniforms.uOffset.value = zoom > 0 ? visual.outline / zoom : 0;
   material.uniforms.uColor.value = ramp[Math.round(visual.outlineTone)] ?? ramp[6];
+}
+
+/**
+ * The burst's own width and ink, and the tone the body's outline flashes to.
+ * Both materials are synced here rather than each from its own visual, because
+ * the two are one mark: the hull and the edge standing against it.
+ */
+export function syncBurstUniforms(
+  hull: THREE.ShaderMaterial,
+  outline: THREE.ShaderMaterial,
+  visual: PulseVisual,
+  ramp: THREE.Color[],
+  zoom: number,
+) {
+  hull.uniforms.uOffset.value = zoom > 0 ? Math.max(0, visual.burstWidth) / zoom : 0;
+  hull.uniforms.uColor.value = ramp[Math.round(visual.burstTone)] ?? ramp[6];
+  outline.uniforms.uFlashColor.value = ramp[Math.round(visual.burstEdge)] ?? ramp[0];
 }

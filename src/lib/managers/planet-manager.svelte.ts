@@ -24,7 +24,7 @@ class PlanetManager {
   reach(id: string) {
     if (!this.canReach) return;
     if (!Boolean(id in this.#planets)) return;
-    if (this.#planets[id].harvested) return;
+    if (this.#planets[id].isHarvested) return;
 
     this.#selected = id;
   }
@@ -53,20 +53,20 @@ class PlanetManager {
 
   /** The axis, minus where you are: harvested is behind you, the rest is ahead. */
   get behind() {
-    return this.planets.filter((id) => id !== this.#selected && this.#planets[id].harvested);
+    return this.planets.filter((id) => id !== this.#selected && this.#planets[id].isHarvested);
   }
 
   get ahead() {
-    return this.planets.filter((id) => id !== this.#selected && !this.#planets[id].harvested);
+    return this.planets.filter((id) => id !== this.#selected && !this.#planets[id].isHarvested);
   }
 
   get canReach() {
-    return this.getActive()?.harvested ?? false;
+    return this.getActive()?.isHarvested ?? false;
   }
 
   /** Planets left for good — the count beats 10 and 12 read. */
   get finished() {
-    return Object.values(this.#planets).filter((planet) => planet.harvested).length;
+    return Object.values(this.#planets).filter((planet) => planet.isHarvested).length;
   }
 }
 

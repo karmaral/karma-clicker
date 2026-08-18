@@ -29,9 +29,19 @@
      * the px floor alone.
      */
     size?: number;
+    /**
+     * How far the body's outline bleeds past its surface, in body radii. Added
+     * to the authored `rim` rather than replacing it: `rim` says where the ink
+     * switches on the *world*, and this says how much of the world the widget
+     * draws past that. A soul crossing behind used to come back out inside the
+     * outline, which is the harness's seam and the same fix.
+     */
+    bleed?: number;
   }
 
-  let { visual, counts, zoom, loops, spinAngle = 0, size = 1 }: Props = $props();
+  let {
+    visual, counts, zoom, loops, spinAngle = 0, size = 1, bleed = 0,
+  }: Props = $props();
 
   const { invalidate } = useThrelte();
   const material = createSoulMaterial();
@@ -50,7 +60,7 @@
   const AXIS = new THREE.Vector3(0, 1, 0);
 
   $effect(() => {
-    syncSoulUniforms(material, visual);
+    syncSoulUniforms(material, visual, bleed);
     invalidate();
   });
 

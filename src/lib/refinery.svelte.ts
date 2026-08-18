@@ -46,7 +46,7 @@ class Refinery {
 
   /** The clock runs from the beat on, staffed or not. Idempotent. */
   start() {
-    if (this.#emitter.autonomous) return;
+    if (this.#emitter.isAutonomous) return;
 
     this.#emitter.toggleAutonomy(true);
     this.#emitter.queue();

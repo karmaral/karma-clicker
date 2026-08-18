@@ -105,9 +105,14 @@ export interface PlanetData {
   densities: number;
   max_initial_density: number;
   firstHarvest: PlanetFirstHarvest;
-  /** What the recurring harvest pays. Unset until the harvest pass. */
-  yields?: Partial<Record<ResourceType, number>>;
-  duration?: number;
+  /**
+   * What the recurring harvest pays, and how often. One object because a payout
+   * with no clock pays once and stops. Unset until the harvest pass.
+   */
+  harvest?: {
+    yields: Partial<Record<ResourceType, number>>;
+    duration: number;
+  };
 }
 export interface ItemTextData {
   title: string;

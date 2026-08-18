@@ -13,14 +13,15 @@
   }
 
   function ratesOf(id: string): Rate[] {
-    const { yields, duration } = PlanetManager.getPlanet(id).data;
-    if (!yields || !duration) return [];
+    const { harvest } = PlanetManager.getPlanet(id).data;
+    // A 0 duration is a world that pays once, so there is no rate to divide out.
+    if (!harvest?.duration) return [];
 
-    const seconds = duration / 1000;
+    const seconds = harvest.duration / 1000;
 
-    return (Object.keys(yields) as ResourceType[]).map((type) => ({
+    return (Object.keys(harvest.yields) as ResourceType[]).map((type) => ({
       type,
-      perSecond: (yields[type] ?? 0) / seconds,
+      perSecond: (harvest.yields[type] ?? 0) / seconds,
     }));
   }
 

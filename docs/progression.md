@@ -118,7 +118,7 @@ Design decisions deferred on purpose. None of these are oversights.
 ## Producers
 
 Anything that yields on a clock **composes** `ResourceEmitter` (`$lib/emission`)
-rather than inheriting a base class. The emitter owns autonomy, `inProgress` and
+rather than inheriting a base class. The emitter owns autonomy, `isInProgress` and
 the `queue`/`action` events; the payout and the duration are both injected.
 `Building` holds one; `Planet` gains one on `harvest()`.
 
@@ -135,6 +135,30 @@ Still open: `#generateResources` reaches into `PlanetManager.getActive()` to
 credit experience. Once planets emit, that closes a loop — Planet →
 ResourceManager → Building → PlanetManager. The injected payout makes it
 containable; it is not yet contained.
+
+### A payout with no clock
+
+An autonomous emitter with a duration of 0 does not run fast — it does not run at
+all. `queue()` emits **synchronously** when there is no duration to wait out, and
+`emit()` re-queues when autonomous, so the two call each other until the stack
+goes. It was reachable from one authoring slip: `PlanetData` had `yields` and
+`duration` as independent optionals, and `completeFirstHarvest` turns autonomy on.
+
+Fixed at both ends, because either alone leaves something wrong.
+
+**The emitter will not self-requeue on a zero duration.** A clock with no interval
+is not a clock. This is the general guard — `Building` composes the same emitter
+and is exposed to the same slip — and it is deliberately silent, since an
+instant one-shot on a manual `queue()` is a legitimate thing to want.
+
+**`PlanetData.harvest` pairs the payout with its clock**, so the slip cannot be
+authored. Without it the guard makes the defect *quieter* rather than absent: a
+world would pay once and never again, which is harder to notice than a freeze and
+lands nine times over at step 5. No record changed — nothing declares a harvest
+yet, which is exactly why the shape was cheap to fix now.
+
+A `duration` of 0 stays legal and means *pays once*. `HarvestLedger` reads it that
+way and shows no rate, rather than dividing by zero.
 
 ## Souls
 
@@ -194,7 +218,7 @@ say what they are:
 | `overview.cameHome` | `overview.harvest` | the recurring take from everything behind you |
 
 That pairing is the same distinction the code already makes — `completeFirstHarvest`,
-`isFirstHarvestReady`, `PlanetData.firstHarvest` against `PlanetData.yields`. The
+`isFirstHarvestReady`, `PlanetData.firstHarvest` against `PlanetData.harvest`. The
 string `overview.harvest` now names a different panel than it did before; it is
 worth knowing when reading an old diff.
 
@@ -207,7 +231,7 @@ would go back to being unreachable, which is the circularity this was resolving.
 It is one predicate, `canReach`, if that turns out to be the wrong call.
 
 `behind` and `ahead` are derived on the manager, not on the screen, and they
-partition by `harvested` around whatever is selected. The active world stays in
+partition by `isHarvested` around whatever is selected. The active world stays in
 **where you are** after its first harvest — you are still on it until you reach
 somewhere else — so it can read `merged` while sitting in the band it started in.
 
@@ -218,7 +242,7 @@ nothing pays. It draws its empty state until beat 10 and its rows after. It is
 deliberately absent from `SYSTEM_SURFACES`: it precedes `finishedPlanets` by two
 beats, which `validate()` would otherwise flag, and correctly.
 
-Its rows are computed from `PlanetData.yields` over `duration`, so it fills the
+Its rows are computed from `PlanetData.harvest`, yields over duration, so it fills the
 moment step 5 authors them. Until then every finished world reads *nothing yet* —
 which is honest, not a stub.
 
@@ -1073,6 +1097,89 @@ has to be a phase offset in the sampling and never a rebuild, since `buildLoops`
 is cached precisely because rebuilding is the expensive path. Not built, and it
 wants the rider count to have been looked at first.
 
+### The burst is the world's own shape, and the halo is parked
+
+The halo is a *circle* about the world. It says a click landed and says nothing
+about which world it landed on — a perfect ring is the same ring on a smooth ball
+and on a ridged one. The **burst** is the opposite reading of the same event: the
+body's silhouette, terrain and all, thrown out behind it as a thick band while
+the world's own outline flashes to the paper end of the ramp.
+
+It is the outline's construction at a much greater width, so it inherits the
+whole argument — radially offset, provably non-self-intersecting however lumpy
+the body is, and authored in px, which is what holds it to its weight from 40px
+to 420px. No new geometry: the same mesh the body and the outline already share,
+which is also what guarantees the hull cannot disagree with the silhouette it is
+a hull of.
+
+**Three decisions.**
+
+**One burst, restarted rather than queued.** The halo and the sparks each keep
+thirty-two slots because there are many of them; there is one world, and
+thirty-two silhouettes would be the same shape drawn thirty-two times. A second
+click restarts the blink. That is also the honest reading of a fast clicker — the
+world is flashing, not accumulating flashes.
+
+**The edge flashes rather than being a second mark.** `burstEdge` is written into
+the body outline's own material as a mix toward it, so at the end of `burstLife`
+the outline is exactly the tone the world authored and there is nothing to
+restore. It is the only place anything writes over `outlineTone`, and it is why
+the hull and the flash share one life: an edge still white after the shadow
+behind it had gone would read as two marks that missed each other.
+
+**It is the one mark drawn *behind* the body.** Transparent, never writing depth,
+and depth-tested with `LessDepth` — the spark group's rule, borrowed for the
+opposite purpose. Strictly-less rejects every fragment sitting at the same depth
+as the body or as the body's own outline, so what survives is only the band
+standing outside both, and the hull cannot creep over the edge it exists to set
+off. It is inside the spin, since a silhouette taken from a world that has since
+turned is the wrong shape.
+
+**The halo is parked, not removed** — `haloWidth` and `echoWidth` at 0 in
+`DEFAULT_PULSE`, the flare's precedent exactly. Everything stands: the inversion,
+the `CustomBlending`, the echo's whole-count warp, the ten sliders. The burst is
+one sitting old and the ring is a slider away, and the inversion argument written
+up below is the most carefully worked thing in the pulse — parking it by value
+costs nothing and deleting it would cost all of it.
+
+Neither the hull nor the flash has been seen. The width, the ink and a life of
+0.25s are blind defaults, and the one thing worth watching for specifically is
+the hull over `--surface` on the detail screen: it is opaque ink at the dark end
+of the ramp against a light ground, which is the loudest thing the widget has
+ever drawn.
+
+### A spark lands on the face you are looking at
+
+Sparks were placed uniformly over the whole sphere, so about half of every burst
+landed on the back and showed through the world at `sparkBack`. That was argued
+for — a strike is an event, and hiding half of them means half of all clicks
+produce no answer — and the argument survives, because `sparkFace` does not hide
+anything. It *places* the mark on the visible cap instead, so every click still
+answers.
+
+What it costs is the two things the old reading bought: the world no longer
+carries a history of earlier clicks round on its far side, and `sparkBack` only
+says anything below 0. Both are reachable — the slider runs from −1, the whole
+sphere and today's behaviour, so the two readings can be compared by dragging.
+
+It is a **cosine off the camera**, `FLARE_LIMB`'s units: 0 is the visible half
+exactly, and above that it also clears the limb, where the ground is edge-on and
+a dot foreshortens into the silhouette. The default 0.45 is 55% of the visible
+half by area — the mark nearest the edge sits at 0.89 of the disc radius. It
+stops at 0.9 rather than 1, since a tighter cap is one point and a slider that
+stops meaning anything before its end is worse than no slider.
+
+**The cutoff is taken in view space and turned back into the body's frame**, and
+that is the whole of the work. A cutoff on the body's own axes would pin marks to
+a fixed patch of ground and let the spin carry them off the face within a
+second. `flash` therefore takes a `Facing` — `PlanetBody`'s three hold angles
+plus where the spin has got to — and runs that chain backwards by hand, because
+nothing in `pulse.ts` may import three and stay probeable. Probed across three
+holds at four cutoffs: 1200 marks, none outside the cap, none off unit length.
+
+The hold is read **untracked** at the click. It is not something the flash effect
+answers to, and subscribing would re-run it every frame the world turns.
+
 ### A world's size is everything except the world
 
 The body cannot say how big it is. It is drawn to the framing whatever it is, so
@@ -1092,6 +1199,11 @@ the outline, the contour, the ghost's dash, the dots' px floor. Those are the
 drawn edges of the widget, and a widget does not get a heavier line for holding a
 smaller planet.
 
+That last rule has since been split rather than broken: the pixels that draw the
+*widget* still stand where they were, and the pixels that draw a **mark on the
+world** — the anchors' edges and the harness's lines — now divide with everything
+else beside them. See *A line had no weight to divide*.
+
 **The orbits stay where they were authored too**, which was a deliberate call and
 not an omission. `radius` is rim-hugging by design, at 1.3 against a body of 1, so
 a soul crosses the silhouette twice an orbit and the ink rule does its work.
@@ -1105,6 +1217,127 @@ The division happens in exactly one place per subject. The anchors get an adjust
 placement computed at another is the single way this could have gone wrong. The
 souls and the sparks take a `size` prop instead, since neither rebuilds anything
 from it and a derived copy would throw away eight hundred souls on every drag.
+
+### A line had no weight to divide
+
+A soul's ring scales with the world because it is a *fraction of the dot*, and the
+dot is divided by size. The anchors' edges and the harness were `LineSegments` —
+one device pixel, on every platform that matters — so the solid shrank on a large
+world and the ink around it did not. At size 3 an anchor is about six pixels of
+form carrying a pixel of outline, which reads as a scribble rather than as a small
+pole.
+
+There was nothing to fix at the ink end. A hairline has **no width to divide**, so
+the first half of this is giving lines one: `ribbon.ts` widens a segment list into
+quads, four vertices and two triangles a span, and `ribbonPlace` in `material.ts`
+swings them apart in the vertex shader. Exact under an orthographic camera and
+only there — view units are pixels over zoom at any depth, so a perpendicular
+offset in view xy is the same weight wherever a segment points and however far
+back it is. No viewport uniform, no perspective divide, and one chunk shared by
+the harness and by both states of an anchor's edge so the three cannot disagree
+about what a given width comes out as.
+
+**The far end swings out backwards**, and this was shipped wrong the first time.
+Each vertex finds its own direction from its own `toward`, and at the far end that
+direction runs the other way — so the perpendicular is the negative of the near
+end's, and a side asked for by the same sign at both ends puts the two corners on
+*opposite* sides of the line. That is a crossed quad: a bowtie per span, and a
+comb along a 54-segment loop. It came back as three complaints at once — jagged
+lines, lines that looked shaded, lines that looked to have alpha — because the
+thin wedges a bowtie leaves take partial coverage under MSAA and read as tone.
+There is no lighting anywhere near either shader.
+
+Three more details the quads cost, all paid in the same chunk:
+
+- **The ends are squared off**, or every corner of a polyline shows a nick at
+  width. The cap pushes an end past its own endpoint, so the shader hands back
+  how far as a share of the span and `vAlong` subtracts it — otherwise the
+  ghost's dash would compress by a cap at each of the twenty spans a solid is
+  drawn from.
+- **The ghost is the one stroke left uncapped.** It draws by inverting what it
+  crosses, and an inversion applied twice is no inversion: a cap filling a corner
+  would punch a hole in the ghost at every one of them. A dashed line has gaps at
+  its corners anyway. (Crossing ghost edges already double-invert where they meet
+  — that is the rule's own fixed point and it predates this.)
+- **The edges pull a depth unit toward the camera** while the facets push one
+  back. A stroke with width to it covers a band of a facet that falls away across
+  it, and one unit of clearance was only ever enough for a hairline.
+
+The rule itself is the souls': **px ÷ the world's size, with a floor**. The floor
+is in pixels and holds — however large the world, an anchor that is drawn at all
+is drawn in ink a screen can carry. A width of 0 is off and the floor does not
+overrule it; it rescues a stroke the division took away, and does not argue with
+an author who asked for none.
+
+**The harness gets a ceiling and the anchors do not**, and the asymmetry is the
+whole of what separates the two subjects. An anchor on a small world *is* a large
+anchor — the same division that thickens its line is what grew the solid that
+carries it, so the two move together and nothing needs to catch them. A harness
+spans the **body**, and the body is drawn to the framing at every size: there is
+nothing underneath its lines getting bigger, so as a world is authored smaller the
+stroke keeps thickening against a cage that stays put, and past a point 192 loops
+stop being a cage and become a fill.
+
+The division lands per subject, once, as it did before. The anchors take a bare
+`size` prop rather than folding the width into the adjusted `AnchorVisual` that
+`PlanetScene` already builds — that copy exists because a solid built at one size
+standing on a placement computed at another is the way this breaks, and a uniform
+has no such hazard. The harness takes the same prop for the same reason: the
+geometry never reads it, and a derived copy would rebuild ten thousand spans on
+every drag of the slider.
+
+Probed on the pure side: structure over every solid from three sides to eight, and
+the shader's own arithmetic replayed in view space at five angles and two widths —
+the band comes out exactly the authored width, centred on the line, the cap sits
+exactly half a width past each end, and the arc length it reports lands on the nose
+at both ends. Edge-on to the camera it stays finite.
+
+That first probe **passed on the bowtie**, which is the lesson worth keeping. It
+replayed the shader for one endpoint at a time, and a crossed quad is a
+disagreement *between* two endpoints — invisible to any check that never assembles
+both. It also asserted the sides were what the builder wrote rather than what they
+had to be, which is a test of the code against itself. What it does now is take the
+four corners of every span from the attributes as stored and ask which side of the
+centreline each one landed on: 312 crossed quads across the six solids before the
+flip, none after.
+
+**`edgeWidth: 1.2`, `width: 1` and `ceiling: 2.5` are still blind.** The weight to
+watch is whether these match the hairline they replaced — a hairline is one
+*device* pixel, so on a retina screen it was half of what these now ask for.
+
+### The world ends where it is drawn to end, not where it is modelled
+
+The harness cut its ink rule — both halves of it, the two inks and the far-side
+hide — at the unit sphere. The body is drawn to the sphere *plus its outline*, and
+the outline is authored in pixels, so the gap between the two is a band that widens
+as the widget shrinks. Everything in it was wrong: a line behind the world came
+back out inside the outline and crossed it, and a line in front took its off-body
+ink while still over the black edge, where it read as nothing at all.
+
+One radius fixes both, and it is not the harness's to author — the *body's* outline
+decides it. `PlanetScene` works out how far that outline **bleeds** past the surface
+in body radii, `outline / zoom`, and hands the figure down, so every crop follows
+the outline slider instead of being tuned against it.
+
+Terrain is still ignored, deliberately: a loop stands off the surface, so the mean
+radius is the only silhouette it can cross, and at the amplitudes worlds are
+authored at that error is now inside the weight being added to it. A world deformed
+far enough to be an asteroid would want the real silhouette, and the fragment has no
+way to ask for it.
+
+**The souls had the same seam**, and the bleed is what lets them take the same fix
+without losing anything. Their `rim` is *authored*, so it could not simply be
+replaced by a derived edge; the bleed is **added** to it instead. The slider goes
+on saying exactly what it said — where the ink switches on the world, in body radii
+— and the widget's own weight stacks on top, which is the one part of the answer a
+slider could never know, because a px-authored edge is not a radius until there is
+a zoom to make it one.
+
+That one number now cuts three marks at the same place: the harness's two inks, its
+far-side hide, and the swarm's discard. The souls' `rim` also sets the sphere the
+front/behind test is taken against, so the hemisphere a soul is measured for grew
+with it and the ink and the hiding still agree — which was the whole point of the
+souls discarding rather than depth-testing.
 
 ### A rider's speed is a distance, not an angle
 
@@ -1212,6 +1445,47 @@ none` so the press still reaches the canvas everywhere the words cover.
 
 `Disc.svelte` is left in the tree. It is the only other thing that has ever been
 the click target, and the decision to drop the dot ring is one sitting old.
+
+### The world is held, not tilted
+
+`tilt` was one `rotation.x` — one axis of three. It is now three, nested rather
+than an Euler triple so each reads the same whatever the other two are:
+
+- **`lean`**, the pole's roll in the screen plane, positive to the right. The
+  genuinely new axis; with `tilt` it fixes the pole completely. Outermost, so it
+  stays a *screen* lean however far the pole is tipped — which is what makes it
+  and `tilt` one puck.
+- **`tilt`**, unchanged at ±0.8. Foreshortening, not a move across the screen: the
+  pole slides *down* toward the centre as it comes at you.
+- **`turn`**, which face is forward. Inside the tilt, outside the spin — a
+  starting phase on a world that turns, and the whole choice of what a seed shows
+  on one at `spin` 0.
+
+**The light needed no work.** `uKeyDir` is view-space and the shader reads a
+view-space normal, so all three turn the world under a key that stays put — which
+is what `light.svelte.ts` already said. Everything on or around the body is inside
+the hold, so the swarm, harness, anchors and sparks come round with it. The halo
+does not: it is about the world, not on it.
+
+`lean` and `turn` are 0 on all nine authored worlds, so nothing moved.
+`LEAN_REACH` is 1.6 — just past pole-horizontal; further is upside-down, which
+`tilt` at ±0.8 cannot meet.
+
+### The labs' two controls are components
+
+`Puck.svelte` and `Slider.svelte`, both out of `LabPanel`/`PlanetLabPanel`.
+
+The puck is two numbers as one drag, with a reach per axis. **Disc** clamps to the
+unit circle — the key light's, where what is left over is the third component.
+**Square** clamps each axis alone and draws a dashed square rather than a horizon
+ring: the hold's two angles are unrelated, and a circle would claim they were one
+direction.
+
+The slider's readout is now an editable field. Typing is held in a draft so a
+half-finished number is not read as one, and commits on Enter or blur, clamped to
+the param's range — the field is for precision, not for leaving the range. Escape
+reverts, double-click on either half resets. Every lab gets it; `LabPanel` styles
+both components' rows globally so no panel can drift.
 
 ### Open
 
@@ -1394,8 +1668,8 @@ Things that are simply unbuilt, and what they cost today.
   `detail.split` is still a `RevealStub`, so nothing but `DevPanel` can set the
   fraction. Beat 11 is reachable, not playable.
 - **The recurring harvest has structure, no numbers.** `Planet.completeFirstHarvest()`
-  flips `harvested`, banks the merged count and the polarity, and builds an emitter
-  over `PlanetData.yields` — but no planet in `data/planets.ts` sets `yields`, so a
+  flips `isHarvested`, banks the merged count and the polarity, and builds an emitter
+  over `PlanetData.harvest` — but no planet in `data/planets.ts` declares one, so a
   harvested planet emits nothing. Deliberate: the payout is balance, and it is the
   one thing §3.9 says to ship flat first.
 - **The merged count and polarity are recorded and unread.** `Planet.merged` and
@@ -1458,7 +1732,7 @@ point: it lands on its own and moves at least one number in the gauge.
 | ~~6b~~ | ~~The refinery engine~~ | ~~nothing visible~~ | **done** — see Refinery below |
 | ~~1~~ | ~~Author the `global` bucket~~ | ~~beats 5, 6 onto real triggers~~ | **done** — see Scopes below |
 | ~~8~~ | ~~Travel~~ | ~~beat 12~~ | **done** — see Overview below |
-| 5 | `PlanetData.yields` | merged planets actually pay | balance |
+| 5 | `PlanetData.harvest` | merged planets actually pay | balance |
 | 9 | The token purchases — Ochre, Indigo, opposite Crimson | red gets a sink | price curves, and a buyer |
 | 7 | Harvest and Refinery layouts | 8 stubs | design pass — see Parked |
 
@@ -1486,6 +1760,33 @@ earlier reading of this doc had that wrong.
 lit no beat; it put a system under a beat that was already reaching. That is the
 shape the gauge cannot see, and the reason to read it next to the course rather
 than instead of it.
+
+### The context files are themselves an open task
+
+Not a step in the table, because it moves no number in the gauge — but it is work
+that is owed. CONTEXT v3 has been superseded in at least two places by decisions
+recorded here (§3.5 by Refinery, §3.2 by Excess) and neither has been amended at
+the source, so the design docs and this file now disagree and only this file knows
+it. `handoff.md` and `progression.md` have also grown by accretion across fifteen
+sessions: the widget rationale is most of the length and sits under a heading about
+progression, and the same facts are stated in both files at different lengths.
+
+What is wanted is a pass over the whole set — which document owns what, what gets
+amended at the source rather than overridden downstream, and what the per-session
+workflow between them is. Cheap to defer and it compounds: every session that ends
+without it writes into a shape nobody has decided.
+
+### The comments want the same pass
+
+A sweep over source comments, aggressively cutting. A comment earns its place by
+saying what the code cannot: why a number is that number, what a shader's maths
+is doing, which visual reading a branch is protecting. A comment that restates the
+line under it, or re-tells an argument this file already owns, is deleted rather
+than shortened.
+
+The shaders and the visual logic are where the exceptions live and are expected to
+stay dense — a GLSL block genuinely does not say what it is for. Everything else
+runs lean.
 
 ### Refinery — engine built, screen not
 
