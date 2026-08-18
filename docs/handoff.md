@@ -69,7 +69,10 @@ Branch `dev-next`. Last commit `194f917 rebuild checkpoint 9` — sessions 12–
 11. **`AnchorVisual.size` lifting the harness.** Intended coupling, never watched.
 12. **The detail screen at any other window width.** The 511:380 proportion was
     judged by sitting with it; nothing else about the placement was.
-13. **Overview steps 1–4 have never been played.** DevPanel *unlock all planets*
+13. **A world crossing between screens.** The spin and the swarm now share one
+    keyed clock, so Detail → Overview → Detail should continue rather than
+    restart. Watch the *handover*, not the turn: a jump means the clamp is wrong.
+14. **Overview steps 1–4 have never been played.** DevPanel *unlock all planets*
     makes the axis walkable. Watch: Behind invisible at beat 10, beat 12 firing
     at all, and the right column's band label — authored in two files with
     nothing enforcing the match.
@@ -86,11 +89,10 @@ Branch `dev-next`. Last commit `194f917 rebuild checkpoint 9` — sessions 12–
 
 ## Does not exist
 
-- **Only the detail screen draws a planet.** No screen draws an anchor or a
-  harness. `Disc.svelte` is unrendered but left in the tree.
-- **A shared renderer** — and it is what blocks the Overview's rows, the next
-  place a world would go. 44 contexts already; one canvas per row is not
-  another `PlanetView`.
+- **No screen draws an anchor or a harness.** `Disc.svelte` is unrendered but
+  left in the tree.
+- **A shared renderer** — parked, and no longer blocking anything. The Overview's
+  rows are stills: §*A still world needs no context*, price in §*Parked*.
 - **The type→parameter table** (design handoff §4), so `planet-visuals.ts` is the
   only source rather than an override layer.
 - **Surface objects** — only the field they would query.
@@ -130,7 +132,15 @@ and the **comment sweep** (§*The comments want the same pass*).
   §*Screenshots*.
 - **The WebGL context ceiling is real.** 44 `PlanetView`s, each its own context;
   only the IntersectionObserver makes that affordable, and the jump bar means
-  more of them mount cold.
+  more of them mount cold. A world that does not move wants `PlanetStill`, which
+  costs none.
+- **`alpha` and `preserveDrawingBuffer` are construction flags** on
+  `SnapshotCanvas`'s renderer, so HMR never reapplies them — same rule as a
+  blending mode.
+- **A store written to from inside an `$effect` must not be a rune.** Asking
+  `snapshots` for a picture reads its queue and then writes it, from a
+  `PlanetStill`'s own effect — as `$state` that is a loop with no exit. Push at
+  the consumer with a callback instead. §*A still world needs no context*.
 - **A probe can pass on a defect it never assembles.** The ribbon check replayed
   one endpoint at a time and passed on 312 crossed quads. Assert what the shape
   has to be, not what the builder wrote.

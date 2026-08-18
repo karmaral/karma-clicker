@@ -6,7 +6,7 @@
   import PlanetLabPanel from './PlanetLabPanel.svelte';
   import PulseLabPanel from './PulseLabPanel.svelte';
   import SwarmLabPanel from './SwarmLabPanel.svelte';
-  import { PlanetView } from './planet';
+  import { PlanetStill, PlanetView } from './planet';
   import { anchorLab } from './anchor-lab.svelte';
   import { harnessLab } from './harness-lab.svelte';
   import { planetLab } from './planet-lab.svelte';
@@ -18,6 +18,20 @@
    * WebGL contexts — 40 and 56 were dropped as the two that read the same.
    */
   const trueSizes = [80, 120, 180];
+
+  /**
+   * Row sizes, well below anything looked at before. These are snapshots rather
+   * than live views, so the whole grid is forty-five pictures at no standing
+   * cost — the reason `trueSizes` had to be coarsened does not apply here.
+   */
+  const stillSizes = [32, 40, 48, 56, 64];
+
+  /**
+   * Framing is world units across the short axis, so the body takes `2 / frame`
+   * of the box — 74% at 2.7, 91% at 2.2. Making the planet bigger costs no
+   * pixels, which is the first thing to try if a silhouette does not read.
+   */
+  let stillFrame = $state(2.4);
 
   /** Souls per cohort, off the lab's sliders. One dot is one soul at these counts. */
   const cohorts = $derived(swarmLab.counts);
@@ -49,6 +63,7 @@
     { id: 'subject', label: 'Subject' },
     { id: 'family', label: 'Family' },
     { id: 'true-size', label: 'True size' },
+    { id: 'stills', label: 'Stills' },
     { id: 'souls', label: 'Souls' },
     { id: 'anchors', label: 'Anchors' },
     { id: 'harness', label: 'Harness' },
@@ -122,6 +137,50 @@
             backgroundToken="--surface"
           />
           <span class="spec">{px}px</span>
+        </div>
+      {/each}
+    </div>
+  </section>
+
+  <section id="stills">
+    <h2>Planet — stills</h2>
+    <p class="note">
+      The family at list-row sizes, snapshots rather than live views: forty-five
+      pictures through one WebGL context, which is the only way this page can show
+      them at all. Two things stop being px-constant down here. <code>outline</code> is
+      2 on every world and <code>bleed</code> is <code>outline / zoom</code>, so ink
+      that is 0.8% of the radius at 400px is around 9% at 48 — chunky the way an icon
+      is chunky, or too heavy, and this is the view that says which.
+      <code>contour</code> is the other: 1–1.5px hairlines at 44px across may merge
+      into one grey.
+    </p>
+    <p class="note">
+      Nothing here is a change to the nine records. If it reads badly the answer is a
+      still's own derivation — lower <code>contour</code>, retune <code>outline</code>.
+    </p>
+    <div class="frame-pick">
+      <label for="still-frame">Frame</label>
+      <input
+        id="still-frame"
+        type="range"
+        min="1.9"
+        max="3"
+        step="0.05"
+        value={stillFrame}
+        oninput={(e) => (stillFrame = Number(e.currentTarget.value))}
+      />
+      <span class="spec">{stillFrame.toFixed(2)} · body at {Math.round((2 / stillFrame) * 100)}%</span>
+    </div>
+    <div class="canvas stills">
+      {#each planetLab.ids as id (id)}
+        <div class="still-row">
+          <span class="spec name">{id}</span>
+          {#each stillSizes as px (px)}
+            <div class="member">
+              <PlanetStill visual={planetLab.drafts[id]} widthPx={px} frame={stillFrame} />
+              <span class="spec">{px}</span>
+            </div>
+          {/each}
         </div>
       {/each}
     </div>
@@ -537,5 +596,33 @@
     font-size: var(--fs-xs);
     color: var(--ink-300);
     font-variant-numeric: tabular-nums;
+  }
+
+  .frame-pick {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    font-size: var(--fs-sm);
+    color: var(--ink-500);
+  }
+
+  .stills {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+  }
+
+  /* Baseline-aligned, so the sizes step up from one line rather than a centre. */
+  .still-row {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--sp-4);
+  }
+
+  .still-row .name {
+    width: 5rem;
+    flex: none;
+    text-align: right;
+    color: var(--ink-500);
   }
 </style>

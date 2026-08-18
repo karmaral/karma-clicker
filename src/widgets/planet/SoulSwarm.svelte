@@ -2,6 +2,7 @@
   import { T, useTask, useThrelte } from '@threlte/core';
   import { onDestroy } from 'svelte';
   import * as THREE from 'three';
+  import type { WorldClock } from './clock';
   import { sampleLoop, type HarnessLoop } from './harness';
   import { createSoulMaterial, syncSoulUniforms } from './material';
   import {
@@ -17,6 +18,13 @@
     zoom: number;
     /** The lines to ride, if there are any. `visual.riders` says how many do. */
     loops?: HarnessLoop[];
+    /**
+     * The world's clock, advanced by the scene and only read here. Not `$state`
+     * and not a number: the drift is a frame's worth of geometry, and putting a
+     * value that moves every frame through the reactive graph is the rule
+     * `Sparks` and `Halo` already draw by.
+     */
+    clock: WorldClock;
     /**
      * How far the body has turned. The swarm sits outside the spin and the
      * harness inside it, so a soul reading a loop has to put it back where the
@@ -40,7 +48,7 @@
   }
 
   let {
-    visual, counts, zoom, loops, spinAngle = 0, size = 1, bleed = 0,
+    visual, counts, zoom, loops, clock, spinAngle = 0, size = 1, bleed = 0,
   }: Props = $props();
 
   const { invalidate } = useThrelte();
@@ -52,7 +60,6 @@
   const souls = $derived(createSouls(visual, counts));
 
   let mesh: THREE.InstancedMesh | undefined = $state();
-  let elapsed = 0;
 
   // Composes one matrix per soul without allocating one.
   const dummy = new THREE.Object3D();
@@ -64,10 +71,12 @@
     invalidate();
   });
 
-  useTask((delta) => {
+  useTask(() => {
     if (!mesh) return;
 
-    elapsed += delta;
+    // Read, never advanced: the scene keeps the world's time, and a swarm that
+    // integrated its own would drift away from the body it orbits.
+    const elapsed = clock.elapsed;
 
     // Souls are sized in body radii, so zoom carries them — a push-in grows the
     // swarm with the world. The floor is the one thing left in px, and it only

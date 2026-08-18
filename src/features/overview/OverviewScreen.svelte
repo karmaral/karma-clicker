@@ -52,6 +52,17 @@
   <FirstHarvestScreen onclose={() => (isHarvesting = false)} />
 {:else}
   <div class="overview view-layout">
+
+    <div class="detail">
+      {#if progression.isRevealed('overview.active')}
+        <PlanetDetail id={selected} onharvest={() => (isHarvesting = true)} />
+      {/if}
+
+      {#if progression.isRevealed('overview.harvest')}
+        <HarvestLedger />
+      {/if}
+    </div>
+
     <div class="axis">
       {#if progression.isRevealed('overview.active')}
         <PlanetList
@@ -74,27 +85,21 @@
       {/if}
 
       {#if progression.isRevealed('overview.ahead')}
+        <!-- The one band carrying pictures so far. Behind and Active follow once
+             the size the silhouettes read at is settled. -->
         <PlanetList
           label="Ahead"
           ids={PlanetManager.ahead}
           {selected}
           stat={getAheadStat}
           empty="Nowhere else is known."
+          pictures
           onpick={(id) => (picked = id)}
         />
       {/if}
 
     </div>
 
-    <div class="detail">
-      {#if progression.isRevealed('overview.active')}
-        <PlanetDetail id={selected} onharvest={() => (isHarvesting = true)} />
-      {/if}
-
-      {#if progression.isRevealed('overview.harvest')}
-        <HarvestLedger />
-      {/if}
-    </div>
   </div>
 {/if}
 

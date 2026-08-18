@@ -19,6 +19,12 @@
     anchored?: boolean[];
     harness?: HarnessVisual;
     pulse?: PulseVisual;
+    /**
+     * Who this world is, for keeping time. Two views of one world pass the same
+     * key and share its spin, so changing screens — or scrolling a view out of
+     * the observer's range and back — does not put it at nought.
+     */
+    clockKey?: string;
     clickActionLabel?: string;
     onclickaction?: () => void;
   }
@@ -35,6 +41,7 @@
     anchored,
     harness,
     pulse,
+    clockKey,
     clickActionLabel = 'Incarnate',
     onclickaction,
   }: Props = $props();
@@ -87,6 +94,7 @@
         {anchored}
         {harness}
         {pulse}
+        {clockKey}
         {flashes}
       />
     </Canvas>

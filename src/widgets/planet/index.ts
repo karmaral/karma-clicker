@@ -1,4 +1,5 @@
 export { default as PlanetView } from './PlanetView.svelte';
+export { default as PlanetStill } from './PlanetStill.svelte';
 export { default as PlanetScene } from './PlanetScene.svelte';
 export { default as PlanetBody } from './PlanetBody.svelte';
 export { default as SoulSwarm } from './SoulSwarm.svelte';

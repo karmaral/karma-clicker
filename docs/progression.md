@@ -114,6 +114,19 @@ Design decisions deferred on purpose. None of these are oversights.
   is no longer one of these; see Overview below.
 - **Per-cohort aiming** is far future. Rows read their lean; only the global
   detent steers.
+- **A shared renderer.** One canvas drawing many worlds. It is not what the
+  Overview needed — see *A still world needs no context* — and it only pays for
+  a screen wanting many **live** worlds, which nothing does. Its price, so it is
+  not re-derived a third time: `PlanetScene` would have to become
+  framing-agnostic (`zoom` and background from props, the camera hoisted to the
+  host — it is the only component reading `useThrelte().size` or `scene`), and
+  `invalidate()` is **canvas-global** while *seven* components call it, so every
+  one would need a slot-scoped invalidate or one soul moving would redraw every
+  slot. The shape itself: one `<Canvas>`, each slot a group offset far apart in
+  world space, camera moved plus viewport and scissor per slot, then the sub-rect
+  blitted to a per-slot 2D canvas — so slots stay ordinary DOM and keep their
+  scrolling, clipping and overlaid captions, which a full-viewport scissor
+  overlay gives up.
 
 ## Producers
 
@@ -202,6 +215,10 @@ world you are on is the one you act on — and the other two follow in axis orde
 line. It reveals at beat 10, when the first world is harvested, but you are still
 standing on that world; it has nothing to list until you reach somewhere else.
 Active and Ahead always draw, and Ahead carries the empty line.
+
+**Ahead's rows carry pictures**, snapshots rather than live views — see *A still
+world needs no context*. Behind and Active are one prop away and wait on whether a
+silhouette reads at forty pixels.
 
 Picking a world in any band feeds the right column, and **the verb travels with
 the selection** — Harvest on the world you are on, Reach on one that is ahead,
@@ -1487,12 +1504,113 @@ the param's range — the field is for precision, not for leaving the range. Esc
 reverts, double-click on either half resets. Every lab gets it; `LabPanel` styles
 both components' rows globally so no panel can drift.
 
+### A still world needs no context
+
+The Overview wants worlds where it has text: a portrait in the detail column and
+a picture on every row. A `PlanetView` each is one WebGL context each, and the
+worst case is fifteen rows plus the portrait — sixteen, which is the ceiling
+exactly. That is what put *a shared renderer* on the board as the thing blocking
+the rows, and it is the wrong answer to the question.
+
+**Sharing a renderer buys context count, not draw count.** Every visible slot
+still renders every frame, because worlds turn. So the saving only exists if the
+worlds are *live*, and the rows' are not: a row's world is a still picture. A
+still picture needs a context for one frame and never again.
+
+So the rows are **snapshots**. `snapshot.ts` holds a queue and a cache;
+`SnapshotCanvas` mounts itself off-screen on the first request, `SnapshotRenderer`
+inside it draws each world once and reads the buffer back, and the canvas
+unmounts three seconds after the queue empties. `PlanetStill` is a 2D canvas
+holding the bitmap — `PlanetView`'s pair, same props, and the two words carry the
+distinction: a **view** turns and holds a context, a **still** does neither.
+Steady state is **one** context in the whole Overview, the portrait's, and it
+would still be one with a hundred rows.
+
+Five things this turns on:
+
+- **The queue is not reactive, and that is the load-bearing part.** A still asks
+  for its picture from inside an `$effect`, and asking means dropping that
+  still's previous job — a read of the queue and then a write to it, by the same
+  effect. As `$state` that is a loop with no exit, and forty-five stills make it
+  a lock rather than a stutter. The renderer is *pushed at* instead: it hands
+  over a callback when it mounts. **A queue written to from inside an effect
+  cannot also be something an effect watches.**
+
+- **`renderMode="manual"` with a real frame counter.** Invalidating raises a
+  flag; three's own animation loop is what renders, some frame later. So the
+  renderer waits on `renderer.info.render.frame` changing rather than on a
+  guessed number of frames — a capture that grabbed an unrendered buffer would
+  come back blank and say nothing about it.
+- **Drawn transparent.** `PlanetScene`'s `backgroundToken` now takes `null`.
+  This is not economy: a selected row has `--surface-alt` under it and the rest
+  have `--surface`, so a ground baked into the picture would show as a square of
+  the wrong tone on exactly the row you clicked.
+- **Spin zeroed for the capture.** A manual frame's delta is however long since
+  the last one, so a turning world would land on a different face every time.
+- **One pending job per asker.** A lab slider drags at sixty asks a second and
+  only the last answer is ever drawn.
+
+Two numbers stop being px-constant at row scale, and they are the whole of the
+open question — whether these silhouettes read at forty pixels. `bleed` is
+`outline / zoom`, and every world ships `outline: 2`: at 400px that is 0.8% of
+the body radius, at 48px it is around 9%. `contour` is 1–1.5px against bands
+44px across. Chunky ink may be exactly right for a list row, the way an icon is
+chunky, but it is a choice. The `#stills` strip in the lab is where it gets
+looked at — the family at five row sizes with the framing on a slider, forty-five
+pictures, which only exists because they cost nothing.
+
+If it reads badly the answer is a derivation for stills, not an edit to the nine
+records. `detail` at 26–36 is ~17k triangles, which would matter for a live view
+and does not matter at all for something drawn once.
+
+**The shared renderer is parked, not abandoned** — see *Parked*. It is what a
+screen wanting many *live* worlds would need, and nothing wants that yet.
+
+### The world keeps its own time
+
+A world drawn on two screens was two worlds. `spinAngle` lived in `PlanetScene`
+and the swarm's `elapsed` in `SoulSwarm`, both starting at nought on mount — so
+changing tabs, or scrolling a view out of the observer's range and back, put the
+planet at the top of its turn again.
+
+`clock.ts` holds them instead, keyed. A view passes `clockKey` and gets the
+world's clock rather than a new one; a view that passes none gets a private one,
+which is what the labs want — forty-four of them converging on one angle would
+be a chorus line. Only `PlanetStage` and the Overview's portrait pass a key, and
+they pass the planet id.
+
+**It is one clock now, which it always claimed to be.** `PlanetScene`'s comment
+already said the body and the swarm read one rotation; they did not. The swarm
+now takes the clock as a prop and *reads* it — never advances it — the way
+`Sparks` and `Halo` take `pulses`. It is a plain object on purpose: a value that
+moves every frame has no business in the reactive graph.
+
+Two properties fall out of one rule — **step by clamped wall time, not by the
+frame's delta**:
+
+- **An unwatched world is paused, not fast-forwarded.** Come back after five
+  minutes and it advances a tenth of a second. The clamp is the same tenth
+  Threlte puts on its own delta, and it is the whole difference between the
+  picture continuing and the picture jumping.
+- **Two views of one world cannot run it double.** Whichever reads second in a
+  frame finds almost no wall time left to add, so the total is one frame's worth
+  however many are watching.
+
+The angle is integrated rather than taken as `spin × elapsed`. The product is
+tempting and wrong: dragging the lab's spin slider at ten minutes in would swing
+the world through several turns to catch up with its own new rate.
+
+Probed off the model, six groups: keyed clocks are one object and unkeyed ones
+are not, a frame turns rate × delta, a second reader in a frame adds nothing, a
+long gap clamps to one step, and a wall clock that goes backwards does not unwind
+the world.
+
 ### Open
 
-The planet is in the game, on the detail screen only — the Overview's rows still
-draw nothing, and each view is its own WebGL context, which the workbench can
-afford and a list of one canvas per row cannot. Surface objects do not exist, only
-the field they would query.
+The planet is in the game on the detail screen, and now in the Overview: a live
+portrait in the detail column and stills on the Ahead rows. Behind and
+Active are one prop away and wait on the size reading. Surface objects do not
+exist, only the field they would query.
 
 **A parameter sizes a world against another now** — `PlanetVisual.size`, above.
 Every entry in `planet-visuals.ts` carries it at 1, so no authored world moved.

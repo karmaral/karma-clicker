@@ -5,6 +5,8 @@
   import { progression } from '$lib/progression';
   import { getFirstHarvestConditionLabel } from '$lib/labels';
   import { f } from '$lib/utils';
+  import { DEFAULT_VISUAL, PlanetView } from '$widgets/planet';
+  import planetVisuals from '$data/planet-visuals';
   import planetTexts from '$data/planets-texts';
 
   interface Props {
@@ -13,6 +15,17 @@
   }
 
   let { id, onharvest }: Props = $props();
+
+  /**
+   * The one live world in the Overview, and the only WebGL context it holds. A
+   * portrait, not a stage: it turns, and nothing stands beside it or answers a
+   * click — incarnating is the detail screen's verb, and the buttons below are
+   * this column's.
+   */
+  const PORTRAIT_PX = 180;
+  const PORTRAIT_FRAME = 2.4;
+
+  const visual = $derived(planetVisuals[id] ?? DEFAULT_VISUAL);
 
   const planet = $derived(PlanetManager.getPlanet(id));
   const name = $derived(planetTexts[id]?.title ?? id);
@@ -59,6 +72,16 @@
     {getStatus()}
   {/snippet}
 
+  <div class="portrait">
+    <PlanetView
+      {visual}
+      widthPx={PORTRAIT_PX}
+      frame={PORTRAIT_FRAME}
+      backgroundToken="--surface"
+      clockKey={id}
+    />
+  </div>
+
   {#if description}
     <p class="description">{description}</p>
   {/if}
@@ -84,6 +107,11 @@
 </Section>
 
 <style>
+  .portrait {
+    display: flex;
+    justify-content: center;
+  }
+
   .description {
     margin: 0;
     font-size: var(--fs-sm);

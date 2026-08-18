@@ -10,6 +10,7 @@
   import SoulSwarm from './SoulSwarm.svelte';
   import Sparks from './Sparks.svelte';
   import { placeAnchors, type AnchorVisual } from './anchor';
+  import { advanceClock, getClock } from './clock';
   import { createSurfaceField } from './field';
   import { buildLoops, trimLoopCache, type HarnessVisual } from './harness';
   import { readToken } from './ink';
@@ -21,7 +22,12 @@
     visual: PlanetVisual;
     /** World units across the viewport's short axis — the framing, not the planet. */
     frame?: number;
-    backgroundToken?: string;
+    /**
+     * `null` leaves the canvas clear, which is what a picture that will be drawn
+     * onto some other ground needs: a row highlights by changing what is under
+     * it, and a baked-in ground would show as a square of the wrong tone.
+     */
+    backgroundToken?: string | null;
     swarm?: SwarmVisual;
     /**
      * Souls per cohort. Absent or empty draws no swarm at all, so every existing
@@ -35,6 +41,12 @@
     harness?: HarnessVisual;
     /** What a click leaves behind. Absent means the world does not answer one. */
     pulse?: PulseVisual;
+    /**
+     * Who this world is, for the purpose of keeping time. Two views passing the
+     * same key share one clock, so switching screens does not put the world back
+     * to nought. Absent keeps a private one, which is what a lab wants.
+     */
+    clockKey?: string;
     /**
      * A running count of clicks. Every rise flashes the world once, so the
      * caller owns the event and the scene only owns what it looks like.
@@ -52,6 +64,7 @@
     anchored,
     harness,
     pulse,
+    clockKey,
     flashes = 0,
   }: Props = $props();
 
@@ -132,16 +145,27 @@
   });
 
   /**
-   * The world's one clock. The body turns by it and the swarm reads it, so
-   * nothing has to integrate a second copy of the same rotation.
+   * The world's one clock, now actually one: the body turns by its angle and the
+   * swarm drifts by its elapsed, and neither integrates a copy. Keyed, it
+   * outlives the component — so a world does not start over when a screen it was
+   * on is left.
    */
+  const clock = $derived(getClock(clockKey));
+
+  const isTurning = $derived(Boolean(visual.spin));
+  const hasSwarm = $derived(Boolean(swarm && cohorts?.length));
+
+  /** How far the body has turned. The only part of the clock that renders. */
   let spinAngle = $state(0);
 
-  useTask((delta) => {
-    if (!visual.spin) return;
+  useTask(() => {
+    // A world that neither turns nor carries souls has no clock to keep.
+    if (!isTurning && !hasSwarm) return;
 
-    spinAngle += visual.spin * delta;
-    invalidate();
+    advanceClock(clock, visual.spin);
+    spinAngle = clock.angle;
+
+    if (isTurning) invalidate();
   });
 
   /**
@@ -202,7 +226,9 @@
   });
 
   $effect(() => {
-    scene.background = new THREE.Color(readToken(backgroundToken, '#f4f4f2'));
+    scene.background = backgroundToken === null
+      ? null
+      : new THREE.Color(readToken(backgroundToken, '#f4f4f2'));
     invalidate();
   });
 </script>
@@ -231,6 +257,7 @@
       counts={cohorts}
       {zoom}
       {loops}
+      {clock}
       {spinAngle}
       {bleed}
       size={worldSize}

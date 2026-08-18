@@ -47,6 +47,7 @@
       swarm={DEFAULT_SWARM}
       {cohorts}
       pulse={DEFAULT_PULSE}
+      clockKey={id}
       {clickActionLabel}
       {onclickaction}
     />
