@@ -31,10 +31,17 @@
     grid-row: span 2;
     border-bottom: var(--rule-card);
     min-width: 0;
+    position: relative;
   }
 
-  .nav-section.active {
-    border-bottom: var(--rule-strong);
+  .nav-section.active::after {
+    content: "";
+    width: 100%;
+    height: 2px;
+    background-color: var(--ink-900);
+    position: absolute;
+    top: 0;
+    translate: 0% -100%;
   }
 
   button {

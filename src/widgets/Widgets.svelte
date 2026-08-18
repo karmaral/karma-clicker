@@ -147,16 +147,15 @@
     <p class="note">
       The family at list-row sizes, snapshots rather than live views: forty-five
       pictures through one WebGL context, which is the only way this page can show
-      them at all. Two things stop being px-constant down here. <code>outline</code> is
-      2 on every world and <code>bleed</code> is <code>outline / zoom</code>, so ink
-      that is 0.8% of the radius at 400px is around 9% at 48 — chunky the way an icon
-      is chunky, or too heavy, and this is the view that says which.
-      <code>contour</code> is the other: 1–1.5px hairlines at 44px across may merge
-      into one grey.
+      them at all. These are <code>toStill</code>'s worlds, not the authored ones —
+      <code>spin</code> at nought and <code>outline</code> at 1 rather than the 2 every
+      record ships, because <code>bleed</code> is <code>outline / zoom</code> and ink
+      that is 0.8% of the radius at 400px is around 9% at 48. The face they freeze on
+      is <code>turn</code>, authored on its slider in the panel.
     </p>
     <p class="note">
-      Nothing here is a change to the nine records. If it reads badly the answer is a
-      still's own derivation — lower <code>contour</code>, retune <code>outline</code>.
+      <code>contour</code> is the one still open: 1–1.5px hairlines at 44px across may
+      merge into one grey. If they do it joins the derivation, not the nine records.
     </p>
     <div class="frame-pick">
       <label for="still-frame">Frame</label>

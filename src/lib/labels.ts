@@ -7,7 +7,7 @@ import type { FirstHarvestCondition, Polarity } from '$types';
 
 export type ScreenName = 'overview' | 'detail' | 'refinery';
 
-export const SCREENS: ScreenName[] = ['overview', 'detail', 'refinery'];
+export const SCREENS: ScreenName[] = ['detail', 'overview', 'refinery'];
 
 export const SCREEN_LABELS: Record<ScreenName, string> = {
   overview: 'Overview',

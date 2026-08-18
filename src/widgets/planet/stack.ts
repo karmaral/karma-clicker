@@ -5,9 +5,11 @@
  * ```
  * -1 burst          the click, the world's own shape thrown out behind it
  * 0  body           writes depth, so the far side of everything solid is hidden
- * 1  harness        no depth test — the ink rule is its whole depth cue
+ * 0  veil           the same shell again, over the body it is a layer on — no
+ *                   depth test, and its far half is culled rather than cut
+ * 1  placed anchor  depth-tested, so the solid caps the lines that end in it
+ * 2  harness        no depth test — the ink rule is its whole depth cue
  *                   (quads, not lines: a line has no width to carry)
- * 2  placed anchor  depth-tested, so the solid caps the lines that end in it
  * 3  ghost anchor   no depth test: a place does not stop existing when it turns away
  * 4  souls          discard what is behind the world themselves
  * 5  halo           the click, around the world and behind it, inverting what it crosses
@@ -37,8 +39,22 @@
  * the opaque pass whatever this says; what the order buys is that it is first
  * among the transparent marks, so the halo and the sparks land over it.
  */
+/**
+ * The veil takes the body's own number rather than one of its own. It is not a
+ * mark standing beside the world, it is a second surface of it — and being
+ * transparent it is drawn after the whole opaque pass whatever the number says,
+ * so 0 buys the reading and costs nothing. What it does buy is a place *before*
+ * the harness and the souls, which stand off the world and must cross it.
+ *
+ * It draws over a placed anchor, which is opaque and so lands in the opaque
+ * pass ahead of it. No screen draws an anchor today; if one ever does and the
+ * two meet, the fix is a cut in the veil's fragment against the anchor's own
+ * reach, not a depth flag — a depth test here would put the terrain back into a
+ * shell that was built by discarding it.
+ */
 export const RENDER_ORDER = {
   burst: -1,
+  veil: 0,
   anchor: 1,
   harness: 2,
   ghost: 3,

@@ -26,6 +26,13 @@ export interface WorldClock {
    * whole difference between a lab slider and a teleport.
    */
   angle: number;
+  /**
+   * The veil's own, and a second integral rather than a second clock. The two
+   * have to share one wall-time step: calling `advanceClock` twice a frame
+   * would add `elapsed` twice and leave `at` at the second read, so the swarm
+   * would run double and both angles half.
+   */
+  veilAngle: number;
   /** Wall time at the last step, in seconds. */
   at: number;
 }
@@ -33,7 +40,7 @@ export interface WorldClock {
 const shared = new Map<string, WorldClock>();
 
 function createClock(): WorldClock {
-  return { elapsed: 0, angle: 0, at: performance.now() / 1000 };
+  return { elapsed: 0, angle: 0, veilAngle: 0, at: performance.now() / 1000 };
 }
 
 /**
@@ -59,12 +66,17 @@ export function getClock(key?: string): WorldClock {
  * second, so coming back continues the picture instead of jumping it. And two
  * views of one world cannot run it double: whichever reads second in a frame
  * finds almost no time left to add.
+ *
+ * `veilRate` is defaulted so the signature stays honest for a caller with no
+ * veil to turn, and both angles are written from the one step — see the
+ * interface for why that cannot be two calls.
  */
-export function advanceClock(clock: WorldClock, rate: number) {
+export function advanceClock(clock: WorldClock, rate: number, veilRate = 0) {
   const now = performance.now() / 1000;
   const step = Math.min(MAX_STEP, Math.max(0, now - clock.at));
 
   clock.at = now;
   clock.elapsed += step;
   clock.angle += rate * step;
+  clock.veilAngle += veilRate * step;
 }

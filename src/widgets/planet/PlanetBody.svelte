@@ -1,11 +1,13 @@
 <script lang="ts">
   import { T, useTask, useThrelte } from '@threlte/core';
   import { onDestroy, type Snippet } from 'svelte';
+  import type * as THREE from 'three';
   import { buildGeometry, trimGeometryCache } from './geometry';
   import { readInkRamp } from './ink';
   import {
     createBurstMaterial, createOutlineMaterial, createSurfaceMaterial,
-    syncBurstUniforms, syncOutlineUniforms, syncSurfaceUniforms,
+    syncBurstUniforms, syncOutlineUniforms, syncSurfaceUniforms, syncVeilUniforms,
+    veilMaterialFor,
   } from './material';
   import { fadeOf, lifeOf, type Pulses, type PulseVisual } from './pulse';
   import { RENDER_ORDER } from './stack';
@@ -30,6 +32,12 @@
      */
     spinAngle?: number;
     /**
+     * How far the veil has turned — its own integral, not the body's. Kept by
+     * the scene for the reason `spinAngle` is: it comes off the world's one
+     * clock, and a body that integrated either would be a second clock for it.
+     */
+    veilAngle?: number;
+    /**
      * Drawn inside the body's hold but outside its spin — orbits and markers
      * share the world's axis without being dragged round by its surface.
      */
@@ -41,7 +49,9 @@
     standing?: Snippet;
   }
 
-  let { visual, zoom, spinAngle = 0, pulse, pulses, children, standing }: Props = $props();
+  let {
+    visual, zoom, spinAngle = 0, veilAngle = 0, pulse, pulses, children, standing,
+  }: Props = $props();
 
   const { invalidate } = useThrelte();
   const ramp = readInkRamp();
@@ -64,6 +74,38 @@
 
     if (pulse) syncBurstUniforms(burst, outline, pulse, ramp, zoom);
 
+    invalidate();
+  });
+
+  /**
+   * Only the mode in force exists. Three materials is three shader compiles for
+   * two pictures nobody asked for, across as many `PlanetView`s as a screen
+   * mounts — and the blend is a construction flag, so a mode change can never
+   * be a uniform write. Torn down on `veil` too, so a world without one
+   * compiles no veil shader at all.
+   */
+  let veilMaterial = $state.raw<THREE.ShaderMaterial>();
+
+  $effect(() => {
+    if (visual.veil <= 0) return;
+
+    const made = veilMaterialFor(visual.veilInk);
+
+    veilMaterial = made;
+    invalidate();
+
+    return () => {
+      made.dispose();
+      veilMaterial = undefined;
+    };
+  });
+
+  // Kept apart from the effect above on purpose: that one writes `veilMaterial`
+  // and this one reads it, and a single effect doing both is a loop with no exit.
+  $effect(() => {
+    if (!veilMaterial) return;
+
+    syncVeilUniforms(veilMaterial, visual);
     invalidate();
   });
 
@@ -111,6 +153,25 @@
 
         {@render standing?.()}
       </T.Group>
+
+      <!-- Its own angle, and that is the whole of why it is not in the group
+           above: weather is not bolted to the ground it is over. Inside the
+           hold, so object-space Y is still the world's axis — the pole mask
+           means what it says however the world is held, and is untouched by
+           the veil's own turn.
+
+           frustumCulled off: the bounding sphere is the body's, and the vertex
+           shader has since pushed this out past it. -->
+      {#if veilMaterial}
+        <T.Group rotation.y={veilAngle}>
+          <T.Mesh
+            {geometry}
+            material={veilMaterial}
+            renderOrder={RENDER_ORDER.veil}
+            frustumCulled={false}
+          />
+        </T.Group>
+      {/if}
 
       {@render children?.()}
     </T.Group>

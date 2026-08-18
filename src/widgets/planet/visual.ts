@@ -198,6 +198,103 @@ export interface PlanetVisual {
   outline: number;
   outlineTone: number;
 
+  /**
+   * A second surface, above the first. It is a cloud deck at one tuning and an
+   * aurora at another, and the difference between them is four sliders: how
+   * high it sits, how far toward the poles it is allowed, how hard its edge is,
+   * and which side of the light it lives on.
+   *
+   * Unlike everything above, its field is evaluated **in the shader**. The
+   * body's is baked on the CPU because `buildGeometry`, `placeAnchors` and the
+   * sparks must all sample one field and can never disagree about the ground.
+   * Nothing stands on a cloud, so that reason does not reach here — and the veil
+   * pays nothing for it: it borrows the body's cached geometry for its topology
+   * alone, renormalised to a true sphere, so **no field here rebuilds a mesh**.
+   *
+   * At `veil` 0 the whole layer is inert and its material is never compiled.
+   */
+  veil: number;
+  /**
+   * How it composites. 0 alpha over `veilTone`; 1 the halo's inversion, which
+   * has no tone of its own and so cannot be the wrong one for its ground; 2 an
+   * ordered dither, the only mode whose every pixel is still a ramp slot.
+   *
+   * A blend is a construction flag rather than a uniform, so this picks between
+   * three materials — see `veilMaterialFor`.
+   */
+  veilInk: number;
+  /** Inert in mode 1, which carries no ink at all. */
+  veilTone: number;
+  /**
+   * How far above the surface, in body radii. Under an orthographic camera a
+   * shell has no parallax to buy, so this is honestly a *limb reach*: it is how
+   * far the veil stands past the body's own silhouette, and wants reading
+   * against `outline / zoom`, which is the same quantity for the ink.
+   */
+  veilHeight: number;
+  /**
+   * The field. No `lacunarity` — it is fixed at 2, because the veil has no
+   * measured range to absorb what a second octave-shaping knob does to it and
+   * `veilCoverage` would quietly re-mean itself. No `ridge` either: ridging
+   * makes a crease, and neither a cloud deck nor an aurora has one.
+   */
+  veilFrequency: number;
+  veilOctaves: number;
+  veilGain: number;
+  veilWarp: number;
+  /** Latitude bands, blended in at the warped direction — `strata`, one shell up. */
+  veilBands: number;
+  veilBandFrequency: number;
+  /**
+   * Where the field becomes a shape. `veilCoverage` is the threshold and
+   * `veilEdge` its softness in field units, floored by the screen derivative so
+   * an edge is never harder than the pixels can draw.
+   */
+  veilCoverage: number;
+  veilEdge: number;
+  /**
+   * A line around the fill, in pixels, drawn at the contour where the fill
+   * reaches *full* rather than at the silhouette — which is what makes it move
+   * on its own. At a hard edge the two are a pixel apart and the line is the
+   * silhouette; open `veilEdge` and full coverage retreats up the field's slope
+   * toward each blob's core and takes the line with it, so a diffuse veil is a
+   * soft mass with its solid heart drawn around. No second slider says where it
+   * sits, because `veilEdge` already does.
+   *
+   * It follows the field, not a centre, so a long curtain keeps a line down its
+   * spine rather than collapsing to a dot — and a wisp that never reaches full
+   * coverage carries no line at all, having no solid part to be the edge of.
+   *
+   * `veilOutlineTone` is inert in mode 1, which has no ink of its own: the line
+   * is the hardest inversion there instead of a tone.
+   */
+  veilOutline: number;
+  veilOutlineTone: number;
+  /**
+   * Which latitudes it is allowed, as an annulus rather than a cap: `veilPole`
+   * is the sin-latitude the band is *centred* on and `veilPoleEdge` its width.
+   * An aurora is a ring at about sixty degrees — a cap centred on the pole is a
+   * hat. A width past 2 cannot fail the test, and is the cloud reading: the
+   * mask is simply gone.
+   */
+  veilPole: number;
+  veilPoleEdge: number;
+  /**
+   * How the key reaches it — and the one term that differs in kind from the
+   * body's. The surface composites its key as a shift along the ramp; a single
+   * ink has no band coordinate to shift along, so the only thing this can shade
+   * is *how much veil there is*. Signed, and the sign is which side of the
+   * light it belongs to: a cloud burns off the dark half at a positive value,
+   * and an aurora is a night mark and lives at a negative one.
+   */
+  veilKey: number;
+  /**
+   * Its own rate, integrated on its own angle off the world's one clock. Here
+   * rather than in `Motion` because `Motion` is how the *world* is held, and a
+   * session tuning the veil wants its rate under its coverage.
+   */
+  veilSpin: number;
+
   /** Motion. */
   spin: number;
 
@@ -217,7 +314,7 @@ export interface PlanetVisual {
   turn: number;
 }
 
-export type VisualGroup = 'Shape' | 'Caps' | 'Texture' | 'Shade' | 'Outline' | 'Motion';
+export type VisualGroup = 'Shape' | 'Caps' | 'Texture' | 'Shade' | 'Outline' | 'Veil' | 'Motion';
 
 export interface VisualParam {
   key: keyof PlanetVisual;
@@ -280,6 +377,28 @@ export const VISUAL_PARAMS: VisualParam[] = [
   { key: 'outline', label: 'Outline px', group: 'Outline', min: 0, max: 8, step: 0.25 },
   { key: 'outlineTone', label: 'Outline tone', group: 'Outline', min: 0, max: 6, step: 1 },
 
+  // Not one `shape` in the group, and that is the point: the shell borrows the
+  // body's geometry and its field lives in the fragment, so every slider here
+  // is a uniform write and nothing under it rebuilds a mesh.
+  { key: 'veil', label: 'Veil', group: 'Veil', min: 0, max: 1, step: 0.01 },
+  { key: 'veilInk', label: 'Composite', group: 'Veil', min: 0, max: 2, step: 1 },
+  { key: 'veilTone', label: 'Veil tone', group: 'Veil', min: 0, max: 6, step: 1 },
+  { key: 'veilHeight', label: 'Veil height', group: 'Veil', min: 0.005, max: 0.25, step: 0.005 },
+  { key: 'veilFrequency', label: 'Veil frequency', group: 'Veil', min: 0.2, max: 10, step: 0.1 },
+  { key: 'veilOctaves', label: 'Veil octaves', group: 'Veil', min: 1, max: 5, step: 1 },
+  { key: 'veilGain', label: 'Veil gain', group: 'Veil', min: 0, max: 1, step: 0.01 },
+  { key: 'veilWarp', label: 'Veil warp', group: 'Veil', min: 0, max: 0.8, step: 0.005 },
+  { key: 'veilBands', label: 'Veil bands', group: 'Veil', min: 0, max: 1, step: 0.01 },
+  { key: 'veilBandFrequency', label: 'Veil band freq', group: 'Veil', min: 1, max: 16, step: 0.5 },
+  { key: 'veilCoverage', label: 'Coverage', group: 'Veil', min: 0, max: 1, step: 0.01 },
+  { key: 'veilEdge', label: 'Veil edge', group: 'Veil', min: 0, max: 0.5, step: 0.005 },
+  { key: 'veilOutline', label: 'Veil outline px', group: 'Veil', min: 0, max: 4, step: 0.25 },
+  { key: 'veilOutlineTone', label: 'Veil outline tone', group: 'Veil', min: 0, max: 6, step: 1 },
+  { key: 'veilPole', label: 'Veil latitude', group: 'Veil', min: 0, max: 1, step: 0.01 },
+  { key: 'veilPoleEdge', label: 'Veil band width', group: 'Veil', min: 0.05, max: 2, step: 0.01 },
+  { key: 'veilKey', label: 'Veil key', group: 'Veil', min: -1, max: 1, step: 0.01 },
+  { key: 'veilSpin', label: 'Veil spin', group: 'Veil', min: -0.6, max: 0.6, step: 0.005 },
+
   { key: 'spin', label: 'Spin', group: 'Motion', min: -0.6, max: 0.6, step: 0.005 },
   // No row for `tilt` or `lean`: they are one puck under this one. `turn` keeps a
   // slider — it is a phase, and a phase reads along a line.
@@ -293,7 +412,7 @@ export const VISUAL_PARAMS: VisualParam[] = [
 export const TILT_REACH = 0.8;
 export const LEAN_REACH = 1.6;
 
-export const VISUAL_GROUPS: VisualGroup[] = ['Shape', 'Caps', 'Texture', 'Shade', 'Outline', 'Motion'];
+export const VISUAL_GROUPS: VisualGroup[] = ['Shape', 'Caps', 'Texture', 'Shade', 'Outline', 'Veil', 'Motion'];
 
 export const DEFAULT_VISUAL: PlanetVisual = {
   seed: 1,
@@ -344,6 +463,26 @@ export const DEFAULT_VISUAL: PlanetVisual = {
   outline: 2,
   outlineTone: 6,
 
+  /** Off, and the numbers below are the cloud reading the slider opens onto. */
+  veil: 0,
+  veilInk: 0,
+  veilTone: 0,
+  veilHeight: 0.03,
+  veilFrequency: 2.6,
+  veilOctaves: 4,
+  veilGain: 0.55,
+  veilWarp: 0.28,
+  veilBands: 0.25,
+  veilBandFrequency: 5,
+  veilCoverage: 0.52,
+  veilEdge: 0.08,
+  veilOutline: 1.5,
+  veilOutlineTone: 6,
+  veilPole: 0,
+  veilPoleEdge: 2,
+  veilKey: 0.4,
+  veilSpin: 0.05,
+
   spin: 0.1,
   tilt: 0.2,
   lean: 0,
@@ -369,6 +508,38 @@ export function keyShape(visual: PlanetVisual) {
 
 export function cloneVisual(visual: PlanetVisual): PlanetVisual {
   return { ...visual };
+}
+
+/**
+ * A hairline, against the 2px every world ships. `bleed` is `outline / zoom`
+ * and `zoom` is `px / frame`, so the same ink is 0.8% of the body radius at
+ * 400px and around 9% at a 48px row — seven times the weight for no edit. One
+ * pixel is a list row's ink, and it belongs to the still rather than to the
+ * nine records.
+ */
+export const STILL_OUTLINE = 1;
+
+/**
+ * The world as a picture rather than as a view.
+ *
+ * `spin` goes to nought because a snapshot is drawn on a manual frame, whose
+ * delta is however long since the last one — a turning world would land on a
+ * different face every capture. `veilSpin` goes with it, and for that reason
+ * twice over: the veil integrates its own angle off the same wall clock, and
+ * the snapshot renderer keeps one scene warm across a whole batch, so a live
+ * veil would put a different sky on every world in a family strip.
+ *
+ * What both land on instead is `turn`, which sits outside the spin and outside
+ * the veil's — so a still's sky is chosen by the slider that already chooses
+ * its face, and no second field was needed for it. On the live world beside it
+ * `turn` is only a starting phase the two rates walk away from at their own
+ * speeds. The face is authored once, and costs the view nothing.
+ *
+ * `veil` itself is not dropped. A still is the world, and its weather is part
+ * of the world.
+ */
+export function toStill(visual: PlanetVisual): PlanetVisual {
+  return { ...visual, spin: 0, veilSpin: 0, outline: STILL_OUTLINE };
 }
 
 /** A TS literal, ready to paste into `$data/planet-visuals`. */

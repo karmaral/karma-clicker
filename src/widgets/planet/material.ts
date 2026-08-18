@@ -1003,6 +1003,460 @@ const flareFragment = /* glsl */ `
   }
 `;
 
+/** The octave loop's static bound. `veilOctaves` is the slider inside it. */
+const VEIL_OCTAVES = 6;
+
+/**
+ * What `field.ts`'s `measureRange` cannot be here. A fragment cannot probe its
+ * own field, so the reachable range is asserted once instead of measured per
+ * world. This is the whole price of evaluating a field in GLSL, and it is paid
+ * in one number: `veilCoverage` re-means itself slightly when `veilOctaves`
+ * moves, which `land` on the body never does.
+ */
+const VEIL_SPREAD = 1.6;
+
+/**
+ * 3D simplex, and the project's first noise in a shader. Deliberately not the
+ * hash kind: a `fract(sin(...))` field depends on the precision of `sin` at
+ * large arguments, which differs between Mali, Adreno and desktop — and the
+ * field *is* what the veil looks like, so a world that comes out different on a
+ * phone is a bug that cannot be reproduced. This permutation is exact integer
+ * arithmetic in float and is the same everywhere.
+ *
+ * Sampled on a direction, so the shell has no seam and no pole to pinch —
+ * `noise.ts`'s opening argument, spent a second time.
+ *
+ * Ashima Arts / Stefan Gustavson, webgl-noise, MIT. Left as written rather than
+ * reformatted to the house style: it is a citation, and a citation you have
+ * edited is not one.
+ *
+ * Declares no uniforms, so every shader including it declares its own — the
+ * contract `rampRead` has with `uRamp`, and for the same reason.
+ */
+const simplex3D = /* glsl */ `
+  vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+  vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+  vec4 permute(vec4 x) { return mod289(((x * 34.0) + 1.0) * x); }
+  vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+
+  float snoise(vec3 v) {
+    const vec2 C = vec2(1.0 / 6.0, 1.0 / 3.0);
+    const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+
+    vec3 i = floor(v + dot(v, C.yyy));
+    vec3 x0 = v - i + dot(i, C.xxx);
+
+    vec3 g = step(x0.yzx, x0.xyz);
+    vec3 l = 1.0 - g;
+    vec3 i1 = min(g.xyz, l.zxy);
+    vec3 i2 = max(g.xyz, l.zxy);
+
+    vec3 x1 = x0 - i1 + C.xxx;
+    vec3 x2 = x0 - i2 + C.yyy;
+    vec3 x3 = x0 - D.yyy;
+
+    i = mod289(i);
+    vec4 p = permute(permute(permute(
+               i.z + vec4(0.0, i1.z, i2.z, 1.0))
+             + i.y + vec4(0.0, i1.y, i2.y, 1.0))
+             + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+
+    float n_ = 0.142857142857;
+    vec3 ns = n_ * D.wyz - D.xzx;
+
+    vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+
+    vec4 x_ = floor(j * ns.z);
+    vec4 y_ = floor(j - 7.0 * x_);
+
+    vec4 x = x_ * ns.x + ns.yyyy;
+    vec4 y = y_ * ns.x + ns.yyyy;
+    vec4 h = 1.0 - abs(x) - abs(y);
+
+    vec4 b0 = vec4(x.xy, y.xy);
+    vec4 b1 = vec4(x.zw, y.zw);
+
+    vec4 s0 = floor(b0) * 2.0 + 1.0;
+    vec4 s1 = floor(b1) * 2.0 + 1.0;
+    vec4 sh = -step(h, vec4(0.0));
+
+    vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy;
+    vec4 a1 = b1.xzyw + s1.xzyw * sh.zzww;
+
+    vec3 p0 = vec3(a0.xy, h.x);
+    vec3 p1 = vec3(a0.zw, h.y);
+    vec3 p2 = vec3(a1.xy, h.z);
+    vec3 p3 = vec3(a1.zw, h.w);
+
+    vec4 norm = taylorInvSqrt(vec4(dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3)));
+    p0 *= norm.x;
+    p1 *= norm.y;
+    p2 *= norm.z;
+    p3 *= norm.w;
+
+    vec4 m = max(0.6 - vec4(dot(x0, x0), dot(x1, x1), dot(x2, x2), dot(x3, x3)), 0.0);
+    m = m * m;
+
+    return 42.0 * dot(m * m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
+  }
+`;
+
+/**
+ * The veil as one number, and the whole of what the three composite modes
+ * share. They differ only in what they do with it, which is why it lives out
+ * here rather than three times over.
+ *
+ * Declares no uniforms. Every including shader states the block itself, or the
+ * join checker cannot see them and a missing one is silently 0.
+ */
+const veilField = /* glsl */ `
+  /**
+   * Octave sum. Lacunarity is fixed at 2 rather than authored: the veil has no
+   * measured range to absorb what a second octave-shaping knob does to it, and
+   * gain already carries the difference between wisp and blob.
+   */
+  float veilFbm(vec3 dir, float perStep) {
+    float frequency = uFrequency;
+    float amplitude = 1.0;
+    float total = 0.0;
+    float range = 0.0;
+
+    // Statically bounded with a uniform break. The count is a slider and the
+    // loop is not allowed to be one — readRamp's constraint, one file over.
+    for (int i = 0; i < ${VEIL_OCTAVES}; i++) {
+      if (float(i) >= uOctaves) break;
+
+      // An octave whose features are finer than the pixels cannot be drawn,
+      // only sparkled at — and a procedural field has no mip to fall back on,
+      // so it has to be faded by hand. Cut as the period approaches two pixels,
+      // which is Nyquist. This is why detail dissolves toward the limb, where
+      // the sphere turns away and a pixel covers a great deal of it, instead of
+      // fizzing there.
+      float fade = 1.0 - smoothstep(0.25, 0.5, frequency * perStep);
+
+      total += snoise(dir * frequency + uOrigin) * amplitude * fade;
+
+      // The *unfaded* amplitude, so a dropped octave is genuinely dropped and
+      // the coarse ones are not boosted to stand in for it. The veil thins at
+      // the limb rather than growing a hard ring there.
+      range += amplitude;
+      frequency *= 2.0;
+      amplitude *= uGain;
+    }
+
+    return range > 0.0 ? total / range * ${VEIL_SPREAD.toFixed(2)} : 0.0;
+  }
+
+  /**
+   * Domain warp: push the sample point around by the field and put it back on
+   * the sphere. Renormalising is what keeps it a slide across the surface
+   * rather than a second shell. The three offsets are field.ts's, so nobody has
+   * to invent a second set of arbitrary distant numbers.
+   */
+  vec3 veilWarpAt(vec3 dir, float perStep) {
+    // Faded on the same rule as an octave, and it has to be: a warp that
+    // sparkles moves every sample point under it, so it would put the noise's
+    // own aliasing back however carefully the sum was band-limited.
+    float fade = 1.0 - smoothstep(0.25, 0.5, uFrequency * perStep);
+    if (uWarp <= 0.0 || fade <= 0.0) return dir;
+
+    vec3 p = dir * uFrequency + uOrigin;
+
+    return normalize(dir + uWarp * fade * vec3(
+      snoise(p + vec3(19.3, 7.1, 3.7)),
+      snoise(p + vec3(5.2, 23.9, 11.4)),
+      snoise(p + vec3(31.6, 2.8, 17.5))
+    ));
+  }
+
+  /**
+   * The fill, and the line around it. Two answers from one field walk, because
+   * the line is a contour *of* the fill and computing it anywhere else would be
+   * a second threshold that could disagree with the first.
+   */
+  float veilCover(vec3 dir, vec3 N, out float line) {
+    // How far the sample point moves from one pixel to the next. Taken on the
+    // unwarped direction and before any branch — derivatives have to be in
+    // uniform control flow, and the warp is a small enough push that its own
+    // rate is this one.
+    float perStep = length(fwidth(dir));
+
+    vec3 warped = veilWarpAt(dir, perStep);
+    float field = veilFbm(warped, perStep);
+
+    // Latitude bands at the warped direction, so the swirl reaches them. The
+    // body's strata, and the same reason they are not a barcode.
+    if (uBands > 0.0) {
+      field = mix(field, sin(warped.y * uBandFrequency * 3.14159265), uBands);
+    }
+
+    // Where the veil is allowed: an annulus in sin-latitude, not a cap. An
+    // aurora is a ring at sixty degrees and a cap centred on the pole is a hat.
+    // Read at the warped direction too, or the ring's edge would be the one
+    // ruled line on the world. Past a uPoleEdge of 2 the test cannot fail and
+    // the mask is simply gone, which is the cloud reading.
+    float mask = 1.0 - smoothstep(uPoleEdge * 0.5, uPoleEdge, abs(abs(warped.y) - uPole));
+
+    // The threshold is what turns a field into a shape. uEdge is its softness
+    // in field units; the derivative under it is a floor, so an edge is never
+    // harder than the screen can draw however fast the field runs beneath it.
+    float over = field * 0.5 + 0.5 - uCoverage;
+
+    // Taken before any branch — derivatives have to be in uniform control flow.
+    float perPixel = max(fwidth(over), 1e-6);
+    float soft = max(max(uEdge, perPixel * 1.5), 1e-4);
+
+    // The one thing a single-ink layer can shade is how much of it there is —
+    // it has no band coordinate to shift along, which is the whole difference
+    // from the surface. Signed, and the sign is which side of the light the
+    // veil belongs to: cloud burns off the dark half, an aurora is a night mark
+    // and lives at a negative value.
+    float lit = 0.5 + 0.5 * dot(N, uKeyDir);
+    float side = mix(1.0 - lit, lit, step(0.0, uKey));
+
+    float gate = mask * mix(1.0, side, abs(uKey)) * uVeil;
+
+    /**
+     * The line is drawn where the fill reaches *full*, not at the silhouette —
+     * and that one choice is the whole of how it behaves. At uEdge 0 the two
+     * are the same contour and the line is the silhouette; open uEdge and full
+     * coverage retreats up the field's own slope toward each blob's core,
+     * taking the line with it. So a diffuse veil is a soft mass with an outline
+     * drawn around its solid heart, and no second slider had to say so.
+     *
+     * It follows the field rather than any centre, so a long curtain keeps a
+     * line down its spine instead of collapsing to a dot — and a wisp whose
+     * peak never reaches full coverage has no line at all, which is right: it
+     * has no solid part to draw the edge of.
+     *
+     * The contour is uEdge and **not** soft, which is the same number only
+     * until the derivative floor bites. soft is a per-pixel quantity: anchoring
+     * a line to it gives every pixel a slightly different contour to be near,
+     * and the line comes apart into dots wherever the field runs fast. The
+     * authored edge is the same for the whole surface, so the line is one line.
+     *
+     * Width in pixels, from the derivative, exactly as contourAt does it on
+     * the surface — so it holds its weight at any widget size with no zoom.
+     */
+    line = 0.0;
+
+    if (uOutline > 0.0) {
+      float reach = uOutline * 0.5;
+      float pixels = abs(over - uEdge) / perPixel;
+
+      line = (1.0 - smoothstep(reach - 0.5, reach + 0.5, pixels)) * gate;
+    }
+
+    return smoothstep(-soft, soft, over) * gate;
+  }
+`;
+
+/**
+ * The body's geometry borrowed for its topology alone. Normalising throws the
+ * terrain away and re-inflates a true sphere, so no veil setting can touch the
+ * shape cache and a cloud is not a lumpy copy of the ground under it —
+ * `outlineVertex`'s move, front-faced and normalised.
+ *
+ * Under an orthographic camera a shell at 1 + uHeight differs from one at 1 in
+ * exactly two ways: the pattern is magnified by that factor, and the limb
+ * reaches that far past the body. There is no parallax to buy. So uHeight is
+ * honestly a *limb reach*, and wants authoring against `outline / zoom`.
+ *
+ * `position` is r(d)·d with r above zero across the whole authored range of
+ * `amplitude`, so normalize recovers d exactly. At an amplitude that drove r
+ * through zero the direction would flip, and the field with it.
+ */
+const veilVertex = /* glsl */ `
+  uniform float uHeight;
+
+  varying vec3 vDir;
+  varying vec3 vNormal;
+
+  void main() {
+    vDir = normalize(position);
+
+    // The shell's own normal is its radial. The baked attribute belongs to a
+    // surface this shader has just discarded.
+    vNormal = normalize(normalMatrix * vDir);
+
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(vDir * (1.0 + uHeight), 1.0);
+  }
+`;
+
+/**
+ * Mode 0. Plain alpha over one ramp tone — the only veil that carries an ink,
+ * and so the only one that can be authored wrong against the world beneath it.
+ * That is the whole reason the other two exist.
+ *
+ * It is also the first thing in the stack whose pixels are not ramp values: a
+ * partial alpha invents a grey between two slots. Known, and chosen.
+ */
+const veilAlphaFragment = /* glsl */ `
+  uniform vec3 uRamp[${RAMP_SLOTS}];
+  uniform float uTone;
+  uniform float uOutline;
+  uniform float uOutlineTone;
+  uniform float uVeil;
+  uniform vec3 uOrigin;
+  uniform float uFrequency;
+  uniform float uOctaves;
+  uniform float uGain;
+  uniform float uWarp;
+  uniform float uBands;
+  uniform float uBandFrequency;
+  uniform float uCoverage;
+  uniform float uEdge;
+  uniform float uPole;
+  uniform float uPoleEdge;
+  uniform float uKey;
+  uniform vec3 uKeyDir;
+
+  varying vec3 vDir;
+  varying vec3 vNormal;
+
+  ${rampRead}
+  ${simplex3D}
+  ${veilField}
+
+  void main() {
+    float line;
+    float cover = veilCover(vDir, normalize(vNormal), line);
+
+    // The line carries its own opacity rather than borrowing the fill's, so an
+    // outline is still a line where the cloud under it has gone to nothing.
+    float alpha = max(cover, line);
+    if (alpha <= 0.0) discard;
+
+    gl_FragColor = vec4(mix(readRamp(uTone), readRamp(uOutlineTone), line), alpha);
+
+    #include <colorspace_fragment>
+  }
+`;
+
+/**
+ * Mode 1, and no ink at all. What this writes is how far to invert what is
+ * already in the framebuffer; the material's blend does the rest, because
+ * src(1−dst) + dst(1−src) with a grey src is mix(dst, 1−dst, f). So a veil over
+ * the surface comes out as its opposite, over the outline as paper, and over
+ * open canvas as ink — the third mark in the medium that cannot be the wrong
+ * tone for its ground, and the one that makes an aurora work.
+ *
+ * `colorspace_fragment` is absent for the halo's reason: this is a blend factor
+ * and not a colour, and encoding it would bend the inversion.
+ *
+ * Its fixed point is mid-grey, exactly as the ghost's is — a veil over
+ * `--ink-400` is invisible however hard it inverts. If that shows on a real
+ * world the answer is mode 0 with an authored tone, not a repair here.
+ */
+const veilInvertFragment = /* glsl */ `
+  uniform float uOutline;
+  uniform float uVeil;
+  uniform vec3 uOrigin;
+  uniform float uFrequency;
+  uniform float uOctaves;
+  uniform float uGain;
+  uniform float uWarp;
+  uniform float uBands;
+  uniform float uBandFrequency;
+  uniform float uCoverage;
+  uniform float uEdge;
+  uniform float uPole;
+  uniform float uPoleEdge;
+  uniform float uKey;
+  uniform vec3 uKeyDir;
+
+  varying vec3 vDir;
+  varying vec3 vNormal;
+
+  ${simplex3D}
+  ${veilField}
+
+  void main() {
+    float line;
+    float invert = veilCover(vDir, normalize(vNormal), line);
+
+    // The outline has no ink here, because nothing in this mode does — it is
+    // the *hardest* inversion instead, so the edge reads as a crisp turn
+    // against a body that is only partly turned. veilOutlineTone is inert here,
+    // exactly as veilTone is.
+    invert = max(invert, line);
+    if (invert <= 0.0) discard;
+
+    gl_FragColor = vec4(vec3(invert), 1.0);
+  }
+`;
+
+/**
+ * Mode 2. Coverage as a *density* rather than as an opacity, so every pixel the
+ * veil draws is still one of the seven inks. An alpha invents a grey between
+ * two ramp slots, which is the one thing the system does not own; this is the
+ * only mode that can say "half a cloud" without saying it in a colour nobody
+ * authored.
+ *
+ * The cell is in device pixels and everything else in the widget is authored in
+ * CSS ones, so uDither divides it back — the outline's rule, and the reason a
+ * hairline read half-weight on retina.
+ */
+const veilDitherFragment = /* glsl */ `
+  uniform vec3 uRamp[${RAMP_SLOTS}];
+  uniform float uTone;
+  uniform float uOutline;
+  uniform float uOutlineTone;
+  uniform float uDither;
+  uniform float uVeil;
+  uniform vec3 uOrigin;
+  uniform float uFrequency;
+  uniform float uOctaves;
+  uniform float uGain;
+  uniform float uWarp;
+  uniform float uBands;
+  uniform float uBandFrequency;
+  uniform float uCoverage;
+  uniform float uEdge;
+  uniform float uPole;
+  uniform float uPoleEdge;
+  uniform float uKey;
+  uniform vec3 uKeyDir;
+
+  varying vec3 vDir;
+  varying vec3 vNormal;
+
+  ${rampRead}
+  ${simplex3D}
+  ${veilField}
+
+  /**
+   * Bayer 4x4, built by nesting the 2x2 rather than indexed out of an array:
+   * dynamic indexing is not portable in GLSL ES 1.00, which is the same reason
+   * readRamp is a loop. Returns 0 to 15/16 in sixteenths.
+   */
+  float bayer2At(vec2 at) {
+    vec2 cell = floor(at);
+
+    return fract(cell.x * 0.5 + cell.y * cell.y * 0.75);
+  }
+
+  float bayer4At(vec2 at) {
+    return bayer2At(at * 0.5) * 0.25 + bayer2At(at);
+  }
+
+  void main() {
+    float line;
+    float cover = veilCover(vDir, normalize(vNormal), line);
+
+    // The fill is stippled and the outline is not: a dithered hairline is not a
+    // line, it is a dotted one, and at these widths it would come apart
+    // entirely. So the line takes a hard half-cut — aliased, which is the mode
+    // this is, and the only mode where that is the consistent answer.
+    float drawn = step(0.5, line);
+    if (max(cover - bayer4At(gl_FragCoord.xy / max(uDither, 1.0)), drawn) <= 0.0) discard;
+
+    gl_FragColor = vec4(readRamp(mix(uTone, uOutlineTone, drawn)), 1.0);
+
+    #include <colorspace_fragment>
+  }
+`;
+
 export function createSurfaceMaterial() {
   return new THREE.ShaderMaterial({
     vertexShader: surfaceVertex,
@@ -1026,6 +1480,147 @@ export function createSurfaceMaterial() {
       uShadeDepth: { value: 0 },
     },
   });
+}
+
+/**
+ * The three veil materials, and the reason there are three rather than one with
+ * a mode uniform: two of them are blends, and a blend is a construction flag.
+ *
+ * Their uniform blocks are written out in full three times over, which is not
+ * an oversight. `uniforms: { ...veilUniforms() }` defeats the join checker's
+ * block match and every declared uniform comes back MISSING — and a uniform the
+ * checker cannot see is a uniform that is silently 0. Seventeen duplicated
+ * lines is what three modes cost to stay checked.
+ *
+ * Every one of them: FrontSide, because the vertex shader emits a true sphere,
+ * so the winding is the sphere's and the rasteriser culls the far half exactly.
+ * A soul needs a discard for this; a closed shell does not.
+ *
+ * And no depth test, which is the load-bearing one. The shell was built by
+ * throwing the terrain away; testing it against a buffer the *lumpy* body wrote
+ * would put every lump straight back in, and the veil's picture would then
+ * depend on `amplitude` — a slider in another group that says nothing about
+ * veils. The far half is culled and the limb is meant to stand past the drawn
+ * silhouette, so there is nothing left for a depth test to decide.
+ */
+export function createVeilAlphaMaterial() {
+  return new THREE.ShaderMaterial({
+    vertexShader: veilVertex,
+    fragmentShader: veilAlphaFragment,
+    side: THREE.FrontSide,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    uniforms: {
+      uRamp: { value: readInkRamp() },
+      uTone: { value: 0 },
+      uOutline: { value: 0 },
+      uOutlineTone: { value: 6 },
+      uHeight: { value: 0.03 },
+      uVeil: { value: 0 },
+      uOrigin: { value: new THREE.Vector3() },
+      uFrequency: { value: 2.6 },
+      uOctaves: { value: 4 },
+      uGain: { value: 0.55 },
+      uWarp: { value: 0.28 },
+      uBands: { value: 0 },
+      uBandFrequency: { value: 5 },
+      uCoverage: { value: 0.52 },
+      uEdge: { value: 0.08 },
+      uPole: { value: 0 },
+      uPoleEdge: { value: 2 },
+      uKey: { value: 0 },
+      uKeyDir: { value: new THREE.Vector3(0, 0, 1) },
+    },
+  });
+}
+
+/** Mode 1, on the halo's blend — see `veilInvertFragment` for what it buys. */
+export function createVeilInvertMaterial() {
+  return new THREE.ShaderMaterial({
+    vertexShader: veilVertex,
+    fragmentShader: veilInvertFragment,
+    side: THREE.FrontSide,
+    transparent: true,
+    blending: THREE.CustomBlending,
+    blendEquation: THREE.AddEquation,
+    blendSrc: THREE.OneMinusDstColorFactor,
+    blendDst: THREE.OneMinusSrcColorFactor,
+    // Colour only. The same factors on the alpha channel would drive it to zero
+    // wherever the veil drew — a hole punched in the canvas, on any context
+    // that has an alpha channel at all.
+    blendSrcAlpha: THREE.ZeroFactor,
+    blendDstAlpha: THREE.OneFactor,
+    depthTest: false,
+    depthWrite: false,
+    uniforms: {
+      uOutline: { value: 0 },
+      uHeight: { value: 0.03 },
+      uVeil: { value: 0 },
+      uOrigin: { value: new THREE.Vector3() },
+      uFrequency: { value: 2.6 },
+      uOctaves: { value: 4 },
+      uGain: { value: 0.55 },
+      uWarp: { value: 0.28 },
+      uBands: { value: 0 },
+      uBandFrequency: { value: 5 },
+      uCoverage: { value: 0.52 },
+      uEdge: { value: 0.08 },
+      uPole: { value: 0 },
+      uPoleEdge: { value: 2 },
+      uKey: { value: 0 },
+      uKeyDir: { value: new THREE.Vector3(0, 0, 1) },
+    },
+  });
+}
+
+/** Mode 2. The only veil whose every pixel is still one of the seven inks. */
+export function createVeilDitherMaterial() {
+  return new THREE.ShaderMaterial({
+    vertexShader: veilVertex,
+    fragmentShader: veilDitherFragment,
+    side: THREE.FrontSide,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    uniforms: {
+      uRamp: { value: readInkRamp() },
+      uTone: { value: 0 },
+      uOutline: { value: 0 },
+      uOutlineTone: { value: 6 },
+      uDither: { value: 1 },
+      uHeight: { value: 0.03 },
+      uVeil: { value: 0 },
+      uOrigin: { value: new THREE.Vector3() },
+      uFrequency: { value: 2.6 },
+      uOctaves: { value: 4 },
+      uGain: { value: 0.55 },
+      uWarp: { value: 0.28 },
+      uBands: { value: 0 },
+      uBandFrequency: { value: 5 },
+      uCoverage: { value: 0.52 },
+      uEdge: { value: 0.08 },
+      uPole: { value: 0 },
+      uPoleEdge: { value: 2 },
+      uKey: { value: 0 },
+      uKeyDir: { value: new THREE.Vector3(0, 0, 1) },
+    },
+  });
+}
+
+/**
+ * The mode in force, as a material. Not a factory *argument*, and that is
+ * load-bearing: `uniform-join.mjs` only recognises `create...Material()` with no
+ * parameters, so a factory that took the mode would drop off the join check
+ * entirely and a missing uniform would go back to being silent.
+ */
+export function veilMaterialFor(ink: number) {
+  const mode = Math.round(ink);
+
+  if (mode === 1) return createVeilInvertMaterial();
+  if (mode === 2) return createVeilDitherMaterial();
+
+  return createVeilAlphaMaterial();
 }
 
 export function createOutlineMaterial() {
@@ -1468,6 +2063,61 @@ export function syncSurfaceUniforms(material: THREE.ShaderMaterial, visual: Plan
   u.uContourShadowTone.value = Math.round(visual.contourShadowTone);
   u.uShadeSteps.value = Math.max(1, Math.round(visual.shadeSteps));
   u.uShadeDepth.value = visual.shadeDepth;
+}
+
+/**
+ * The veil's noise-domain offset, from the world's own seed. There is no
+ * `veilSeed` on purpose: the veil is this world's weather and not a second
+ * world, so reseeding in the lab has to move both together.
+ *
+ * Folded small because `simplex3D` wraps its lattice at 289 cells — a raw
+ * five-digit seed lands outside it and every world would share one corner of
+ * the field. Three mutually irrational strides, so consecutive seeds land far
+ * apart instead of walking one line.
+ */
+const VEIL_ORIGIN = new THREE.Vector3();
+
+function veilOriginOf(seed: number) {
+  const at = Math.abs(seed);
+
+  return VEIL_ORIGIN.set(
+    ((at * 0.7548776662) % 1) * 128,
+    ((at * 0.5698402909) % 1) * 128,
+    ((at * 0.6180339887) % 1) * 128,
+  );
+}
+
+export function syncVeilUniforms(material: THREE.ShaderMaterial, visual: PlanetVisual) {
+  const u = material.uniforms;
+
+  u.uVeil.value = Math.max(0, visual.veil);
+  u.uHeight.value = Math.max(0, visual.veilHeight);
+  u.uOrigin.value.copy(veilOriginOf(visual.seed));
+  u.uFrequency.value = visual.veilFrequency;
+  u.uOctaves.value = Math.max(1, Math.round(visual.veilOctaves));
+  u.uGain.value = visual.veilGain;
+  u.uWarp.value = visual.veilWarp;
+  u.uBands.value = visual.veilBands;
+  u.uBandFrequency.value = visual.veilBandFrequency;
+  u.uCoverage.value = visual.veilCoverage;
+  u.uEdge.value = visual.veilEdge;
+  u.uPole.value = Math.abs(visual.veilPole);
+  u.uPoleEdge.value = Math.max(0.02, visual.veilPoleEdge);
+  u.uKey.value = visual.veilKey;
+  u.uOutline.value = Math.max(0, visual.veilOutline);
+
+  // The aim is the system's, not the world's — read ambiently, as the ramp is.
+  const key = keyLight.direction;
+  u.uKeyDir.value.set(key.x, key.y, key.z);
+
+  // The slots only some of the three modes have, guarded rather than declared
+  // into shaders that do not use them. The inversion carries no ink at all —
+  // the halo's argument, and why it has no `uRamp` either — and only the dither
+  // is measured in device pixels. A uniform a shader does not declare is one
+  // the join check calls unused, and it would be right.
+  if (u.uTone) u.uTone.value = Math.round(visual.veilTone);
+  if (u.uOutlineTone) u.uOutlineTone.value = Math.round(visual.veilOutlineTone);
+  if (u.uDither) u.uDither.value = Math.max(1, Math.round(window.devicePixelRatio || 1));
 }
 
 /**

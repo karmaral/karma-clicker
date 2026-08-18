@@ -72,7 +72,11 @@ Branch `dev-next`. Last commit `194f917 rebuild checkpoint 9` — sessions 12–
 13. **A world crossing between screens.** The spin and the swarm now share one
     keyed clock, so Detail → Overview → Detail should continue rather than
     restart. Watch the *handover*, not the turn: a jump means the clamp is wrong.
-14. **Overview steps 1–4 have never been played.** DevPanel *unlock all planets*
+14. **A still's hairline, and the face it freezes on.** `toStill` drops `outline`
+    to 1 and `spin` to 0, so what ships is `turn` — authored on its own slider,
+    with two snapshots under it in the panel. `contour` is untouched and is the
+    next candidate. §*A still is the world with two fields taken off it*.
+15. **Overview steps 1–4 have never been played.** DevPanel *unlock all planets*
     makes the axis walkable. Watch: Behind invisible at beat 10, beat 12 firing
     at all, and the right column's band label — authored in two files with
     nothing enforcing the match.

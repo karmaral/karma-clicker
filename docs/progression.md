@@ -1545,26 +1545,51 @@ Five things this turns on:
   This is not economy: a selected row has `--surface-alt` under it and the rest
   have `--surface`, so a ground baked into the picture would show as a square of
   the wrong tone on exactly the row you clicked.
-- **Spin zeroed for the capture.** A manual frame's delta is however long since
-  the last one, so a turning world would land on a different face every time.
+- **A still is not the world as authored** — `toStill`, below.
 - **One pending job per asker.** A lab slider drags at sixty asks a second and
   only the last answer is ever drawn.
 
-Two numbers stop being px-constant at row scale, and they are the whole of the
-open question — whether these silhouettes read at forty pixels. `bleed` is
-`outline / zoom`, and every world ships `outline: 2`: at 400px that is 0.8% of
-the body radius, at 48px it is around 9%. `contour` is 1–1.5px against bands
-44px across. Chunky ink may be exactly right for a list row, the way an icon is
-chunky, but it is a choice. The `#stills` strip in the lab is where it gets
-looked at — the family at five row sizes with the framing on a slider, forty-five
-pictures, which only exists because they cost nothing.
-
-If it reads badly the answer is a derivation for stills, not an edit to the nine
-records. `detail` at 26–36 is ~17k triangles, which would matter for a live view
-and does not matter at all for something drawn once.
+The `#stills` strip in the lab is where the size reading gets made — the family
+at five row sizes with the framing on a slider, forty-five pictures, which only
+exists because they cost nothing. `detail` at 26–36 is ~17k triangles, which
+would matter for a live view and does not matter at all for something drawn
+once, so it is left alone.
 
 **The shared renderer is parked, not abandoned** — see *Parked*. It is what a
 screen wanting many *live* worlds would need, and nothing wants that yet.
+
+### A still is the world with two fields taken off it
+
+`toStill` sits beside `PlanetVisual` and overrides exactly two, both because a
+picture is small and does not move. It is applied in the renderer, so nothing
+that draws a still can forget it, and the cache key is still the *source*
+visual — the derivation is total, so it adds nothing to distinguish.
+
+**`outline: 1`.** The ink is authored in pixels and `bleed` is `outline / zoom`,
+with `zoom` being `px / frame`. Every world ships 2, which is 0.8% of the body
+radius at 400px and around 9% at a 48px row: the same number, seven times the
+weight, with nothing edited. A hairline is a list row's ink. This is a still's
+number and not the nine records' — the authored 2 is right for the sizes it was
+judged at, and the derivation is what keeps one from having to be wrong for the
+other. `contour` is the next candidate and has not been changed: 1–1.5px
+hairlines against bands 44px across may merge into one grey, and that wants
+looking at rather than guessing.
+
+**`spin: 0`, so the face is `turn`.** The spin has to go — a manual frame's
+delta is however long since the last one, so a turning world would land
+somewhere else every capture. What that leaves is `turn`, which already sits
+outside the spin and inside the tilt. Its doc has said from the start that it is
+*"a starting phase on a world that turns, the whole choice of what a seed shows
+on one that does not"*, and a still is precisely a world that does not turn. So
+**the field already existed** and no second one was added: on the live view
+`turn` is a phase the spin walks away from inside a second, and on the still it
+is everything.
+
+What was missing was not a field but a *view*. Every planet on the lab page
+turns, so the one thing the lab could not show was the face that ships. The
+`turn` slider now carries two snapshots under it, at 72 and 40px — the same
+`under` snippet the pucks use — redrawn as the slider moves. Two sizes rather
+than one because the thing that differs between them is the weight of the ink.
 
 ### The world keeps its own time
 
@@ -1604,6 +1629,146 @@ Probed off the model, six groups: keyed clocks are one object and unkeyed ones
 are not, a frame turns rate × delta, a second reader in a frame adds nothing, a
 long gap clamps to one step, and a wall clock that goes backwards does not unwind
 the world.
+
+### A second surface, on its own clock
+
+The veil is a cloud deck at one tuning and an aurora at another, and it is the
+first thing the widget draws that is *on* the world rather than beside it. One
+shell, eighteen fields, and every world ships it at `veil: 0`.
+
+**Its field is in the shader, and that is a departure with a reason.** The body's
+is baked on the CPU because `buildGeometry`, `placeAnchors` and `pulses.flash`
+must all sample one `SurfaceField` — a marker and the terrain under it can never
+disagree. Nothing stands on a cloud, so the constraint does not reach the veil,
+and dropping it is what makes the layer nearly free: the shell borrows the body's
+*cached* geometry for its topology alone and renormalises it to a true sphere in
+the vertex shader, so there is no second mesh, no second cache key, and **not one
+`shape: true` field in the group**. Sixteen sliders that never rebuild anything.
+
+**A procedural field has no mip-map, so it is band-limited by hand.** This is the
+other half of the price of evaluating in a fragment. `field.ts` bakes its noise
+per vertex and the rasteriser interpolates, so the body cannot alias; the veil
+reads the field afresh at every pixel, and any octave whose features are finer
+than a pixel is pure sparkle — worst at the limb, where the sphere turns away
+and one pixel covers a great deal of it, and *crawling* rather than merely
+noisy, because the veil turns. So each octave is faded out as its period
+approaches two pixels, and so is the warp, which would otherwise put the
+aliasing back by moving every sample point under it.
+
+The fade divides by the **unfaded** amplitude sum, so a dropped octave is
+genuinely dropped rather than having the coarse ones boosted to stand in for it:
+the veil loses detail toward the limb instead of growing a hard ring there. It
+is also scale-aware for free — a 48px still drops nearly everything fine, a
+400px view keeps it.
+
+The price is one number. A fragment cannot probe its own field, so where
+`field.ts` measures its reachable range across 4096 directions, the veil asserts
+it once as `VEIL_SPREAD`. The consequence is real and worth knowing at the
+slider: **`veilCoverage` re-means itself slightly when `veilOctaves` moves**,
+which `land` on the body never does. That is also why there is no
+`veilLacunarity` — a second octave-shaping knob with nothing to absorb it would
+make the threshold drift for no picture.
+
+**Three composite modes, because the ramp has seven inks and no gradient.** A
+translucent layer has to say what "half covered" means in a medium that owns no
+tone between two slots, and there are three honest answers, so all three ship on
+`veilInk`. Mode 0 is plain alpha over an authored tone — the only one that names
+an ink, and so the only one that can be wrong about the world under it; it is
+also the first thing in the stack whose pixels are not ramp values. Mode 1 is the
+halo's inversion, which has no tone of its own: over paper it comes out dark,
+over a dark world pale, over the outline paper again. Mode 2 is an ordered
+dither, the only mode whose every pixel is still one of the seven.
+
+Mode 1 is what makes an aurora work, and it is not a preference. An aurora over
+the unlit limb has to *lighten* it, and a cloud over paper has to darken — the
+inversion is one blend that does both, because it has nothing of its own to be.
+Its fixed point is `--ink-400`, exactly as the ghost's is, so a veil over
+mid-grey is invisible however hard it inverts; the answer there is mode 0 with a
+tone, not a repair in the shader.
+
+**No depth test, and the reason is not z-fighting.** The shell was built by
+throwing the terrain away. Testing it against a buffer the *lumpy* body wrote
+would put every lump straight back in — `cool_2` at `amplitude: 0.14` would wear
+lace over its peaks and `banded` would not — so the veil's picture would come to
+depend on a slider in another group that says nothing about veils. The far half
+needs no rule either: the vertex shader emits a true sphere, so the winding is
+the sphere's and `FrontSide` culls it exactly. A soul needs a discard for this
+because a billboard has no winding; a closed shell does not. What is left is a
+limb standing past the drawn silhouette, which is `veilHeight`'s only visible
+job — under an orthographic camera a shell buys no parallax, so that field is
+honestly a limb reach and wants reading against `outline / zoom`.
+
+**The pole mask is an annulus, not a cap.** A signed knob over `|y|` puts the
+maximum on the pole, which is a hat. `veilPole` is the sin-latitude the band is
+centred on and `veilPoleEdge` its width, so a ring at sixty degrees is sayable
+and "everywhere" falls out of a width past 2 rather than needing a case of its
+own.
+
+**The outline is placed by a contour, not by an inset.** `veilOutline` draws a
+line at the contour where the fill reaches *full* coverage — the inner edge of
+the feather — rather than at the silhouette. That one choice is the whole of its
+behaviour: at a hard edge the two contours are a pixel and a half apart and the
+line is the silhouette, and opening `veilEdge` sends full coverage retreating up
+the field's own slope toward each blob's core, taking the line with it. A
+diffuse veil is then a soft mass with its solid heart drawn around, and **no
+second slider had to say where the line sits** — the one that made the veil
+diffuse already did.
+
+It follows the field rather than any centre, so a long curtain keeps a line down
+its spine instead of collapsing to a dot, and a wisp whose peak never reaches
+full coverage carries no line at all — right, because it has no solid part to be
+the edge of. Width comes from the derivative in pixels, `contourAt`'s trick on
+the surface, so it holds its weight at any widget size and needs no zoom.
+
+**The contour is `veilEdge`, not the feather's floored width, and the difference
+is a whole class of bug.** The fill's softness is `max(veilEdge, fwidth × 1.5)`
+— a *per-pixel* quantity, because the floor is what antialiases the fill. The
+line was first anchored to that, which gave every pixel a slightly different
+contour to be near: wherever the field ran fast the line came apart into
+scattered dots. Anchored to the authored `veilEdge` instead it is one contour
+for the whole surface and draws as one line — and at `veilEdge` 0 it now sits
+*exactly* on the silhouette rather than a pixel and a half inside it, which is
+what the field was asked for in the first place.
+
+Each mode does what it can with it. Mode 0 mixes the outline's tone into the
+fill and takes the higher of the two opacities, so a line survives where the
+cloud under it has gone to nothing. Mode 1 has no ink at all, so the line is the
+*hardest* inversion instead — a crisp turn against a body only partly turned —
+and `veilOutlineTone` is inert there exactly as `veilTone` is. Mode 2 stipples
+the fill and does **not** stipple the line: a dithered hairline is a dotted one,
+and at these widths it would come apart. The line takes a hard half-cut there,
+aliased, which is the mode this is.
+
+**`veilKey` differs in kind from the body's key.** The surface composites its
+shade as a shift along the ramp; one ink has no band coordinate to shift along,
+so the only thing the veil's key can shade is *how much veil there is*. Signed,
+and the sign is which side of the light it belongs to — a cloud burns off the
+dark half, an aurora lives on it. Keeping it on coverage is also what lets all
+three modes consume one number, so the key does not have to mean three things.
+
+**A second angle, not a second clock.** `WorldClock` gains `veilAngle` and
+`advanceClock` writes both from one wall-time step. Two calls would add `elapsed`
+twice and leave `at` at the second read, so the swarm would run double and both
+angles half. Both live on the shared keyed record, so two screens on one world
+share the veil's phase exactly as they already share the body's, and `toStill`
+zeroes `veilSpin` beside `spin` — the snapshot renderer keeps one scene warm
+across a whole batch, so a live veil would put a different sky on every world in
+a family strip. No `veilTurn` was needed: the veil's group hangs inside `turn`,
+so the slider that already chooses a still's face chooses its sky too.
+
+Two readings to start from, neither yet seen rendered:
+
+```
+cloud    veil 0.55  ink 0  height 0.03  pole 0     edge 0.08  key  0.4  spin  0.05
+aurora   veil 0.9   ink 1  height 0.06  pole 0.86  edge 0.02  key -0.8  spin -0.22
+```
+
+**And one risk named before it is built.** `SnapshotRenderer` draws with
+`backgroundToken: null` and no pulse, and the halo — the only other inverting
+mark — is drawn `{#if pulse}`. So mode 1 would be the first inverting mark ever
+to reach a snapshot, and it would invert a transparent buffer rather than the
+row's ground. If the limb annulus comes out solid paper on a still where it reads
+correctly live, mode 1 is a live-view mode and `toStill` should say so.
 
 ### Open
 

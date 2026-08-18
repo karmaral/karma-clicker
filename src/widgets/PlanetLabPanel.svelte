@@ -2,7 +2,8 @@
   import LabPanel from './LabPanel.svelte';
   import Puck from './Puck.svelte';
   import {
-    keyLight, LEAN_REACH, TILT_REACH, VISUAL_GROUPS, VISUAL_PARAMS, type PlanetVisual,
+    keyLight, LEAN_REACH, PlanetStill, TILT_REACH, VISUAL_GROUPS, VISUAL_PARAMS,
+    type PlanetVisual,
   } from './planet';
   import { planetLab } from './planet-lab.svelte';
 
@@ -93,6 +94,20 @@
         <span class="num">
           {current.lean.toFixed(2)}<br />{current.tilt.toFixed(2)}
         </span>
+      </div>
+    {/if}
+
+    <!--
+      What the slider above is actually for. Every live view on the page is
+      turning, so the face a still ships is the one thing the lab could not
+      show: these are snapshots, spin frozen and ink thinned, redrawn as the
+      slider moves. Two sizes because the ink is what changes between them.
+    -->
+    {#if key === 'turn'}
+      <div class="row aim">
+        <span class="id">Still face</span>
+        <PlanetStill visual={current} widthPx={72} />
+        <PlanetStill visual={current} widthPx={40} />
       </div>
     {/if}
   {/snippet}

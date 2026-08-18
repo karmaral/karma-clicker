@@ -9,6 +9,7 @@
   import type * as THREE from 'three';
   import PlanetScene from './PlanetScene.svelte';
   import { snapshots, type SnapshotJob } from './snapshot';
+  import { toStill } from './visual';
 
   interface Props {
     width: number;
@@ -23,11 +24,11 @@
   let current = $state.raw<SnapshotJob>();
 
   /**
-   * Spin is zeroed rather than left alone. A manual frame's delta is however
-   * long since the last one, so a turning world would land on a different face
-   * every render — and a still picture has no use for the rotation anyway.
+   * Not the world as authored: a still freezes the spin and thins the ink, and
+   * `toStill` is where both are argued. The cache key is the source visual, and
+   * the derivation is total, so it does not need to be in the key.
    */
-  const visual = $derived(current ? { ...current.visual, spin: 0 } : undefined);
+  const visual = $derived(current && toStill(current.visual));
 
   let isDraining = false;
 

@@ -46,10 +46,10 @@
   --ls-label:.16em;
   --ls-label-sm:.14em;
 
-  --rule-strong:2px solid var(--ink-900);
-  --rule-section:1px solid var(--ink-900);
-  --rule-row:1px solid var(--line-100);
-  --rule-card:1px solid var(--line-200);
+  --rule-strong: 2px solid var(--ink-900);
+  --rule-section: 1px solid var(--ink-900);
+  --rule-row: 1px solid var(--line-100);
+  --rule-card: 1px solid var(--line-200);
 
   --sp-1:4px;
   --sp-2:8px;

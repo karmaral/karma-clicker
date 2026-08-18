@@ -153,19 +153,23 @@
   const clock = $derived(getClock(clockKey));
 
   const isTurning = $derived(Boolean(visual.spin));
+  /** Drawn *and* moving. A veil at rest is geometry, and geometry asks for no frames. */
+  const isVeiling = $derived(visual.veil > 0 && Boolean(visual.veilSpin));
   const hasSwarm = $derived(Boolean(swarm && cohorts?.length));
 
-  /** How far the body has turned. The only part of the clock that renders. */
+  /** How far each layer has turned. The only parts of the clock that render. */
   let spinAngle = $state(0);
+  let veilAngle = $state(0);
 
   useTask(() => {
     // A world that neither turns nor carries souls has no clock to keep.
-    if (!isTurning && !hasSwarm) return;
+    if (!isTurning && !isVeiling && !hasSwarm) return;
 
-    advanceClock(clock, visual.spin);
+    advanceClock(clock, visual.spin, visual.veilSpin);
     spinAngle = clock.angle;
+    veilAngle = clock.veilAngle;
 
-    if (isTurning) invalidate();
+    if (isTurning || isVeiling) invalidate();
   });
 
   /**
@@ -235,7 +239,7 @@
 
 <T.OrthographicCamera makeDefault position={[0, 0, 5]} {zoom} />
 
-<PlanetBody {visual} {zoom} {spinAngle} {pulse} {pulses}>
+<PlanetBody {visual} {zoom} {spinAngle} {veilAngle} {pulse} {pulses}>
   {#snippet standing()}
     {#if harness && loops}
       <Harness visual={harness} {loops} {zoom} {rim} size={worldSize} />
