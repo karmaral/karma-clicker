@@ -177,6 +177,39 @@ export interface PlanetVisual {
   contourTone: number;
   contourShadowTone: number;
   /**
+   * The grain, and the only noise in the body's fragment. Both of the body's
+   * quantisers are exact level sets, so a smooth field crosses one as a perfect
+   * curve — this displaces the coordinate before the floor, and the boundary
+   * comes apart into paper instead.
+   *
+   * `grain` is how far the texture band wanders, in **slots**, and `shadeGrain`
+   * is the same for the shade level. Two amounts because they are two pictures:
+   * one is the world's own pattern and the other is where the light falls on it,
+   * and a world can want its terrain broken up without its terminator going with
+   * it.
+   *
+   * One noise sample under both, though, and that is deliberate. The veil
+   * decorrelates its two cuts because they are one ruling read twice, and
+   * sharing collapsed every shoulder onto one slot; here the two coordinates are
+   * already independent fields, so a shared displacement is a grain in the
+   * *paper* rather than a correlation — and it is one `snoise` instead of two.
+   *
+   * `grainScale` is that noise's scale, shared, and it is the whole of the
+   * difference between a rough edge and a mottled one. Faded to nothing as its
+   * period approaches two pixels, `veilFbm`'s rule with its constants: the limb
+   * compresses the sphere hard, and an unfaded grain fizzes there. To nothing
+   * and not to its mean, because a grain stuck at its mean is a constant offset
+   * on the band, which is `bias` said badly.
+   *
+   * A contour follows the grained band rather than the clean one, so the line
+   * stays coincident with the edge it is the boundary of. Its *width* comes off
+   * the clean rate — a rate carrying the displacement spikes wherever the noise
+   * runs fast, and anything scaled by it thins to nothing there.
+   */
+  grain: number;
+  shadeGrain: number;
+  grainScale: number;
+  /**
    * How the shade composites. `shadeSteps` is its granularity — 1 is a
    * three-tone terminator, 2 a five-tone one — and `shadeDepth` is how many ramp
    * slots each level moves the texture's tone by. At 0 the picture is the
@@ -299,9 +332,20 @@ export interface PlanetVisual {
    */
   veilKey: number;
   /**
-   * Its own rate, integrated on its own angle off the world's one clock. Here
-   * rather than in `Motion` because `Motion` is how the *world* is held, and a
-   * session tuning the veil wants its rate under its coverage.
+   * Its **drift over the ground**, not a rate of its own: the veil turns at
+   * `spin + veilSpin`, so 0 is a deck locked to the surface and travelling with
+   * it, and either direction from there is how fast it pulls away — ahead of the
+   * world one way, against it the other.
+   *
+   * Relative because that is the reading the eye has. An absolute rate makes
+   * authoring a cloud an arithmetic problem — hold `spin` in your head, solve
+   * for the difference — and lets a later edit to `spin` silently re-mean every
+   * veil under it. Nothing downstream changed: the veil group is still a sibling
+   * of the spin group and `clock.veilAngle` is still an absolute angle. Only
+   * what feeds it is a sum.
+   *
+   * Here rather than in `Motion` because `Motion` is how the *world* is held,
+   * and a session tuning the veil wants its rate under its coverage.
    */
   veilSpin: number;
   /**
@@ -338,8 +382,8 @@ export interface PlanetVisual {
    * field's. They meet at a tone of 0.4, where the picture stops changing.
    *
    * `veilHatchBreak` is the fraction of the surface where no stroke is drawn at
-   * all, cut from a one-octave noise, and `veilHatchGrain` is that noise's
-   * scale — so break is how much is gone and grain is how big the gaps are. At
+   * all, cut from a one-octave noise, and `veilHatchGrainScale` is that noise's
+   * scale — so break is how much is gone and the scale is how big the gaps are. At
    * 0 nothing is cut and the mode is plain line hatching; at 1 only solid tone
    * survives. Each phase breaks on its own offset of the noise, and the second
    * offset does double duty: it is also what displaces the tone's strokes off
@@ -375,7 +419,7 @@ export interface PlanetVisual {
   veilHatchWidth: number;
   veilHatchAlpha: number;
   veilHatchBreak: number;
-  veilHatchGrain: number;
+  veilHatchGrainScale: number;
   veilHatchShade: number;
   veilHatchSoften: number;
 
@@ -450,9 +494,14 @@ export const VISUAL_PARAMS: VisualParam[] = [
   { key: 'contour', label: 'Contour px', group: 'Texture', min: 0, max: 4, step: 0.25 },
   { key: 'contourTone', label: 'Contour lit', group: 'Texture', min: 0, max: 6, step: 1 },
   { key: 'contourShadowTone', label: 'Contour shadow', group: 'Texture', min: 0, max: 6, step: 1 },
+  { key: 'grain', label: 'Grain', group: 'Texture', min: 0, max: 2, step: 0.01 },
+  // Shared with `shadeGrain`, and sat here because this is where a grain is
+  // first reached for. One noise under both — see the field's comment.
+  { key: 'grainScale', label: 'Grain scale', group: 'Texture', min: 4, max: 80, step: 0.5 },
 
   { key: 'shadeDepth', label: 'Shade depth', group: 'Shade', min: -6, max: 6, step: 0.5 },
   { key: 'shadeSteps', label: 'Shade steps', group: 'Shade', min: 1, max: 6, step: 1 },
+  { key: 'shadeGrain', label: 'Shade grain', group: 'Shade', min: 0, max: 2, step: 0.01 },
   { key: 'relief', label: 'Relief', group: 'Shade', min: -0.6, max: 0.6, step: 0.005, shape: true },
   { key: 'key', label: 'Key', group: 'Shade', min: 0, max: 1.5, step: 0.01 },
   { key: 'rim', label: 'Rim', group: 'Shade', min: -1.5, max: 1.5, step: 0.01 },
@@ -486,7 +535,7 @@ export const VISUAL_PARAMS: VisualParam[] = [
   { key: 'veilHatchWidth', label: 'Hairline px', group: 'Veil', min: 0, max: 12, step: 0.1 },
   { key: 'veilHatchAlpha', label: 'Hatch alpha', group: 'Veil', min: 0, max: 1, step: 0.01 },
   { key: 'veilHatchBreak', label: 'Hatch break', group: 'Veil', min: 0, max: 1, step: 0.01 },
-  { key: 'veilHatchGrain', label: 'Hatch grain', group: 'Veil', min: 4, max: 80, step: 0.5 },
+  { key: 'veilHatchGrainScale', label: 'Hatch grain scale', group: 'Veil', min: 4, max: 80, step: 0.5 },
   { key: 'veilHatchShade', label: 'Hatch shade', group: 'Veil', min: 0, max: 4, step: 0.5 },
   { key: 'veilHatchSoften', label: 'Hatch soften px', group: 'Veil', min: 0, max: 20, step: 0.5 },
 
@@ -547,6 +596,12 @@ export const DEFAULT_VISUAL: PlanetVisual = {
   contour: 0,
   contourTone: 6,
   contourShadowTone: 6,
+
+  /** Off, and the scale below is what the two amounts open onto. */
+  grain: 0,
+  shadeGrain: 0,
+  grainScale: 30,
+
   shadeSteps: 2,
   shadeDepth: 0,
   relief: 0,
@@ -572,12 +627,13 @@ export const DEFAULT_VISUAL: PlanetVisual = {
   veilPole: 0,
   veilPoleEdge: 2,
   veilKey: 0.4,
-  veilSpin: 0.05,
+  /** Locked to the ground: a drift is a choice, and 0 is the deck riding its world. */
+  veilSpin: 0,
   veilHatchDensity: 24,
   veilHatchWidth: 1,
   veilHatchAlpha: 0.85,
   veilHatchBreak: 0.45,
-  veilHatchGrain: 30,
+  veilHatchGrainScale: 30,
   veilHatchShade: 2,
   veilHatchSoften: 0,
 
@@ -625,7 +681,9 @@ export const STILL_OUTLINE = 1;
  * different face every capture. `veilSpin` goes with it, and for that reason
  * twice over: the veil integrates its own angle off the same wall clock, and
  * the snapshot renderer keeps one scene warm across a whole batch, so a live
- * veil would put a different sky on every world in a family strip.
+ * veil would put a different sky on every world in a family strip. It takes the
+ * pair to still it — the veil turns at `spin + veilSpin` — and zeroing both is
+ * what leaves the sky where the body is.
  *
  * What both land on instead is `turn`, which sits outside the spin and outside
  * the veil's — so a still's sky is chosen by the slider that already chooses

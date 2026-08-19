@@ -153,8 +153,18 @@
   const clock = $derived(getClock(clockKey));
 
   const isTurning = $derived(Boolean(visual.spin));
+
+  /**
+   * The veil's rate, and it is a sum because `veilSpin` is a *drift over the
+   * ground* rather than a rotation of its own — see `visual.ts`. Derived once so
+   * the guard below and the integration read the same number: a deck at
+   * `veilSpin: -spin` is a still sky over a turning world and wants no frames,
+   * and one at 0 rides a turning world and does.
+   */
+  const veilRate = $derived(visual.spin + visual.veilSpin);
+
   /** Drawn *and* moving. A veil at rest is geometry, and geometry asks for no frames. */
-  const isVeiling = $derived(visual.veil > 0 && Boolean(visual.veilSpin));
+  const isVeiling = $derived(visual.veil > 0 && Boolean(veilRate));
   const hasSwarm = $derived(Boolean(swarm && cohorts?.length));
 
   /** How far each layer has turned. The only parts of the clock that render. */
@@ -165,7 +175,7 @@
     // A world that neither turns nor carries souls has no clock to keep.
     if (!isTurning && !isVeiling && !hasSwarm) return;
 
-    advanceClock(clock, visual.spin, visual.veilSpin);
+    advanceClock(clock, visual.spin, veilRate);
     spinAngle = clock.angle;
     veilAngle = clock.veilAngle;
 

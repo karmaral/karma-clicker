@@ -29,17 +29,21 @@ Branch `dev-next`. Last commit `194f917 rebuild checkpoint 9` — sessions 12–
 | Outline bleed — the ink cuts follow the drawn edge, not the unit sphere | *The world ends where it is drawn to end* |
 | `lean`/`turn` beside `tilt`, on a square puck | *The world is held, not tilted* |
 | `Puck.svelte`, `Slider.svelte` — the labs' rows as components | *The labs' two controls are components* |
+| `veilSpin` is a drift over the ground, not a rate | *A drift is not a rate* |
+| `grain` / `shadeGrain` / `grainScale` — noise under the body's two quantisers | *A grain in the paper* |
 
 ## Verified, and how
 
-- `npm run check` → **849 FILES 12 ERRORS 2 WARNINGS** — the standing baseline,
-  table at the end. The count is memorised; a thirteenth would hide in it.
+- `npm run check` → **855 FILES 12 ERRORS 2 WARNINGS** — the standing baseline,
+  table at the end. The error count is memorised; a thirteenth would hide in it.
+  The file count drifts with the tree and is not the thing being watched.
 - `npx vite build` clean.
 - **The probe** — `esbuild` the model modules into the scratchpad, run under
   node. Works only because `pulse` / `harness` / `anchor` / `orbit` / `visual` /
   `field` **never import three**. Keep it that way. Nine groups passing.
-- `node scripts/uniform-join.mjs src/widgets/planet/material.ts` → **13
-  materials, 23 shaders, 0 broken joins**. Not wired into `check`.
+- `node scripts/uniform-join.mjs src/widgets/planet/material.ts` → **15
+  materials, 28 shaders, 0 broken joins**. Not wired into `check`. Only the
+  **0** is the assertion; the two counts move whenever a shader is added.
 - **No assistant has seen a rendered frame.** The author watches the dev server.
 
 ---
@@ -76,7 +80,14 @@ Branch `dev-next`. Last commit `194f917 rebuild checkpoint 9` — sessions 12–
     to 1 and `spin` to 0, so what ships is `turn` — authored on its own slider,
     with two snapshots under it in the panel. `contour` is untouched and is the
     next candidate. §*A still is the world with two fields taken off it*.
-15. **Overview steps 1–4 have never been played.** DevPanel *unlock all planets*
+15. **The body's grain, at any setting.** `grain` / `shadeGrain` / `grainScale`
+    all ship at off, so nothing has drawn one. Watch the **limb** first — the
+    Nyquist fade is what stops it fizzing there — then whether a contour riding
+    the grained band reads as ink or as noise.
+16. **The veil outline's wander.** A quarter of the line's width, chosen blind
+    against a grain scale of 24–60. Too far and the hairline comes apart; the
+    number is `wander` in `veilCover` and nothing else touches it.
+17. **Overview steps 1–4 have never been played.** DevPanel *unlock all planets*
     makes the axis walkable. Watch: Behind invisible at beat 10, beat 12 firing
     at all, and the right column's band label — authored in two files with
     nothing enforcing the match.

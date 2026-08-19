@@ -69,6 +69,94 @@ const ribbonPlace = /* glsl */ `
 `;
 
 /**
+ * 3D simplex, and the project's only noise in a shader. Deliberately not the
+ * hash kind: a `fract(sin(...))` field depends on the precision of `sin` at
+ * large arguments, which differs between Mali, Adreno and desktop — and the
+ * field *is* what the surface looks like, so a world that comes out different
+ * on a phone is a bug that cannot be reproduced. This permutation is exact
+ * integer arithmetic in float and is the same everywhere.
+ *
+ * Sampled on a direction, so a sphere has no seam and no pole to pinch —
+ * `noise.ts`'s opening argument, spent a second time.
+ *
+ * Ashima Arts / Stefan Gustavson, webgl-noise, MIT. Left as written rather than
+ * reformatted to the house style: it is a citation, and a citation you have
+ * edited is not one.
+ *
+ * Declares no uniforms, so every shader including it declares its own — the
+ * contract `rampRead` has with `uRamp`, and for the same reason. Up here
+ * rather than beside the veil because the body's own fragment includes it too,
+ * and a const is not hoisted.
+ */
+const simplex3D = /* glsl */ `
+  vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+  vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+  vec4 permute(vec4 x) { return mod289(((x * 34.0) + 1.0) * x); }
+  vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+
+  float snoise(vec3 v) {
+    const vec2 C = vec2(1.0 / 6.0, 1.0 / 3.0);
+    const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+
+    vec3 i = floor(v + dot(v, C.yyy));
+    vec3 x0 = v - i + dot(i, C.xxx);
+
+    vec3 g = step(x0.yzx, x0.xyz);
+    vec3 l = 1.0 - g;
+    vec3 i1 = min(g.xyz, l.zxy);
+    vec3 i2 = max(g.xyz, l.zxy);
+
+    vec3 x1 = x0 - i1 + C.xxx;
+    vec3 x2 = x0 - i2 + C.yyy;
+    vec3 x3 = x0 - D.yyy;
+
+    i = mod289(i);
+    vec4 p = permute(permute(permute(
+               i.z + vec4(0.0, i1.z, i2.z, 1.0))
+             + i.y + vec4(0.0, i1.y, i2.y, 1.0))
+             + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+
+    float n_ = 0.142857142857;
+    vec3 ns = n_ * D.wyz - D.xzx;
+
+    vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+
+    vec4 x_ = floor(j * ns.z);
+    vec4 y_ = floor(j - 7.0 * x_);
+
+    vec4 x = x_ * ns.x + ns.yyyy;
+    vec4 y = y_ * ns.x + ns.yyyy;
+    vec4 h = 1.0 - abs(x) - abs(y);
+
+    vec4 b0 = vec4(x.xy, y.xy);
+    vec4 b1 = vec4(x.zw, y.zw);
+
+    vec4 s0 = floor(b0) * 2.0 + 1.0;
+    vec4 s1 = floor(b1) * 2.0 + 1.0;
+    vec4 sh = -step(h, vec4(0.0));
+
+    vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy;
+    vec4 a1 = b1.xzyw + s1.xzyw * sh.zzww;
+
+    vec3 p0 = vec3(a0.xy, h.x);
+    vec3 p1 = vec3(a0.zw, h.y);
+    vec3 p2 = vec3(a1.xy, h.z);
+    vec3 p3 = vec3(a1.zw, h.w);
+
+    vec4 norm = taylorInvSqrt(vec4(dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3)));
+    p0 *= norm.x;
+    p1 *= norm.y;
+    p2 *= norm.z;
+    p3 *= norm.w;
+
+    vec4 m = max(0.6 - vec4(dot(x0, x0), dot(x1, x1), dot(x2, x2), dot(x3, x3)), 0.0);
+    m = m * m;
+
+    return 42.0 * dot(m * m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
+  }
+`;
+
+/**
  * No lights, no gradient map, no `MeshToonMaterial`. Under an orthographic
  * camera the view vector is a constant, so the fresnel collapses to how far a
  * facet turns from the screen — `1 − |N.z|`. Everything else is where that gets
@@ -79,12 +167,18 @@ const surfaceVertex = /* glsl */ `
 
   varying float vHeight;
   varying vec3 vNormal;
+  varying vec3 vDir;
 
   void main() {
     vHeight = height;
 
     // The attribute is the field's own surface normal, baked in geometry.ts.
     vNormal = normalize(normalMatrix * normal);
+
+    // Object space, so the grain rides the surface the way vHeight does rather
+    // than sitting on the paper. position is r(d)*d with r above zero across the
+    // authored range of amplitude, so normalize recovers d — veilVertex's move.
+    vDir = normalize(position);
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
@@ -106,21 +200,32 @@ const surfaceFragment = /* glsl */ `
   uniform float uContourShadowTone;
   uniform float uShadeSteps;
   uniform float uShadeDepth;
+  uniform float uGrain;
+  uniform float uShadeGrain;
+  uniform float uGrainScale;
+  uniform vec3 uOrigin;
 
   varying float vHeight;
   varying vec3 vNormal;
+  varying vec3 vDir;
 
   ${rampRead}
+  ${simplex3D}
 
   /**
    * A band boundary drawn as a stroked path rather than left as the step between
    * two tones. Widths come from fwidth, so the line is the weight it
    * says it is however steep the field runs — and is simply absent where the
    * field is flat, instead of smearing across it.
+   *
+   * It is handed the *grained* band and the *clean* rate, and the pair is the
+   * whole of how it behaves under a grain. The band, so the line stays
+   * coincident with the tone edge it is the boundary of instead of ruling a
+   * smooth arc across a ragged one. The rate, because a rate carrying the
+   * displacement spikes wherever the noise runs fast, and a width divided by it
+   * thins to nothing there — the bug ridgeAt records one shader down.
    */
-  float contourAt(float band) {
-    // Derivatives have to be taken in uniform control flow.
-    float perPixel = fwidth(band);
+  float contourAt(float band, float perPixel) {
     if (uContour <= 0.0) return 0.0;
 
     // The uSteps-1 interior boundaries only. The ends of the range are where
@@ -139,13 +244,38 @@ const surfaceFragment = /* glsl */ `
     // rather than the triangles it was tessellated into.
     vec3 N = normalize(vNormal);
 
+    // The grain, and the one noise in the body's fragment. Both quantisers
+    // below are exact level sets, so a smooth field crosses one as a perfect
+    // curve; this displaces the coordinate before the floor and the boundary
+    // comes apart into paper instead. Half the noise's range, so an amount of 1
+    // is a wander of one whole slot.
+    //
+    // Faded as its period approaches two pixels — veilFbm's rule with its
+    // constants. The limb compresses the sphere hard and an unfaded grain
+    // fizzes there. To nothing rather than to its mean, because a grain stuck
+    // at its mean is a constant offset on the band, which is uBias said badly.
+    //
+    // One sample under both amounts. They are independent coordinates already,
+    // so a shared displacement is a grain in the paper rather than a
+    // correlation — and it is one snoise instead of two.
+    float perStep = length(fwidth(vDir));
+    float fade = 1.0 - smoothstep(0.25, 0.5, uGrainScale * perStep);
+    float grain = snoise(vDir * uGrainScale + uOrigin) * 0.5 * fade;
+
     // The texture. vHeight is a vertex attribute, so this is the only term that
     // turns with the surface — and it is quantised alone, so the pattern is a
     // property of the world rather than of where the camera is standing. Left
     // unclamped: the contour reads it, and a boundary past the ends of the ramp
     // must not be drawn.
     float land = vHeight * 0.5 + 0.5;
-    float band = (uLand * land + uBias) * uSteps;
+
+    // The clean coordinate and its rate, taken before the grain reaches either.
+    // Derivatives have to be in uniform control flow, and the rate is what the
+    // contour is weighed in.
+    float clean = (uLand * land + uBias) * uSteps;
+    float perPixel = fwidth(clean);
+
+    float band = clean + uGrain * grain;
     float level = floor(clamp(band, 0.0, uSteps - 1.0));
     float spread = uSteps > 1.0 ? level / (uSteps - 1.0) : 0.0;
 
@@ -161,7 +291,7 @@ const surfaceFragment = /* glsl */ `
     // Rounded rather than floored, so a signed rim lightens the limb by as many
     // levels as a positive one darkens it.
     float shade = clamp(uRim * rim + uKey * key, -1.0, 1.0);
-    float shadeLevel = floor(shade * uShadeSteps + 0.5);
+    float shadeLevel = floor(shade * uShadeSteps + 0.5 + uShadeGrain * grain);
 
     // readRamp clamps, so the shadow crushes to solid ink rather than wrapping.
     float index = mix(uToneFloor, uToneCeil, spread) + shadeLevel * uShadeDepth;
@@ -174,7 +304,7 @@ const surfaceFragment = /* glsl */ `
     // the light is.
     float contourInk = mix(uContourTone, uContourShadowTone, step(0.5, shadeLevel));
 
-    gl_FragColor = vec4(mix(readRamp(index), readRamp(contourInk), contourAt(band)), 1.0);
+    gl_FragColor = vec4(mix(readRamp(index), readRamp(contourInk), contourAt(band, perPixel)), 1.0);
 
     #include <colorspace_fragment>
   }
@@ -1016,92 +1146,6 @@ const VEIL_OCTAVES = 6;
 const VEIL_SPREAD = 1.6;
 
 /**
- * 3D simplex, and the project's first noise in a shader. Deliberately not the
- * hash kind: a `fract(sin(...))` field depends on the precision of `sin` at
- * large arguments, which differs between Mali, Adreno and desktop — and the
- * field *is* what the veil looks like, so a world that comes out different on a
- * phone is a bug that cannot be reproduced. This permutation is exact integer
- * arithmetic in float and is the same everywhere.
- *
- * Sampled on a direction, so the shell has no seam and no pole to pinch —
- * `noise.ts`'s opening argument, spent a second time.
- *
- * Ashima Arts / Stefan Gustavson, webgl-noise, MIT. Left as written rather than
- * reformatted to the house style: it is a citation, and a citation you have
- * edited is not one.
- *
- * Declares no uniforms, so every shader including it declares its own — the
- * contract `rampRead` has with `uRamp`, and for the same reason.
- */
-const simplex3D = /* glsl */ `
-  vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-  vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-  vec4 permute(vec4 x) { return mod289(((x * 34.0) + 1.0) * x); }
-  vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
-
-  float snoise(vec3 v) {
-    const vec2 C = vec2(1.0 / 6.0, 1.0 / 3.0);
-    const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
-
-    vec3 i = floor(v + dot(v, C.yyy));
-    vec3 x0 = v - i + dot(i, C.xxx);
-
-    vec3 g = step(x0.yzx, x0.xyz);
-    vec3 l = 1.0 - g;
-    vec3 i1 = min(g.xyz, l.zxy);
-    vec3 i2 = max(g.xyz, l.zxy);
-
-    vec3 x1 = x0 - i1 + C.xxx;
-    vec3 x2 = x0 - i2 + C.yyy;
-    vec3 x3 = x0 - D.yyy;
-
-    i = mod289(i);
-    vec4 p = permute(permute(permute(
-               i.z + vec4(0.0, i1.z, i2.z, 1.0))
-             + i.y + vec4(0.0, i1.y, i2.y, 1.0))
-             + i.x + vec4(0.0, i1.x, i2.x, 1.0));
-
-    float n_ = 0.142857142857;
-    vec3 ns = n_ * D.wyz - D.xzx;
-
-    vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
-
-    vec4 x_ = floor(j * ns.z);
-    vec4 y_ = floor(j - 7.0 * x_);
-
-    vec4 x = x_ * ns.x + ns.yyyy;
-    vec4 y = y_ * ns.x + ns.yyyy;
-    vec4 h = 1.0 - abs(x) - abs(y);
-
-    vec4 b0 = vec4(x.xy, y.xy);
-    vec4 b1 = vec4(x.zw, y.zw);
-
-    vec4 s0 = floor(b0) * 2.0 + 1.0;
-    vec4 s1 = floor(b1) * 2.0 + 1.0;
-    vec4 sh = -step(h, vec4(0.0));
-
-    vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy;
-    vec4 a1 = b1.xzyw + s1.xzyw * sh.zzww;
-
-    vec3 p0 = vec3(a0.xy, h.x);
-    vec3 p1 = vec3(a0.zw, h.y);
-    vec3 p2 = vec3(a1.xy, h.z);
-    vec3 p3 = vec3(a1.zw, h.w);
-
-    vec4 norm = taylorInvSqrt(vec4(dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3)));
-    p0 *= norm.x;
-    p1 *= norm.y;
-    p2 *= norm.z;
-    p3 *= norm.w;
-
-    vec4 m = max(0.6 - vec4(dot(x0, x0), dot(x1, x1), dot(x2, x2), dot(x3, x3)), 0.0);
-    m = m * m;
-
-    return 42.0 * dot(m * m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
-  }
-`;
-
-/**
  * The veil as one number, and the whole of what the three composite modes
  * share. They differ only in what they do with it, which is why it lives out
  * here rather than three times over.
@@ -1179,8 +1223,15 @@ const veilField = /* glsl */ `
    * back together on the spot, so the key thins it — nothing has changed there.
    * A hatched veil keeps them apart: shape from the field, shading from the
    * light, which is the only way a mark can be both dense and dark.
+   *
+   * lineGrain wanders the *outline* and nothing else. In the hatch the marks
+   * are broken by a noise the line knows nothing about, so a break patch
+   * straddling the contour takes the strokes away and leaves the ink ruling
+   * straight through the gap. Fed the same noise, the line follows the edge it
+   * is the edge of. Centred, so 0 is the clean contour and the alpha veil — which
+   * has no such noise — passes it.
    */
-  float veilCover(vec3 dir, vec3 N, out float line, out float lit) {
+  float veilCover(vec3 dir, vec3 N, float lineGrain, out float line, out float lit) {
     // How far the sample point moves from one pixel to the next. Taken on the
     // unwarped direction and before any branch — derivatives have to be in
     // uniform control flow, and the warp is a small enough push that its own
@@ -1251,7 +1302,16 @@ const veilField = /* glsl */ `
 
     if (uOutline > 0.0) {
       float reach = uOutline * 0.5;
-      float pixels = abs(over - uEdge) / perPixel;
+
+      // The wander is in *pixels*, and is a share of the line's own weight: at
+      // lineGrain's half-unit range this is up to a quarter of the drawn width
+      // either way, so the ink follows the broken edge without coming apart
+      // along it. Scale-free at any widget size the way every other measure in
+      // this shader is, and needing no slider to say how far — a thick line
+      // wanders proportionally more than a hairline, which is what a wider pen
+      // does.
+      float wander = lineGrain * reach * perPixel;
+      float pixels = abs(over - uEdge - wander) / perPixel;
 
       line = (1.0 - smoothstep(reach - 0.5, reach + 0.5, pixels)) * shape;
     }
@@ -1330,7 +1390,8 @@ const veilAlphaFragment = /* glsl */ `
   void main() {
     float line;
     float lit;
-    float fill = veilCover(vDir, normalize(vNormal), line, lit);
+    // No break noise in this mode, so the outline is the clean contour it was.
+    float fill = veilCover(vDir, normalize(vNormal), 0.0, line, lit);
 
     // Folded straight back in: for this mode the key *is* a coverage term, and
     // the only thing a single-ink layer can shade is how much of it there is.
@@ -1404,7 +1465,7 @@ const veilHatchFragment = /* glsl */ `
   uniform float uHatchWidth;
   uniform float uHatchAlpha;
   uniform float uHatchBreak;
-  uniform float uHatchGrain;
+  uniform float uHatchGrainScale;
   uniform float uHatchSoften;
   uniform float uHatchShade;
 
@@ -1561,26 +1622,31 @@ const veilHatchFragment = /* glsl */ `
   }
 
   void main() {
+    float perStep = length(fwidth(vDir));
+
+    // Detail 0 in his graph: one octave, no sum, and the seed offset is the
+    // world's so two worlds break differently. Two samples of it, and the
+    // second earns its keep twice over below.
+    //
+    // Taken before veilCover rather than after, because the outline is drawn in
+    // there and wants grainA: the line is the edge of a silhouette this noise
+    // breaks, and a clean contour over a broken edge rules straight through
+    // every gap.
+    float grainA = snoise(vDir * uHatchGrainScale + uOrigin) * 0.5 + 0.5;
+    float grainB = snoise(vDir * uHatchGrainScale + uOrigin + vec3(37.1, 11.9, 5.3)) * 0.5 + 0.5;
+
+    float soft = max(0.06, uHatchGrainScale * perStep);
+    float fade = 1.0 - smoothstep(0.25, 0.5, uHatchGrainScale * perStep);
+
     float line;
     float lit;
-    float fill = veilCover(vDir, normalize(vNormal), line, lit);
-
-    float perStep = length(fwidth(vDir));
+    float fill = veilCover(vDir, normalize(vNormal), (grainA - 0.5) * fade, line, lit);
 
     // One ruling for the whole shader, read at two phases. Its rate is measured
     // once, on the clean band, and is what both cuts are weighed in.
     float band = bandAt(vDir);
     float perBand = max(fwidth(band), 1e-6);
     float perStroke = 2.0 * perBand;
-
-    // Detail 0 in his graph: one octave, no sum, and the seed offset is the
-    // world's so two worlds break differently. Two samples of it, and the
-    // second earns its keep twice over below.
-    float grainA = snoise(vDir * uHatchGrain + uOrigin) * 0.5 + 0.5;
-    float grainB = snoise(vDir * uHatchGrain + uOrigin + vec3(37.1, 11.9, 5.3)) * 0.5 + 0.5;
-
-    float soft = max(0.06, uHatchGrain * perStep);
-    float fade = 1.0 - smoothstep(0.25, 0.5, uHatchGrain * perStep);
 
     // Cut one: the silhouette. Coverage is a density here, so a full cloud
     // closes to solid ink and a thinning one opens into strokes. His screen
@@ -1665,6 +1731,10 @@ export function createSurfaceMaterial() {
       uContourShadowTone: { value: 6 },
       uShadeSteps: { value: 2 },
       uShadeDepth: { value: 0 },
+      uGrain: { value: 0 },
+      uShadeGrain: { value: 0 },
+      uGrainScale: { value: 30 },
+      uOrigin: { value: new THREE.Vector3() },
     },
   });
 }
@@ -1760,7 +1830,7 @@ export function createVeilHatchMaterial() {
       uHatchWidth: { value: 1 },
       uHatchAlpha: { value: 0.85 },
       uHatchBreak: { value: 0.45 },
-      uHatchGrain: { value: 30 },
+      uHatchGrainScale: { value: 30 },
       uHatchSoften: { value: 0 },
       uHatchShade: { value: 2 },
     },
@@ -2198,6 +2268,31 @@ export function syncSoulUniforms(
   u.uFrontTone.value = Math.round(visual.frontTone);
 }
 
+/**
+ * The world's noise-domain offset, from its own seed — read by the body's grain
+ * and by the veil alike. There is no second seed for either on purpose: the
+ * grain is this world's paper and the veil is this world's weather, not two more
+ * worlds, so reseeding in the lab has to move all three together.
+ *
+ * Folded small because `simplex3D` wraps its lattice at 289 cells — a raw
+ * five-digit seed lands outside it and every world would share one corner of
+ * the field. Three mutually irrational strides, so consecutive seeds land far
+ * apart instead of walking one line.
+ *
+ * One scratch vector for both callers, and both `.copy()` out of it.
+ */
+const NOISE_ORIGIN = new THREE.Vector3();
+
+function originOf(seed: number) {
+  const at = Math.abs(seed);
+
+  return NOISE_ORIGIN.set(
+    ((at * 0.7548776662) % 1) * 128,
+    ((at * 0.5698402909) % 1) * 128,
+    ((at * 0.6180339887) % 1) * 128,
+  );
+}
+
 export function syncSurfaceUniforms(material: THREE.ShaderMaterial, visual: PlanetVisual) {
   const u = material.uniforms;
 
@@ -2219,28 +2314,11 @@ export function syncSurfaceUniforms(material: THREE.ShaderMaterial, visual: Plan
   u.uContourShadowTone.value = Math.round(visual.contourShadowTone);
   u.uShadeSteps.value = Math.max(1, Math.round(visual.shadeSteps));
   u.uShadeDepth.value = visual.shadeDepth;
-}
 
-/**
- * The veil's noise-domain offset, from the world's own seed. There is no
- * `veilSeed` on purpose: the veil is this world's weather and not a second
- * world, so reseeding in the lab has to move both together.
- *
- * Folded small because `simplex3D` wraps its lattice at 289 cells — a raw
- * five-digit seed lands outside it and every world would share one corner of
- * the field. Three mutually irrational strides, so consecutive seeds land far
- * apart instead of walking one line.
- */
-const VEIL_ORIGIN = new THREE.Vector3();
-
-function veilOriginOf(seed: number) {
-  const at = Math.abs(seed);
-
-  return VEIL_ORIGIN.set(
-    ((at * 0.7548776662) % 1) * 128,
-    ((at * 0.5698402909) % 1) * 128,
-    ((at * 0.6180339887) % 1) * 128,
-  );
+  u.uGrain.value = Math.max(0, visual.grain);
+  u.uShadeGrain.value = Math.max(0, visual.shadeGrain);
+  u.uGrainScale.value = Math.max(0.1, visual.grainScale);
+  u.uOrigin.value.copy(originOf(visual.seed));
 }
 
 export function syncVeilUniforms(material: THREE.ShaderMaterial, visual: PlanetVisual) {
@@ -2248,7 +2326,7 @@ export function syncVeilUniforms(material: THREE.ShaderMaterial, visual: PlanetV
 
   u.uVeil.value = Math.max(0, visual.veil);
   u.uHeight.value = Math.max(0, visual.veilHeight);
-  u.uOrigin.value.copy(veilOriginOf(visual.seed));
+  u.uOrigin.value.copy(originOf(visual.seed));
   u.uFrequency.value = visual.veilFrequency;
   u.uOctaves.value = Math.max(1, Math.round(visual.veilOctaves));
   u.uGain.value = visual.veilGain;
@@ -2277,7 +2355,7 @@ export function syncVeilUniforms(material: THREE.ShaderMaterial, visual: PlanetV
   u.uHatchWidth.value = Math.max(0, visual.veilHatchWidth);
   u.uHatchAlpha.value = Math.max(0, Math.min(1, visual.veilHatchAlpha));
   u.uHatchBreak.value = visual.veilHatchBreak;
-  u.uHatchGrain.value = Math.max(0.1, visual.veilHatchGrain);
+  u.uHatchGrainScale.value = Math.max(0.1, visual.veilHatchGrainScale);
   u.uHatchSoften.value = Math.max(0, visual.veilHatchSoften);
   u.uHatchShade.value = Math.max(0, visual.veilHatchShade);
 }

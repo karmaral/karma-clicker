@@ -1881,6 +1881,11 @@ across a whole batch, so a live veil would put a different sky on every world in
 a family strip. No `veilTurn` was needed: the veil's group hangs inside `turn`,
 so the slider that already chooses a still's face chooses its sky too.
 
+`veilSpin` has since become a *drift over the ground* rather than a rate of its
+own — see §*A drift is not a rate*. The three `spin` figures in the readings
+below read as drifts now, and every one of them still says what it said: a deck
+pulling ahead of its world, an aurora running against it.
+
 Three readings to start from. The first two are still unrendered; the hatched one
 has been through several rounds in the lab and is the reason the mode looks the
 way it does.
@@ -2101,6 +2106,77 @@ Both are per world, deliberately, so one world can be pen and its neighbour fog.
 **Not built: the screen tone.** The video's other half is window-space diamonds,
 which is the pixel-art dither under another name, and it spends a section
 apologising for the aspect-ratio correction it needs.
+
+### A drift is not a rate
+
+`veilSpin` was the veil's whole rotation. The veil's group is a *sibling* of the
+spin group, not a child, so authoring a cloud deck meant holding `spin` in your
+head and solving for the difference — and a later edit to `spin` silently
+re-meant every veil under it. It is a **drift over the ground** now: the veil
+turns at `spin + veilSpin`, so 0 is a deck locked to the surface and travelling
+with it, and either direction is how fast it pulls away.
+
+Nothing downstream moved. `clock.veilAngle` is still an absolute angle and the
+group is still a sibling; only what feeds `advanceClock` is a sum. The one thing
+that had to follow is the idle guard — `isVeiling` tests the *sum*, or a veil at
+`veilSpin: -spin` asks for frames it does not use and one at 0 over a turning
+world stops asking for the frames it does.
+
+The two veiled worlds were rebased so no picture changed — `first` 0.295 → 0.11,
+`second` 0.125 → 0.035. The seven at `veil: 0` went to 0 rather than to
+`0.05 − spin`: their 0.05 was never a picture, and 0 is the honest starting value.
+`DEFAULT_VISUAL` with it.
+
+The slider's ±0.6 is untouched, and it reaches further than it did: a veil
+running *backwards* against its own surface used to need arithmetic to find.
+
+### A grain in the paper
+
+The body's fragment had no noise in it at all. Both of its quantisers are exact
+level sets — the texture band and the shade level — so a smooth field crosses one
+as a perfect curve, and a world with few `steps` is a stack of clean arcs. Three
+fields answer it: `grain` displaces the texture band before its floor,
+`shadeGrain` does the same to the shade level, and `grainScale` is the noise
+under both.
+
+**Two amounts, one sample.** They are two pictures — the world's own pattern, and
+where the light falls on it — and a world can want its terrain broken up without
+its terminator going with it. But the noise beneath them is one sample, not two.
+The veil decorrelates its two cuts because they are one ruling read twice and
+sharing collapsed every shoulder onto a single slot; here the two coordinates are
+independent fields already, so a shared displacement is a grain in the *paper*
+rather than a correlation — and it is one `snoise` instead of two.
+
+Both amounts are in **slots**, which is what lets one number mean the same thing
+in each: an amount of 1 is a wander of one whole band either way.
+
+The Nyquist fade is `veilFbm`'s, constants and all, and is not optional — the
+limb compresses the sphere hard and an unfaded grain fizzes there instead of
+dissolving. To *nothing* rather than to its mean, unlike a ruling: a grain stuck
+at its mean is a constant offset on the band, which is `bias` said badly.
+
+**The contour follows the grained band, and is weighed by the clean rate.** The
+band, so the line stays coincident with the tone edge it is the boundary of
+instead of ruling a smooth arc beside a ragged one. The rate, because a rate
+carrying the displacement spikes wherever the noise runs fast and a width divided
+by it thins to nothing there — `ridgeAt`'s bug, one shader over, not repeated.
+
+`simplex3D` moved above the surface shader for this, and `veilOriginOf` became
+`originOf`: it is the world's noise origin now, read by the body's grain and the
+veil alike, and there is still no second seed for either. Reseeding in the lab
+moves all three together.
+
+**The veil's outline follows its grain too.** Same disagreement, one shell up:
+the hatch's silhouette is broken by `breakAt`, and its outline was a clean
+contour of a field that knew nothing about the break — so a patch straddling the
+line took the strokes away and left the ink ruling through the gap. `veilCover`
+takes a `lineGrain` used by the outline branch and nothing else; the hatch passes
+its own break noise, the alpha veil passes 0 and is unchanged. The wander is a
+share of the line's own weight in pixels, so it needs no slider and holds at any
+widget size.
+
+**`veilHatchGrain` is `veilHatchGrainScale`.** It was always a scale, and with
+`grain` on the body meaning an amount the two would have read as opposites.
 
 ### Open
 
