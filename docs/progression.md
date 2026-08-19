@@ -60,7 +60,9 @@ in `labels.ts` is the worked example.
 
 `DevPanel` (DEV only) exposes beat −/+/reset, resource grants, and
 `window.karma`. Yields are low and the later beats trigger at high figures, so
-this is the only practical way to reach them by hand.
+this is the only practical way to reach them by hand. Its experience grants go to
+the **active planet as well as the pile**, unlike a harvest's — otherwise nothing
+by hand walks a world's phases, and `agesLived` is a first-harvest condition.
 
 **The widget work is verified by probe rather than by eye.** `esbuild --bundle
 --platform=node --format=cjs` the model modules into the scratchpad and run them
@@ -166,12 +168,119 @@ instant one-shot on a manual `queue()` is a legitimate thing to want.
 
 **`PlanetData.harvest` pairs the payout with its clock**, so the slip cannot be
 authored. Without it the guard makes the defect *quieter* rather than absent: a
-world would pay once and never again, which is harder to notice than a freeze and
-lands nine times over at step 5. No record changed — nothing declares a harvest
-yet, which is exactly why the shape was cheap to fix now.
+world would pay once and never again, which is harder to notice than a freeze.
+The shape was fixed while no record declared a harvest, which is why it was
+cheap; all three declare one now, and none of them can express the slip.
 
 A `duration` of 0 stays legal and means *pays once*. `HarvestLedger` reads it that
 way and shows no rate, rather than dividing by zero.
+
+### What a finished world pays
+
+The numbers arrived. A harvested world pays **experience and karma into the
+piles**, on a slow clock the merge decision speeds up, and the two fields that
+were banked-and-unread now do the work.
+
+**The experience goes to the pile only, and never to the active planet.** That is
+the one place this deliberately differs from `Building.#generateResources`, which
+credits both. A world behind you buys **progression** — `beat.floor` reads
+`ctx.total('experience')` — and does not walk the phases of the world you are
+standing on. Those stay yours to earn, which is the whole reason a planet is a
+state machine driven by accumulated experience rather than a producer. It also
+keeps the loop above open: a finished planet's payout never calls
+`PlanetManager`, so Planet → ResourceManager → Building → PlanetManager still
+does not close.
+
+**Alignment picks karma's pile, and even trades the karma for experience.**
+
+| locked alignment | pays |
+|---|---|
+| −1 | `experience: E`, `karma_negative: K` |
+| +1 | `experience: E`, `karma_positive: K` |
+| 0 | `experience: E × (1 + EVEN_EXPERIENCE_BONUS)`, **no karma** |
+
+Instead of, not on top of. On top, even would be strictly dominant and the
+reading would stop being a choice; as a trade it buys progression and gives up
+currency. It is also the first thing that pays excess *management* back rather
+than merely gating on it — until now excess was a wall and nothing else, and a
+balanced pair of piles at the moment of harvest is now worth something for good.
+
+**Merged souls buy speed, and that is the whole of what they buy.**
+
+```
+duration = base / min(1 + merged / mergeHalving, maxMergeSpeed)
+```
+
+Hyperbolic, so it cannot reach 0 — the freeze above is unreachable from here —
+and capped, so a world's hundreds do not run away. Both terms are **authored per
+world**, because a late world should ask more souls for the same step and stop
+giving it back sooner: 50/×8 on `first`, 200/×6 on `second`, 800/×4 on `third`.
+A world that declares neither takes the module defaults.
+
+**A world also names a floor.** `firstHarvest.mergeMinimum` is the toll it takes
+for letting you leave, and it reaches the player in two places that say different
+things. As a *condition* it asks whether the floor is payable — `countSouls()`
+against the threshold — which is ambient, so `#unmet` keeps its parameterless
+shape and the Overview's row can name the requirement before you open the screen.
+In the screen it is **the slider's minimum**, not something to fail against: the
+handle cannot go below the toll, so a short split is not a state the UI can
+express and there is no disabled button explaining one. The floor falls as the
+population grows, which is why the slider's position is `max(chosen, floor)` —
+held up to the toll rather than clamped down to it, so a handle dragged high
+stays where it was put.
+
+Finding that minimum is a search, not a division. Rounding in `#takeFromCohorts`
+is per cohort, so `minimum / souls` is not the fraction that reaches the count;
+`findMergeFloor` bisects whole percents against `countMergeable`, which is exact
+because the count is monotone in the fraction. It can only return 100 when even
+every soul falls short, and the condition has already stopped that case.
+
+`PlanetManager` still guards with `countMergeable` before calling `mergeSouls`.
+Unreachable from the screen now, and kept anyway: it is the check that makes the
+toll true of the *model* rather than of one control, and `mergeSouls` is
+destructive — a guard that ran after it would have already taken the souls.
+
+The floor is not only a toll: since it is a floor on `merged`, and `merged` is
+what buys speed, it also sets the **slowest** the world can ever pay. Against the
+authored halvings that is ×1.2 on `first`, ×1.6 on `second` and ×1.75 on `third`
+— so no world can be left in a state where it barely delivers.
+
+**Total souls at the first harvest is deliberately not a second variable.** Not
+as a *payout* term, that is — the floor above reads `countSouls()`, but it is a
+gate on leaving rather than a knob on what the world then pays. `mergeSouls`
+returns `Σ round(cohort.count × fraction)`, so the population is already a factor
+of `merged` — a bigger world merged at the same fraction yields a bigger count
+and a faster clock for free. Reading the total separately would count one
+quantity twice and give the player two knobs that cannot be traded against each
+other. That leaves exactly two axes on a finished world, **how much you merged**
+and **how you were aligned**, which is what the first-harvest screen already asks.
+
+**`polarity` on a planet is now `alignment`.** The type stays `Polarity` — it is
+structurally identical to any alias, so a separate one would catch nothing and
+`strict` is off besides. The collision was on the *word*: `planet.polarity`
+beside the polarity `karma.ts`, `polarized.ts`, `learning-token.ts` and `aim` all
+mean. `Polarity` is the shape, `alignment` is the role.
+
+**The resolution lives in `planets/harvest.ts` rather than in `Planet`**, and only
+because runes are not probeable: `base.svelte.ts` cannot be bundled by esbuild
+and run under node, and two pure functions can. Same argument as the widget model
+modules never importing three.
+
+**The ledger reads deliveries, not rates.** A row shows what one delivery brings
+and an `mm:ss` countdown to it; the emitter gained `nextAt` for that, and the
+component keeps its own 1s clock. **The Total row stays `/s` and is the only rate
+on the panel** — batch sizes do not add, since every world's duration moves with
+its own merged count. The base cadence is 60s, chosen so `/y` is a figure worth
+reading and the countdown counts; it sits at the slow end on purpose, since a
+cadence is easier to judge downward than a trickle is to discover was never
+readable.
+
+Every figure is a placeholder anchored at roughly 30% of income at the point you
+leave. `first` is the only one that can be felt today — **`third` cannot be
+reached at all**: its gate is `agesLived: 4` at `cycles_per_age: 16`, and
+`phase_multiplier: 3` from `initial_phase_amount: 1000` puts 128 phases past
+10^60 experience. `second` needs ~1.5M, which is hours but playable. The curve is
+a separate balance item; the harvest is authored anyway.
 
 ## Souls
 
@@ -259,9 +368,10 @@ nothing pays. It draws its empty state until beat 10 and its rows after. It is
 deliberately absent from `SYSTEM_SURFACES`: it precedes `finishedPlanets` by two
 beats, which `validate()` would otherwise flag, and correctly.
 
-Its rows are computed from `PlanetData.harvest`, yields over duration, so it fills the
-moment step 5 authors them. Until then every finished world reads *nothing yet* —
-which is honest, not a stub.
+Its rows are computed from the planet's *resolved* harvest, not from
+`PlanetData` — the merge speedup and the alignment routing both move after
+authoring — so a world with no `harvest` still reads *nothing yet*, which is
+honest rather than a stub. See *What a finished world pays*.
 
 ## Planet visuals
 
@@ -1634,7 +1744,7 @@ the world.
 
 The veil is a cloud deck at one tuning and an aurora at another, and it is the
 first thing the widget draws that is *on* the world rather than beside it. One
-shell, eighteen fields, and every world ships it at `veil: 0`.
+shell, twenty-five fields, and every world ships it at `veil: 0`.
 
 **Its field is in the shader, and that is a departure with a reason.** The body's
 is baked on the CPU because `buildGeometry`, `placeAnchors` and `pulses.flash`
@@ -1643,7 +1753,8 @@ disagree. Nothing stands on a cloud, so the constraint does not reach the veil,
 and dropping it is what makes the layer nearly free: the shell borrows the body's
 *cached* geometry for its topology alone and renormalises it to a true sphere in
 the vertex shader, so there is no second mesh, no second cache key, and **not one
-`shape: true` field in the group**. Sixteen sliders that never rebuild anything.
+`shape: true` field in the group**. Twenty-three sliders that never rebuild
+anything — only `veil` and `veilInk` do, and what they rebuild is a material.
 
 **A procedural field has no mip-map, so it is band-limited by hand.** This is the
 other half of the price of evaluating in a fragment. `field.ts` bakes its noise
@@ -1669,22 +1780,25 @@ which `land` on the body never does. That is also why there is no
 `veilLacunarity` — a second octave-shaping knob with nothing to absorb it would
 make the threshold drift for no picture.
 
-**Three composite modes, because the ramp has seven inks and no gradient.** A
+**Two composite modes, because the ramp has seven inks and no gradient.** A
 translucent layer has to say what "half covered" means in a medium that owns no
-tone between two slots, and there are three honest answers, so all three ship on
-`veilInk`. Mode 0 is plain alpha over an authored tone — the only one that names
-an ink, and so the only one that can be wrong about the world under it; it is
-also the first thing in the stack whose pixels are not ramp values. Mode 1 is the
-halo's inversion, which has no tone of its own: over paper it comes out dark,
-over a dark world pale, over the outline paper again. Mode 2 is an ordered
-dither, the only mode whose every pixel is still one of the seven.
+tone between two slots. Mode 0 is plain alpha over an authored tone — it names
+an ink, and so it is the one that can be wrong about the world under it; it is
+also the first thing in the stack whose pixels are not ramp values. Mode 1 spends
+the same coverage as *density* instead, and every pixel it draws is still one of
+the seven.
 
-Mode 1 is what makes an aurora work, and it is not a preference. An aurora over
-the unlit limb has to *lighten* it, and a cloud over paper has to darken — the
-inversion is one blend that does both, because it has nothing of its own to be.
-Its fixed point is `--ink-400`, exactly as the ghost's is, so a veil over
-mid-grey is invisible however hard it inverts; the answer there is mode 0 with a
-tone, not a repair in the shader.
+**Three modes shipped and one survives, which is the honest record.** The other
+two were built, looked at and cut. Mode 1 was the halo's inversion — no tone of
+its own, dark over paper and pale over a dark world, fixed point at `--ink-400`.
+Mode 2 was a Bayer 4×4 stipple. The inversion was argued for as the thing that
+makes an aurora work, and that argument was sound and is now unfunded: **the
+aurora reading has no ground-independent mode any more** and has to be mode 0
+with an authored pale tone, which can be wrong against a world it did not expect.
+If that shows, the inversion is in the history and comes back as a third mode
+rather than being reinvented. The stipple's *argument* did not die with it —
+coverage as a density rather than an opacity is exactly what the hatch inherited,
+with a better mark.
 
 **No depth test, and the reason is not z-fighting.** The shell was built by
 throwing the terrain away. Testing it against a buffer the *lumpy* body wrote
@@ -1732,19 +1846,30 @@ what the field was asked for in the first place.
 
 Each mode does what it can with it. Mode 0 mixes the outline's tone into the
 fill and takes the higher of the two opacities, so a line survives where the
-cloud under it has gone to nothing. Mode 1 has no ink at all, so the line is the
-*hardest* inversion instead — a crisp turn against a body only partly turned —
-and `veilOutlineTone` is inert there exactly as `veilTone` is. Mode 2 stipples
-the fill and does **not** stipple the line: a dithered hairline is a dotted one,
-and at these widths it would come apart. The line takes a hard half-cut there,
-aliased, which is the mode this is.
+cloud under it has gone to nothing. Mode 1 hatches the fill and does **not**
+hatch the line: a broken hairline is a dotted one, and at these widths it would
+come apart. The line takes a hard half-cut there, aliased, which is what the mode
+is elsewhere too — and it is not keyed either, because in mode 1 the key is a
+shading and a cloud does not lose its edge to the dark.
 
-**`veilKey` differs in kind from the body's key.** The surface composites its
-shade as a shift along the ramp; one ink has no band coordinate to shift along,
-so the only thing the veil's key can shade is *how much veil there is*. Signed,
-and the sign is which side of the light it belongs to — a cloud burns off the
-dark half, an aurora lives on it. Keeping it on coverage is also what lets all
-three modes consume one number, so the key does not have to mean three things.
+**`veilKey` differs in kind from the body's key, and it means something
+different in each mode.** The surface composites its shade as a shift along the
+ramp. Mode 0 has no band coordinate to shift along — one ink, one alpha — so the
+only thing its key can shade is *how much veil there is*, and the layer thins
+toward the far side of the light. Mode 1 does have one, because a hatch can be
+sparse and dark at the same time: the veil keeps its full shape and the key walks
+`veilHatchShade` slots down the ramp instead. Shape and light stop competing for
+the same number, which is the thing a density mode buys that an alpha one cannot.
+
+`veilCover` therefore hands the key back *beside* the fill rather than folded
+into it, and mode 0 multiplies them together on the spot. That keeps mode 0
+numerically what it was while letting mode 1 read them apart — one field walk,
+two answers, no second threshold that could disagree with the first.
+
+Signed either way, and the sign is which side of the light it belongs to: a cloud
+burns off — or shades — the dark half, an aurora lives on it. The magnitude is
+how hard the reading is pressed, which in mode 1 also bounds the walk: at
+`veilKey` 0.4 the veil never reaches past 40% of its shade range.
 
 **A second angle, not a second clock.** `WorldClock` gains `veilAngle` and
 `advanceClock` writes both from one wall-time step. Two calls would add `elapsed`
@@ -1756,19 +1881,226 @@ across a whole batch, so a live veil would put a different sky on every world in
 a family strip. No `veilTurn` was needed: the veil's group hangs inside `turn`,
 so the slider that already chooses a still's face chooses its sky too.
 
-Two readings to start from, neither yet seen rendered:
+Three readings to start from. The first two are still unrendered; the hatched one
+has been through several rounds in the lab and is the reason the mode looks the
+way it does.
 
 ```
 cloud    veil 0.55  ink 0  height 0.03  pole 0     edge 0.08  key  0.4  spin  0.05
-aurora   veil 0.9   ink 1  height 0.06  pole 0.86  edge 0.02  key -0.8  spin -0.22
+aurora   veil 0.9   ink 0  height 0.06  pole 0.86  edge 0.02  key -0.8  spin -0.22
+hatched  veil 0.8   ink 1  height 0.02  pole 0     edge 0.30  key  1.0  spin  0.02
 ```
 
-**And one risk named before it is built.** `SnapshotRenderer` draws with
-`backgroundToken: null` and no pulse, and the halo — the only other inverting
-mark — is drawn `{#if pulse}`. So mode 1 would be the first inverting mark ever
-to reach a snapshot, and it would invert a transparent buffer rather than the
-row's ground. If the limb annulus comes out solid paper on a still where it reads
-correctly live, mode 1 is a live-view mode and `toStill` should say so.
+The hatched one is the reference frame's reading and wants `veilKey` at the rail:
+that is the slider the ramp walk is bounded by, so at 1 the veil crosses its whole
+shade range and the terminator is the hatch. A wide `veilEdge` is deliberate
+there — it is the *silhouette's* gradient, the band the marks thin and break
+across on their way out of the cloud, so a hard edge would give a solid blob with
+a shaded side and no shoulder at all.
+
+### The hatch is a dither with a better mark
+
+Mode 1 is Christoph Steinmeyer's *dotted line* shader, from a Blender EEVEE
+tutorial on procedural manga hatching, rebuilt in GLSL on a sphere. His whole
+graph is four nodes: a wave texture at one authored angle, a single-octave noise
+screened in to break the lines into dashes, a constant colour ramp for a sharp
+edge, and the diffuse added underneath before that ramp.
+
+**That last step is why it belongs here rather than being a second kind of
+thing.** A pattern, plus a tone, through a hard threshold *is* ordered dithering
+— it is what `bayer4At` was doing one line at a time. So the hatch did not
+replace the dither's structure, only its screen function, and the mode kept
+everything the stipple had: coverage as a density, a discard rather than an
+alpha, and every drawn pixel still a ramp slot.
+
+**Strokes are the level sets of the angle to an axis, and the choice of `asin`
+over the raw dot product is the load-bearing one.** The gradient of
+`asin(dot(d, a))` over a unit sphere has magnitude **exactly 1 for any unit
+axis**. One family is therefore evenly spaced across the entire world at once —
+which means a surface-locked hatch needs no UV projection, no triplanar blend and
+no correction at the limb, the three things his UV approach spends its budget on
+and the three things he apologises for in the video.
+
+**The axis is the world's own, and there is no angle slider.** The measure has
+exactly one flaw — it degenerates at ±axis — and an authored angle can only
+decide where that flaw surfaces. The axis was first placed in the XY plane on the
+claim that this parked both poles on the limb, and **that claim was wrong**: the
+plane is object space, so tilt, turn and lean carry the poles wherever they like,
+and what shows is a whorl sitting in the middle of the disc with nothing in the
+picture to explain it. On the world's own axis the ruling runs in latitude and
+the degeneracy lands on the poles, which is where a ruling in latitude is
+*supposed* to converge — the same flaw, read as a globe. The slider went with it:
+of its range only two values were ever wanted, and both named this axis.
+
+His clustered rotation — a voronoi driving the wave's Z angle, the *little marks*
+shader — is not built. One family suffices for the reference frame, and a
+permutation voronoi is twenty-seven cell evaluations a pixel against the one
+`snoise` the breaks cost. A hash-based one is not an option for the reason
+`simplex3D` is not hash-based: `fract(sin(…))` differs between Mali, Adreno and
+desktop, and the cell layout would *be* what the veil looks like.
+
+**The first build was a hatch and not a dither, and that is the mistake worth
+recording.** It scaled *stroke weight* by coverage against a ceiling of about a
+pixel, so the marks could never close up: the veil's white mass was gone and what
+remained read as a species of line noise laid over the world. The argument had
+been made correctly and then not implemented — a dither's screen is compared
+against a tone, it does not modulate the mark. The correction is one line in
+spirit: `step(screen, tone)`, with the screen running 0 at a stroke's spine to 1
+in the paper between two of them. A tone of 1 is then solid ink and the strokes
+are what the *gradient* looks like, which is the whole difference between
+hatching a picture and hatching a blend.
+
+**Two tones, cut against one family read at two phases.** Coverage cuts the
+silhouette, so a full cloud is unbroken ink and a thinning one opens into strokes
+on its way to nothing. The key cuts the ramp: `floor` of the walk is the slot
+already reached and the remainder is dithered into the next one, which is exactly
+the banding the mode exists to break.
+
+They were one screen first, on the argument that layering a single screen at
+different thresholds is what a pen does. **That argument is true of a pen and
+false of a dither**, and it was visible immediately: sharing a screen *correlates*
+the cuts. In a shoulder the only pixels that survive the silhouette are the ones
+nearest a spine, and those are precisely the pixels that pass the tone cut too —
+so every shoulder collapses onto whichever slot is at its extreme, the grading
+appears only where the veil is already solid, and each shoulder gets a tonal
+fringe that reads as a rimlight.
+
+**The obvious fix was a second family square to the first, and it failed for a
+reason worth keeping.** Cross-hatch is what a pen does for a second tone, and it
+decorrelates the cuts exactly. On a sphere it is also a *net*: two regular rulings
+over a curved surface, meeting at every crossing, reading as wireframe laid over
+the world rather than as ink on it. Two of everything made it worse, not better —
+two pole degeneracies instead of one, and a regularity the breaks could not
+disguise however hard they were pushed.
+
+**What decorrelates without crossing is phase.** The second ruling is the same
+family displaced along its own axis by the break noise, up to half a period. Same
+direction, so there are no crossings at all; and a displacement of half a period
+is as independent of the first ruling as a right angle was, because it is drawn
+from a field the ruling knows nothing about. The strokes weave between each other
+and merge where the phases meet, which is what a second tone in one direction
+looks like drawn by hand. It costs one `asin` less than the cross did, and the
+displacement rides the noise sample the second break was already paying for.
+
+The displacement is the *faded* noise, so the weave dies where the grain can no
+longer be resolved rather than aliasing the ruling it displaces — and both cuts
+are weighed in the **clean** band's rate, never the displaced one's, for the same
+reason the floor is.
+
+**Crossing the rulings cost the breaks their gentleness.** Christoph screens a
+smooth noise straight into the ruling, which lifts it a little everywhere and
+shortens the strokes into dashes. Nothing is ever fully gone — which is fine for
+one family and useless for two, because the pair then meet at *every* crossing
+and the veil reads as a net over the world rather than as hatching on it. That
+was the shape of the regression.
+
+So `veilHatchBreak` stopped being a tint on the threshold and became a
+**removal**: the noise is cut to a near-binary mask, and the slider is the
+fraction of the surface where no stroke is drawn at all. Where the mask is up the
+ruling lifts to 1, so that patch takes no ink *until its tone reaches solid* —
+which is how a hard break still leaves a dense cloud unholed. The mask's own edge
+is floored by the noise's rate per pixel, `veilCover`'s move on `uEdge`.
+
+Each family breaks on **its own offset** of the noise, and that second sample is
+what the break is worth paying twice for. Two families breaking in the same
+places still meet wherever both survive, which is the net again; offset, the
+crossings are sparse and the two read as strokes. It also fades to *nothing* at
+Nyquist rather than to its mean, unlike a ruling — a mask stuck at its mean would
+flip a whole hemisphere on or off as `veilHatchBreak` crossed a half.
+
+**`veilHatchWidth` had to stop being a width.** A pure dither has no width knob;
+width *is* the tone. What it has instead is a mark it cannot draw at *each* end
+of the range: near 0 a stroke a fiftieth of a period wide, and near 1 a **gap**
+of the same. Neither goes away with density — density is spacing, this is width —
+so both persist as a hairline that sparkles rather than reads, dark ones through
+the faint half of a veil and pale ones through its solid half.
+
+So the field is a floor in pixels, applied at both ends: a stroke under it is
+lifted onto it, and a gap under it is opened out to it. Symmetric, because the
+two are one statement — **`veilHatchWidth` is the thinnest thing this pen draws**,
+and a gap is a mark in the paper. Exact 0 and exact 1 survive it, so bare stays
+bare and a solid cloud stays solid. The exchange rate falls out of the ruling's
+own derivative — it runs 0 to 1 across a half period, so a mark of *w* pixels is
+worth a tone of `w × perStroke / 2` — which is `contourAt`'s trick in its third
+use and the reason a mark holds its weight at any widget size. The two lifts are
+*composed* rather than combined with a `min`, or the second undoes the first over
+the half of the range it was not meant to touch.
+
+**A floor is a discontinuity, and trying to build one without a step produced a
+slider that did nothing.** The first attempt at the low end was a remap onto
+`[floor, 1]`, which stepped the whole scale up at once: the instant a tone left
+zero it arrived a quarter solid, drawing a hard ring at every blob edge and every
+ramp-slot boundary. The fix for that was a **geometric mean**, `max(t, √(t·floor))`
+— smooth, meets the identity at the floor, returns to zero with no contour of its
+own. It is also **not a floor**: `√(t·floor)` goes to zero with `t`, so it only
+ever leans toward the value and every width below it still gets through. Dragging
+the knob end to end moved a hairline by a tenth of a pixel and read as broken.
+
+What it is now is a plain `clamp(t, floor, 1 − floor)`. The step is kept, because
+any honest floor has one — a tone above zero owes at least one whole mark — and
+made exactly `veilHatchWidth` wide, so what it draws is a hairline appearing all
+at once at each contour where a tone leaves zero or reaches full. A *drawn edge*,
+which is the thing the slider is for, and set to 0 there is no floor at all.
+Clamped rather than remapped so the range between the two floors is untouched; a
+remap buys the same two edges by compressing every mid-tone.
+
+Its range runs to twelve pixels, well past a legibility fix, because past that
+point it stops being one: as the floors close the tones between them are squeezed
+out and the veil goes from graded to **two-level**, every mark either a minimum
+stroke or a minimum gap. They meet at a tone of 0.4 and the picture stops
+changing. It is the only slider in the group that speaks in the pen's units
+rather than the field's, and that is worth a long rail.
+
+The rate it scales is the **clean ruling's**, not the screened field's. Taking
+`fwidth` of the composed screen puts the break noise into the derivative, which
+spikes along every grain contour — and a floor multiplied by that draws a bright
+edge around each blob in the noise. The one that finally showed on screen.
+
+**The Nyquist fade could not be the field's fade.** An octave fades to *nothing*
+when its period falls under two pixels; a screen that did the same would take the
+veil's mass with it at the limb. It fades to its own **mean** instead — which is
+what a mip of it would be — so the dither degrades to a plain cut at half tone
+and a limb keeps its solid heart, losing only the grading across it. The breaks
+fade the same way for `veilWarpAt`'s reason: a mask that sparkles puts the
+aliasing back however carefully the stripes were band-limited.
+
+**Two knobs cost the seven-ink guarantee, and they are not one knob twice.**
+Both were asked for after the pure version had been seen, and both trade the same
+thing — a partial alpha inventing a grey between the ink and the ground, exactly
+as mode 0 does — but they spend it on different pictures.
+
+`veilHatchSoften` blurs each mark's *edge* over that many pixels and leaves its
+middle pure. At 0 the cuts are a raw `step`: pen ink, aliased, every pixel a ramp
+slot, which is the discipline the whole density argument exists to keep. Above 0
+the marks go misty. Softening in *tone* instead — mixing toward the next slot —
+would keep the inks but read as banding, not mist.
+
+**A blur has to be bounded at both ends of the thing it blurs**, and the first
+version was bounded at neither. A ruling tops out at exactly 1, so ramping the cut
+±reach ran off the end of the screen: at solid tone the midline between two spines
+sat half way up the ramp and took half alpha, drawing a **pale line down every gap
+of a region that should be unbroken ink**, and another at every slot boundary of
+the shading, where the remainder comes back round through 1. The tone is widened
+by the reach before it is cut, so tone 1 clears the screen's top and tone 0 its
+bottom and softening touches only marks that have an edge to soften. That widening
+then spends the reach off the *floor* as well, which would come out as a hairline
+of `veilHatchWidth − veilHatchSoften` — nothing at all once the blur is wider than
+the hairline. So the floor is the **sum** of the two: the thinnest mark is
+`veilHatchWidth` across at half alpha with the falloff outside it, which is what a
+soft pen drawing a hairline does. At width 0 the lift and the reach cancel and the
+dither is plain, so it needs no guard.
+
+`veilHatchAlpha` thins the whole sheet evenly and leaves every edge as hard as it
+was, so **the faceted read survives it**, which is the point: at full weight the
+hatch has only its density to say anything with, and density is already carrying
+the silhouette. It is the subtlety knob, and the first one to reach for. The
+outline is never thinned — a line at part weight is a smudge.
+
+Both are per world, deliberately, so one world can be pen and its neighbour fog.
+
+**Not built: the screen tone.** The video's other half is window-space diamonds,
+which is the pixel-art dither under another name, and it spends a section
+apologising for the aspect-ratio correction it needs.
 
 ### Open
 
@@ -1950,14 +2282,11 @@ Things that are simply unbuilt, and what they cost today.
 - **The soul split has no control.** `reserve` is real — see Souls below — but
   `detail.split` is still a `RevealStub`, so nothing but `DevPanel` can set the
   fraction. Beat 11 is reachable, not playable.
-- **The recurring harvest has structure, no numbers.** `Planet.completeFirstHarvest()`
-  flips `isHarvested`, banks the merged count and the polarity, and builds an emitter
-  over `PlanetData.harvest` — but no planet in `data/planets.ts` declares one, so a
-  harvested planet emits nothing. Deliberate: the payout is balance, and it is the
-  one thing §3.9 says to ship flat first.
-- **The merged count and polarity are recorded and unread.** `Planet.merged` and
-  `Planet.polarity` are set at the first harvest and locked, but nothing consumes
-  them. §3.9's tier 1 is a flat bonus, so this is the intended half-step.
+- ~~**The recurring harvest has structure, no numbers.**~~ Closed — all three
+  worlds declare a `harvest`, and both banked fields are consumed: `alignment`
+  picks what it pays, `merged` picks how fast. See *What a finished world pays*.
+  The figures themselves are placeholders and `third`'s experience curve puts it
+  out of reach; both are balance, not structure.
 - **The `harness` bucket in `data/upgrades.ts` is empty.** `global` and
   `refinery` are now authored; `harness` exists so there is somewhere for its
   upgrades to live, and nothing names one yet.
@@ -2015,7 +2344,7 @@ point: it lands on its own and moves at least one number in the gauge.
 | ~~6b~~ | ~~The refinery engine~~ | ~~nothing visible~~ | **done** — see Refinery below |
 | ~~1~~ | ~~Author the `global` bucket~~ | ~~beats 5, 6 onto real triggers~~ | **done** — see Scopes below |
 | ~~8~~ | ~~Travel~~ | ~~beat 12~~ | **done** — see Overview below |
-| 5 | `PlanetData.harvest` | merged planets actually pay | balance |
+| ~~5~~ | ~~`PlanetData.harvest`~~ | ~~merged planets actually pay~~ | **done** — see *What a finished world pays* |
 | 9 | The token purchases — Ochre, Indigo, opposite Crimson | red gets a sink | price curves, and a buyer |
 | 7 | Harvest and Refinery layouts | 8 stubs | design pass — see Parked |
 

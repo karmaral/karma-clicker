@@ -10,6 +10,7 @@ export default class ResourceEmitter {
   #duration = $derived.by(() => this.#getDuration());
   #isAutonomous = $state(false);
   #isInProgress = $state(false);
+  #nextAt = $state(0);
 
   #listeners: Record<string, Listener[]> = {
     queue: [],
@@ -25,6 +26,8 @@ export default class ResourceEmitter {
     this.#isInProgress = true;
 
     const duration = this.#duration;
+    this.#nextAt = Date.now() + duration;
+
     if (!duration) {
       this.emit();
     } else {
@@ -54,6 +57,10 @@ export default class ResourceEmitter {
   }
 
   get duration() { return this.#duration; }
+
+  /** When the queued batch lands, for anything drawing a countdown. */
+  get nextAt() { return this.#nextAt; }
+
   get isAutonomous() { return this.#isAutonomous; }
   get isInProgress() { return this.#isInProgress; }
 

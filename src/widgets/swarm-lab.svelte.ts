@@ -46,7 +46,7 @@ function createSwarmLab() {
   }
 
   function reseed() {
-    draft.seed = Math.floor(Math.random() * 100000);
+    draft.seed = Math.floor(Math.random() * 100_000);
   }
 
   function revert() {

@@ -43,9 +43,10 @@ export function getExcess() {
 
 /**
  * Read once, at the first harvest. It locks what the planet's recurring harvest
- * pays for good (§3.9), so nothing afterwards may consult it again.
+ * pays for good (§3.9), so nothing afterwards may consult it again. `Polarity`
+ * is the shape; the planet calls it its alignment, to keep it off the resources.
  */
-export function getFirstHarvestPolarity(): Polarity {
+export function getFirstHarvestAlignment(): Polarity {
   const reading = getExcess() ?? 0;
   if (Math.abs(reading) < EVEN_BAND) return 0;
 

@@ -38,7 +38,7 @@ const data: Record<string, UpgradeData[]> = {
     },
     {
       id: 'the_other_way',
-      unlocks_at: { experience: 30000 },
+      unlocks_at: { experience: 30_000 },
       costs: { karma_positive: 4000 },
     },
   ],
@@ -54,13 +54,13 @@ const data: Record<string, UpgradeData[]> = {
       id: 'seats_1',
       effect: { op: 'flat', value: 4, stat: 'seats' },
       unlocks_at: { karma_negative: 5000 },
-      costs: { karma_positive: 25000 },
+      costs: { karma_positive: 25_000 },
     },
     {
       id: 'efficiency_1',
       effect: { op: 'mult', value: 1.5 },
       unlocks_at: { red_positive: 500 },
-      costs: { experience: 1000000 },
+      costs: { experience: 1_000_000 },
     },
     {
       id: 'speed_1',
@@ -86,21 +86,21 @@ const data: Record<string, UpgradeData[]> = {
     {
       id: 'discover',
       effect: 'discover',
-      unlocks_at: { karma_positive: 20000 },
-      costs: { karma_positive: 30000 },
+      unlocks_at: { karma_positive: 20_000 },
+      costs: { karma_positive: 30_000 },
     },
   ],
   'planet:third': [
     {
       id: 'discover',
       effect: 'discover',
-      unlocks_at: { karma_positive: 750000 },
+      unlocks_at: { karma_positive: 750_000 },
     },
   ],
   'building:main': [
     // {
     //   id: 'speed_3',
-    //   effect: { op: 'flat', value: -10000 },
+    //   effect: { op: 'flat', value: -10_000 },
     //   effect_target: 'duration',
     //   unlocks_at: { experience: 500 },
     // },
@@ -153,8 +153,8 @@ const data: Record<string, UpgradeData[]> = {
         { op: 'mult', value: 1.6, target: 'experience' },
         { op: 'mult', value: 6.6, target: 'karma' },
       ],
-      unlocks_at: { karma_positive: 10000 },
-      costs: { karma_positive: 10000 },
+      unlocks_at: { karma_positive: 10_000 },
+      costs: { karma_positive: 10_000 },
     },
   ],
   'cohort:steady': [
@@ -184,8 +184,8 @@ const data: Record<string, UpgradeData[]> = {
     {
       id: 'first',
       effect: ['unlock', 'acquire'],
-      unlocks_at: { karma_positive: 10000 },
-      costs: { karma_positive: 10000 },
+      unlocks_at: { karma_positive: 10_000 },
+      costs: { karma_positive: 10_000 },
     },
   ],
   'cohort:red_basic': [

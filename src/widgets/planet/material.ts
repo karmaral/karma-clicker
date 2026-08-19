@@ -1173,8 +1173,14 @@ const veilField = /* glsl */ `
    * The fill, and the line around it. Two answers from one field walk, because
    * the line is a contour *of* the fill and computing it anywhere else would be
    * a second threshold that could disagree with the first.
+   *
+   * The key comes out *beside* the fill rather than folded into it, and that is
+   * the one thing the two modes disagree about. An alpha veil multiplies them
+   * back together on the spot, so the key thins it — nothing has changed there.
+   * A hatched veil keeps them apart: shape from the field, shading from the
+   * light, which is the only way a mark can be both dense and dark.
    */
-  float veilCover(vec3 dir, vec3 N, out float line) {
+  float veilCover(vec3 dir, vec3 N, out float line, out float lit) {
     // How far the sample point moves from one pixel to the next. Taken on the
     // unwarped direction and before any branch — derivatives have to be in
     // uniform control flow, and the warp is a small enough push that its own
@@ -1206,15 +1212,18 @@ const veilField = /* glsl */ `
     float perPixel = max(fwidth(over), 1e-6);
     float soft = max(max(uEdge, perPixel * 1.5), 1e-4);
 
-    // The one thing a single-ink layer can shade is how much of it there is —
-    // it has no band coordinate to shift along, which is the whole difference
-    // from the surface. Signed, and the sign is which side of the light the
-    // veil belongs to: cloud burns off the dark half, an aurora is a night mark
-    // and lives at a negative value.
-    float lit = 0.5 + 0.5 * dot(N, uKeyDir);
-    float side = mix(1.0 - lit, lit, step(0.0, uKey));
+    // Signed, and the sign is which side of the light the veil belongs to:
+    // cloud burns off the dark half, an aurora is a night mark and lives at a
+    // negative value. Its magnitude is how hard that reading is pressed, so at
+    // 0 the light does not reach the veil at all and lit is flat 1.
+    float facing = 0.5 + 0.5 * dot(N, uKeyDir);
+    float side = mix(1.0 - facing, facing, step(0.0, uKey));
 
-    float gate = mask * mix(1.0, side, abs(uKey)) * uVeil;
+    lit = mix(1.0, side, abs(uKey));
+
+    // Everything about the veil that is *not* the light. The modes both want
+    // this on its own, and only one of them wants it multiplied by the key.
+    float shape = mask * uVeil;
 
     /**
      * The line is drawn where the fill reaches *full*, not at the silhouette —
@@ -1244,10 +1253,10 @@ const veilField = /* glsl */ `
       float reach = uOutline * 0.5;
       float pixels = abs(over - uEdge) / perPixel;
 
-      line = (1.0 - smoothstep(reach - 0.5, reach + 0.5, pixels)) * gate;
+      line = (1.0 - smoothstep(reach - 0.5, reach + 0.5, pixels)) * shape;
     }
 
-    return smoothstep(-soft, soft, over) * gate;
+    return smoothstep(-soft, soft, over) * shape;
   }
 `;
 
@@ -1320,7 +1329,13 @@ const veilAlphaFragment = /* glsl */ `
 
   void main() {
     float line;
-    float cover = veilCover(vDir, normalize(vNormal), line);
+    float lit;
+    float fill = veilCover(vDir, normalize(vNormal), line, lit);
+
+    // Folded straight back in: for this mode the key *is* a coverage term, and
+    // the only thing a single-ink layer can shade is how much of it there is.
+    float cover = fill * lit;
+    line *= lit;
 
     // The line carries its own opacity rather than borrowing the fill's, so an
     // outline is still a line where the cloud under it has gone to nothing.
@@ -1334,75 +1349,43 @@ const veilAlphaFragment = /* glsl */ `
 `;
 
 /**
- * Mode 1, and no ink at all. What this writes is how far to invert what is
- * already in the framebuffer; the material's blend does the rest, because
- * src(1−dst) + dst(1−src) with a grey src is mix(dst, 1−dst, f). So a veil over
- * the surface comes out as its opposite, over the outline as paper, and over
- * open canvas as ink — the third mark in the medium that cannot be the wrong
- * tone for its ground, and the one that makes an aurora work.
+ * Mode 1. Coverage as a *density* rather than as an opacity, so the veil can
+ * say "half a cloud" without saying it in a colour nobody authored — the
+ * argument the Bayer dither this replaces was making, with a better mark.
  *
- * `colorspace_fragment` is absent for the halo's reason: this is a blend factor
- * and not a colour, and encoding it would bend the inversion.
+ * The mark is Christoph Steinmeyer's dotted line shader, whose whole graph is a
+ * wave texture at one authored angle, a single-octave noise screened in to
+ * break the lines into dashes, and a constant ramp with the light added under
+ * it. That last step is what makes it fit: a pattern plus a tone through a hard
+ * threshold *is* ordered dithering, so the hatch drops straight into the slot
+ * the Bayer matrix left rather than being a second kind of thing.
  *
- * Its fixed point is mid-grey, exactly as the ghost's is — a veil over
- * `--ink-400` is invisible however hard it inverts. If that shows on a real
- * world the answer is mode 0 with an authored tone, not a repair here.
+ * So the hatch is a **screen**, never a picture: a ruling in 0..1, cut against
+ * a tone. Two tones want cutting, so one family is read at two phases.
+ *
+ * - **Coverage cuts the silhouette.** A full cloud is *solid ink* and a thinning
+ *   one breaks into dashes on its way to nothing. The hatch is the gradient, not
+ *   the veil — the mass it used to eat is the thing it is dithering.
+ * - **The key cuts the ramp**, against the same family walked out of phase by
+ *   the break noise. `veilKey` walks `veilHatchShade` slots deeper as the
+ *   surface turns from the light and the woven strokes dither each slot
+ *   boundary. That is the whole of the manga read: paper, hatch, solid tone.
+ *
+ * Two phases rather than one, because one correlates them: in a shoulder the
+ * pixels that survive the silhouette are the ones nearest a spine, and they are
+ * the same pixels that pass the tone cut, so every shoulder collapses onto one
+ * slot and the grading shows only where the veil is already solid. Two phases
+ * rather than two *angles*, because a second family square to the first is a
+ * cross-hatch on paper and a net on a sphere.
+ *
+ * Surface-locked, and free: vDir is object space and the veil group carries the
+ * veil's own turn, so the strokes ride the world rather than the paper.
  */
-const veilInvertFragment = /* glsl */ `
-  uniform float uOutline;
-  uniform float uVeil;
-  uniform vec3 uOrigin;
-  uniform float uFrequency;
-  uniform float uOctaves;
-  uniform float uGain;
-  uniform float uWarp;
-  uniform float uBands;
-  uniform float uBandFrequency;
-  uniform float uCoverage;
-  uniform float uEdge;
-  uniform float uPole;
-  uniform float uPoleEdge;
-  uniform float uKey;
-  uniform vec3 uKeyDir;
-
-  varying vec3 vDir;
-  varying vec3 vNormal;
-
-  ${simplex3D}
-  ${veilField}
-
-  void main() {
-    float line;
-    float invert = veilCover(vDir, normalize(vNormal), line);
-
-    // The outline has no ink here, because nothing in this mode does — it is
-    // the *hardest* inversion instead, so the edge reads as a crisp turn
-    // against a body that is only partly turned. veilOutlineTone is inert here,
-    // exactly as veilTone is.
-    invert = max(invert, line);
-    if (invert <= 0.0) discard;
-
-    gl_FragColor = vec4(vec3(invert), 1.0);
-  }
-`;
-
-/**
- * Mode 2. Coverage as a *density* rather than as an opacity, so every pixel the
- * veil draws is still one of the seven inks. An alpha invents a grey between
- * two ramp slots, which is the one thing the system does not own; this is the
- * only mode that can say "half a cloud" without saying it in a colour nobody
- * authored.
- *
- * The cell is in device pixels and everything else in the widget is authored in
- * CSS ones, so uDither divides it back — the outline's rule, and the reason a
- * hairline read half-weight on retina.
- */
-const veilDitherFragment = /* glsl */ `
+const veilHatchFragment = /* glsl */ `
   uniform vec3 uRamp[${RAMP_SLOTS}];
   uniform float uTone;
   uniform float uOutline;
   uniform float uOutlineTone;
-  uniform float uDither;
   uniform float uVeil;
   uniform vec3 uOrigin;
   uniform float uFrequency;
@@ -1417,6 +1400,13 @@ const veilDitherFragment = /* glsl */ `
   uniform float uPoleEdge;
   uniform float uKey;
   uniform vec3 uKeyDir;
+  uniform float uHatchDensity;
+  uniform float uHatchWidth;
+  uniform float uHatchAlpha;
+  uniform float uHatchBreak;
+  uniform float uHatchGrain;
+  uniform float uHatchSoften;
+  uniform float uHatchShade;
 
   varying vec3 vDir;
   varying vec3 vNormal;
@@ -1426,32 +1416,229 @@ const veilDitherFragment = /* glsl */ `
   ${veilField}
 
   /**
-   * Bayer 4x4, built by nesting the 2x2 rather than indexed out of an array:
-   * dynamic indexing is not portable in GLSL ES 1.00, which is the same reason
-   * readRamp is a loop. Returns 0 to 15/16 in sixteenths.
+   * Where a direction falls across the ruling, counted in stroke periods. The
+   * whole family is level sets of this, and every ruling the shader draws is
+   * this one number read at a different phase.
+   *
+   * Strokes are the level sets of the *angle* to the axis rather than of the
+   * dot product, and that is the load-bearing choice: the gradient of
+   * asin(d.y) over a unit sphere has magnitude exactly 1, so the family is
+   * evenly spaced across the whole world at once. A surface-locked stroke
+   * therefore needs no projection, no triplanar blend and no correction at the
+   * limb — the three things a UV-space hatch spends its budget on.
+   *
+   * The axis is the world's own, and is not authorable. Any other one puts the
+   * measure's two degenerate poles somewhere arbitrary — object space, so tilt,
+   * turn and lean decide where they surface, and they read as a whorl sitting
+   * in the middle of the disc with nothing to explain it. On the world's axis
+   * they land on the world's poles, where a ruling in latitude is *supposed* to
+   * converge, and the eye reads a globe instead of an artefact.
    */
-  float bayer2At(vec2 at) {
-    vec2 cell = floor(at);
-
-    return fract(cell.x * 0.5 + cell.y * cell.y * 0.75);
+  float bandAt(vec3 dir) {
+    return asin(clamp(dir.y, -1.0, 1.0)) * uHatchDensity;
   }
 
-  float bayer4At(vec2 at) {
-    return bayer2At(at * 0.5) * 0.25 + bayer2At(at);
+  /**
+   * The ruling itself: 0 on a spine, 1 out in the paper midway between two of
+   * them. A tone cut against this is an ordered dither — tone 1 solid, tone 0
+   * bare, the Bayer matrix's whole contract.
+   *
+   * Takes the band's rate rather than measuring it, so a phase-displaced ruling
+   * is still weighed by the *clean* one. A rate that carried the displacement
+   * would spike wherever the noise ran fast, and anything scaled by it would
+   * grow a bright fringe there — which is the bug this shader already shipped
+   * once.
+   */
+  float ridgeAt(float band, float perBand) {
+    float ridge = abs(band - floor(band + 0.5)) * 2.0;
+
+    // Nyquist, on veilFbm's rule and with its constants — but a ruling cannot
+    // fade to *nothing* the way an octave can, or the veil would lose its mass
+    // at the limb. It fades to its own mean instead, which is what a mip of it
+    // would be, and there the dither degrades to a plain cut at half tone. So a
+    // limb keeps its solid heart and loses only the grading across it.
+    return mix(0.5, ridge, 1.0 - smoothstep(0.25, 0.5, perBand));
+  }
+
+  /**
+   * The breaks, as a *removal* rather than as a tint on the threshold.
+   *
+   * Christoph screens a smooth noise straight in, which lifts the ruling a
+   * little everywhere and shortens the strokes into dashes. Nothing is ever
+   * fully gone, and with two rulings on one sphere that is far too gentle — the
+   * families meet wherever both survive and the veil reads as a net. So the
+   * noise is cut to a near-binary mask first: uHatchBreak is the *fraction of
+   * the field taken away*, and where it is taken the ruling is lifted to 1 and
+   * that patch draws no stroke at all until its tone reaches solid.
+   *
+   * The mask's own edge is floored by the noise's rate per pixel, veilCover's
+   * move on uEdge, so it is never harder than the screen can draw. It fades to
+   * *nothing* at Nyquist rather than to its mean, unlike a ruling: a mask that
+   * vanishes only costs the limb its dashes, where a mask stuck at its mean
+   * would flip a whole hemisphere on or off as uHatchBreak crossed a half.
+   */
+  float breakAt(float grain, float soft, float fade) {
+    if (uHatchBreak <= 0.0) return 0.0;
+
+    return smoothstep(1.0 - uHatchBreak - soft, 1.0 - uHatchBreak + soft, grain) * fade;
+  }
+
+  /**
+   * One cut. At uHatchSoften 0 this is a raw step and every pixel the hatch
+   * draws is still one of the seven inks — the whole reason a density mode
+   * exists rather than an alpha one. Above 0 it ramps across that many pixels,
+   * the mark goes misty, and the guarantee is traded away for it: a partial
+   * alpha invents a grey between the ink and the ground, exactly as mode 0
+   * does. Authored per world, so one world can be pen and its neighbour fog.
+   *
+   * The tone is widened by the reach at both ends before it is cut, and that is
+   * not a nicety. A ruling tops out at exactly 1, so a raw ramp of +/-reach runs
+   * off the end of the screen: at solid tone the midline between two spines sits
+   * half way up the ramp and takes half alpha, drawing a fine pale line down
+   * every gap of a region that should be unbroken ink — and one at every slot
+   * boundary of the shading, where the remainder comes back round through 1.
+   * Widened, tone 1 clears the screen's top and tone 0 its bottom, so softening
+   * touches only the marks that have an edge to soften.
+   */
+  float inkAt(float screen, float perStroke, float tone) {
+    if (tone <= 0.0) return 0.0;
+    if (uHatchSoften <= 0.0) return step(screen, tone);
+
+    float reach = uHatchSoften * perStroke * 0.5;
+
+    return smoothstep(screen - reach, screen + reach, tone * (1.0 + 2.0 * reach) - reach);
+  }
+
+  /**
+   * Both ends of a tone's range, opened out so the pen can draw them.
+   *
+   * A pure dither has no width control — width *is* the tone. That leaves it
+   * with a mark it cannot draw at each end: near 0 a stroke a fiftieth of a
+   * period wide, and near 1 a *gap* of the same, both well under a pixel at
+   * these densities. Neither disappears with density, because density is
+   * spacing and this is width; both persist as a hairline that sparkles rather
+   * than reads. So the faint end is lifted onto a floor of uHatchWidth pixels
+   * and the solid end is lifted off it by the same amount — the ruling runs
+   * 0..1 across a half period, which makes a mark of w pixels worth a tone of
+   * w * perStroke / 2, ink or paper alike.
+   *
+   * Symmetric because the two are the same statement: **uHatchWidth is the
+   * thinnest thing this pen draws**, and a gap is a mark in the paper.
+   *
+   * A plain clamp, and it has to be. It was a geometric mean first —
+   * max(t, sqrt(t * floor)) — chosen to reach the floor without the hard step a
+   * remap would put at zero. It is not a floor at all: sqrt(t * floor) goes to
+   * zero with t, so it only ever leans toward the value and every width below
+   * it still gets through. The knob moved a tenth of a pixel and read as dead.
+   *
+   * A floor is a discontinuity by definition — any tone above zero owes at
+   * least one whole mark — so the honest form keeps the step and makes it
+   * exactly uHatchWidth wide. What that draws is a hairline appearing all at
+   * once at each contour where a tone leaves zero or reaches full, which is a
+   * *drawn edge* and the thing the slider is for. At uHatchWidth 0 there is no
+   * floor and the dither is plain.
+   *
+   * Clamped rather than remapped, so the range between the two floors is left
+   * exactly as it was; a remap would compress every mid-tone to buy the same
+   * two edges. Capped at 0.4 so the pair cannot cross on a small widget.
+   *
+   * The soften is paid for here rather than left to eat the floor. inkAt spends
+   * its reach off the tone, so a floor of exactly uHatchWidth would come out a
+   * softened mark of uHatchWidth minus uHatchSoften — nothing at all once the
+   * blur is wider than the hairline it is blurring. Floored at the sum instead,
+   * the thinnest mark is uHatchWidth across at half alpha with the falloff
+   * outside it, which is what a soft pen drawing a hairline does. It needs no
+   * guard at uHatchWidth 0: the lift and the reach cancel, the mark comes out
+   * zero wide, and the dither is plain exactly as it is with no soften.
+   */
+  float legibleAt(float tone, float perStroke) {
+    if (tone <= 0.0) return 0.0;
+    if (tone >= 1.0) return 1.0;
+
+    float thinnest = min((uHatchWidth + uHatchSoften) * perStroke * 0.5, 0.4);
+
+    return clamp(tone, thinnest, 1.0 - thinnest);
   }
 
   void main() {
     float line;
-    float cover = veilCover(vDir, normalize(vNormal), line);
+    float lit;
+    float fill = veilCover(vDir, normalize(vNormal), line, lit);
 
-    // The fill is stippled and the outline is not: a dithered hairline is not a
-    // line, it is a dotted one, and at these widths it would come apart
-    // entirely. So the line takes a hard half-cut — aliased, which is the mode
-    // this is, and the only mode where that is the consistent answer.
+    float perStep = length(fwidth(vDir));
+
+    // One ruling for the whole shader, read at two phases. Its rate is measured
+    // once, on the clean band, and is what both cuts are weighed in.
+    float band = bandAt(vDir);
+    float perBand = max(fwidth(band), 1e-6);
+    float perStroke = 2.0 * perBand;
+
+    // Detail 0 in his graph: one octave, no sum, and the seed offset is the
+    // world's so two worlds break differently. Two samples of it, and the
+    // second earns its keep twice over below.
+    float grainA = snoise(vDir * uHatchGrain + uOrigin) * 0.5 + 0.5;
+    float grainB = snoise(vDir * uHatchGrain + uOrigin + vec3(37.1, 11.9, 5.3)) * 0.5 + 0.5;
+
+    float soft = max(0.06, uHatchGrain * perStep);
+    float fade = 1.0 - smoothstep(0.25, 0.5, uHatchGrain * perStep);
+
+    // Cut one: the silhouette. Coverage is a density here, so a full cloud
+    // closes to solid ink and a thinning one opens into strokes. His screen
+    // node, over a mask rather than over the raw noise: where the mask is up
+    // the ruling is lifted to 1, so the patch takes no ink until its tone
+    // reaches solid — which is why even a hard break never holes a solid core.
+    float marks = ridgeAt(band, perBand);
+    marks = 1.0 - (1.0 - marks) * (1.0 - breakAt(grainA, soft, fade));
+
+    // The layer's own weight, and the second knob in this mode that spends the
+    // seven-ink guarantee. It is not uHatchSoften's job done twice: soften
+    // blurs a mark's *edge* and leaves its middle pure, this thins the whole
+    // sheet evenly and keeps every edge as hard as it was. The faceted read
+    // survives it, which is why it is here — a hatch at full weight has only
+    // its density to say anything with, and density is already carrying the
+    // silhouette. The outline is left alone: a line at part weight is a smudge.
+    float alpha = inkAt(marks, perStroke, legibleAt(fill, perStroke)) * uHatchAlpha;
+
+    // Cut two: the shading. How far from the light, in ramp slots — bounded by
+    // abs(uKey), so the slider is both which way the light falls and how hard
+    // the reading is pressed. floor is the slot already reached and the
+    // remainder is dithered into the next, which is the banding this mode
+    // exists to break.
+    //
+    // It needs a ruling the first cut cannot predict. Sharing one outright
+    // correlates them: in a shoulder only the pixels nearest a spine survive
+    // the silhouette, and those same pixels are the ones that pass the tone
+    // cut, so every shoulder collapses onto whichever slot is at its extreme
+    // and the grading shows only where the veil is already solid.
+    //
+    // Crossing a second family square to the first decorrelates them and is
+    // what a pen does — and on a sphere it is also a *net*, two regular grids
+    // over a curved surface reading as wireframe rather than as ink. So the
+    // second ruling is the same family walked out of phase by the noise
+    // instead: same direction, no crossings, and a displacement of up to half a
+    // period is as independent of the first as a right angle was. The strokes
+    // weave between each other and merge where the phases meet, which is what a
+    // second tone in one direction looks like drawn by hand.
+    //
+    // Displaced by the *faded* noise, so the weave dies where the grain can no
+    // longer be resolved rather than aliasing the ruling it is displacing.
+    float weave = (grainB - 0.5) * fade;
+    float woven = ridgeAt(band + weave, perBand);
+    woven = 1.0 - (1.0 - woven) * (1.0 - breakAt(grainB, soft, fade));
+
+    float depth = (1.0 - lit) * uHatchShade;
+    float reached = floor(depth);
+    float deeper = inkAt(woven, perStroke, legibleAt(depth - reached, perStroke));
+
+    // The outline is not hatched — a broken hairline is not a line, and at
+    // these widths it would come apart entirely — and not keyed either, because
+    // here the key is a shading and a cloud does not lose its edge to the dark.
     float drawn = step(0.5, line);
-    if (max(cover - bayer4At(gl_FragCoord.xy / max(uDither, 1.0)), drawn) <= 0.0) discard;
 
-    gl_FragColor = vec4(readRamp(mix(uTone, uOutlineTone, drawn)), 1.0);
+    alpha = max(alpha, drawn);
+    if (alpha <= 0.0) discard;
+
+    gl_FragColor = vec4(readRamp(mix(uTone + reached + deeper, uOutlineTone, drawn)), alpha);
 
     #include <colorspace_fragment>
   }
@@ -1483,14 +1670,19 @@ export function createSurfaceMaterial() {
 }
 
 /**
- * The three veil materials, and the reason there are three rather than one with
- * a mode uniform: two of them are blends, and a blend is a construction flag.
+ * The two veil materials, and the reason there are two rather than one with a
+ * mode uniform. It used to be that a mode was a blend and a blend is a
+ * construction flag; the inversion is gone and that argument with it. What is
+ * left is cost: a mode uniform compiles both pictures into one shader, so every
+ * world wearing the cheap alpha veil would carry the hatch's noise and
+ * derivatives in its register budget for a branch it never takes — across as
+ * many `PlanetView`s as a screen mounts. Two shaders, one compiled per world.
  *
- * Their uniform blocks are written out in full three times over, which is not
- * an oversight. `uniforms: { ...veilUniforms() }` defeats the join checker's
+ * Their uniform blocks are written out in full twice over, which is not an
+ * oversight. `uniforms: { ...veilUniforms() }` defeats the join checker's
  * block match and every declared uniform comes back MISSING — and a uniform the
- * checker cannot see is a uniform that is silently 0. Seventeen duplicated
- * lines is what three modes cost to stay checked.
+ * checker cannot see is a uniform that is silently 0. The duplication is what
+ * two modes cost to stay checked.
  *
  * Every one of them: FrontSide, because the vertex shader emits a true sphere,
  * so the winding is the sphere's and the rasteriser culls the far half exactly.
@@ -1535,50 +1727,11 @@ export function createVeilAlphaMaterial() {
   });
 }
 
-/** Mode 1, on the halo's blend — see `veilInvertFragment` for what it buys. */
-export function createVeilInvertMaterial() {
+/** Mode 1, the hatch — the only veil that can be all seven inks and nothing between. */
+export function createVeilHatchMaterial() {
   return new THREE.ShaderMaterial({
     vertexShader: veilVertex,
-    fragmentShader: veilInvertFragment,
-    side: THREE.FrontSide,
-    transparent: true,
-    blending: THREE.CustomBlending,
-    blendEquation: THREE.AddEquation,
-    blendSrc: THREE.OneMinusDstColorFactor,
-    blendDst: THREE.OneMinusSrcColorFactor,
-    // Colour only. The same factors on the alpha channel would drive it to zero
-    // wherever the veil drew — a hole punched in the canvas, on any context
-    // that has an alpha channel at all.
-    blendSrcAlpha: THREE.ZeroFactor,
-    blendDstAlpha: THREE.OneFactor,
-    depthTest: false,
-    depthWrite: false,
-    uniforms: {
-      uOutline: { value: 0 },
-      uHeight: { value: 0.03 },
-      uVeil: { value: 0 },
-      uOrigin: { value: new THREE.Vector3() },
-      uFrequency: { value: 2.6 },
-      uOctaves: { value: 4 },
-      uGain: { value: 0.55 },
-      uWarp: { value: 0.28 },
-      uBands: { value: 0 },
-      uBandFrequency: { value: 5 },
-      uCoverage: { value: 0.52 },
-      uEdge: { value: 0.08 },
-      uPole: { value: 0 },
-      uPoleEdge: { value: 2 },
-      uKey: { value: 0 },
-      uKeyDir: { value: new THREE.Vector3(0, 0, 1) },
-    },
-  });
-}
-
-/** Mode 2. The only veil whose every pixel is still one of the seven inks. */
-export function createVeilDitherMaterial() {
-  return new THREE.ShaderMaterial({
-    vertexShader: veilVertex,
-    fragmentShader: veilDitherFragment,
+    fragmentShader: veilHatchFragment,
     side: THREE.FrontSide,
     transparent: true,
     depthTest: false,
@@ -1588,7 +1741,6 @@ export function createVeilDitherMaterial() {
       uTone: { value: 0 },
       uOutline: { value: 0 },
       uOutlineTone: { value: 6 },
-      uDither: { value: 1 },
       uHeight: { value: 0.03 },
       uVeil: { value: 0 },
       uOrigin: { value: new THREE.Vector3() },
@@ -1604,6 +1756,13 @@ export function createVeilDitherMaterial() {
       uPoleEdge: { value: 2 },
       uKey: { value: 0 },
       uKeyDir: { value: new THREE.Vector3(0, 0, 1) },
+      uHatchDensity: { value: 24 },
+      uHatchWidth: { value: 1 },
+      uHatchAlpha: { value: 0.85 },
+      uHatchBreak: { value: 0.45 },
+      uHatchGrain: { value: 30 },
+      uHatchSoften: { value: 0 },
+      uHatchShade: { value: 2 },
     },
   });
 }
@@ -1615,10 +1774,7 @@ export function createVeilDitherMaterial() {
  * entirely and a missing uniform would go back to being silent.
  */
 export function veilMaterialFor(ink: number) {
-  const mode = Math.round(ink);
-
-  if (mode === 1) return createVeilInvertMaterial();
-  if (mode === 2) return createVeilDitherMaterial();
+  if (Math.round(ink) === 1) return createVeilHatchMaterial();
 
   return createVeilAlphaMaterial();
 }
@@ -2105,19 +2261,25 @@ export function syncVeilUniforms(material: THREE.ShaderMaterial, visual: PlanetV
   u.uPoleEdge.value = Math.max(0.02, visual.veilPoleEdge);
   u.uKey.value = visual.veilKey;
   u.uOutline.value = Math.max(0, visual.veilOutline);
+  u.uTone.value = Math.round(visual.veilTone);
+  u.uOutlineTone.value = Math.round(visual.veilOutlineTone);
 
   // The aim is the system's, not the world's — read ambiently, as the ramp is.
   const key = keyLight.direction;
   u.uKeyDir.value.set(key.x, key.y, key.z);
 
-  // The slots only some of the three modes have, guarded rather than declared
-  // into shaders that do not use them. The inversion carries no ink at all —
-  // the halo's argument, and why it has no `uRamp` either — and only the dither
-  // is measured in device pixels. A uniform a shader does not declare is one
-  // the join check calls unused, and it would be right.
-  if (u.uTone) u.uTone.value = Math.round(visual.veilTone);
-  if (u.uOutlineTone) u.uOutlineTone.value = Math.round(visual.veilOutlineTone);
-  if (u.uDither) u.uDither.value = Math.max(1, Math.round(window.devicePixelRatio || 1));
+  // The hatch's own slots, guarded rather than declared into the alpha shader
+  // that does not use them. A uniform a shader does not declare is one the join
+  // check calls unused, and it would be right.
+  if (!u.uHatchDensity) return;
+
+  u.uHatchDensity.value = Math.max(0.1, visual.veilHatchDensity);
+  u.uHatchWidth.value = Math.max(0, visual.veilHatchWidth);
+  u.uHatchAlpha.value = Math.max(0, Math.min(1, visual.veilHatchAlpha));
+  u.uHatchBreak.value = visual.veilHatchBreak;
+  u.uHatchGrain.value = Math.max(0.1, visual.veilHatchGrain);
+  u.uHatchSoften.value = Math.max(0, visual.veilHatchSoften);
+  u.uHatchShade.value = Math.max(0, visual.veilHatchShade);
 }
 
 /**

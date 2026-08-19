@@ -55,7 +55,7 @@ export default {
   },
   'zealot': {
     upgrade_threshold: [5, 15, 25, 50, 75, 100, 125],
-    cost: 10000,
+    cost: 10_000,
     cost_multiplier: 1.5,
     yield_multipliers: { karma: 3 },
     cost_type: 'karma_positive',

@@ -1,5 +1,5 @@
 import Planet from '$lib/planets/base.svelte';
-import { getFirstHarvestPolarity } from '$lib/excess';
+import { getFirstHarvestAlignment } from '$lib/excess';
 import { BuildingManager } from '.';
 import data from '$data/planets';
 
@@ -29,13 +29,17 @@ class PlanetManager {
     this.#selected = id;
   }
 
-  /** The active planet's one-off ending. Returns how many souls were merged. */
+  /**
+   * The active planet's one-off ending. Returns how many souls were merged.
+   * The floor is counted before anything is taken — `mergeSouls` is destructive.
+   */
   completeFirstHarvest(mergeFraction: number) {
     const planet = this.getActive();
     if (!planet?.isFirstHarvestReady) return 0;
+    if (!planet.isMergeSufficient(BuildingManager.countMergeable(mergeFraction))) return 0;
 
     const merged = BuildingManager.mergeSouls(mergeFraction);
-    planet.completeFirstHarvest(merged, getFirstHarvestPolarity());
+    planet.completeFirstHarvest(merged, getFirstHarvestAlignment());
 
     return merged;
   }

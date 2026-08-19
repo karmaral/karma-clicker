@@ -1,19 +1,19 @@
 /** Cohorts wander instead of jittering — `Math.random` per emission reads as a bug. */
 
 function seedFrom(key: string) {
-  let hash = 2166136261;
+  let hash = 2_166_136_261;
   for (let i = 0; i < key.length; i++) {
     hash ^= key.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
+    hash = Math.imul(hash, 16_777_619);
   }
 
   return hash >>> 0;
 }
 
 function latticeValue(seed: number, step: number) {
-  let hash = Math.imul(seed ^ step, 2654435761);
+  let hash = Math.imul(seed ^ step, 2_654_435_761);
   hash ^= hash >>> 15;
-  hash = Math.imul(hash, 2246822519);
+  hash = Math.imul(hash, 2_246_822_519);
   hash ^= hash >>> 13;
 
   return ((hash >>> 0) / 0xffffffff) * 2 - 1;

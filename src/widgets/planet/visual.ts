@@ -215,15 +215,15 @@ export interface PlanetVisual {
    */
   veil: number;
   /**
-   * How it composites. 0 alpha over `veilTone`; 1 the halo's inversion, which
-   * has no tone of its own and so cannot be the wrong one for its ground; 2 an
-   * ordered dither, the only mode whose every pixel is still a ramp slot.
+   * How it composites. 0 alpha over `veilTone`, which invents a grey between
+   * two ramp slots wherever it is partly open; 1 the hatch, which spends the
+   * same coverage as a *density* of marks instead and so can stay inside the
+   * seven inks. Picks between two materials — see `veilMaterialFor`.
    *
-   * A blend is a construction flag rather than a uniform, so this picks between
-   * three materials — see `veilMaterialFor`.
+   * It also decides what `veilKey` means, which is the only place the two modes
+   * disagree about anything but their marks. See there.
    */
   veilInk: number;
-  /** Inert in mode 1, which carries no ink at all. */
   veilTone: number;
   /**
    * How far above the surface, in body radii. Under an orthographic camera a
@@ -265,8 +265,8 @@ export interface PlanetVisual {
    * spine rather than collapsing to a dot — and a wisp that never reaches full
    * coverage carries no line at all, having no solid part to be the edge of.
    *
-   * `veilOutlineTone` is inert in mode 1, which has no ink of its own: the line
-   * is the hardest inversion there instead of a tone.
+   * Never hatched. A broken hairline is not a line, so in mode 1 it takes a
+   * hard half-cut and stays solid.
    */
   veilOutline: number;
   veilOutlineTone: number;
@@ -280,12 +280,22 @@ export interface PlanetVisual {
   veilPole: number;
   veilPoleEdge: number;
   /**
-   * How the key reaches it — and the one term that differs in kind from the
-   * body's. The surface composites its key as a shift along the ramp; a single
-   * ink has no band coordinate to shift along, so the only thing this can shade
-   * is *how much veil there is*. Signed, and the sign is which side of the
-   * light it belongs to: a cloud burns off the dark half at a positive value,
-   * and an aurora is a night mark and lives at a negative one.
+   * How the key reaches it, and it reaches the two modes differently.
+   *
+   * At `veilInk` 0 it is a *coverage* term: a single ink has no band coordinate
+   * to shift along, so the only thing it can shade is how much veil there is,
+   * and the veil thins toward the far side of the light.
+   *
+   * At `veilInk` 1 it is the shading proper — the veil keeps its full shape and
+   * walks `veilHatchShade` slots down the ramp instead, which is what the hatch
+   * dithers. That is the one thing a density mode buys that an alpha one
+   * cannot: a mark can be sparse *and* dark, so shape and light stop competing
+   * for the same number.
+   *
+   * Signed either way, and the sign is which side of the light it belongs to: a
+   * cloud burns off — or shades — the dark half at a positive value, and an
+   * aurora is a night mark and lives at a negative one. The magnitude is how
+   * hard the reading is pressed, and at 0 the light does not reach the veil.
    */
   veilKey: number;
   /**
@@ -294,6 +304,80 @@ export interface PlanetVisual {
    * session tuning the veil wants its rate under its coverage.
    */
   veilSpin: number;
+  /**
+   * The hatch, and inert at any `veilInk` but 1. One family of strokes, ruled
+   * on the sphere itself rather than on the paper, so they turn with the world.
+   *
+   * These author a *screen*, not a picture. The strokes are never the veil —
+   * they are what a tone looks like part of the way to solid, so a full cloud
+   * is unbroken ink and the marks live in its gradient. Two tones are cut
+   * against one family read at two phases: coverage opens the silhouette, and
+   * the key walks the ramp against the same strokes displaced by the noise.
+   *
+   * `veilHatchDensity` is strokes per radian, and it is the only thing about
+   * the ruling that is authored. There is no angle: the family runs in
+   * latitude, on the world's own axis. Any other axis puts the measure's two
+   * degenerate poles somewhere arbitrary in object space, where they read as a
+   * whorl in the middle of the disc; on this one they land on the poles, where
+   * a ruling in latitude is *supposed* to converge. There is no second angle
+   * either — the tone's strokes run the same way and weave between the
+   * silhouette's, because a family square to the first is a cross-hatch on
+   * paper and a net on a sphere.
+   *
+   * `veilHatchWidth` is *not* the stroke weight — the tone is — but **the
+   * thinnest mark this pen draws**, in CSS pixels, at both ends of the range: a
+   * stroke under it is lifted onto it and a *gap* under it is opened out to it.
+   * Those two are the hairlines that survive at any density, since density is
+   * spacing and this is width. At 0 the floors are gone and the dither is plain.
+   *
+   * Its range runs well past a legibility fix, because it does not stay one. As
+   * the floors close on each other the tones between them are squeezed out, and
+   * a veil goes from graded to two-level — every mark either a minimum stroke or
+   * a minimum gap. That is a look, not a failure, and it is the far end of the
+   * only slider in the group that speaks in the pen's units rather than the
+   * field's. They meet at a tone of 0.4, where the picture stops changing.
+   *
+   * `veilHatchBreak` is the fraction of the surface where no stroke is drawn at
+   * all, cut from a one-octave noise, and `veilHatchGrain` is that noise's
+   * scale — so break is how much is gone and grain is how big the gaps are. At
+   * 0 nothing is cut and the mode is plain line hatching; at 1 only solid tone
+   * survives. Each phase breaks on its own offset of the noise, and the second
+   * offset does double duty: it is also what displaces the tone's strokes off
+   * the silhouette's.
+   *
+   * A patch that is cut still fills at solid tone, which is what keeps a dense
+   * cloud from going holey. That is Christoph's screen, over a near-binary mask
+   * rather than over the raw noise — the raw form only shortens strokes, and
+   * shortened strokes on two crossed rulings is the net again.
+   *
+   * `veilHatchShade` is how many ramp slots `veilKey` walks from `veilTone`
+   * toward ink as the surface turns from the light. At 0 the veil is one flat
+   * ink, the key does nothing to it, and the woven phase never draws.
+   *
+   * Two knobs cost the seven-ink guarantee, and they are not the same knob
+   * twice. `veilHatchSoften` blurs each mark's *edge* over that many pixels and
+   * leaves its middle pure; `veilHatchAlpha` thins the whole sheet evenly and
+   * leaves every edge as hard as it was, so the faceted read survives it. Both
+   * invent a grey between the ink and the ground the way mode 0 does, both are
+   * authored per world, and alpha is the one to reach for first: at full weight
+   * the hatch has only its density to say anything with, and density is already
+   * carrying the silhouette. The outline is never thinned — a line at part
+   * weight is a smudge.
+   *
+   * Soften does nothing at either end of a tone's range — bare stays bare and
+   * solid stays unbroken — and it widens `veilHatchWidth`'s floors by its own
+   * reach, so a hairline is blurred rather than blurred away. Both matter at the
+   * settings that make it visible: a blur that ran off the top of the ruling
+   * would draw a pale line down the middle of every gap in solid ink, and one
+   * that ate the floor would take the hairline with it.
+   */
+  veilHatchDensity: number;
+  veilHatchWidth: number;
+  veilHatchAlpha: number;
+  veilHatchBreak: number;
+  veilHatchGrain: number;
+  veilHatchShade: number;
+  veilHatchSoften: number;
 
   /** Motion. */
   spin: number;
@@ -381,7 +465,7 @@ export const VISUAL_PARAMS: VisualParam[] = [
   // body's geometry and its field lives in the fragment, so every slider here
   // is a uniform write and nothing under it rebuilds a mesh.
   { key: 'veil', label: 'Veil', group: 'Veil', min: 0, max: 1, step: 0.01 },
-  { key: 'veilInk', label: 'Composite', group: 'Veil', min: 0, max: 2, step: 1 },
+  { key: 'veilInk', label: 'Composite', group: 'Veil', min: 0, max: 1, step: 1 },
   { key: 'veilTone', label: 'Veil tone', group: 'Veil', min: 0, max: 6, step: 1 },
   { key: 'veilHeight', label: 'Veil height', group: 'Veil', min: 0.005, max: 0.25, step: 0.005 },
   { key: 'veilFrequency', label: 'Veil frequency', group: 'Veil', min: 0.2, max: 10, step: 0.1 },
@@ -398,6 +482,13 @@ export const VISUAL_PARAMS: VisualParam[] = [
   { key: 'veilPoleEdge', label: 'Veil band width', group: 'Veil', min: 0.05, max: 2, step: 0.01 },
   { key: 'veilKey', label: 'Veil key', group: 'Veil', min: -1, max: 1, step: 0.01 },
   { key: 'veilSpin', label: 'Veil spin', group: 'Veil', min: -0.6, max: 0.6, step: 0.005 },
+  { key: 'veilHatchDensity', label: 'Hatch density', group: 'Veil', min: 4, max: 60, step: 0.5 },
+  { key: 'veilHatchWidth', label: 'Hairline px', group: 'Veil', min: 0, max: 12, step: 0.1 },
+  { key: 'veilHatchAlpha', label: 'Hatch alpha', group: 'Veil', min: 0, max: 1, step: 0.01 },
+  { key: 'veilHatchBreak', label: 'Hatch break', group: 'Veil', min: 0, max: 1, step: 0.01 },
+  { key: 'veilHatchGrain', label: 'Hatch grain', group: 'Veil', min: 4, max: 80, step: 0.5 },
+  { key: 'veilHatchShade', label: 'Hatch shade', group: 'Veil', min: 0, max: 4, step: 0.5 },
+  { key: 'veilHatchSoften', label: 'Hatch soften px', group: 'Veil', min: 0, max: 20, step: 0.5 },
 
   { key: 'spin', label: 'Spin', group: 'Motion', min: -0.6, max: 0.6, step: 0.005 },
   // No row for `tilt` or `lean`: they are one puck under this one. `turn` keeps a
@@ -482,6 +573,13 @@ export const DEFAULT_VISUAL: PlanetVisual = {
   veilPoleEdge: 2,
   veilKey: 0.4,
   veilSpin: 0.05,
+  veilHatchDensity: 24,
+  veilHatchWidth: 1,
+  veilHatchAlpha: 0.85,
+  veilHatchBreak: 0.45,
+  veilHatchGrain: 30,
+  veilHatchShade: 2,
+  veilHatchSoften: 0,
 
   spin: 0.1,
   tilt: 0.2,

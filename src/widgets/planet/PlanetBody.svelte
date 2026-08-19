@@ -78,11 +78,11 @@
   });
 
   /**
-   * Only the mode in force exists. Three materials is three shader compiles for
-   * two pictures nobody asked for, across as many `PlanetView`s as a screen
-   * mounts — and the blend is a construction flag, so a mode change can never
-   * be a uniform write. Torn down on `veil` too, so a world without one
-   * compiles no veil shader at all.
+   * Only the mode in force exists. Both materials is a second shader compile
+   * for a picture nobody asked for, across as many `PlanetView`s as a screen
+   * mounts — and the hatch is the expensive one, so an alpha veil must not be
+   * made to carry it. Torn down on `veil` too, so a world without one compiles
+   * no veil shader at all.
    */
   let veilMaterial = $state.raw<THREE.ShaderMaterial>();
 

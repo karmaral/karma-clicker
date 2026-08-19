@@ -10,8 +10,8 @@
   import UpgradeRail from './UpgradeRail.svelte';
 
   const WIDTHS: Record<ScreenName, string> = {
-    detail: '4fr',
     overview: '3.5fr',
+    detail: '4fr',
     refinery: '3.5fr',
   };
 

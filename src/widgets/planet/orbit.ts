@@ -129,7 +129,7 @@ function createRandom(seed: number) {
     state ^= state >>> 17;
     state ^= state << 5;
 
-    return (state >>> 0) / 4294967296;
+    return (state >>> 0) / 4_294_967_296;
   };
 }
 

@@ -95,6 +95,30 @@ class BuildingManager {
     return this.#takeFromCohorts(mergeFraction).reduce((sum, { count }) => sum + count, 0);
   }
 
+  /**
+   * The lowest whole percent whose split reaches `minimum` — the floor the merge
+   * slider starts at. Searched rather than divided, for the same reason the note
+   * above gives: rounding is per cohort, so the fraction arithmetic predicts is
+   * not the one that reaches the count. Monotone, so halving is exact. Returns
+   * 100 when even all of them fall short, which the first-harvest condition has
+   * already caught.
+   */
+  findMergeFloor(minimum: number) {
+    if (minimum <= 0) return 0;
+
+    let low = 0;
+    let high = 100;
+
+    while (low < high) {
+      const mid = Math.floor((low + high) / 2);
+
+      if (this.countMergeable(mid / 100) >= minimum) high = mid;
+      else low = mid + 1;
+    }
+
+    return low;
+  }
+
   /** Merged souls stop being yours. Returns how many went. */
   mergeSouls(mergeFraction: number) {
     let merged = 0;

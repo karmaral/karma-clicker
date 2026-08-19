@@ -1,8 +1,9 @@
 import { Experience } from '$lib/resources/experience';
-import { ResourceManager } from '$lib/managers';
+import { BuildingManager, ResourceManager } from '$lib/managers';
 import { ResourceEmitter } from '$lib/emission';
 import { getExcess } from '$lib/excess';
 import { FIRST_HARVEST_CONDITIONS } from '$lib/labels';
+import { resolveHarvestDuration, resolveHarvestYields } from './harvest';
 import type { FirstHarvestCondition, PlanetData, Polarity, ResourceType } from '$types';
 
 const BIAS_WITH = 1.4;
@@ -14,7 +15,7 @@ export default class Planet {
   #experience = new Experience();
   #isHarvested = $state(false);
   #merged = $state(0);
-  #polarity = $state<Polarity>(0);
+  #alignment = $state<Polarity>(0);
   #emitter = $state<ResourceEmitter>();
 
   constructor(id: string, initData: PlanetData) {
@@ -49,6 +50,11 @@ export default class Planet {
 
         return excess !== undefined && Math.abs(excess) < threshold;
       }
+      // Whether the floor is *payable*. Whether it is actually paid depends on
+      // the split, which only the harvest screen knows — see `isMergeSufficient`.
+      case 'mergeMinimum': {
+        return BuildingManager.countSouls() >= threshold;
+      }
       default: {
         const unhandled: never = condition;
 
@@ -59,27 +65,45 @@ export default class Planet {
 
   /**
    * The one-off event that ends the planet. Merged souls stop being yours, and
-   * the polarity read here locks what the recurring harvest pays.
+   * the alignment read here locks what the recurring harvest pays.
    */
-  completeFirstHarvest(merged: number, polarity: Polarity) {
+  completeFirstHarvest(merged: number, alignment: Polarity) {
     if (this.#isHarvested) return;
 
     this.#isHarvested = true;
     this.#merged = Math.max(0, Math.trunc(merged));
-    this.#polarity = polarity;
+    this.#alignment = alignment;
 
-    const { harvest } = this.#data;
-    if (!harvest) return;
+    if (!this.#data.harvest) return;
 
-    this.#emitter = new ResourceEmitter(() => {
-      Object.keys(harvest.yields).forEach((type: ResourceType) => {
-        ResourceManager.add(type, harvest.yields[type]);
-      });
-    }, harvest.duration);
+    // A getter, not the figure: the emitter re-queues itself and asks again.
+    this.#emitter = new ResourceEmitter(() => this.#payHarvest(), () => this.#harvestDuration);
 
     this.#emitter.toggleAutonomy(true);
     this.#emitter.queue();
   }
+
+  /**
+   * Into the piles and nowhere else. A finished world does not feed the world
+   * you are standing on — its experience buys progression, not somebody's phases.
+   */
+  #payHarvest() {
+    const yields = this.#harvestYields;
+
+    Object.keys(yields).forEach((type: ResourceType) => {
+      ResourceManager.add(type, yields[type]);
+    });
+  }
+
+  #harvestYields = $derived.by(() => {
+    return resolveHarvestYields(this.#data.harvest?.yields ?? {}, this.#alignment);
+  });
+
+  #harvestDuration = $derived.by(() => {
+    const harvest = this.#data.harvest;
+
+    return resolveHarvestDuration(harvest?.duration ?? 0, this.#merged, harvest ?? {});
+  });
 
   #phasesPerAge = $derived.by(() => this.#data.cycles_per_age * 2);
 
@@ -133,12 +157,21 @@ export default class Planet {
   get experience() { return this.#experience.amount; }
   get isHarvested() { return this.#isHarvested; }
   get merged() { return this.#merged; }
-  get polarity() { return this.#polarity; }
+  get alignment() { return this.#alignment; }
   get emitter() { return this.#emitter; }
+
+  /** What one delivery brings, and how long it takes. The ledger's two figures. */
+  get harvestYields() { return this.#harvestYields; }
+  get harvestDuration() { return this.#harvestDuration; }
 
   /** The conditions still standing in the way, for the UI to name. */
   get unmetFirstHarvestConditions() { return this.#unmet; }
   get isFirstHarvestReady() { return !this.#isHarvested && this.#unmet.length === 0; }
+
+  /** The toll the world takes for letting you leave. 0 is a world that asks none. */
+  get mergeMinimum() { return this.#data.firstHarvest.mergeMinimum ?? 0; }
+
+  isMergeSufficient(merged: number) { return merged >= this.mergeMinimum; }
 
   get phases() { return this.#currentPhases; }
   get phasesPerAge() { return this.#phasesPerAge; }

@@ -43,6 +43,15 @@ export function f(val: number, floats = 2, useLongForm = false) {
 }
 
 
+/** A countdown, mm:ss. Clamped at zero — a batch already landed reads 00:00. */
+export function formatClock(ms: number) {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
 export function withinRange(val: number, min: number, max: number) {
   return val >= min && val < max;
 }

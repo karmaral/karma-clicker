@@ -90,9 +90,23 @@ export interface BuildingData {
 export interface PlanetFirstHarvest {
   excessGate?: number;
   agesLived?: number;
+  /** Souls the world will not let you leave without merging. */
+  mergeMinimum?: number;
 }
 
 export type FirstHarvestCondition = keyof PlanetFirstHarvest;
+
+/**
+ * What merged souls are worth to a world's harvest clock. Authored, because a
+ * late world should ask more souls for the same step and stop giving it back
+ * sooner. Both fall back to a default when a world says nothing.
+ */
+export interface PlanetHarvestMerge {
+  /** Merged souls that double the rate. Higher asks more for the same speed. */
+  mergeHalving?: number;
+  /** The most any merge can multiply the rate by. */
+  maxMergeSpeed?: number;
+}
 /**
  * A phase is a half-wave, light or dense; two make a cycle; `cycles_per_age` of
  * those make an age. Three words, used the same way in code and in the UI.
@@ -107,10 +121,12 @@ export interface PlanetData {
   firstHarvest: PlanetFirstHarvest;
   /**
    * What the recurring harvest pays, and how often. One object because a payout
-   * with no clock pays once and stops. Unset until the harvest pass.
+   * with no clock pays once and stops. `karma` is declared as a family and the
+   * planet routes it by the alignment it locked; `duration` is the base, which
+   * merged souls shorten.
    */
-  harvest?: {
-    yields: Partial<Record<ResourceType, number>>;
+  harvest?: PlanetHarvestMerge & {
+    yields: Partial<Record<YieldType, number>>;
     duration: number;
   };
 }

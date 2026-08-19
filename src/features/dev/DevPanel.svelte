@@ -28,8 +28,14 @@
     progression.jumpTo(progression.beat + delta);
   }
 
+  /** Experience also walks the active world's phases — nothing else by hand does. */
   function grant(type: 'experience' | 'karma_positive' | 'karma_negative', amount: number) {
     ResourceManager.add(type, amount);
+
+    if (type === 'experience') {
+      PlanetManager.getActive()?.addExperience(amount);
+    }
+
     pulse();
   }
 

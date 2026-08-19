@@ -7,20 +7,19 @@ import type { FirstHarvestCondition, Polarity } from '$types';
 
 export type ScreenName = 'overview' | 'detail' | 'refinery';
 
-export const SCREENS: ScreenName[] = ['detail', 'overview', 'refinery'];
+export const SCREENS: ScreenName[] = ['overview', 'detail', 'refinery'];
 
 export const SCREEN_LABELS: Record<ScreenName, string> = {
   overview: 'Overview',
-  detail: '—',
   refinery: 'Refinery',
+  detail: '—',
 };
 
 /**
  * How a planet was first harvested, which sets what its recurring harvest pays.
- * The karma column words, so nobody mistakes them for the excess poles. Flat
- * placeholders, deferred rather than open (CONTEXT v3 §3.9).
+ * The karma column words, so nobody mistakes them for the excess poles.
  */
-export const FIRST_HARVEST_POLARITY_LABELS: Record<Polarity, string> = {
+export const FIRST_HARVEST_ALIGNMENT_LABELS: Record<Polarity, string> = {
   '-1': 'In the negative',
   '0': 'Even',
   '1': 'In the positive',
@@ -43,7 +42,8 @@ export function getExcessSideLabel(excess: number | undefined) {
  */
 const CONDITION_ORDER: Record<FirstHarvestCondition, number> = {
   agesLived: 1,
-  excessGate: 2,
+  mergeMinimum: 2,
+  excessGate: 3,
 };
 
 /**
@@ -61,6 +61,8 @@ export function getFirstHarvestConditionLabel(
   switch (condition) {
     case 'agesLived':
       return `${value} ${value === 1 ? 'age' : 'ages'} lived`;
+    case 'mergeMinimum':
+      return `${value} souls to merge`;
     case 'excessGate':
       return `excess under ${Math.round(value * 100)}%`;
     default: {

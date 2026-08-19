@@ -29,7 +29,7 @@ function createPlanetLab() {
   }
 
   function reseed() {
-    drafts[selected].seed = Math.floor(Math.random() * 100000);
+    drafts[selected].seed = Math.floor(Math.random() * 100_000);
   }
 
   function revert() {

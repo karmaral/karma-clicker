@@ -61,8 +61,8 @@
     { label: 'More cause means more effect', costs: { karma_positive: 15 }, status: 'affordable' },
     { label: 'An easier way', costs: { experience: 200 }, status: 'affordable' },
     { label: 'Free Wilderness', costs: { karma_positive: 50 }, status: 'unlocked' },
-    { label: 'A singular purpose', costs: { karma_positive: 10000 }, status: 'unlocked' },
-    { label: 'Nothing is lost', costs: { karma_positive: 24000 }, status: 'unlocked' },
+    { label: 'A singular purpose', costs: { karma_positive: 10_000 }, status: 'unlocked' },
+    { label: 'Nothing is lost', costs: { karma_positive: 24_000 }, status: 'unlocked' },
     { label: '3 approaching', status: 'approaching' },
   ];
 
