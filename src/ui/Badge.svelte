@@ -57,6 +57,34 @@
     clip-path: polygon(0 0, 100% 0, 100% 100%);
   }
 
+  /* Karma's three treatments at red's hue. Same shapes and the same clip, so a
+     polarised red reads as the polarity it is before it reads as a token. */
+  .badge.red-pos {
+    border-radius: 50%;
+    background: var(--hatch-red-pos-badge);
+    box-shadow: var(--hatch-red-edge);
+  }
+
+  .badge.red-neg {
+    border-radius: 50%;
+    background: var(--hatch-red-neg-badge);
+  }
+
+  .badge.red-both {
+    border-radius: 50%;
+    background: var(--hatch-red-neg-badge);
+  }
+
+  .badge.red-both::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--hatch-red-pos-badge);
+    box-shadow: var(--hatch-red-edge);
+    clip-path: polygon(0 0, 100% 0, 100% 100%);
+  }
+
   .badge.any {
     box-shadow: inset 0 0 0 1px var(--ink-900);
   }

@@ -1,6 +1,14 @@
+/**
+ * Red is the one token that exists polarised, so it carries karma's three hatch
+ * treatments at its own hue — `red` itself stays for an unrouted red, which
+ * `PolarizedResourceType` still lets data declare.
+ */
 export type BadgeKind =
   | 'xp'
   | 'red'
+  | 'red-pos'
+  | 'red-neg'
+  | 'red-both'
   | 'yellow'
   | 'blue'
   | 'pos'

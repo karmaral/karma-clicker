@@ -30,6 +30,7 @@ export {
   clonePulse, printPulse,
   type PulseGroup, type PulseParam, type PulseVisual, type Pulses,
 } from './pulse';
+export { setWatched, useWatched } from './watched';
 export { buildGeometry } from './geometry';
 export { readInkHexes, RAMP_SIZE } from './ink';
 export {

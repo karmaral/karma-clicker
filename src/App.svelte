@@ -8,7 +8,7 @@
   import { wire } from '$lib/wiring.svelte';
   import { f } from '$lib/utils';
   import * as loop from '$lib/loop';
-  import { Frame } from '$features/frame';
+  import { Frame, Screen } from '$features/frame';
   import { DetailScreen } from '$features/detail';
   import { OverviewScreen } from '$features/overview';
   import { RefineryScreen } from '$features/refinery';
@@ -54,13 +54,22 @@
       </div>
     {/if}
 
-    {#if nav.active === 'detail'}
-      <DetailScreen />
-    {:else if nav.active === 'overview'}
-      <OverviewScreen />
-    {:else}
-      <RefineryScreen />
-    {/if}
+    <!-- All three at once, and only one of them looked at. A screen left is
+         hidden rather than destroyed, so its planet keeps the context it was
+         drawn in and comes back turning instead of blank. -->
+    <div class="screens">
+      <Screen active={nav.active === 'detail'}>
+        <DetailScreen />
+      </Screen>
+
+      <Screen active={nav.active === 'overview'}>
+        <OverviewScreen />
+      </Screen>
+
+      <Screen active={nav.active === 'refinery'}>
+        <RefineryScreen />
+      </Screen>
+    </div>
   </Card>
 </main>
 
@@ -81,6 +90,11 @@
   main > :global(.card) {
     width: 100%;
     max-width: 1440px;
+  }
+
+  /* The ground the hidden screens are positioned out of flow against. */
+  .screens {
+    position: relative;
   }
 
   .prelude {

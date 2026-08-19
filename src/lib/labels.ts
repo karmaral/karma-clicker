@@ -16,6 +16,30 @@ export const SCREEN_LABELS: Record<ScreenName, string> = {
 };
 
 /**
+ * The grades, in ladder order. Code says red / yellow / blue and the screen says
+ * Crimson / Ochre / Indigo; red is the only one still holding a side, so it is
+ * the only one whose name takes a qualifier.
+ */
+export type GradeKey = 'red_negative' | 'red_positive' | 'yellow' | 'blue';
+
+export const GRADES: GradeKey[] = ['red_negative', 'red_positive', 'yellow', 'blue'];
+
+export const GRADE_LABELS: Record<GradeKey, string> = {
+  red_negative: 'Crimson · negative',
+  red_positive: 'Crimson · positive',
+  yellow: 'Ochre',
+  blue: 'Indigo',
+};
+
+/** What each grade comes out of — the row's whole explanation of itself. */
+export const GRADE_SOURCES: Record<GradeKey, string> = {
+  red_negative: 'Refined from negative karma',
+  red_positive: 'Refined from positive karma',
+  yellow: 'Refined from matched Crimson',
+  blue: 'Refined from Ochre',
+};
+
+/**
  * How a planet was first harvested, which sets what its recurring harvest pays.
  * The karma column words, so nobody mistakes them for the excess poles.
  */

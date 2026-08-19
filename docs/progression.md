@@ -106,11 +106,6 @@ I have the dev server up and I'm watching all the time."*
 
 Design decisions deferred on purpose. None of these are oversights.
 
-- **The token layer above the refinery.** Yellow is *bought* by pairing the two
-  reds off, blue with yellow, and either red converts to its opposite at a steep
-  scaling price. Matching therefore happens above the refinery, not inside it.
-  The refinery itself is built — see Refinery below; these three purchases are
-  not, and none of them has a price curve yet.
 - **The Harvest layout** is stubbed pending a design pass: where Harvest's verb
   sits relative to its disc is an open question — don't improvise it. Overview
   is no longer one of these; see Overview below.
@@ -1767,6 +1762,49 @@ are not, a frame turns rate × delta, a second reader in a frame adds nothing, a
 long gap clamps to one step, and a wall clock that goes backwards does not unwind
 the world.
 
+### A screen that is left is hidden, not destroyed
+
+The clock made a world resume where it was. It could not make it *appear* there:
+`App.svelte` was an `{#if}` chain, so changing tabs destroyed the whole screen,
+and with it the canvas, the renderer, and every shader compiled against that
+context. Coming back was an empty box for as long as the rebuild took — a new
+`WebGLRenderer`, a fresh compile of four to seven materials, and two deferred
+steps before any of it started: `PlanetStage` waits on a `clientWidth` measure,
+then `PlanetView` waits on an `IntersectionObserver` callback.
+
+None of that is worth paying twice, so it is not paid twice. `Screen.svelte`
+holds one screen each and takes nothing down. An inactive screen is
+`position: absolute; visibility: hidden`, and the two halves of that are both
+load-bearing:
+
+- **`visibility`, not `display: none`.** A screen at `display: none` measures
+  nought — which puts the stage's width at nought, drops the view out of the
+  observer that mounts its canvas, and has Threlte resize that canvas to
+  nothing. Every one of them is the teardown this exists to prevent.
+- **Out of flow, and at its natural height.** `top/left/right`, never `inset` —
+  a hidden screen stretched to the height of the visible one would come back at
+  someone else's size.
+
+A screen is built on first ask and never again, so the Overview costs nothing
+before it is opened. It cannot be reached while hidden, either: `inert`.
+
+**What is left is a canvas nobody sees still asking for frames.** `watched.ts`
+is a context carrying the predicate — `setWatched` above, `useWatched` in
+`PlanetView` — and a view that is mounted but unwatched passes `isPaused` to the
+scene, which stops both `useTask` bodies. No `invalidate`, no clock step. The
+clock stopping is the point rather than a cost: `advanceClock` already reads
+clamped wall time, so an unwatched world resumes instead of jumping, and that
+was written for exactly this.
+
+Nothing above says otherwise means watched, so the labs are untouched — the
+context ceiling is still theirs alone to press. The app now holds two live
+contexts once both screens have been visited, and three while the snapshot
+canvas is up.
+
+**Two things now outlive a tab switch that did not before.** The Overview's
+picked world, and the first-harvest takeover: leave it open, come back, it is
+still open. Both read as correct, and both are new.
+
 ### A second surface, on its own clock
 
 The veil is a cloud deck at one tuning and an aurora at another, and it is the
@@ -2393,17 +2431,32 @@ Things that are simply unbuilt, and what they cost today.
 - **The `harness` bucket in `data/upgrades.ts` is empty.** `global` and
   `refinery` are now authored; `harness` exists so there is somewhere for its
   upgrades to live, and nothing names one yet.
-- **The refinery runs behind seven stubs.** The engine is live — see Refinery
-  below — so souls in seats turn karma into red on a clock, and the rail sells
-  the upgrades that move it. Nothing on the Refinery screen draws any of it.
-- **Red has no sink.** Ochre is *bought* with equal parts Crimson and the
-  opposite Crimson at a steep scaling price, both decided and neither built, so
-  red only accumulates. The two purchases need a buyer, which is a screen.
+- **The refinery runs behind six stubs.** The grades are drawn and bought — see
+  *The grades are bought above the refinery* — but nothing on the screen says
+  what the refinery is doing, what is waiting, how fast it clears, or how intake
+  is divided.
+- ~~**Red has no sink.**~~ Closed — the three purchases exist and the grade table
+  is their buyer. What is still missing is a sink for **yellow and blue**: they
+  are a ladder with nothing at the top, and inventing a spender is its own
+  decision.
 - ~~**Nothing travels.**~~ Closed — `PlanetManager.reach` is the verb and the
   Ahead band is where it is taken. See Overview below.
 - **Nothing expires anything yet.** The modifier layer exists (see above) and
   `Building.removeModifier` works, but no system calls it. The re-aim penalty is
   deliberately **not** a modifier — see Aim above.
+- **The header reads amounts, never rates.** Every `Value` in `Frame.svelte` is a
+  pile, so nothing on screen says how fast a pile is filling — the one place the
+  question is always live. `detail.status` is still a `RevealStub` noted as *the
+  per-second rate line*, and the Overview's Behind band already draws `/s` from
+  `sumHarvestRates`, so the register exists and the header does not use it.
+- **No 'next phase in mm:ss'.** A phase closes at an experience threshold and
+  nothing estimates when. `formatClock` is the format and `PlanetSection` is the
+  place; `#experienceAfter` already knows where the phase closes.
+
+Both of those want one thing that does not exist: **a summed per-second reading**.
+`Building.perSecond(type)` is per cohort and no manager totals it, so a header
+rate and a phase estimate would each sum the cohorts themselves. Build the total
+once, on `BuildingManager`, before either.
 
 ## Roadmap
 
@@ -2428,10 +2481,10 @@ Beat 11 counts, but read it with the asterisk in Known gaps: its trigger is live
 and only `DevPanel` can satisfy it, because the split has no control yet. Beat 12
 joined the column when reaching landed — it is the only beat that reveals nothing.
 
-Stubs: **11 of 35**. Detail 5/8 · Overview 5/5 · Harvest 3/4 · Refinery 0/7.
-`reading.excess` is real; `reading.tokens` still renders a literal `—`. The
-refinery engine landed without moving this line — a running system and a drawn
-panel are counted separately here for exactly that reason.
+Stubs: **9 of 35**. Detail 5/8 · Overview 5/5 · Harvest 3/4 · Refinery 1/7.
+`reading.excess` and `reading.tokens` are both real. The refinery engine landed
+without moving this line — a running system and a drawn panel are counted
+separately here for exactly that reason — and step 9 moved it twice.
 
 ### The course
 
@@ -2448,7 +2501,7 @@ point: it lands on its own and moves at least one number in the gauge.
 | ~~1~~ | ~~Author the `global` bucket~~ | ~~beats 5, 6 onto real triggers~~ | **done** — see Scopes below |
 | ~~8~~ | ~~Travel~~ | ~~beat 12~~ | **done** — see Overview below |
 | ~~5~~ | ~~`PlanetData.harvest`~~ | ~~merged planets actually pay~~ | **done** — see *What a finished world pays* |
-| 9 | The token purchases — Ochre, Indigo, opposite Crimson | red gets a sink | price curves, and a buyer |
+| ~~9~~ | ~~The token purchases — Ochre, Indigo, opposite Crimson~~ | ~~red gets a sink~~ | **done** — see *The grades are bought above the refinery* |
 | 7 | Harvest and Refinery layouts | 8 stubs | design pass — see Parked |
 
 **Step 2 was supposed to be the keystone. It was half of one.** Discovery landed
@@ -2562,8 +2615,95 @@ curve where empty seats slow the batch rather than shrink it. Both were
 considered and set aside as too complex for a first pass.
 
 Still open, and none of it mechanical: every figure in the bucket and in
-`refinery.svelte.ts` is a placeholder, the seven stubs are untouched, and red has
-nowhere to go until the token purchases exist.
+`refinery.svelte.ts` is a placeholder, and six of the seven stubs are untouched.
+
+### The grades are bought above the refinery
+
+`$lib/tokens.svelte.ts` is the layer the refinery feeds, and the one place
+matching happens. Three purchases: yellow by pairing the two reds off, blue with
+yellow, and either red with its **opposite** red.
+
+**It composes no `ResourceEmitter`.** Every other producer does, and that is the
+distinction being drawn — nothing here runs on a clock. A purchase is a click,
+which is the whole reason the layer needed a buyer before it could exist at all.
+No `start()` either, for the same reason: the refinery has one because its clock
+must run from the beat whether or not the tab is open, and this has no clock.
+
+**The two grade prices are flat, forever.** A scaling yellow would make refining
+throughput pay *less* the longer you play, which fights all three refinery axes
+at once — you would buy speed and efficiency to stand still. The grades are a
+ladder, not a shop, and 12-from-each-pile is a ratio rather than a price curve.
+
+Yellow's figure is **per side, not the total**: pairing is the point, so what the
+button reads is what each pile loses. A total would have the watched pile drop by
+half what was clicked.
+
+**The inversion is the one price that climbs, and it counts inversions ever
+made.** `#inversions` never resets — not on harvest, not on reaching. The
+alternatives both fail the same way: a per-transaction curve is dodged by
+dribbling, and a per-world budget makes inverting a renewable resource. This is
+the only purchase that must never become the cheap way to run a single polarity,
+because the wave, the aim and the whole excess reading assume you are living with
+the polarity you earned. Each inversion is a confession and makes the next
+dearer for the rest of the run.
+
+The verb is **`invert`** and the noun is **`inversion`**. Not *reverse*: reversing
+implies undoing a step, and this undoes nothing — it buys the opposite side at a
+loss, which is a different admission.
+
+`inversionCost` repeats the shape of `Building.#cumulativePrice` rather than
+sharing it. That curve prices a building and this one prices a confession; they
+are allowed to diverge and a shared helper would quietly couple them.
+
+**Blue opens on holding any yellow.** No authored figure, because the ladder
+already teaches itself: the rung above appears once the one below exists. An
+authored threshold would be a third placeholder with nothing behind it.
+
+#### What the table draws
+
+`TokenTable` / `TokenRow` in `features/refinery`, on `CohortTable`'s grid. Four
+rows, and they are deliberately **not** four of a kind, which is why the row
+takes a plain descriptor instead of a class the way `CohortRow` takes a
+`Building`.
+
+**The inversion has no row.** It is the button on a red row, priced in the
+opposite red — so the row you want is the row you press, and the cost badge is
+the thing you give up. Beside it, greyed and not a control, the **passive
+route**: what the refinery clears each batch without being asked. Two ways to the
+same pile, one of which you are already getting for free.
+
+That greyed figure is exactly where a karma-to-red ratio would show if the
+"obvious next balance knob" above ever lands. At today's 1:1 it equals the red it
+yields, which is why the two numbers on a red row currently read as the same kind
+of thing.
+
+`PER BATCH` is the refinery's batch, so only red has one; yellow and blue draw a
+dash. The column was briefly read as an emission on the yellow row — it is not.
+Nothing auto-pairs, and *the refinery never pairs anything off* stands unamended.
+
+Red is the one token that still holds a side, so it takes karma's three hatch
+treatments at `--res-red`: `red-pos`, `red-neg`, `red-both`. `--res-red` is the
+shared stripe in both, so the field carries the polarity and the hue still says
+which resource it is. `badgeFor` now branches red the way it already branched
+karma, which also fixes the rail chips and `CohortRow` — `cohort:red_basic` and
+three `refinery` upgrades are priced in `red_positive` and had been drawing an
+unpolarised badge.
+
+**In the header, red is one badge between two figures** — negative left, the
+order the detail section and the table both take — and empty rungs draw greyed
+rather than being withheld, so the ladder shows its full height from the beat
+that reveals it. `Figure` grew a `muted` prop for that; it greys the figure only,
+and the badge keeps its hue.
+
+**The excess reading dropped a size** once four readings shared a 3.5fr column.
+That is provisional: the design has excess on its own labelled row under a meter,
+with a backlog tag, and the meter is still the one this doc calls *still ahead*.
+Backlog has no agreed definition yet — it is `refinery.backlog`, and it belongs
+to the layout pass.
+
+All four figures — `YELLOW_PRICE`, `BLUE_PRICE`, `INVERSION_BASE`,
+`INVERSION_GROWTH` — are placeholders, and they are not tuned against the
+refinery's placeholders either.
 
 ## Excess — provisional, revisit before balancing
 
@@ -2704,6 +2844,10 @@ revealing them again. None of this is drift; don't "fix" it.
 Retired with CONTEXT v3: *clearing* (→ refining, and the screen is labelled
 Refinery in both vocabularies now), *probe* (→ soul), *stage* (→ phase). Token
 code names stay `red`/`yellow`/`blue` against the UI's Crimson/Ochre/Indigo.
+
+Buying a red with its opposite is an **inversion**, and the verb is `invert`.
+*Reversal* was the first word and is wrong: nothing is undone, a side is bought
+at a loss. *Inversal* is not a word at all.
 
 The wave has its own three words. A **phase** is a half-wave, light or dense; two
 make a **cycle**; `cycles_per_age` of those make an **age**. `ages` counts up

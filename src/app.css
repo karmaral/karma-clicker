@@ -28,6 +28,13 @@
   --hatch-pos-badge:repeating-linear-gradient(-90deg, #ffffff 1px, #ffffff 3px, #bdbdbd 3px, #bdbdbd 4px);
   --hatch-neg-badge:repeating-linear-gradient(0deg, #111111 1px, #111111 3px, #5a5a5a 3px, #5a5a5a 4px);
 
+  /* Red is the one token that exists polarised. Same angles and same structure
+     as karma's two, with --res-red as the shared stripe so both sides still read
+     as one resource and only the field carries the polarity. */
+  --hatch-red-pos-badge:repeating-linear-gradient(-90deg, #d98b82 1px, #d98b82 3px, #9e2b25 3px, #9e2b25 4px);
+  --hatch-red-neg-badge:repeating-linear-gradient(0deg, #5c1815 1px, #5c1815 3px, #9e2b25 3px, #9e2b25 4px);
+  --hatch-red-edge:inset 0 0 0 1px var(--res-red);
+
   --badge-size:9px;
   --badge-radius:1.5px;
   --badge-gap:6px;

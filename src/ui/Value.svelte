@@ -7,14 +7,16 @@
     kind: BadgeKind;
     value: string;
     size?: FigureSize;
+    /** Greys the figure only — the badge keeps its hue, so the row still reads. */
+    muted?: boolean;
   }
 
-  let { kind, value, size = 'xl' }: Props = $props();
+  let { kind, value, size = 'xl', muted = false }: Props = $props();
 </script>
 
 <span class="value">
   <Badge {kind} />
-  <Figure {value} {size} />
+  <Figure {value} {size} {muted} />
 </span>
 
 <style>

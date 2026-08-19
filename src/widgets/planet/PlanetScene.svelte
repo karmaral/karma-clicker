@@ -52,6 +52,13 @@
      * caller owns the event and the scene only owns what it looks like.
      */
     flashes?: number;
+    /**
+     * Drawn, but not looked at. A screen that has been left keeps its canvas so
+     * it can come back drawn, and a world nobody sees should not be asking for
+     * frames — see `watched.ts`. Its clock stops with it, which `advanceClock`
+     * already treats as a pause rather than a jump.
+     */
+    isPaused?: boolean;
   }
 
   let {
@@ -66,6 +73,7 @@
     pulse,
     clockKey,
     flashes = 0,
+    isPaused = false,
   }: Props = $props();
 
   const { size: sizeStore, scene, invalidate } = useThrelte();
@@ -172,7 +180,9 @@
   let veilAngle = $state(0);
 
   useTask(() => {
-    // A world that neither turns nor carries souls has no clock to keep.
+    // A world that neither turns nor carries souls has no clock to keep, and one
+    // nobody is looking at keeps its own where it left it.
+    if (isPaused) return;
     if (!isTurning && !isVeiling && !hasSwarm) return;
 
     advanceClock(clock, visual.spin, veilRate);
@@ -230,7 +240,7 @@
    * world nobody has clicked costs the same as one that cannot be.
    */
   useTask((delta) => {
-    if (!pulse) return;
+    if (isPaused || !pulse) return;
 
     pulses.advance(delta);
 
