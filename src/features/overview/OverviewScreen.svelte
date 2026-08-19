@@ -1,13 +1,24 @@
 <script lang="ts">
   /** One axis, three bands. Selecting feeds the right column; the verb lives there. */
+  import { Badge } from '$ui';
   import { PlanetManager } from '$lib/managers';
   import { FIRST_HARVEST_CONDITIONS, getFirstHarvestConditionLabel } from '$lib/labels';
   import { progression } from '$lib/progression';
+  import { sumHarvestRates } from '$lib/planets/harvest';
   import { f } from '$lib/utils';
+  import { badgeFor } from '../detail/badge';
   import FirstHarvestScreen from '../harvest/FirstHarvestScreen.svelte';
   import PlanetList from './PlanetList.svelte';
   import PlanetDetail from './PlanetDetail.svelte';
   import HarvestLedger from './HarvestLedger.svelte';
+  import HarvestRates from './HarvestRates.svelte';
+
+  /** Size is the only thing that separates the three bands' pictures. */
+  const BEHIND_PX = 24;
+  const ACTIVE_PX = 24;
+  const AHEAD_PX = 40;
+
+  const TICK_MS = 1000;
 
   /**
    * The takeover owns the screen while open, but leaving it is free: nothing is
@@ -17,10 +28,36 @@
 
   let picked = $state('');
 
+  /**
+   * One clock for every countdown in the Behind band. Local, and written only by
+   * the timer — never read and written in the same effect.
+   */
+  let now = $state(Date.now());
+
+  $effect(() => {
+    const handle = setInterval(() => (now = Date.now()), TICK_MS);
+
+    return () => clearInterval(handle);
+  });
+
   const selected = $derived(picked || PlanetManager.selected);
   const active = $derived(PlanetManager.getPlanet(PlanetManager.selected));
   const isOffered = $derived(
     selected === PlanetManager.selected && Boolean(active) && !active.isHarvested,
+  );
+
+  /** Whether the Behind band reports rates at all, or is still just a list. */
+  const isReporting = $derived(progression.isRevealed('overview.harvest'));
+
+  /** The band's own figure. Batches do not add, so the header reads per second. */
+  const behindTotal = $derived(
+    sumHarvestRates(
+      PlanetManager.behind.map((id) => {
+        const planet = PlanetManager.getPlanet(id);
+
+        return { yields: planet.harvestYields, duration: planet.harvestDuration };
+      }),
+    ),
   );
 
   function getHereStat(id: string) {
@@ -48,6 +85,21 @@
   }
 </script>
 
+{#snippet behindRates(id: string)}
+  <HarvestRates planet={PlanetManager.getPlanet(id)} {now} />
+{/snippet}
+
+{#snippet behindHeader()}
+  <span class="total">
+    {#each behindTotal as rate (rate.type)}
+      <span class="rate">
+        <Badge kind={badgeFor(rate.type)} />
+        <span class="num">{f(rate.perSecond)}/s</span>
+      </span>
+    {/each}
+  </span>
+{/snippet}
+
 {#if isHarvesting && isOffered}
   <FirstHarvestScreen onclose={() => (isHarvesting = false)} />
 {:else}
@@ -58,7 +110,8 @@
         <PlanetDetail id={selected} onharvest={() => (isHarvesting = true)} />
       {/if}
 
-      {#if progression.isRevealed('overview.harvest')}
+      <!-- Only while the Behind band cannot carry the rates itself. -->
+      {#if isReporting && !PlanetManager.behind.length}
         <HarvestLedger />
       {/if}
     </div>
@@ -70,6 +123,7 @@
           ids={[PlanetManager.selected]}
           {selected}
           stat={getHereStat}
+          stillPx={ACTIVE_PX}
           onpick={(id) => (picked = id)}
         />
       {/if}
@@ -79,21 +133,22 @@
           label="Behind"
           ids={PlanetManager.behind}
           {selected}
-          stat={getBehindStat}
+          stat={isReporting ? undefined : getBehindStat}
+          rowAside={isReporting ? behindRates : undefined}
+          aside={isReporting && behindTotal.length ? behindHeader : undefined}
+          stillPx={BEHIND_PX}
           onpick={(id) => (picked = id)}
         />
       {/if}
 
       {#if progression.isRevealed('overview.ahead')}
-        <!-- The one band carrying pictures so far. Behind and Active follow once
-             the size the silhouettes read at is settled. -->
         <PlanetList
           label="Ahead"
           ids={PlanetManager.ahead}
           {selected}
           stat={getAheadStat}
           empty="Nowhere else is known."
-          pictures
+          stillPx={AHEAD_PX}
           onpick={(id) => (picked = id)}
         />
       {/if}
@@ -115,5 +170,20 @@
     flex-direction: column;
     border-left: var(--rule-card);
     min-width: 0;
+  }
+
+  .total {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--sp-1) var(--sp-3);
+  }
+
+  .rate {
+    display: flex;
+    align-items: center;
+    gap: var(--badge-gap);
+    color: var(--ink-900);
   }
 </style>

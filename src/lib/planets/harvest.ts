@@ -6,6 +6,12 @@
 
 import type { PlanetHarvestMerge, Polarity, ResourceType, YieldType } from '$types';
 
+/** One finished world's take, as the summing needs it. */
+export interface HarvestSource {
+  yields: Partial<Record<ResourceType, number>>;
+  duration: number;
+}
+
 /** What an even alignment takes instead of the karma it cannot pick a pile for. */
 export const EVEN_EXPERIENCE_BONUS = 0.5;
 
@@ -63,4 +69,24 @@ export function resolveHarvestDuration(
   const speed = Math.min(1 + Math.max(0, merged) / halving, Math.max(1, maxMergeSpeed));
 
   return base / speed;
+}
+
+/**
+ * Batches do not add — every world's duration moves with its own merged count —
+ * so a total has to be per second.
+ */
+export function sumHarvestRates(sources: HarvestSource[]) {
+  const summed = new Map<ResourceType, number>();
+
+  for (const { yields, duration } of sources) {
+    // A 0 duration is a world that pays once, so there is no rate to divide out.
+    const seconds = duration / 1000;
+    if (!seconds) continue;
+
+    for (const type of Object.keys(yields) as ResourceType[]) {
+      summed.set(type, (summed.get(type) ?? 0) + (yields[type] ?? 0) / seconds);
+    }
+  }
+
+  return [...summed].map(([type, perSecond]) => ({ type, perSecond }));
 }

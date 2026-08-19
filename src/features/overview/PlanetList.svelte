@@ -1,5 +1,6 @@
 <script lang="ts">
   /** One band of the axis. The stat line is the band's, not the row's. */
+  import type { Snippet } from 'svelte';
   import { Section } from '$ui';
   import { DEFAULT_VISUAL, PlanetStill } from '$widgets/planet';
   import planetVisuals from '$data/planet-visuals';
@@ -9,39 +10,44 @@
     label: string;
     ids: string[];
     selected: string;
-    stat: (id: string) => string;
+    /** The row's right cell as text. Bands with more to say pass `rowAside`. */
+    stat?: (id: string) => string;
+    rowAside?: Snippet<[string]>;
+    /** The band's own figure, in the header beside the label. */
+    aside?: Snippet;
     empty?: string;
-    /** Bands opt in one at a time — whether a world reads at this size is a design call. */
-    pictures?: boolean;
+    /** Size is what distinguishes the bands; the framing is shared. */
+    stillPx: number;
     onpick: (id: string) => void;
   }
 
-  let { label, ids, selected, stat, empty, pictures = false, onpick }: Props = $props();
+  let { label, ids, selected, stat, rowAside, aside, empty, stillPx, onpick }: Props = $props();
 
   /** A still, not a view: a row's world does not move, so it costs no WebGL context. */
-  const ROW_PX = 40;
   const ROW_FRAME = 2.2;
 </script>
 
-<Section {label}>
+<Section {label} {aside}>
   {#if ids.length}
     <ul class="planets">
       {#each ids as id (id)}
         <li>
           <button
             type="button"
-            class={['planet', { selected: id === selected, pictured: pictures }]}
+            class={['planet', { selected: id === selected }]}
             onclick={() => onpick(id)}
           >
-            {#if pictures}
-              <PlanetStill
-                visual={planetVisuals[id] ?? DEFAULT_VISUAL}
-                widthPx={ROW_PX}
-                frame={ROW_FRAME}
-              />
-            {/if}
+            <PlanetStill
+              visual={planetVisuals[id] ?? DEFAULT_VISUAL}
+              widthPx={stillPx}
+              frame={ROW_FRAME}
+            />
             <span class="name">{planetTexts[id]?.title ?? id}</span>
-            <span class="stat num">{stat(id)}</span>
+            {#if rowAside}
+              <span class="trailing">{@render rowAside(id)}</span>
+            {:else if stat}
+              <span class="stat num">{stat(id)}</span>
+            {/if}
           </button>
         </li>
       {/each}
@@ -60,10 +66,11 @@
     list-style: none;
   }
 
+  /* A picture has no baseline to sit on, so a row centres rather than aligns. */
   .planet {
     display: flex;
-    align-items: baseline;
-    gap: var(--sp-4);
+    align-items: center;
+    gap: var(--sp-3);
     width: 100%;
     padding: var(--sp-3) var(--sp-2);
     background: none;
@@ -71,12 +78,6 @@
     border-bottom: var(--rule-row);
     cursor: pointer;
     text-align: left;
-  }
-
-  /* A picture has no baseline to sit on, so a pictured row centres instead. */
-  .planet.pictured {
-    align-items: center;
-    gap: var(--sp-3);
   }
 
   .planet.selected {
@@ -90,7 +91,8 @@
   }
 
   /* Auto rather than space-between: the row gained a third child. */
-  .stat {
+  .stat,
+  .trailing {
     margin-left: auto;
     font-size: var(--fs-sm);
     color: var(--ink-500);

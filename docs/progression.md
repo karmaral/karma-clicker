@@ -172,8 +172,9 @@ world would pay once and never again, which is harder to notice than a freeze.
 The shape was fixed while no record declared a harvest, which is why it was
 cheap; all three declare one now, and none of them can express the slip.
 
-A `duration` of 0 stays legal and means *pays once*. `HarvestLedger` reads it that
-way and shows no rate, rather than dividing by zero.
+A `duration` of 0 stays legal and means *pays once*. `HarvestRates` and
+`sumHarvestRates` both read it that way and show no rate, rather than dividing by
+zero.
 
 ### What a finished world pays
 
@@ -266,11 +267,11 @@ because runes are not probeable: `base.svelte.ts` cannot be bundled by esbuild
 and run under node, and two pure functions can. Same argument as the widget model
 modules never importing three.
 
-**The ledger reads deliveries, not rates.** A row shows what one delivery brings
-and an `mm:ss` countdown to it; the emitter gained `nextAt` for that, and the
-component keeps its own 1s clock. **The Total row stays `/s` and is the only rate
-on the panel** — batch sizes do not add, since every world's duration moves with
-its own merged count. The base cadence is 60s, chosen so `/y` is a figure worth
+**A row reads deliveries, not rates.** It shows what one delivery brings and an
+`mm:ss` countdown to it; the emitter gained `nextAt` for that, and the Overview
+keeps one 1s clock for the whole band. **The total stays `/s` and is the only
+rate on the screen** — batch sizes do not add, since every world's duration moves
+with its own merged count. The base cadence is 60s, chosen so `/y` is a figure worth
 reading and the countdown counts; it sits at the slow end on purpose, since a
 cadence is easier to judge downward than a trickle is to discover was never
 readable.
@@ -325,9 +326,14 @@ line. It reveals at beat 10, when the first world is harvested, but you are stil
 standing on that world; it has nothing to list until you reach somewhere else.
 Active and Ahead always draw, and Ahead carries the empty line.
 
-**Ahead's rows carry pictures**, snapshots rather than live views — see *A still
-world needs no context*. Behind and Active are one prop away and wait on whether a
-silhouette reads at forty pixels.
+**Every row carries a picture**, snapshots rather than live views — see *A still
+world needs no context*. Size is the only thing that separates the bands:
+**Behind 24, Active 24, Ahead 40**, at one shared framing of 2.2. **Ahead is the
+band a picture is actually for** — an unreached world is a place you know nothing
+else about, and the silhouette is the only thing you have to want. Active already
+has its 180px portrait in the detail column and Behind is a list of things you
+have left, so neither needs size in the row. All three are provisional and are
+one constant each in `OverviewScreen`.
 
 Picking a world in any band feeds the right column, and **the verb travels with
 the selection** — Harvest on the world you are on, Reach on one that is ahead,
@@ -361,17 +367,38 @@ partition by `isHarvested` around whatever is selected. The active world stays i
 **where you are** after its first harvest — you are still on it until you reach
 somewhere else — so it can read `merged` while sitting in the band it started in.
 
-### The ledger reads nothing yet
+### The harvest is a column of the axis, not a panel beside it
 
-`overview.harvest` is revealed **live at beat 8**, when nothing is behind you and
-nothing pays. It draws its empty state until beat 10 and its rows after. It is
-deliberately absent from `SYSTEM_SURFACES`: it precedes `finishedPlanets` by two
-beats, which `validate()` would otherwise flag, and correctly.
+`HarvestLedger` used to sit in the detail column and re-list every world the
+Behind band already listed — the same names, twice, in two columns. So **the
+rates moved onto the rows**: a Behind row is still, name, then what that world
+sends and when the next batch lands, and the band's `Section` header carries the
+`/s` total. One list, and the row that names a world is the row that reports it.
 
-Its rows are computed from the planet's *resolved* harvest, not from
-`PlanetData` — the merge speedup and the alignment routing both move after
-authoring — so a world with no `harvest` still reads *nothing yet*, which is
-honest rather than a stub. See *What a finished world pays*.
+The row drops `merged` to make space. The axis is the narrow column, and a
+one-line row cannot hold a count, two badged rates and a clock; `merged` survives
+in the detail column whenever that world is selected, which is where you go to
+ask about a world rather than to scan them.
+
+`PlanetList` grew two snippet props for this — `rowAside` replacing the row's stat
+text, `aside` forwarded to `Section` — so a band supplies text *or* a component
+and nothing else on the screen learns what a harvest is.
+
+**What is left of `HarvestLedger` is the beat-8 promise.** `overview.harvest` is
+revealed live at beat 8, when nothing is behind you and nothing pays, but
+`overview.behind` waits for beat 10 — so for two beats there is no band to hang
+the rates on. The ledger stands in the detail column across that gap, drawing
+nothing but *Nothing is behind you yet*, and disappears the moment the Behind
+band can carry the same fact itself. It stays deliberately absent from
+`SYSTEM_SURFACES`: it precedes `finishedPlanets` by two beats, which `validate()`
+would otherwise flag, and correctly.
+
+Rates are computed from the planet's *resolved* harvest, not from `PlanetData` —
+the merge speedup and the alignment routing both move after authoring — so a
+world with no `harvest` still reads *nothing yet*, which is honest rather than a
+stub. The summing is `sumHarvestRates` in `planets/harvest.ts` rather than in the
+component, for the same reason the resolution is: that file takes plain
+`{ yields, duration }` and stays probeable. See *What a finished world pays*.
 
 ## Planet visuals
 
