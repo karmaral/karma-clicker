@@ -1,11 +1,13 @@
 <script lang="ts">
   import { Badge, Cell, Figure, HeaderBand, Rail, Value } from '$ui';
-  import { ResourceManager } from '$lib/managers';
+  import { BuildingManager, PlanetManager, ResourceManager } from '$lib/managers';
   import { getExcess } from '$lib/excess';
   import { progression } from '$lib/progression';
   import { nav } from '$lib/nav.svelte';
   import { SCREENS, getExcessSideLabel, type ScreenName } from '$lib/labels';
+  import { sumHarvestRates } from '$lib/planets/harvest';
   import { f } from '$lib/utils';
+  import type { ResourceType } from '$types';
   import NavSection from './NavSection.svelte';
   import UpgradeRail from './UpgradeRail.svelte';
 
@@ -26,6 +28,31 @@
   const negRed = $derived(ResourceManager.getAmount('red_negative'));
   const yellow = $derived(ResourceManager.getAmount('yellow'));
   const blue = $derived(ResourceManager.getAmount('blue'));
+
+  /** Cohorts and the worlds already left both keep earning, so each figure sums both. */
+  const harvestRates = $derived(
+    sumHarvestRates(
+      PlanetManager.behind.map((id) => {
+        const planet = PlanetManager.getPlanet(id);
+
+        return { yields: planet.harvestYields, duration: planet.harvestDuration };
+      }),
+    ),
+  );
+
+  function harvestRateFor(...types: ResourceType[]) {
+    return harvestRates
+      .filter((rate) => types.includes(rate.type))
+      .reduce((sum, rate) => sum + rate.perSecond, 0);
+  }
+
+  const showRates = $derived(progression.isRevealed('detail.status'));
+  const karmaRates = $derived(BuildingManager.countKarmaPerSecondByPolarity());
+  const experienceRate = $derived(
+    f(BuildingManager.countExperiencePerSecond() + harvestRateFor('experience')),
+  );
+  const posKarmaRate = $derived(f(karmaRates.positive + harvestRateFor('karma_positive')));
+  const negKarmaRate = $derived(f(karmaRates.negative + harvestRateFor('karma_negative')));
 
   const reading = $derived(getExcess());
 
@@ -68,15 +95,15 @@
       >
         {#if screen === 'overview'}
           {#if progression.isRevealed('reading.experience')}
-            <Value kind="xp" value={experience} />
+            <Value kind="xp" value={experience} rate={showRates ? experienceRate : undefined} />
           {/if}
 
         {:else if screen === 'detail'}
           {#if progression.isRevealed('reading.negKarma')}
-            <Value kind="neg" value={negKarma} />
+            <Value kind="neg" value={negKarma} rate={showRates ? negKarmaRate : undefined} />
           {/if}
           {#if progression.isRevealed('reading.posKarma')}
-            <Value kind="pos" value={posKarma} />
+            <Value kind="pos" value={posKarma} rate={showRates ? posKarmaRate : undefined} />
           {/if}
 
         {:else if progression.isRevealed('reading.excess') || progression.isRevealed('reading.tokens')}

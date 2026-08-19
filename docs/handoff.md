@@ -1,4 +1,4 @@
-# Handoff — 2026-08-17
+# Handoff — 2026-08-19
 
 **Orientation only, and a board rather than an essay.** Three rules keep it that
 way:
@@ -13,30 +13,22 @@ way:
 
 ## Tree
 
-Branch `dev-next`. Last commit `194f917 rebuild checkpoint 9` — sessions 12–14.
-**Sessions 15–16 are uncommitted**; `git status` for the list.
+Branch `dev-next`. Last commit `665ffb1 rebuild checkpoint 14`; uncommitted since:
+Detail's soul allocation control (`SplitControl` reused from Refinery), the
+`1/10/Next/Max` purchase-quantity switcher wired end-to-end from `CohortRow` up,
+and per-second karma/xp rates now living beside each resource in the header
+rather than as one global line. `git status` and `git log` for the list.
 
 `planet-visuals.ts` carries a **UTF-8 BOM**, and a new required field on
 `PlanetVisual` means editing all nine records.
 
-## Uncommitted, by idea
-
-| what | § |
-|---|---|
-| The burst — the body's silhouette thrown out behind it; the halo parked at width 0 | *The burst is the world's own shape, and the halo is parked* |
-| `sparkFace` — marks land on the visible cap, not the whole sphere | *A spark lands on the face you are looking at* |
-| `ribbon.ts` — lines widened into quads, so a stroke divides by world size | *A line had no weight to divide* |
-| Outline bleed — the ink cuts follow the drawn edge, not the unit sphere | *The world ends where it is drawn to end* |
-| `lean`/`turn` beside `tilt`, on a square puck | *The world is held, not tilted* |
-| `Puck.svelte`, `Slider.svelte` — the labs' rows as components | *The labs' two controls are components* |
-| `veilSpin` is a drift over the ground, not a rate | *A drift is not a rate* |
-| `grain` / `shadeGrain` / `grainScale` — noise under the body's two quantisers | *A grain in the paper* |
-
 ## Verified, and how
 
-- `npm run check` → **855 FILES 12 ERRORS 2 WARNINGS** — the standing baseline,
-  table at the end. The error count is memorised; a thirteenth would hide in it.
-  The file count drifts with the tree and is not the thing being watched.
+- `npm run check` → **867 FILES 3 ERRORS 2 WARNINGS** — table at the end. Two
+  are the standing baseline; the third (`TokenRow.svelte`) surfaced from the
+  author's own uncommitted `PurchaseButton.svelte` edit (a new required
+  `quantity` prop) never propagated to Refinery's call site — not touched, it's
+  in-progress work in the lab.
 - `npx vite build` clean.
 - **The probe** — `esbuild` the model modules into the scratchpad, run under
   node. Works only because `pulse` / `harness` / `anchor` / `orbit` / `visual` /
@@ -50,47 +42,58 @@ Branch `dev-next`. Last commit `194f917 rebuild checkpoint 9` — sessions 12–
 
 ## Unseen — in the order they want an eye
 
-1. **The burst hull over `--surface`.** Opaque ink at the dark end of the ramp on
-   a light ground — the loudest thing the widget has drawn. Width, ink and a
-   0.25s life are blind.
-2. **Line weights against the hairlines they replaced.** `edgeWidth: 1.2`,
-   `width: 1`, `ceiling: 2.5`; a hairline was one *device* pixel, so on retina it
-   was half of what these ask for.
-3. **A spark that is actually a dot.** Never seen; every proportion in the spark
+1. **A spark that is actually a dot.** Never seen; every proportion in the spark
    group is unjudged for that reason.
-4. **`sparkFace` 0.45 against the old whole-sphere reading.** The slider runs
+2. **`sparkFace` 0.45 against the old whole-sphere reading.** The slider runs
    from −1, so the two are a drag apart.
-5. **The single silhouette.** `LessDepth`, one shared depth plane. Watch for a
+3. **The single silhouette.** `LessDepth`, one shared depth plane. Watch for a
    *missing* piece, not a bruise — instance order wins, not depth.
-6. **Rapid clicking.** 32 slots each, oldest overwritten; where the instance
+4. **Rapid clicking.** 32 slots each, oldest overwritten; where the instance
    order shows.
-7. **Blind defaults.** Echo set (1.24 / 0.07 / 5 / 0.35 / 0.55), `sparkBack`
+5. **Blind defaults.** Echo set (1.24 / 0.07 / 5 / 0.35 / 0.55), `sparkBack`
    0.25, `FLARE_LIMB` 0.18, `sparkOutline` 1.5px, `ghostBack` 0.45.
-8. **The mark's outline hairline** at 1× DPR. Fix if it reads is a tighter
+6. **The mark's outline hairline** at 1× DPR. Fix if it reads is a tighter
    antialias on the fill's outer edge — **not** swapping the order.
-9. **The ghost over mid-grey.** An inversion has a fixed point at `--ink-400`.
-10. **Riders at a real speed.** `DEFAULT_HARNESS` still has `riders: 0`.
-11. **`AnchorVisual.size` lifting the harness.** Intended coupling, never watched.
-12. **The detail screen at any other window width.** The 511:380 proportion was
+7. **The ghost over mid-grey.** An inversion has a fixed point at `--ink-400`.
+8. **Riders at a real speed.** `DEFAULT_HARNESS` still has `riders: 0`.
+9. **`AnchorVisual.size` lifting the harness.** Intended coupling, never watched.
+10. **The detail screen at any other window width.** The 511:380 proportion was
     judged by sitting with it; nothing else about the placement was.
-13. **A world crossing between screens.** The spin and the swarm now share one
+11. **A world crossing between screens.** The spin and the swarm now share one
     keyed clock, so Detail → Overview → Detail should continue rather than
     restart. Watch the *handover*, not the turn: a jump means the clamp is wrong.
-14. **A still's hairline, and the face it freezes on.** `toStill` drops `outline`
+12. **A still's hairline, and the face it freezes on.** `toStill` drops `outline`
     to 1 and `spin` to 0, so what ships is `turn` — authored on its own slider,
     with two snapshots under it in the panel. `contour` is untouched and is the
     next candidate. §*A still is the world with two fields taken off it*.
-15. **The body's grain, at any setting.** `grain` / `shadeGrain` / `grainScale`
+13. **The body's grain, at any setting.** `grain` / `shadeGrain` / `grainScale`
     all ship at off, so nothing has drawn one. Watch the **limb** first — the
     Nyquist fade is what stops it fizzing there — then whether a contour riding
     the grained band reads as ink or as noise.
-16. **The veil outline's wander.** A quarter of the line's width, chosen blind
+14. **The veil outline's wander.** A quarter of the line's width, chosen blind
     against a grain scale of 24–60. Too far and the hairline comes apart; the
     number is `wander` in `veilCover` and nothing else touches it.
-17. **Overview steps 1–4 have never been played.** DevPanel *unlock all planets*
+15. **Overview steps 1–4 have never been played.** DevPanel *unlock all planets*
     makes the axis walkable. Watch: Behind invisible at beat 10, beat 12 firing
     at all, and the right column's band label — authored in two files with
     nothing enforcing the match.
+16. **The whole Refinery screen.** Five modules, none rendered. Watch, in order:
+    the sweep restarting each batch and the countdown; the intake bar with one
+    pile empty, which is all tail and no matched span; the ceiling bar with
+    `arriving` under and then over `cleared`; the split drag moving `workers` and
+    the batch figure together. §*The refinery screen*.
+17. **`SliderBar`'s handle at a real width.** 8px astride the fill edge, `--sp`
+    nothing — the first number picked without seeing the reference at size. Now
+    doubly live: `SplitControl` carries the same handle onto Detail too.
+18. **Soul allocation on Detail.** `SplitControl` reused verbatim from Refinery;
+    the aside's "…clearing" wording was authored for Refinery's own token
+    pipeline and may not read right reused here — reword if it doesn't land.
+19. **The purchase-mode tabs (`1/10/Next/Max`) beside the "Cost" column head.**
+    Moved out of the section aside into a 96px head cell; wrapping/spacing at
+    real width never checked.
+20. **The header's per-resource `/s` rates.** xp under Overview, karma +/− under
+    Detail — never watched ticking live against actual purchases, and now sum
+    in whatever's left behind on harvested planets too.
 
 ## Parked — named, argued, not done
 
@@ -118,8 +121,9 @@ Branch `dev-next`. Last commit `194f917 rebuild checkpoint 9` — sessions 12–
 
 ## Next
 
-From the course table: **step 5** `PlanetData.harvest`, **step 9** the token
-purchases, **step 7** the Harvest / Refinery layouts. Outside it: `log-texts.ts`
+From the course table: **step 7b**, the Harvest layout — the last one open, two
+stubs, and a design pass. 7a is done: §*The refinery screen*; `detail.split`
+now carries the same `SliderBar` too. Outside the table: `log-texts.ts`
 (sixteen placeholders), re-authoring `ridged` and `banded`, the type→parameter
 table.
 
@@ -162,19 +166,10 @@ and the **comment sweep** (§*The comments want the same pass*).
 - **`printVisual` and friends** emit every field at four decimals; paste
   indentation has drifted once.
 
-## The 12 `check` errors
-
-Unowned for ten sessions. None is in a file a visuals session has touched.
+## The 3 `check` errors
 
 | # | Where | What |
 |---|---|---|
-| 7 | `Preview.svelte` | `costs` literals typed against the full `Record` instead of `Partial`. One widening fixes all seven. |
-| 2 | `Chip.svelte` | tippy props — `placement` absent, and two `Partial<Props>` with nothing in common. |
-| 1 | `CohortRow.svelte` | tooltip `delay` given `number[]` where a tuple is required. |
 | 1 | `notification-manager.ts` | Svelte 5 `Component<Props>` in a legacy `SvelteComponent` slot. |
-| 1 | `UpgradeRail.svelte` | reads `.effect` off `Upgrade`. **The only live defect** — that caption has rendered empty since it was written, and the fallback is what hides it. Decide whether it wants `UpgradeData.effect` or goes. |
-
-The rest of that sweep is closed: the `is*` renames are done, and the
-`completeFirstHarvest` hang is fixed at both ends — see §*A payout with no clock*.
-`PlanetData.yields`/`duration` are now one `harvest` object, which is the shape
-step 5 authors into.
+| 2 | `UpgradeRail.svelte` | reads `.effect` off `Upgrade`. **The only live defect** — that caption has rendered empty since it was written, and the fallback is what hides it. Decide whether it wants `UpgradeData.effect` or goes. |
+| 3 | `TokenRow.svelte` | missing `quantity` on `PurchaseButton` — the author's own uncommitted prop addition there, not yet propagated to this call site. |

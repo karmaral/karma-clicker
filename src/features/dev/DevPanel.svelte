@@ -108,7 +108,7 @@
 
       <div class="row">
         <span class="id">
-          seats {refinery.workers}/{refinery.seats}
+          slots {refinery.workers}/{refinery.slots}
           · {f(refinery.perSecond)}/s each way
           · red {f(ResourceManager.getAmount('red_positive'))}
           /{f(ResourceManager.getAmount('red_negative'))}

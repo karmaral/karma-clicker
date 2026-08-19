@@ -43,16 +43,16 @@ const data: Record<string, UpgradeData[]> = {
     },
   ],
   /**
-   * Three axes and no fourth. Seats cap the souls, efficiency moves the batch,
+   * Three axes and no fourth. Slots cap the souls, efficiency moves the batch,
    * speed moves the interval — staffing must never touch the interval, or
    * throughput goes quadratic in souls. Each is priced in what buying it should
-   * make you feel: seats in karma, efficiency in lifetimes, speed in what the
+   * make you feel: slots in karma, efficiency in lifetimes, speed in what the
    * refinery itself makes. Placeholder figures.
    */
   'refinery': [
     {
-      id: 'seats_1',
-      effect: { op: 'flat', value: 4, stat: 'seats' },
+      id: 'slots_1',
+      effect: { op: 'flat', value: 4, stat: 'slots' },
       unlocks_at: { karma_negative: 5000 },
       costs: { karma_positive: 25_000 },
     },
@@ -69,8 +69,8 @@ const data: Record<string, UpgradeData[]> = {
       costs: { red_positive: 1500 },
     },
     {
-      id: 'seats_2',
-      effect: { op: 'flat', value: 12, stat: 'seats' },
+      id: 'slots_2',
+      effect: { op: 'flat', value: 12, stat: 'slots' },
       unlocks_at: { red_positive: 8000 },
       costs: { red_positive: 6000 },
     },

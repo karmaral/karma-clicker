@@ -161,6 +161,10 @@
     font-size: var(--fs-sm);
     color: var(--ink-300);
   }
+  
+  .cost :global(.purchase) {
+    margin-left: unset;
+  }
 
   .locked-button {
     padding: var(--sp-1) var(--sp-2);

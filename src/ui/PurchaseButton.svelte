@@ -4,6 +4,7 @@
 
   interface Props {
     kind: BadgeKind;
+    quantity: number;
     amount: string;
     affordable?: boolean;
     disabled?: boolean;
@@ -12,6 +13,7 @@
 
   let {
     kind,
+    quantity,
     amount,
     affordable = false,
     disabled = false,
@@ -25,6 +27,9 @@
   {disabled}
   {onclick}
 >
+  {#if quantity}
+    <span class="quantity">{quantity}×</span>
+  {/if}
   <span class="amount num">{amount}</span>
   <Badge {kind} />
 </button>
@@ -46,6 +51,11 @@
     color: var(--ink-300);
     cursor: pointer;
     white-space: nowrap;
+  }
+
+  .quantity {
+    font-size: var(--fs-xs);
+    font-weight: 500;
   }
 
   .amount {

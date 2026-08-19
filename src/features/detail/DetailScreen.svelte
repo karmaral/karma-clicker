@@ -8,11 +8,15 @@
   import PlanetStage from '../PlanetStage.svelte';
   import Log from '../Log.svelte';
   import RevealStub from '../RevealStub.svelte';
+  import SplitControl from '../refinery/SplitControl.svelte';
   import CohortTable from './CohortTable.svelte';
   import AimSection from './AimSection.svelte';
   import PlanetSection from './PlanetSection.svelte';
-  import type { Phase } from './types';
+  import RateStatus from './RateStatus.svelte';
+  import type { Phase, PurchaseMode } from './types';
   import planetTexts from '$data/planets-texts';
+
+  let purchaseMode: PurchaseMode = $state('1');
 
   const CLICK = 'main';
 
@@ -51,8 +55,8 @@
     click?.queueAction();
   }
 
-  function buy(id: string) {
-    BuildingManager.purchase(id, 1);
+  function purchase(id: string, quantity: number) {
+    BuildingManager.purchase(id, quantity);
     pulse();
   }
 </script>
@@ -69,7 +73,9 @@
       />
     {/if}
 
-    <RevealStub name="detail.status" note="the per-second rate line" height="48px" />
+    {#if progression.isRevealed('detail.status')}
+      <RateStatus />
+    {/if}
 
     {#if progression.isRevealed('detail.wave') && planet}
       <PlanetSection
@@ -91,9 +97,10 @@
     {#if progression.isRevealed('detail.cohortTable')}
       <CohortTable
         {cohorts}
-        affordable={(id) => BuildingManager.canAfford(id, 1)}
+        {purchaseMode}
         showAim={progression.isRevealed('detail.aimPerRow')}
-        onbuy={buy}
+        onpurchasemode={(m) => (purchaseMode = m)}
+        onpurchase={purchase}
       />
     {/if}
 
@@ -101,7 +108,9 @@
       <AimSection />
     {/if}
 
-    <RevealStub name="detail.split" note="the soul split — Phase D" />
+    {#if progression.isRevealed('detail.split')}
+      <SplitControl />
+    {/if}
     <RevealStub name="detail.field" note="the anchoring field — Phase D" />
   </div>
 

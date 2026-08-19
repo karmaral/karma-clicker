@@ -9,11 +9,11 @@
     ExperienceModule, InertiaModule, KarmaModule, ManualModule,
   } from '$features/header';
   import { CohortTable, PlanetSection } from '$features/detail';
-  import type { Phase } from '$features/detail';
+  import type { Phase, PurchaseMode } from '$features/detail';
   import Building from '$lib/buildings/base.svelte';
   import buildingData from '$data/buildings';
 
-  let buyMode = $state('100');
+  let purchaseMode: PurchaseMode = $state('1');
 
   /** Real buildings, off the manager — driven to a state worth looking at. */
   const cohorts = [
@@ -29,8 +29,8 @@
     return cohort;
   });
 
-  function buy(id: string) {
-    cohorts.find((cohort) => cohort.id === id)?.add(1);
+  function purchase(id: string, quantity: number) {
+    cohorts.find((cohort) => cohort.id === id)?.add(quantity);
   }
 
   let cycles = $state(4);
@@ -57,7 +57,11 @@
 
   const inertiaTicks: MeterTick[] = [{ at: 20 }, { at: 60, strong: true }];
 
-  const upgrades: { label: string; costs?: Record<ResourceType, number>; status: ChipStatus }[] = [
+  const upgrades: {
+    label: string;
+    costs?: Partial<Record<ResourceType, number>>;
+    status: ChipStatus;
+  }[] = [
     { label: 'More cause means more effect', costs: { karma_positive: 15 }, status: 'affordable' },
     { label: 'An easier way', costs: { experience: 200 }, status: 'affordable' },
     { label: 'Free Wilderness', costs: { karma_positive: 50 }, status: 'unlocked' },
@@ -342,10 +346,9 @@
         />
         <CohortTable
           {cohorts}
-          {buyMode}
-          affordable={() => true}
-          onbuymode={(m) => (buyMode = m)}
-          onbuy={buy}
+          {purchaseMode}
+          onpurchasemode={(m) => (purchaseMode = m)}
+          onpurchase={purchase}
           note="Aiming costs karma and takes two phases — commit before the phase flips, not after."
         />
       </Card>

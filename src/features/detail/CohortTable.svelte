@@ -1,30 +1,29 @@
 <script lang="ts">
   import { Label, Section, Tabs } from '$ui';
   import type Building from '$lib/buildings/base.svelte';
+  import type { PurchaseMode } from './types';
   import CohortRow from './CohortRow.svelte';
 
   interface Props {
     title?: string;
     cohorts: Building[];
-    affordable?: (id: string) => boolean;
-    buyModes?: readonly string[];
-    buyMode?: string;
+    purchaseModes?: readonly PurchaseMode[];
+    purchaseMode?: PurchaseMode;
     showAim?: boolean;
     note?: string;
-    onbuymode?: (mode: string) => void;
-    onbuy?: (id: string) => void;
+    onpurchasemode?: (mode: PurchaseMode) => void;
+    onpurchase?: (id: string, quantity: number) => void;
   }
 
   let {
     title,
     cohorts,
-    affordable,
-    buyModes = ['1', '10', '100', 'Max'],
-    buyMode = '1',
+    purchaseModes = ['1', '10', 'Next', 'Max'],
+    purchaseMode = '1',
     showAim = true,
     note,
-    onbuymode,
-    onbuy,
+    onpurchasemode,
+    onpurchase,
   }: Props = $props();
 
   const columns = $derived(
@@ -35,10 +34,6 @@
 </script>
 
 <Section label="Incarnations" {title}>
-  {#snippet aside()}
-    <Tabs tabs={buyModes} active={buyMode} size="sm" onselect={onbuymode} />
-  {/snippet}
-
   <div class="table" style:--cohort-cols={columns}>
 
     <div class="head">
@@ -49,19 +44,21 @@
       {#if showAim}
         <span class="lean"><Label text="Lean" size="sm" /></span>
       {/if}
-      
+
       <span class="output right"><Label text="Rate" size="sm" /></span>
 
-
-      <span class="right"><Label text="Cost" size="sm" /></span>
+      <span class="cost right">
+        <Tabs tabs={purchaseModes} active={purchaseMode} size="sm" onselect={(m) => onpurchasemode?.(m as PurchaseMode)} />
+        <Label text="Cost" size="sm" />
+      </span>
     </div>
 
     {#each cohorts as cohort (cohort.id)}
       <CohortRow
         {cohort}
         {showAim}
-        affordable={affordable?.(cohort.id)}
-        onbuy={() => onbuy?.(cohort.id)}
+        {purchaseMode}
+        onpurchase={(quantity) => onpurchase?.(cohort.id, quantity)}
       />
     {/each}
   </div>
@@ -98,6 +95,16 @@
   }
   .lean {
     justify-content: center;
+  }
+
+  .cost {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--sp-1);
+  }
+  .cost :global(.tabs) {
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .note {

@@ -1,11 +1,17 @@
 <script lang="ts">
-  import { BuildingManager } from '$lib/managers';
+  /**
+   * A bar swept once per emission. Knows nothing about what emits — the caller
+   * hands it a subscribe closure and gets its own teardown back.
+   */
+  import type { Listener } from '$lib/emission';
 
   interface Props {
-    id: string;
+    subscribe: (fn: Listener) => () => void;
+    width?: string;
+    height?: string;
   }
 
-  let { id }: Props = $props();
+  let { subscribe, width = '12rem', height = '3px' }: Props = $props();
 
   let bar = $state<HTMLSpanElement>();
 
@@ -18,20 +24,17 @@
       bar.animate([{ width: '0%' }, { width: '100%' }], { duration, easing: 'linear' });
     };
 
-    BuildingManager.addListener(id, 'queue', sweep);
-    return () => BuildingManager.removeListener(id, 'queue', sweep);
+    return subscribe(sweep);
   });
 </script>
 
-<div class="cycle">
+<div class="sweep" style:width style:height>
   <span class="progress" bind:this={bar}></span>
 </div>
 
 <style>
-  .cycle {
+  .sweep {
     display: inline-flex;
-    width: 12rem;
-    height: 3px;
     background: var(--line-100);
   }
   .progress {

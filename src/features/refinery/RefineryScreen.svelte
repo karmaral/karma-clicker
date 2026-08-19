@@ -1,19 +1,31 @@
 <script lang="ts">
   import { progression } from '$lib/progression';
-  import RevealStub from '../RevealStub.svelte';
+  import RefiningStatus from './RefiningStatus.svelte';
+  import IntakeBar from './IntakeBar.svelte';
+  import RateCeiling from './RateCeiling.svelte';
+  import SplitControl from './SplitControl.svelte';
   import TokenTable from './TokenTable.svelte';
 </script>
 
 <div class="refinery view-layout">
-  <div>
-    <RevealStub name="refinery.intake" note="what goes in" />
-    <RevealStub name="refinery.rate" note="how fast it clears" height="48px" />
-    <RevealStub name="refinery.side" note="what comes out the side" />
+  <div class="engine">
+    {#if progression.isRevealed('refinery.status')}
+      <RefiningStatus />
+    {/if}
   </div>
 
-  <div>
-    <RevealStub name="refinery.split" note="how intake is divided" />
-    <RevealStub name="refinery.backlog" note="what is waiting" />
+  <div class="grades">
+    {#if progression.isRevealed('refinery.intake')}
+      <IntakeBar />
+    {/if}
+
+    {#if progression.isRevealed('refinery.backlog')}
+      <RateCeiling />
+    {/if}
+
+    {#if progression.isRevealed('refinery.split')}
+      <SplitControl />
+    {/if}
 
     {#if progression.isRevealed('refinery.grades')}
       <TokenTable />
@@ -22,4 +34,18 @@
 </div>
 
 <style>
+  .engine {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-5);
+    padding: 0 var(--sp-4);
+    border-right: var(--rule-card);
+    min-width: 0;
+  }
+
+  .grades {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
 </style>

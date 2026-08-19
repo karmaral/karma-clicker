@@ -12,9 +12,9 @@ const data: Record<string, Record<string, ItemTextData>> = {
     },
   },
   'refinery': {
-    'seats_1': {
+    'slots_1': {
       title: 'Room to work',
-      description: 'Four seats. Reserved souls fill them; an empty seat refines nothing.',
+      description: 'Four slots. Reserved souls fill them; an empty slot refines nothing.',
     },
     'efficiency_1': {
       title: 'A steadier hand',
@@ -24,9 +24,9 @@ const data: Record<string, Record<string, ItemTextData>> = {
       title: 'Shorter shifts',
       description: 'Seconds per batch x0.75',
     },
-    'seats_2': {
+    'slots_2': {
       title: 'The floor below',
-      description: 'Twelve more seats.',
+      description: 'Twelve more slots.',
     },
   },
   'planet:second': {

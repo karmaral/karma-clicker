@@ -1,7 +1,7 @@
 /**
- * The soul split: the share of every cohort held back from incarnating. Held
- * souls are still yours — unlike merged ones — they only stop earning, which is
- * the whole of what reserving costs.
+ * The soul allocation: the share of every cohort held back from incarnating.
+ * Held souls are still yours — unlike merged ones — they only stop earning,
+ * which is the whole of what reserving costs.
  */
 
 class Reserve {

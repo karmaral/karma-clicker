@@ -1,32 +1,44 @@
 <script lang="ts">
-  import { Badge, PurchaseButton, Meter, Tooltip, tooltip } from '$ui';
+  import type { Props as TippyProps } from 'tippy.js';
+  import { Badge, PurchaseButton, Meter, SweepBar, Tooltip, tooltip } from '$ui';
+  import { BuildingManager } from '$lib/managers';
+  import type { Listener } from '$lib/emission';
   import { aim } from '$lib/aim';
   import { progression } from '$lib/progression';
   import { f } from '$lib/utils';
   import type Building from '$lib/buildings/base.svelte';
   import type { YieldType } from '$types';
+  import type { PurchaseMode } from './types';
   import LeanMeter from './LeanMeter.svelte';
-  import CycleBar from './CycleBar.svelte';
   import { badgeFor } from './badge';
   import texts from '$data/buildings-texts';
 
   interface Props {
     cohort: Building;
-    affordable?: boolean;
+    purchaseMode?: PurchaseMode;
     showAim?: boolean;
     compact?: boolean;
-    onbuy?: () => void;
+    onpurchase?: (quantity: number) => void;
   }
 
   let {
     cohort,
-    affordable,
+    purchaseMode = '1',
     showAim = true,
     compact = true,
-    onbuy,
+    onpurchase,
   }: Props = $props();
 
-  const cost = $derived(cohort.getCost(1) ?? 0);
+  const resolvedQuantity = $derived.by(() => {
+    if (purchaseMode === 'Max') return BuildingManager.getAffordableQuantity(cohort.id) ?? 0;
+    if (purchaseMode === 'Next') return cohort.nextUntilThreshold;
+
+    return Number(purchaseMode);
+  });
+
+  const quantity = $derived(Math.max(1, resolvedQuantity));
+  const cost = $derived(cohort.getCost(quantity) ?? 0);
+  const affordable = $derived(resolvedQuantity > 0 && BuildingManager.canAfford(cohort.id, resolvedQuantity));
   const aimed = $derived(aim.resolve(cohort.id, cohort.data));
 
   const TREND_DEADBAND = 0.005;
@@ -76,7 +88,16 @@
   let isHovered: boolean = $state(false);
 
   let tooltipElem: HTMLElement | undefined = $state();
-  const tooltipOptions = {
+  /** The bar sweeps on the cohort's own clock; this is all it needs to know. */
+  function sweepOf(id: string) {
+    return (fn: Listener) => {
+      BuildingManager.addListener(id, 'queue', fn);
+
+      return () => BuildingManager.removeListener(id, 'queue', fn);
+    };
+  }
+
+  const tooltipOptions: Partial<TippyProps> = {
     placement: 'right',
     delay: [650, 0],
     offset: [0, 16],
@@ -118,7 +139,7 @@
     <span class="description">{texts[cohort.id]?.description ?? ''}</span>
 
     <span class="duration">
-      <CycleBar id={cohort.id} />
+      <SweepBar subscribe={sweepOf(cohort.id)} />
       {f(cohort.duration / 1000)}s
     </span>
 
@@ -157,7 +178,8 @@
       kind={badgeFor(cohort.data.cost_type!)}
       amount={f(cost)}
       {affordable}
-      onclick={onbuy}
+      onclick={() => onpurchase?.(quantity)}
+      {quantity}
     />
 
     <div class="tooltip-wrapper" bind:this={tooltipElem}>

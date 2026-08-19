@@ -4,7 +4,7 @@
  * carries through into the token layer untouched. Polarity survives the step.
  */
 
-import { ResourceEmitter } from '$lib/emission';
+import { ResourceEmitter, type Listener } from '$lib/emission';
 import { ModifierSet } from '$lib/modifiers';
 import { BuildingManager, ResourceManager } from '$lib/managers';
 import type { Modifier, ResourceType } from '$types';
@@ -27,10 +27,10 @@ class Refinery {
   #modifiers = new ModifierSet();
   #emitter: ResourceEmitter;
 
-  /** Bought seats. Reserved souls fill them — neither on its own refines anything. */
-  #seats = $derived(this.#modifiers.apply(0, 'seats'));
+  /** Bought slots. Reserved souls fill them — neither on its own refines anything. */
+  #slots = $derived(this.#modifiers.apply(0, 'slots'));
 
-  #workers = $derived(Math.min(BuildingManager.countReserved(), this.#seats));
+  #workers = $derived(Math.min(BuildingManager.countReserved(), this.#slots));
 
   /**
    * Per pile. Staffing is linear here and absent from the interval: in both, it
@@ -70,13 +70,27 @@ class Refinery {
     this.#modifiers.add(modifier);
   }
 
-  get seats() { return this.#seats; }
+  addListener(identifier: string, fn: Listener) {
+    this.#emitter.addListener(identifier, fn);
+  }
+
+  removeListener(identifier: string, fn: Listener) {
+    this.#emitter.removeListener(identifier, fn);
+  }
+
+  get slots() { return this.#slots; }
   get workers() { return this.#workers; }
   get batch() { return this.#batch; }
   get interval() { return this.#interval; }
 
+  /** When the queued batch lands. */
+  get nextAt() { return this.#emitter.nextAt; }
+
   /** Karma cleared from each pile per second. */
   get perSecond() { return this.#batch / (this.#interval / 1000); }
+
+  /** Across both piles, and uncapped by what they hold — this is the ceiling. */
+  get clearedPerSecond() { return this.perSecond * PILES.length; }
 }
 
 export const refinery = new Refinery();

@@ -70,11 +70,28 @@ class BuildingManager {
    * puts aim and the wave phase inside the wall. The click is manual, so it is out.
    */
   countKarmaPerSecond() {
-    return this.#cohorts().reduce((sum, cohort) => {
-      const { positive, negative } = cohort.karmaPerSecond();
+    const { positive, negative } = this.countKarmaPerSecondByPolarity();
 
-      return sum + positive + negative;
-    }, 0);
+    return positive + negative;
+  }
+
+  /** Split for the two badges that read it separately — same sum as `countKarmaPerSecond`. */
+  countKarmaPerSecondByPolarity() {
+    return this.#cohorts().reduce(
+      (sum, cohort) => {
+        const { positive, negative } = cohort.karmaPerSecond();
+        sum.positive += positive;
+        sum.negative += negative;
+
+        return sum;
+      },
+      { positive: 0, negative: 0 },
+    );
+  }
+
+  /** Souls only, same exclusion as `countKarmaPerSecond` — the click is manual. */
+  countExperiencePerSecond() {
+    return this.#cohorts().reduce((sum, cohort) => sum + cohort.perSecond('experience'), 0);
   }
 
   /**

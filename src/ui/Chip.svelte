@@ -4,13 +4,14 @@
   import Tooltip from './Tooltip.svelte';
   import type { ChipStatus } from './types';
     import Badge from './Badge.svelte';
+    import type { Props as TippyProps } from 'tippy.js';
     import type { ResourceType, YieldType } from '$lib/types';
     import { badgeFor } from '$features/detail/badge';
     import { f } from '$lib/utils';
 
   interface Props {
     label: string;
-    costs?: Record<ResourceType, number>;
+    costs?: Partial<Record<ResourceType, number>>;
     status?: ChipStatus;
     disabled?: boolean;
     onclick?: () => void;
@@ -29,7 +30,7 @@
   }: Props = $props();
 
   let tooltipElem: HTMLElement | undefined = $state();
-  const tooltipOptions: Partial<Props> = {
+  const tooltipOptions: Partial<TippyProps> = {
     placement: 'bottom-start',
     delay: [450, 0],
     interactive: false,

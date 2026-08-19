@@ -1,4 +1,4 @@
-type Listener = (detail?: Record<string, unknown>) => void;
+export type Listener = (detail?: Record<string, unknown>) => void;
 
 /** Events the emitter owns. Anything composing one routes these through to it. */
 export const EMITTER_EVENTS = ['queue', 'action'];

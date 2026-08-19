@@ -2420,9 +2420,10 @@ arbitrary later moment.
 
 Things that are simply unbuilt, and what they cost today.
 
-- **The soul split has no control.** `reserve` is real — see Souls below — but
-  `detail.split` is still a `RevealStub`, so nothing but `DevPanel` can set the
-  fraction. Beat 11 is reachable, not playable.
+- **The soul split has a control, on one screen of two.** The Refinery's Split
+  module writes `reserve` — see *The refinery screen* — so beat 11 is playable
+  now. `detail.split` is still a `RevealStub` and wants the same lever, which is
+  a `SliderBar` and an aside.
 - ~~**The recurring harvest has structure, no numbers.**~~ Closed — all three
   worlds declare a `harvest`, and both banked fields are consumed: `alignment`
   picks what it pays, `merged` picks how fast. See *What a finished world pays*.
@@ -2431,10 +2432,8 @@ Things that are simply unbuilt, and what they cost today.
 - **The `harness` bucket in `data/upgrades.ts` is empty.** `global` and
   `refinery` are now authored; `harness` exists so there is somewhere for its
   upgrades to live, and nothing names one yet.
-- **The refinery runs behind six stubs.** The grades are drawn and bought — see
-  *The grades are bought above the refinery* — but nothing on the screen says
-  what the refinery is doing, what is waiting, how fast it clears, or how intake
-  is divided.
+- ~~**The refinery runs behind six stubs.**~~ Closed — the screen is drawn. See
+  *The refinery screen* below. What is left on it is balance, not structure.
 - ~~**Red has no sink.**~~ Closed — the three purchases exist and the grade table
   is their buyer. What is still missing is a sink for **yellow and blue**: they
   are a ladder with nothing at the top, and inventing a spender is its own
@@ -2477,14 +2476,14 @@ Two numbers, both countable in a minute:
 |---|---|---|
 | 1–12 | — | — |
 
-Beat 11 counts, but read it with the asterisk in Known gaps: its trigger is live
-and only `DevPanel` can satisfy it, because the split has no control yet. Beat 12
-joined the column when reaching landed — it is the only beat that reveals nothing.
+Beat 11's asterisk is gone: the Refinery's Split module sets `reserve`, so its
+trigger is satisfiable by playing. Beat 12 joined the column when reaching landed
+— it is the only beat that reveals nothing.
 
-Stubs: **9 of 35**. Detail 5/8 · Overview 5/5 · Harvest 3/4 · Refinery 1/7.
-`reading.excess` and `reading.tokens` are both real. The refinery engine landed
-without moving this line — a running system and a drawn panel are counted
-separately here for exactly that reason — and step 9 moved it twice.
+Stubs: **3 of 35**, all on Detail. Detail 5/8 · Overview 5/5 · Harvest 4/4 ·
+Refinery 7/7. `reading.excess` and `reading.tokens` are both real. The refinery
+engine landed without moving this line — a running system and a drawn panel are
+counted separately here for exactly that reason — and step 9 moved it twice.
 
 ### The course
 
@@ -2502,7 +2501,8 @@ point: it lands on its own and moves at least one number in the gauge.
 | ~~8~~ | ~~Travel~~ | ~~beat 12~~ | **done** — see Overview below |
 | ~~5~~ | ~~`PlanetData.harvest`~~ | ~~merged planets actually pay~~ | **done** — see *What a finished world pays* |
 | ~~9~~ | ~~The token purchases — Ochre, Indigo, opposite Crimson~~ | ~~red gets a sink~~ | **done** — see *The grades are bought above the refinery* |
-| 7 | Harvest and Refinery layouts | 8 stubs | design pass — see Parked |
+| 7a | ~~Refinery layout~~ | ~~6 stubs~~ | **done** — see *The refinery screen* |
+| 7b | Harvest layout | 2 stubs | design pass — see Parked |
 
 **Step 2 was supposed to be the keystone. It was half of one.** Discovery landed
 beat 8 on its own trigger, but beat 12 asks for `planetsFinished >= 2` and a
@@ -2571,14 +2571,14 @@ upgradable, and the `refinery` bucket now holds one upgrade for each:
 
 | axis | moves | how |
 |---|---|---|
-| staffing | reserved souls working it | `min(reserve, seats)`, linear on the batch |
+| staffing | reserved souls working it | `min(reserve, slots)`, linear on the batch |
 | efficiency | the X — karma per batch | `yield` modifiers |
 | speed | the Y — seconds per batch | `duration` modifiers |
 
 **The staffing knob is closed.** Staffing is a linear multiplier on the batch,
-and bought *seats* cap how many souls can work. It appears in X and never in Y —
+and bought *slots* cap how many souls can work. It appears in X and never in Y —
 in both, throughput would go quadratic in souls and the other two axes would be
-decorative. Seats pay off exactly when there are souls to fill them, which
+decorative. Slots pay off exactly when there are souls to fill them, which
 couples the split to the upgrades instead of stacking with them.
 
 That leaves efficiency and staffing both scaling X, which is only worth keeping
@@ -2600,7 +2600,7 @@ karma consumed, which is what the axis table means by X, and no separate
 karma-to-red ratio exists. That ratio is the obvious next balance knob if the
 refinery turns out to pay too well, and it is deliberately not there yet.
 
-`seats` is a third `ModifierStat` beside `yield` and `duration`. Only yields are
+`slots` is a third `ModifierStat` beside `yield` and `duration`. Only yields are
 keyed by resource, so `ModifierSet.#isApplicable` now asks that question for
 yields alone rather than excluding `duration` by name.
 
@@ -2611,11 +2611,11 @@ kind and `UpgradeManager` routes its modifiers to the singleton. Verbs (`unlock`
 always a modifier.
 
 Parked: **soul types feeding the refinery differently**, and any partial-staffing
-curve where empty seats slow the batch rather than shrink it. Both were
+curve where empty slots slow the batch rather than shrink it. Both were
 considered and set aside as too complex for a first pass.
 
 Still open, and none of it mechanical: every figure in the bucket and in
-`refinery.svelte.ts` is a placeholder, and six of the seven stubs are untouched.
+`refinery.svelte.ts` is a placeholder.
 
 ### The grades are bought above the refinery
 
@@ -2698,12 +2698,54 @@ and the badge keeps its hue.
 **The excess reading dropped a size** once four readings shared a 3.5fr column.
 That is provisional: the design has excess on its own labelled row under a meter,
 with a backlog tag, and the meter is still the one this doc calls *still ahead*.
-Backlog has no agreed definition yet — it is `refinery.backlog`, and it belongs
-to the layout pass.
+Backlog now has a definition — see *The refinery screen*.
 
 All four figures — `YELLOW_PRICE`, `BLUE_PRICE`, `INVERSION_BASE`,
 `INVERSION_GROWTH` — are placeholders, and they are not tuned against the
 refinery's placeholders either.
+
+### The refinery screen
+
+Step 7's Refinery half. Five modules, and none of them changed the engine — this
+was a layout pass and the mechanics it draws are the ones argued above.
+
+**Backlog is a pressure, not a quantity.** `refinery.backlog` was the last key
+with no agreed meaning, and what it draws is *arriving against cleared*:
+`countKarmaPerSecond()` on one side, the refinery's `clearedPerSecond` on the
+other, with the overflow in `--res-red`. A held figure was the obvious reading and
+is the wrong one — it says how much karma you have, which the header already says,
+and it goes up when you are doing well. A rate against a ceiling says the thing
+worth knowing: whether the piles are growing, and by how much per second. It is
+also the only place the three upgrade axes are legible as one number, because all
+three move the ceiling and nothing else does.
+
+**The intake bar draws matched and unmatched without the engine pairing
+anything.** The design module reads *"matched pairs only — the leftover is not
+fuel"* — that is the superseded §3.5 flow, and the caption is not used. What the
+bar shows is a **reading**: `min(pos, neg)` hatched from both ends, the remainder
+as a tail on whichever pole holds it. The leftover is refined like everything
+else and carries its polarity through. Do not take this bar as evidence the
+matching question reopened; the sign comes from `getUnpairedKarma()`, which is
+excess's own, so the tail and the excess reading can never disagree.
+
+**The batch line is written as a conversion at 1:1.** `800 karma → 800 Crimson`
+reads as a redundancy today and is deliberate: it is the slot a karma-to-red ratio
+would occupy, drawn before the knob exists so adding one moves a number rather
+than a layout.
+
+**The split is a control here.** The design module is headed *set on Close-up* and
+is read-only; it is draggable on this screen instead, because the refinery is
+where the cost of reserving is felt. `detail.split` is still a stub and gets the
+same lever. This is the first thing outside `DevPanel` to write `reserve`.
+
+`SliderBar` and `SweepBar` came out of this pass into `$ui`. `SweepBar` is
+`CycleBar` with the `BuildingManager` lookup lifted out into a `subscribe`
+closure, which is what let the refinery's clock drive the same bar — the component
+never knew what a cohort was, it only knew where to find one.
+
+One deviation from the design, chosen not inherited: Split sits **above** the
+grade table rather than below it, so the right column runs reading, reading,
+lever, table.
 
 ## Excess — provisional, revisit before balancing
 
@@ -2844,6 +2886,10 @@ revealing them again. None of this is drift; don't "fix" it.
 Retired with CONTEXT v3: *clearing* (→ refining, and the screen is labelled
 Refinery in both vocabularies now), *probe* (→ soul), *stage* (→ phase). Token
 code names stay `red`/`yellow`/`blue` against the UI's Crimson/Ochre/Indigo.
+
+**`seats` → `slots`** across the staffing axis — the `ModifierStat`, the two
+upgrade ids, and the copy. A seat is furniture and implies a room; a slot is a
+capacity, which is all the number ever was.
 
 Buying a red with its opposite is an **inversion**, and the verb is `invert`.
 *Reversal* was the first word and is wrong: nothing is undone, a side is bought

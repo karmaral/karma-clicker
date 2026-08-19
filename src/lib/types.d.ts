@@ -20,8 +20,8 @@ export type BuyMode = number | 'next' | 'max';
 
 export type ModifierOp = 'flat' | 'boost' | 'mult' | 'pow' | 'final';
 
-/** `seats` is the refinery's third axis: how many souls it can put to work. */
-export type ModifierStat = 'yield' | 'duration' | 'seats';
+/** `slots` is the refinery's third axis: how many souls it can put to work. */
+export type ModifierStat = 'yield' | 'duration' | 'slots';
 
 export interface Modifier {
   id: string;
