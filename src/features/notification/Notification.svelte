@@ -1,7 +1,5 @@
 <script lang="ts">
-  import { toast } from '@zerodevx/svelte-toast';
-  import { NotificationManager } from '$lib/managers';
-
+  /** Draws a toast's contents and nothing else — pushing one is the manager's. */
   interface Props {
     toastId: string | number;
     title: string;

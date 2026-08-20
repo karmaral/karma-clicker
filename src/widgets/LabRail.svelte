@@ -1,5 +1,6 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+  import { setContext, type Snippet } from 'svelte';
+  import { RAIL, type Rail } from './lab-rail';
 
   interface Props {
     side: 'left' | 'right';
@@ -7,12 +8,22 @@
   }
 
   let { side, children }: Props = $props();
+
+  /** One subject at a time, held here so a panel never has to close another. */
+  let open = $state<symbol | undefined>();
+
+  setContext<Rail>(RAIL, {
+    claim: (id) => { open ??= id; },
+    isOpen: (id) => open === id,
+    toggle: (id) => { open = open === id ? undefined : id; },
+  });
 </script>
 
 <!--
   One side of the page, holding however many panels that side carries. The rail
   owns the fixed position so a panel does not, which is what lets a third lab
-  exist without the second moving.
+  exist without the second moving. It owns which one is open for the same
+  reason — every other title bar stays in sight, so the column says what it has.
 
   It is also the box an *open* panel fills. The rail carries the width for that
   reason — a column sized by its content would collapse the moment the only

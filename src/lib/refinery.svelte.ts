@@ -7,12 +7,8 @@
 import { ResourceEmitter, type Listener } from '$lib/emission';
 import { ModifierSet } from '$lib/modifiers';
 import { BuildingManager, ResourceManager } from '$lib/managers';
+import balance from '$data/balance';
 import type { Modifier, ResourceType } from '$types';
-
-/** What one worker clears from each pile per batch. Placeholder figures. */
-const BATCH_PER_WORKER = 25;
-
-const INTERVAL = 4000;
 
 /** Under this the emitter would re-queue inside its own payout. */
 const MIN_INTERVAL = 100;
@@ -36,9 +32,11 @@ class Refinery {
    * Per pile. Staffing is linear here and absent from the interval: in both, it
    * would make throughput quadratic in souls and the other two axes decorative.
    */
-  #batch = $derived(this.#modifiers.apply(BATCH_PER_WORKER, 'yield') * this.#workers);
+  #batch = $derived(this.#modifiers.apply(balance.refinery.batchPerWorker, 'yield') * this.#workers);
 
-  #interval = $derived(Math.max(MIN_INTERVAL, this.#modifiers.apply(INTERVAL, 'duration')));
+  #interval = $derived(
+    Math.max(MIN_INTERVAL, this.#modifiers.apply(balance.refinery.interval, 'duration')),
+  );
 
   constructor() {
     this.#emitter = new ResourceEmitter(() => this.#refine(), () => this.#interval);

@@ -9,9 +9,11 @@
     set: (value: number) => void;
     /** Double-click either half. */
     reset: () => void;
+    /** Moved off what the data says. Marked so a tune can be read back at a glance. */
+    changed?: boolean;
   }
 
-  let { label, value, min, max, step, set, reset }: Props = $props();
+  let { label, value, min, max, step, set, reset, changed = false }: Props = $props();
 
   /**
    * What is being typed, while it is being typed. The field shows the value
@@ -32,13 +34,21 @@
     draft = undefined;
   }
 
+  /**
+   * Focus means you are replacing the figure, not editing a digit of it. The
+   * click that gave focus would collapse the selection again, so it is stopped.
+   */
+  function take(event: FocusEvent & { currentTarget: HTMLInputElement }) {
+    event.currentTarget.select();
+  }
+
   function key(event: KeyboardEvent & { currentTarget: HTMLInputElement }) {
     if (event.key === 'Enter') event.currentTarget.blur();
     if (event.key === 'Escape') draft = undefined;
   }
 </script>
 
-<div class="row">
+<div class={['row', { changed }]}>
   <span class="id">{label}</span>
   <input
     type="range"
@@ -57,6 +67,8 @@
     aria-label="{label} value"
     value={shown}
     oninput={(e) => (draft = e.currentTarget.value)}
+    onfocus={take}
+    onmouseup={(e) => e.preventDefault()}
     onchange={commit}
     onblur={commit}
     onkeydown={key}

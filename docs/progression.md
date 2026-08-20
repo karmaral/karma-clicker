@@ -193,7 +193,7 @@ does not close.
 |---|---|
 | −1 | `experience: E`, `karma_negative: K` |
 | +1 | `experience: E`, `karma_positive: K` |
-| 0 | `experience: E × (1 + EVEN_EXPERIENCE_BONUS)`, **no karma** |
+| 0 | `experience: E × (1 + harvest.evenExperienceBonus)`, **no karma** |
 
 Instead of, not on top of. On top, even would be strictly dominant and the
 reading would stop being a choice; as a trade it buys progression and gives up
@@ -312,6 +312,22 @@ that function asked about the count you actually have, and both
 never disagree about who is working. It takes a count rather than reading one
 because pricing a purchase asks what the *next* count would earn, and only the
 class knows how much of it works. §*A purchase is priced before you make it*.
+
+### A level is a reading of the count, not a record of it
+
+`#syncLevel` only ever climbed, so a merge left every cohort holding a level its
+count no longer earned: basic at 50 still reading level 7, still producing at
+level 7's multiplier, and — because `nextUntilThreshold` measures from the level
+rather than the count — the **Next** purchase priced exactly the souls you had
+just given away, so one click bought the pre-merge number back. `levelProgress`
+was not recomputed on the way out either, and went negative on the next buy.
+
+Levels now follow the count in both directions: `#levelFor` counts the crossings
+and `#syncLevel` sets level and progress together, from `add`, from `remove`, and
+from the constructor so an authored starting count arrives at its own level.
+Merged souls take their level with them — the level is a reading of what you
+hold, never a record of what you once held. `#calcLevelProgress` lost its `% 100`
+with the climb-only loop that needed it.
 
 ## Header
 
@@ -2525,6 +2541,42 @@ factor of about 2.3. Making bias continuous over `position` is a real option, bu
 it changes the average bias across a phase and the wall reads income, so it is a
 balance change and not a display one.
 
+### Lean is a dial
+
+The meter was a flat track: 12px tall, a hairline at zero, a hatched span each
+side, the word beneath. It cost the row **130px** — wide because a linear scale
+has to be, and made wider by `unpredictable` being thirteen characters. Bent into
+a half-circle it says the same thing in 44px. **12 o'clock is even and a quadrant
+either way is a hard detent**, so full negative lays the needle flat to the left.
+
+Nothing about the reading changed; only its coordinates. The two spans are still
+two wedges, anchored at 12 o'clock rather than at a centre line, still dark-hatch
+left and light-hatch right. What the arc buys is that **zero needs no mark**: the
+wedges meet at it, and the only state with no wedge at all — even, with no
+resistance — is the one where the needle already points straight up. The flat
+track had to spend an element saying where zero was.
+
+The needle is the one thing the track could not draw. It reads `realizedAim`,
+**drift and all** — which does not break the settled-figures rule above, because
+that rule is about *numbers*: drift is a span here, never a figure. A position is
+what a dial is for. And `#driftFor` returns 0 at `resistance: 0`, so the reading
+falls out of the geometry for free: a cohort you can aim has a needle that **does
+not move**, sitting exactly on its wedge's outer edge, and one you cannot has a
+needle visibly creeping between two wedges. That is the whole of what `risky` and
+`unpredictable` meant, without the words. It costs no new render either — the row
+already reacts to the drift clock, because `leanFor` reads `realizedAim` too.
+
+`unaimable` is the one state the geometry cannot separate, since `resistance: 0.9`
+draws nearly the same band as `1`. The needle greys to `--ink-300` to say the line
+is not yours to set. The word itself survives as the container's native `title` —
+interim, and the argument for a proper hint tooltip is in `handoff.md` §*Parked*.
+
+A sector at an arbitrary angle has no primitive in this codebase. `Badge`'s `both`
+cuts a hatched circle with `clip-path: polygon`, but a polygon is fixed and this
+angle moves, so the wedge is a **conic-gradient mask** over a circle hung below an
+`overflow: hidden` fold. First mask in the tree; the hatch stays a plain CSS
+background, which is what keeps all three hatch scales one mark.
+
 ## Modifiers
 
 Nothing folds into a producer's numbers. `Building` keeps `#baseProduction` and
@@ -2956,7 +3008,8 @@ candidate breaks something specific:
   difference did not move.
 
 What is in the code instead is **income rate**: the wall is karma per second
-across every cohort, times a `WALL_SECONDS` window in `lib/excess.ts`. Excess
+across every cohort, times an `excess.wallSeconds` window authored in
+`data/balance.ts` and read by `lib/excess.ts`. Excess
 then reads as the share of that window you are holding unpaired. It survives all
 three tests — it scales with progression so it cannot be outgrown, it does not
 decay, and the refinery does not touch the denominator.

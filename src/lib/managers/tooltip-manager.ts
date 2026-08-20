@@ -4,7 +4,7 @@ import type { CreateSingletonInstance, Instance, Props } from 'tippy.js';
 type TooltipOptions = Partial<Props>;
 
 class TooltipManager {
-  #singleton: CreateSingletonInstance;
+  #singleton: CreateSingletonInstance | undefined;
   #options: Record<string, unknown>;
   #instances: Instance[] = [];
 
@@ -13,7 +13,15 @@ class TooltipManager {
       delay: 0,
       interactive: true,
     };
-    this.#singleton = createSingleton([], {
+  }
+
+  /**
+   * Built on the first tooltip rather than at module load: `createSingleton`
+   * reaches for `document`, and the manager barrel is imported by things with
+   * no document to reach for — the headless run among them.
+   */
+  #getSingleton() {
+    this.#singleton ??= createSingleton([], {
       interactive: true,
       overrides: [
         'placement',
@@ -23,6 +31,8 @@ class TooltipManager {
         'appendTo',
       ],
     });
+
+    return this.#singleton;
   }
 
   addInstance(elem: HTMLElement, contentElem: HTMLElement, options: TooltipOptions = {}) {
@@ -33,9 +43,9 @@ class TooltipManager {
     });
 
     this.#instances.push(instance);
-    this.#singleton.setInstances(this.#instances);
+    this.#getSingleton().setInstances(this.#instances);
 
-    return instance; 
+    return instance;
   }
 
   removeInstance(instance: Instance) {
@@ -43,7 +53,7 @@ class TooltipManager {
     if (index !== -1) {
       this.#instances[index].destroy();
       this.#instances.splice(index, 1);
-      this.#singleton.setInstances(this.#instances);
+      this.#getSingleton().setInstances(this.#instances);
     }
   }
 }

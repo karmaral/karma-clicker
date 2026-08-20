@@ -20,7 +20,9 @@
   <Badge {kind} />
   <Figure {value} {size} {muted} />
   {#if rate}
-    <span class="rate num">+{rate}<span class="unit">/s</span></span>
+    <span class={['rate num']}>
+      +{rate}<span class="unit">/s</span>
+    </span>
   {/if}
 </span>
 

@@ -2,8 +2,11 @@
  * What a finished world pays, resolved. No runes and no imports that reach
  * three.js or the DOM, so this is probeable off the model the way the widget's
  * geometry is — which is the only reason it is not sitting inside `Planet`.
+ *
+ * The three figures a world may leave unsaid live in `data/balance.ts`.
  */
 
+import balance from '$data/balance';
 import type { PlanetHarvestMerge, Polarity, ResourceType, YieldType } from '$types';
 
 /** One finished world's take, as the summing needs it. */
@@ -11,15 +14,6 @@ export interface HarvestSource {
   yields: Partial<Record<ResourceType, number>>;
   duration: number;
 }
-
-/** What an even alignment takes instead of the karma it cannot pick a pile for. */
-export const EVEN_EXPERIENCE_BONUS = 0.5;
-
-/** Merged souls that double the harvest's rate, where a world does not say. */
-export const MERGE_HALVING = 50;
-
-/** The ceiling on that, so a world's hundreds do not run away. */
-export const MAX_HARVEST_SPEED = 8;
 
 /**
  * The locked alignment picks karma's pile. Even can pick neither, so it takes
@@ -44,7 +38,7 @@ export function resolveHarvestYields(
     }
 
     if (type === 'experience' && isEven) {
-      paid.experience = amount * (1 + EVEN_EXPERIENCE_BONUS);
+      paid.experience = amount * (1 + balance.harvest.evenExperienceBonus);
       return;
     }
 
@@ -63,9 +57,12 @@ export function resolveHarvestYields(
 export function resolveHarvestDuration(
   base: number,
   merged: number,
-  { mergeHalving = MERGE_HALVING, maxMergeSpeed = MAX_HARVEST_SPEED }: PlanetHarvestMerge = {},
+  {
+    mergeHalving = balance.harvest.mergeHalving,
+    maxMergeSpeed = balance.harvest.maxMergeSpeed,
+  }: PlanetHarvestMerge = {},
 ) {
-  const halving = mergeHalving > 0 ? mergeHalving : MERGE_HALVING;
+  const halving = mergeHalving > 0 ? mergeHalving : balance.harvest.mergeHalving;
   const speed = Math.min(1 + Math.max(0, merged) / halving, Math.max(1, maxMergeSpeed));
 
   return base / speed;

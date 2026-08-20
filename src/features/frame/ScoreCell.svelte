@@ -3,15 +3,16 @@
 
   interface Props {
     amount: string;
+    rate?: string;
     caption?: string;
   }
 
-  let { amount, caption }: Props = $props();
+  let { amount, rate, caption }: Props = $props();
 </script>
 
 <div class="score">
   <Cell label="Experience" {caption} banded>
-    <Value kind="xp" value={amount} />
+    <Value kind="xp" value={amount} {rate} />
 
     {#snippet foot()}
       the score · not a screen

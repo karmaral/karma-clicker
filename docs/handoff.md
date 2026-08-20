@@ -13,24 +13,21 @@ way:
 
 ## Tree
 
-Branch `dev-next`. Last commit `6c3d2be rebuild checkpoint 16`, which carries the
-3a header; uncommitted since: Detail's cohort table rebuilt around *the head is
-the sum of its rows* — the `/s` totals moved onto the section rail, per-row rates
-gone quiet until hover, a purchase priced in green before you make it, and the
-cost head turned into the quantity switcher. Then `f` re-rounded game-wide:
-decimals only under ten, and costs round up. `git status` and `git log` for the
-list.
+Branch `dev-next`. Last commit `4382963 rebuild checkpoint 17`, which carries
+Detail's cohort table rebuilt around *the head is the sum of its rows* — the `/s`
+totals moved onto the section rail, per-row rates gone quiet until hover, a
+purchase priced in green before you make it, the cost head turned into the
+quantity switcher — and `f` re-rounded game-wide: decimals only under ten, costs
+round up. Uncommitted: Lean bent into a **dial**, giving the ident 86px back; and
+Overview, in the author's hands. `git status` and `git log` for the list.
 
 `planet-visuals.ts` carries a **UTF-8 BOM**, and a new required field on
 `PlanetVisual` means editing all nine records.
 
 ## Verified, and how
 
-- `npm run check` → **871 FILES 3 ERRORS 2 WARNINGS** — table at the end. Two
-  are the standing baseline; the third (`TokenRow.svelte`) surfaced from the
-  author's own uncommitted `PurchaseButton.svelte` edit (a new required
-  `quantity` prop) never propagated to Refinery's call site — not touched, it's
-  in-progress work in the lab.
+- `npm run check` → **871 FILES 3 ERRORS 2 WARNINGS** — table at the end. All
+  three are now committed defects; two are live.
 - `npx vite build` clean.
 - **The probe** — `esbuild` the model modules into the scratchpad, run under
   node. Works only because `pulse` / `harness` / `anchor` / `orbit` / `visual` /
@@ -89,7 +86,8 @@ list.
     doubly live: `SplitControl` carries the same handle onto Detail too.
 18. **The cost head as a switcher.** `COST × 1 10 NEXT MAX` on one rail in a
     184px cell, the whole cell a button that cycles. Never seen at real text
-    width — the number is a guess and the identity column paid 88px for it.
+    width — the number is a guess and the identity column paid 88px for it, 86 of
+    which the lean dial has since handed back.
 19. **The cohort table's head rail.** Detail's `/s` totals moved off the left
     column into `Section`'s aside, split by polarity, xp first. Check it sums to
     the rows. §*The cohort table*.
@@ -126,6 +124,14 @@ list.
 30. **The preview against a reserve.** Drag Soul allocation to ~30% and re-hover —
     the preview should add about 0.7 of what you buy. `activeAt` is what makes
     that true and nothing tests it.
+31. **The lean dial, in four states.** 36×18, and nothing has drawn one. Walk them
+    in this order: **even** (needle up, no wedge — if it reads *empty* rather than
+    *centred*, the plate is too faint at `--line-200`); **a plain aim** at
+    `resistance: 0` (one wedge, needle still and on its outer edge; hard negative
+    lays it flat left); **risky** (a wedge each side, needle creeping — the lattice
+    is 9s, so it must creep and not jitter); **unpredictable** (wide band, grey
+    needle). Then check the light wedge against a hovered row — its `.edge`
+    hairline is the only thing terminating it. §*Lean is a dial*.
 
 ## Parked — named, argued, not done
 
@@ -135,6 +141,13 @@ list.
 - The halo, the echo and the flare — all off **by value**, everything standing.
 - `span` is a ratio wearing a length word. A rename in four files.
 - The planet lab's id row scrolls at nine worlds.
+- **A hint tooltip, so nothing rides the native `title`.** Two call sites do now —
+  the lean dial's word and `TokenRow`'s price note — and native means ~1s, unstyled,
+  unplaceable, invisible on touch. `Tooltip` exists but is a *panel*: bordered card,
+  title and description, 650ms, 320px. This wants its small sibling — one line, no
+  chrome, short delay. Do it **with** the cohort row's tooltip, whose body is still
+  the placeholder `name, lore, rates, +each and all that`; one pass should settle
+  what a tooltip is here before three call sites each answer it.
 - The token layer, the Harvest layout, per-cohort aiming — `progression.md` §*Parked*.
 
 ## Does not exist
@@ -204,4 +217,4 @@ and the **comment sweep** (§*The comments want the same pass*).
 |---|---|---|
 | 1 | `notification-manager.ts` | Svelte 5 `Component<Props>` in a legacy `SvelteComponent` slot. |
 | 2 | `UpgradeRail.svelte` | reads `.effect` off `Upgrade`. **The only live defect** — that caption has rendered empty since it was written, and the fallback is what hides it. Decide whether it wants `UpgradeData.effect` or goes. |
-| 3 | `TokenRow.svelte` | missing `quantity` on `PurchaseButton` — the author's own uncommitted prop addition there, not yet propagated to this call site. |
+| 3 | `TokenRow.svelte` | missing `quantity` on `PurchaseButton`. **Live** — the prop landed in checkpoint 17 as required, and Refinery buys one grade at a time so it has none to pass. The template already guards `{#if quantity}`; `quantity?: number` is the fix, unless a grade is meant to carry a count. |

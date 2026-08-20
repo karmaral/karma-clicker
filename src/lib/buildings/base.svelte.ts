@@ -56,6 +56,7 @@ export default class Building {
     );
 
     this.#baseProduction = { ...initData.yields };
+    this.#syncLevel();
   }
 
   add(n: number = 1) {
@@ -65,7 +66,6 @@ export default class Building {
       this.queueAction();
     }
     this.#total += amt;
-    this.#levelProgress = this.#calcLevelProgress();
 
     this.#runCallbacks('count', { count: this.#count });
     this.#runCallbacks('total', { total: this.#total });
@@ -80,24 +80,29 @@ export default class Building {
 
     this.#runCallbacks('count', { count: this.#count });
     this.#runCallbacks('remove', { removed: amt });
+
+    this.#syncLevel();
   }
 
-  #syncLevel() {
-    const count = this.#count;
+  /** The level a count has earned. Thresholds ascend, so crossings are the level. */
+  #levelFor(count: number) {
     const { upgrade_threshold } = this.#data;
-    if (!upgrade_threshold) return;
+    if (!upgrade_threshold) return this.#level;
 
-    while (count >= upgrade_threshold[this.#level - 1]) {
-      this.#increaseLevel();
-
-      if (this.#level > upgrade_threshold.length) break;
-    }
+    return upgrade_threshold.filter((threshold) => count >= threshold).length + 1;
   }
 
-  #increaseLevel() {
-    this.#level++;
+  /** Both ways — merged souls take their level with them, so a cohort can fall. */
+  #syncLevel() {
+    const level = this.#levelFor(this.#count);
+    const changed = level !== this.#level;
 
-    this.#runCallbacks('level', { level: this.#level });
+    this.#level = level;
+    this.#levelProgress = this.#calcLevelProgress();
+
+    if (changed) {
+      this.#runCallbacks('level', { level });
+    }
   }
 
   queueAction() {
@@ -203,9 +208,7 @@ export default class Building {
     const next = threshold[lvl - 1];
     if (!next) return 100;
 
-    const progress = (q - from) / (next - from) * 100;
-
-    return progress % 100;
+    return (q - from) / (next - from) * 100;
   }
 
   get id() { return this.#id; }

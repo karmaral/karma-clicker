@@ -153,7 +153,7 @@
 <HeaderBand {columns}>
   <ScoreCell
     amount={experience}
-    caption={showRates ? `+${experienceRate}/s` : undefined}
+    rate={showRates ? experienceRate : undefined}
   />
 
   {#each visible as screen (screen)}

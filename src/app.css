@@ -114,6 +114,13 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
+/* The palette has no blue in it; the browser's default selection was the one
+   place one showed up. */
+::selection {
+  background: var(--line-300);
+  color: var(--ink-900);
+}
+
 #app {
   display: flex;
   flex-direction: column;

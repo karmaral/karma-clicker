@@ -1,3 +1,5 @@
+import { clock } from '$lib/clock';
+
 export type Listener = (detail?: Record<string, unknown>) => void;
 
 /** Events the emitter owns. Anything composing one routes these through to it. */
@@ -26,12 +28,12 @@ export default class ResourceEmitter {
     this.#isInProgress = true;
 
     const duration = this.#duration;
-    this.#nextAt = Date.now() + duration;
+    this.#nextAt = clock.now() + duration;
 
     if (!duration) {
       this.emit();
     } else {
-      setTimeout(() => this.emit(), duration);
+      clock.after(duration, () => this.emit());
       // when duration becomes ridiculously small, probably just tick by seconds
     }
 

@@ -1,76 +1,107 @@
 <script lang="ts">
+  /**
+   * The lean track, bent into a half-circle. 12 o'clock is even and a quadrant
+   * either way is a hard detent, so the wedges are the band this cohort wanders
+   * across and the needle is where its aim actually sits inside them.
+   *
+   * Zero wants no mark: the wedges meet at it, and the one state with no wedge at
+   * all is the one where the needle already points straight up.
+   */
   interface Props {
+    /** How far into each polarity this cohort reaches, 0…1 of a hard detent. */
     negativeReach: number;
     positiveReach: number;
+    /** Where the aim is now, −1…1 on the reaches' scale. */
+    needle: number;
+    /** The aim is the cohort's, not yours — the line greys out to say so. */
+    unaimable?: boolean;
+    /** The word, now the hover rather than a line of text under the dial. */
     lean: string;
   }
 
-  let { negativeReach, positiveReach, lean }: Props = $props();
+  let { negativeReach, positiveReach, needle, unaimable = false, lean }: Props = $props();
 
-  const HALF = 50;
+  /** A quadrant is a hard detent. Everything on the dial is this one conversion. */
+  const QUADRANT = 90;
 
-  const negative = $derived(negativeReach * HALF);
-  const positive = $derived(positiveReach * HALF);
+  const negative = $derived(negativeReach * QUADRANT);
+  const positive = $derived(positiveReach * QUADRANT);
+  const angle = $derived(needle * QUADRANT);
 </script>
 
-<div class="lean">
-  <div class="track">
-    <span class="side neg" style:right="{HALF}%" style:width="{negative}%"></span>
-    <span class="side pos" style:left="{HALF}%" style:width="{positive}%"></span>
-    <span class="zero"></span>
-  </div>
-  <span class="word">{lean}</span>
+<div class="lean" title={lean} role="img" aria-label="Lean: {lean}">
+  {#if negative > 0}
+    <span class="wedge neg" style:--sweep="{negative}deg" style:--from="-{negative}deg"></span>
+  {/if}
+  {#if positive > 0}
+    <span class="wedge pos" style:--sweep="{positive}deg" style:--from="0deg"></span>
+  {/if}
+
+  <span class="plate"></span>
+
+  <!-- The light hatch needs a terminus the way it does on a flat track; the dark
+       one is its own. -->
+  {#if positive > 0}
+    <span class="edge" style:rotate="{positive}deg"></span>
+  {/if}
+
+  <span class={['needle', { unaimable }]} style:rotate="{angle}deg"></span>
 </div>
 
 <style>
   .lean {
-    display: flex;
-    flex-direction: column;
-    gap: var(--sp-2);
-    min-width: 0;
     position: relative;
+    width: 36px;
+    height: 18px;
+    flex: none;
+    margin-inline: auto;
+    overflow: hidden;
   }
 
-  .track {
-    position: relative;
-    height: 12px;
-    background: var(--surface-alt);
-  }
-
-  .side {
+  /* A full circle hung below the fold — the container keeps its top half, and the
+     conic mask cuts the sector out of that. The only shape primitive here that
+     takes an arbitrary angle. */
+  .wedge {
     position: absolute;
     top: 0;
-    bottom: 0;
+    left: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    mask-image: conic-gradient(from var(--from), #000 0deg var(--sweep), #0000 var(--sweep));
   }
 
-  .side.neg {
-    background: var(--hatch-neg);
-  }
+  .wedge.neg { background: var(--hatch-neg); }
+  .wedge.pos { background: var(--hatch-pos); }
 
-  .side.pos {
-    background: var(--hatch-pos);
-    box-shadow: var(--hatch-pos-edge);
-  }
-
-  .zero {
+  /* Outline, never a fill: a hovered row is --surface-alt, which is what a filled
+     track would have been. */
+  .plate {
     position: absolute;
-    top: -2px;
-    bottom: -2px;
+    inset: 0;
+    border: 1px solid var(--line-200);
+    border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  }
+
+  .edge,
+  .needle {
+    position: absolute;
+    bottom: 0;
     left: 50%;
     width: 1px;
     margin-left: -0.5px;
+    transform-origin: bottom center;
+  }
+
+  .edge {
+    height: 18px;
+    background: var(--line-300);
+  }
+
+  .needle {
+    height: 17px;
     background: var(--ink-900);
   }
 
-  .word {
-    font-size: 10.5px;
-    color: var(--ink-500);
-    line-height: 1;
-    text-align: center;
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: -5px;
-    translate: 0% 100%;
-  }
+  .needle.unaimable { background: var(--ink-300); }
 </style>

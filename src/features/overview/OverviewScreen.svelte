@@ -12,6 +12,7 @@
   import PlanetDetail from './PlanetDetail.svelte';
   import HarvestLedger from './HarvestLedger.svelte';
   import HarvestRates from './HarvestRates.svelte';
+    import { nav } from '$lib/nav.svelte';
 
   /** Size is the only thing that separates the three bands' pictures. */
   const BEHIND_PX = 24;
@@ -125,6 +126,19 @@
           stat={getHereStat}
           stillPx={ACTIVE_PX}
           onpick={(id) => (picked = id)}
+          ondblclick={() => nav.to('detail')}
+        />
+      {/if}
+
+      {#if progression.isRevealed('overview.ahead')}
+        <PlanetList
+          label="Ahead"
+          ids={PlanetManager.ahead}
+          {selected}
+          stat={getAheadStat}
+          empty="Nowhere else is known."
+          stillPx={AHEAD_PX}
+          onpick={(id) => (picked = id)}
         />
       {/if}
 
@@ -141,20 +155,7 @@
         />
       {/if}
 
-      {#if progression.isRevealed('overview.ahead')}
-        <PlanetList
-          label="Ahead"
-          ids={PlanetManager.ahead}
-          {selected}
-          stat={getAheadStat}
-          empty="Nowhere else is known."
-          stillPx={AHEAD_PX}
-          onpick={(id) => (picked = id)}
-        />
-      {/if}
-
     </div>
-
   </div>
 {/if}
 

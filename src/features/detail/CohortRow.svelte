@@ -173,6 +173,8 @@
     <LeanMeter
       negativeReach={aimed.negativeReach}
       positiveReach={aimed.positiveReach}
+      needle={aim.needleFor(aimed)}
+      unaimable={aimed.unaimable}
       lean={aim.leanFor(aimed)}
     />
   {/if}

@@ -1,6 +1,8 @@
 import type { BuildingData } from '$types';
 import { PlanetManager } from '$lib/managers';
 import { progression } from '$lib/progression';
+import { clock } from '$lib/clock';
+import balance from '$data/balance';
 import { noise } from './noise';
 
 export const DETENTS = [-2, -1, 0, 1, 2] as const;
@@ -8,12 +10,6 @@ export type Detent = (typeof DETENTS)[number];
 
 const HARDEST_NEGATIVE = DETENTS[0];
 const HARDEST_POSITIVE = DETENTS[DETENTS.length - 1];
-
-const DRIFT_DETENTS = 0.55;
-const DRIFT_MS_PER_LATTICE_UNIT = 9_000;
-
-const REAIM_PENALTY = 0.65;
-const REAIM_PHASES = 2;
 
 const DETENT_LABELS: Record<Detent, string> = {
   [-2]: 'Hard negative',
@@ -55,7 +51,7 @@ class Aim {
 
   /** Driven by the loop, so drift is one clock the UI and the payout share. */
   tick() {
-    this.#driftClock = Date.now();
+    this.#driftClock = clock.now();
   }
 
   /**
@@ -69,18 +65,19 @@ class Aim {
   });
 
   #reaimPenalty = $derived.by(() => {
+    const { reaimPenalty, reaimPhases } = balance.aim;
     const lived = this.#phasesSinceReaim;
-    if (lived === undefined || lived >= REAIM_PHASES) return 0;
+    if (lived === undefined || lived >= reaimPhases) return 0;
 
-    return REAIM_PENALTY * (1 - lived / REAIM_PHASES);
+    return reaimPenalty * (1 - lived / reaimPhases);
   });
 
   #driftFor(id: string, biasPull: number) {
     if (!biasPull) return 0;
 
-    const t = this.#driftClock / DRIFT_MS_PER_LATTICE_UNIT;
+    const t = this.#driftClock / balance.aim.driftMsPerLatticeUnit;
 
-    return noise(id, t) * DRIFT_DETENTS * biasPull;
+    return noise(id, t) * balance.aim.driftDetents * biasPull;
   }
 
   /** What the aim pays right now, drift and all. The payout reads this. */
@@ -104,7 +101,7 @@ class Aim {
     const drifted = drifting ? settledAim + this.#driftFor(id, biasPull) : settledAim;
     const realizedAim = clamp(drifted, HARDEST_NEGATIVE, HARDEST_POSITIVE);
     const unaimable = biasPull >= 1;
-    const wander = DRIFT_DETENTS * biasPull;
+    const wander = balance.aim.driftDetents * biasPull;
 
     const reach = {
       negativeReach: -clamp(settledAim - wander, HARDEST_NEGATIVE, 0) / HARDEST_POSITIVE,
@@ -140,6 +137,14 @@ class Aim {
     return DETENT_LABELS[detent];
   }
 
+  /**
+   * Where the needle points, −1…1 of a hard detent — the reaches' own scale, so
+   * the dial reads one number for the band and one for the line inside it.
+   */
+  needleFor({ realizedAim }: ResolvedAim) {
+    return realizedAim / HARDEST_POSITIVE;
+  }
+
   /** The row's word. Character, not position — position is the meter beside it. */
   leanFor({ realizedAim, unaimable, negativeReach, positiveReach }: ResolvedAim) {
     if (unaimable) return 'unpredictable';
@@ -153,10 +158,11 @@ class Aim {
   get reaimPenalty() { return this.#reaimPenalty; }
 
   get phasesOwed() {
+    const { reaimPhases } = balance.aim;
     const lived = this.#phasesSinceReaim;
-    if (lived === undefined || lived >= REAIM_PHASES) return 0;
+    if (lived === undefined || lived >= reaimPhases) return 0;
 
-    return REAIM_PHASES - lived;
+    return reaimPhases - lived;
   }
 }
 

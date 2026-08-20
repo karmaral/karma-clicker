@@ -41,7 +41,7 @@
 
   const columns = $derived(
     showAim
-      ? '20px minmax(0, 1fr) 130px 170px 184px'
+      ? '20px minmax(0, 1fr) 44px 170px 184px'
       : '20px minmax(0, 1fr) 170px 184px',
   );
 

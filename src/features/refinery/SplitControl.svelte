@@ -16,7 +16,7 @@
 
 <Section label="Soul allocation">
   {#snippet aside()}
-    {f(incarnating)}/{f(souls)} staffed · {f(reserved)} idle
+    {f(incarnating)} · {f(reserved)} idle
   {/snippet}
 
   <!-- Filled from the incarnating end, so the bar reads left to right with the aside. -->

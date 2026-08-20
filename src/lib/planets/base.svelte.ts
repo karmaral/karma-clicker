@@ -3,11 +3,9 @@ import { BuildingManager, ResourceManager } from '$lib/managers';
 import { ResourceEmitter } from '$lib/emission';
 import { getExcess } from '$lib/excess';
 import { FIRST_HARVEST_CONDITIONS } from '$lib/labels';
+import balance from '$data/balance';
 import { resolveHarvestDuration, resolveHarvestYields } from './harvest';
 import type { FirstHarvestCondition, PlanetData, Polarity, ResourceType } from '$types';
-
-const BIAS_WITH = 1.4;
-const BIAS_AGAINST = 0.6;
 
 export default class Planet {
   #id: string;
@@ -149,7 +147,7 @@ export default class Planet {
   });
 
   bias(positive: boolean) {
-    return this.isDense === positive ? BIAS_AGAINST : BIAS_WITH;
+    return this.isDense === positive ? balance.wave.biasAgainst : balance.wave.biasWith;
   }
 
   get id() { return this.#id; }

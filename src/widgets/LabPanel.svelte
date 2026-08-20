@@ -1,6 +1,7 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+  import { getContext, type Snippet } from 'svelte';
   import Slider from './Slider.svelte';
+  import { RAIL, type Rail } from './lab-rail';
 
   /** Structurally what `VisualParam` and `SwarmParam` already are. */
   interface LabParam {
@@ -23,15 +24,30 @@
     value: (key: string) => number;
     set: (key: string, value: number) => void;
     reset: (key: string) => void;
+    /** Which rows have moved. A lab with no defaults to compare against omits it. */
+    changed?: (key: string) => boolean;
     /** Rows above the sliders — whatever this lab is per-subject about. */
     header?: Snippet;
     /** Extra control belonging to one slider, drawn directly under it. */
     under?: Snippet<[string]>;
   }
 
-  let { title, groups, params, value, set, reset, header, under }: Props = $props();
+  let { title, groups, params, value, set, reset, changed, header, under }: Props = $props();
 
-  let open = $state(true);
+  /** In a rail, which panel is open is the rail's call; standing alone it is ours. */
+  const rail = getContext<Rail | undefined>(RAIL);
+  const id = Symbol();
+
+  rail?.claim(id);
+
+  let alone = $state(true);
+
+  const open = $derived(rail ? rail.isOpen(id) : alone);
+
+  function toggle() {
+    if (rail) rail.toggle(id);
+    else alone = !alone;
+  }
 
   function paramsIn(group: string) {
     return params.filter((param) => param.group === group);
@@ -39,7 +55,7 @@
 </script>
 
 <aside class={['lab', { open }]}>
-  <button class="toggle" onclick={() => (open = !open)}>{title}</button>
+  <button class="toggle" onclick={toggle}>{title}</button>
 
   {#if open}
     <div class="body">
@@ -57,6 +73,7 @@
             value={value(param.key)}
             set={(next) => set(param.key, next)}
             reset={() => reset(param.key)}
+            changed={changed?.(param.key)}
           />
 
           {@render under?.(param.key)}
@@ -76,18 +93,18 @@
     font-size: var(--fs-xs);
   }
 
-  /* An open panel takes the **whole** rail and covers whatever else is in it.
-     Four subjects sharing one column left every one of them too short to work
-     in; a rail is one subject at a time, and minimising is how you choose which.
-     The closed ones are their title bars alone, in flow underneath. */
-  .lab.open {
-    position: absolute;
-    inset: 0;
-    z-index: 2;
+  /* An open panel takes everything the other title bars leave. Four subjects
+     sharing the column evenly left every one of them too short to work in, and
+     covering the rail with the open one left no sign the others existed — so
+     the closed ones stay in flow as their bars, and the rail keeps one open. */
+  .lab {
+    flex: none;
   }
 
-  .lab:not(.open) {
-    flex: none;
+  .lab.open {
+    flex: 1 1 auto;
+    min-height: 0;
+    align-self: stretch;
   }
 
   .toggle {
@@ -136,6 +153,19 @@
     display: flex;
     align-items: center;
     gap: var(--sp-2);
+  }
+
+  /* A moved row comes up to full ink and grows a rule in the panel's padding —
+     a column you can run an eye down, without a colour the lab does not have. */
+  .body :global(.row.changed) {
+    margin-left: calc(var(--sp-3) * -1);
+    padding-left: calc(var(--sp-3) - 2px);
+    border-left: 2px solid var(--ink-900);
+  }
+
+  .body :global(.row.changed .id),
+  .body :global(.row.changed .num) {
+    color: var(--ink-900);
   }
 
   .body :global(.id) {

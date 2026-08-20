@@ -5,16 +5,8 @@
  */
 
 import { BuildingManager, ResourceManager } from '$lib/managers';
+import balance from '$data/balance';
 import type { Polarity } from '$types';
-
-/**
- * How much income the wall is worth. Excess reads as the share of this window
- * you are holding unpaired, so §4's "around ten minutes in" is the calibration.
- */
-const WALL_SECONDS = 600;
-
-/** Inside this, a planet counts as first harvested even rather than tilted either way. */
-const EVEN_BAND = 0.02;
 
 /** Signed and unbounded: negative is Burden, positive is Comfort. */
 export function getUnpairedKarma() {
@@ -24,10 +16,11 @@ export function getUnpairedKarma() {
 /**
  * The stuck threshold, in raw karma. Read off income rather than off anything
  * cumulative: a lifetime total only grows, which would decay excess to nothing,
- * and the two piles shrink as the refinery works, which would inflate it.
+ * and the two piles shrink as the refinery works, which would inflate it. The
+ * window is `excess.wallSeconds` — §4's "around ten minutes in" is its calibration.
  */
 export function getWall() {
-  return BuildingManager.countKarmaPerSecond() * WALL_SECONDS;
+  return BuildingManager.countKarmaPerSecond() * balance.excess.wallSeconds;
 }
 
 /**
@@ -48,7 +41,7 @@ export function getExcess() {
  */
 export function getFirstHarvestAlignment(): Polarity {
   const reading = getExcess() ?? 0;
-  if (Math.abs(reading) < EVEN_BAND) return 0;
+  if (Math.abs(reading) < balance.excess.evenBand) return 0;
 
   return reading > 0 ? 1 : -1;
 }

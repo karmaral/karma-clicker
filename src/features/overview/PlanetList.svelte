@@ -19,9 +19,10 @@
     /** Size is what distinguishes the bands; the framing is shared. */
     stillPx: number;
     onpick: (id: string) => void;
+    ondblclick?: () => void;
   }
 
-  let { label, ids, selected, stat, rowAside, aside, empty, stillPx, onpick }: Props = $props();
+  let { label, ids, selected, stat, rowAside, aside, empty, stillPx, onpick, ondblclick }: Props = $props();
 
   /** A still, not a view: a row's world does not move, so it costs no WebGL context. */
   const ROW_FRAME = 2.2;
@@ -36,6 +37,7 @@
             type="button"
             class={['planet', { selected: id === selected }]}
             onclick={() => onpick(id)}
+            {ondblclick}
           >
             <PlanetStill
               visual={planetVisuals[id] ?? DEFAULT_VISUAL}

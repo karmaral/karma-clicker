@@ -9,4 +9,13 @@ export default defineConfig({
     svelte(),
     tsconfigPaths(),
   ],
+  // A worker is its own build and inherits none of the above. The sim's worker
+  // pulls in `.svelte.ts` runes and the `$lib` aliases, so it needs both.
+  worker: {
+    format: 'es',
+    plugins: () => [
+      svelte(),
+      tsconfigPaths(),
+    ],
+  },
 })

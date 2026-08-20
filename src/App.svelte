@@ -1,8 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { SvelteToast } from '@zerodevx/svelte-toast';
+  import { SvelteToast, toast } from '@zerodevx/svelte-toast';
   import { Card, Value } from '$ui';
-  import { PlanetManager, BuildingManager, ResourceManager } from '$lib/managers';
+  import {
+    PlanetManager, BuildingManager, NotificationManager, ResourceManager,
+  } from '$lib/managers';
+  import Notification from '$features/notification/Notification.svelte';
   import { progression, validate } from '$lib/progression';
   import { nav } from '$lib/nav.svelte';
   import { wire } from '$lib/wiring.svelte';
@@ -17,6 +20,19 @@
   PlanetManager.unlock('first');
   PlanetManager.select('first');
   BuildingManager.unlock('main');
+
+  /** What a notification looks like. The manager only knows that one exists. */
+  NotificationManager.use(({ title, description }) => {
+    toast.push({
+      component: {
+        src: Notification,
+        props: { title, description },
+        sendIdTo: 'toastId',
+      },
+      pausable: true,
+      intro: { x: 0, y: 128 },
+    });
+  });
 
   const experience = $derived(f(ResourceManager.getAmount('experience')));
   const posKarma = $derived(f(ResourceManager.getAmount('karma_positive')));
