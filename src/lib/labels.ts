@@ -1,7 +1,7 @@
 /**
- * The one place code names and UI labels meet. `detail` takes the active planet's
- * proper noun and only falls back to the generic word once there is no world to
- * name. See nav.label().
+ * The one place code names and UI labels meet. Every screen keeps its own name in
+ * the header; the active planet's proper noun rides in the note beside it, so the
+ * tab holds still while the world it reads changes.
  */
 
 import type { FirstHarvestCondition, Polarity } from '$types';

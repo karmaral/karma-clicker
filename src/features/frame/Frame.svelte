@@ -140,7 +140,9 @@
     if (screen !== 'detail') return undefined;
     if (isDetailDead || !planet) return 'no active planet';
 
-    return getWaveLabel(planet.phase, planet.phasesPerAge, planet.isDense);
+    const name = planetTexts[planet.id]?.title ?? planet.id;
+
+    return `${name} · ${getWaveLabel(planet.phase, planet.phasesPerAge, planet.isDense)}`;
   }
 
   function getSectionTone(screen: ScreenName) {

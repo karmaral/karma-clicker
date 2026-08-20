@@ -1,7 +1,6 @@
 import { progression, type RevealKey } from '$lib/progression';
 import { PlanetManager } from '$lib/managers';
 import { SCREEN_LABELS, type ScreenName } from '$lib/labels';
-import planetTexts from '$data/planets-texts';
 
 const NAV_KEY: Record<ScreenName, RevealKey> = {
   overview: 'nav.overview',
@@ -24,8 +23,6 @@ function isAvailable(screen: ScreenName) {
 
 const active = $derived(isAvailable(requested) ? requested : 'overview');
 
-const detailLabel = $derived(planetTexts[PlanetManager.selected]?.title ?? SCREEN_LABELS.detail);
-
 export const nav = {
   get active() { return active; },
 
@@ -34,9 +31,7 @@ export const nav = {
   },
   isAvailable,
   label(screen: ScreenName) {
-    if (screen !== 'detail') return SCREEN_LABELS[screen];
-
-    return isAvailable('detail') ? detailLabel : SCREEN_LABELS.detail;
+    return SCREEN_LABELS[screen];
   },
   to(screen: ScreenName) {
     if (isAvailable(screen)) {
