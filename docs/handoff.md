@@ -13,18 +13,20 @@ way:
 
 ## Tree
 
-Branch `dev-next`. Last commit `665ffb1 rebuild checkpoint 14`; uncommitted since:
-Detail's soul allocation control (`SplitControl` reused from Refinery), the
-`1/10/Next/Max` purchase-quantity switcher wired end-to-end from `CohortRow` up,
-and per-second karma/xp rates now living beside each resource in the header
-rather than as one global line. `git status` and `git log` for the list.
+Branch `dev-next`. Last commit `6c3d2be rebuild checkpoint 16`, which carries the
+3a header; uncommitted since: Detail's cohort table rebuilt around *the head is
+the sum of its rows* — the `/s` totals moved onto the section rail, per-row rates
+gone quiet until hover, a purchase priced in green before you make it, and the
+cost head turned into the quantity switcher. Then `f` re-rounded game-wide:
+decimals only under ten, and costs round up. `git status` and `git log` for the
+list.
 
 `planet-visuals.ts` carries a **UTF-8 BOM**, and a new required field on
 `PlanetVisual` means editing all nine records.
 
 ## Verified, and how
 
-- `npm run check` → **870 FILES 3 ERRORS 2 WARNINGS** — table at the end. Two
+- `npm run check` → **871 FILES 3 ERRORS 2 WARNINGS** — table at the end. Two
   are the standing baseline; the third (`TokenRow.svelte`) surfaced from the
   author's own uncommitted `PurchaseButton.svelte` edit (a new required
   `quantity` prop) never propagated to Refinery's call site — not touched, it's
@@ -85,12 +87,12 @@ rather than as one global line. `git status` and `git log` for the list.
 17. **`SliderBar`'s handle at a real width.** 8px astride the fill edge, `--sp`
     nothing — the first number picked without seeing the reference at size. Now
     doubly live: `SplitControl` carries the same handle onto Detail too.
-18. **Soul allocation on Detail.** `SplitControl` reused verbatim from Refinery;
-    the aside's "…clearing" wording was authored for Refinery's own token
-    pipeline and may not read right reused here — reword if it doesn't land.
-19. **The purchase-mode tabs (`1/10/Next/Max`) beside the "Cost" column head.**
-    Moved out of the section aside into a 96px head cell; wrapping/spacing at
-    real width never checked.
+18. **The cost head as a switcher.** `COST × 1 10 NEXT MAX` on one rail in a
+    184px cell, the whole cell a button that cycles. Never seen at real text
+    width — the number is a guess and the identity column paid 88px for it.
+19. **The cohort table's head rail.** Detail's `/s` totals moved off the left
+    column into `Section`'s aside, split by polarity, xp first. Check it sums to
+    the rows. §*The cohort table*.
 20. **The header's per-resource `/s` rates.** xp under the score block, karma +/−
     under Detail — never watched ticking live against actual purchases, and now
     sum in whatever's left behind on harvested planets too.
@@ -107,6 +109,23 @@ rather than as one global line. `git status` and `git log` for the list.
     the handover, not the rule.
 25. **The 1fr Refinery column below 1440.** The flexible cell moved; nothing has
     been looked at narrow.
+26. **Rates that only appear on hover.** Every row's figures are
+    `visibility: hidden` at rest. Watch the empty RATE column read as *missing*
+    rather than as *quiet* — if it does, the column head is the thing to change.
+27. **The purchase preview.** Hover a buy: the row's figures re-read and the head
+    rail re-reads with them, green `+N` over each. Never rendered. Watch the green
+    landing on the aim arrow, and `Max` at a count where the delta is huge.
+28. **Every figure in the game, re-rounded.** `f` now prints decimals only under
+    ten, so `424.36` is `424` and `1.24k` is unchanged. Nothing was audited past
+    the cohort table — watch the header's piles, Refinery's bars and the planet
+    lab's readouts for a figure that wanted its tail. §*Figures*.
+29. **Costs round up.** `formatCost` never reads below what you are charged, which
+    means a 42,360 price shows `43k`. Watch a button that looks unaffordable next
+    to a pile that looks big enough — the lit state is the truth, the digits are
+    coarse on purpose.
+30. **The preview against a reserve.** Drag Soul allocation to ~30% and re-hover —
+    the preview should add about 0.7 of what you buy. `activeAt` is what makes
+    that true and nothing tests it.
 
 ## Parked — named, argued, not done
 

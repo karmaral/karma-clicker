@@ -13,7 +13,6 @@
   import CohortTable from './CohortTable.svelte';
   import AimSection from './AimSection.svelte';
   import PlanetSection from './PlanetSection.svelte';
-  import RateStatus from './RateStatus.svelte';
   import type { Phase, PurchaseMode } from './types';
   import planetTexts from '$data/planets-texts';
 
@@ -74,10 +73,6 @@
       />
     {/if}
 
-    {#if progression.isRevealed('detail.status')}
-      <RateStatus />
-    {/if}
-
     {#if progression.isRevealed('detail.wave') && planet}
       <PlanetSection
         name={planetTexts[planet.id]?.title ?? planet.id}
@@ -100,6 +95,7 @@
         {cohorts}
         {purchaseMode}
         showAim={progression.isRevealed('detail.aimPerRow')}
+        showRates={progression.isRevealed('detail.status')}
         onpurchasemode={(m) => (purchaseMode = m)}
         onpurchase={purchase}
       />

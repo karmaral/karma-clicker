@@ -4,7 +4,7 @@
   import { ResourceManager, UpgradeManager } from '$lib/managers';
   import type { ResourceType, YieldType } from '$types';
   import { pulse } from '$lib/loop';
-  import { f } from '$lib/utils';
+  import { formatCost } from '$lib/utils';
   import { badgeFor } from '$features/detail/badge';
   import data, { parseScope } from '$data/upgrades';
   import texts from '$data/upgrades-texts';
@@ -110,7 +110,7 @@
               Cost:
               {#if upgrade.costs}
                 {#each Object.entries(upgrade.costs) as [costType, costVal]}
-                  <strong><span>{f(costVal)}</span></strong>
+                  <strong><span>{formatCost(costVal)}</span></strong>
                   <Badge kind={badgeFor(costType as YieldType)} />
                 {/each}
               {/if}

@@ -9,13 +9,14 @@
   import { reserve } from '$lib/reserve.svelte';
   import { f } from '$lib/utils';
 
+  const souls = $derived(BuildingManager.countSouls());
   const reserved = $derived(BuildingManager.countReserved());
-  const incarnating = $derived(BuildingManager.countSouls() - reserved);
+  const incarnating = $derived(souls - reserved);
 </script>
 
 <Section label="Soul allocation">
   {#snippet aside()}
-    {f(incarnating)} incarnating · {f(reserved)} clearing
+    {f(incarnating)}/{f(souls)} staffed · {f(reserved)} idle
   {/snippet}
 
   <!-- Filled from the incarnating end, so the bar reads left to right with the aside. -->

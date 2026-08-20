@@ -6,7 +6,7 @@
    */
   import { Badge, PurchaseButton } from '$ui';
   import type { BadgeKind } from '$ui';
-  import { f } from '$lib/utils';
+  import { f, formatCost } from '$lib/utils';
   import { GRADE_LABELS, GRADE_SOURCES, type GradeKey } from '$lib/labels';
   import { badgeFor } from '$features/detail/badge';
 
@@ -62,7 +62,7 @@
   <div class="cost" title={note}>
     {#if passive}
       <span class="passive">
-        <span class="num">{f(passive.amount)}</span>
+        <span class="num">{formatCost(passive.amount)}</span>
         <Badge kind={passive.kind} />
       </span>
       <span class="or">or</span>
@@ -71,7 +71,7 @@
     {#if isLocked}
       <button type="button" class="locked-button" disabled>Locked</button>
     {:else}
-      <PurchaseButton kind={costKind} amount={f(cost!)} {affordable} onclick={onbuy} />
+      <PurchaseButton kind={costKind} amount={formatCost(cost!)} {affordable} onclick={onbuy} />
     {/if}
   </div>
 </div>

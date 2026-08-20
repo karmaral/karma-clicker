@@ -305,10 +305,13 @@ be spelled "is soul" rather than "is not click" so a future non-soul building
 would not fall in by default — a rule that lived only in a comment. Class
 identity makes it structural.
 
-`Building.active` is the seam: how many of the count are producing. The base
-returns all of them, `Cohort` subtracts the reserve, and both `#generateResources`
-and `perSecond` read it — so income and the excess wall can never disagree about
-who is working.
+`Building.activeAt(count)` is the seam: how many of *a* count would be producing.
+The base returns all of them, `Cohort` subtracts the reserve, `get active()` is
+that function asked about the count you actually have, and both
+`#generateResources` and `perSecond` read it — so income and the excess wall can
+never disagree about who is working. It takes a count rather than reading one
+because pricing a purchase asks what the *next* count would earn, and only the
+class knows how much of it works. §*A purchase is priced before you make it*.
 
 ## Header
 
@@ -391,6 +394,105 @@ stripe fizzes to grey. Same stops throughout, so all three read as one mark.
   decision, not a side effect of a layout pass.
 - `Label`'s default ink lightened `--ink-400` → `--ink-300` at weight 700 to match
   the reference. Every `Section` and `Cell` label in the game moved with it.
+
+## The cohort table
+
+One rule, and everything else on the table follows from it:
+
+> **The head is the sum of its rows.**
+
+The per-second total used to sit in `RateStatus`, a 48px strip in Detail's *left*
+column — one unified karma figure, nowhere near the rows that produce it, and
+summing the harvest income of worlds already left on top. That last part is why it
+could not simply move: a head that includes harvest is not the sum of anything
+under it. The rail now sums the rows' own figures, cohort by cohort, so the two
+cannot read different numbers. The harvest-inclusive total still exists, once, in
+the frame's Details cell. `RateStatus.svelte` is gone.
+
+**Rates are quiet until you point at a row.** Twelve rows each printing two karma
+figures is a wall, and a wall has no answer to *what is this one doing*. At rest
+the table shows one rail of totals; a row's own figures appear on hover, which
+makes hovering the question and the row the answer. Hidden with `visibility`, so
+the column holds its width and nothing reflows. The row tint moved with it — it
+used to mean *you can afford this*, which the button already says; it now means
+*this is the row you are reading*.
+
+### A purchase is priced before you make it
+
+Hovering the purchase button re-reads every rate at the count the buy would leave,
+with the difference in green above each figure — and the rail re-reads with it,
+because a head that is the sum of its rows has to move when a row does.
+
+That costs one seam and one callback. The seam is **`Building.activeAt(count)`**,
+which generalises `get active()`: the base returns the count, `Cohort` subtracts
+the reserve *from the count it was handed*, and `perSecond` / `karmaPerSecond` both
+take an optional count that defaults to today's. So the reserve is priced into the
+preview for free — ten bought into a third held back adds seven, and the figure
+says seven rather than ten. The callback is `onpreview(id)`, pushed from the
+button's own mouse handlers; the table holds the id and re-sums that one cohort at
+`count + resolveQuantity(...)`. `resolveQuantity` had to leave `CohortRow` for
+`purchase.ts` to make that possible — the head prices the same buy the row is
+previewing, off one function.
+
+The delta is drawn only when it is positive. A rounding in the reserve can leave a
+buy adding nothing, and `+0` is worse than silence. `--status-gain` had been
+declared in `app.css` with no consumer since it was written; this is its first.
+
+### The cost head is the switcher
+
+`COST × 1 10 NEXT MAX` on one rail, and the whole cell is a `<button>` that cycles
+`1 → 10 → Next → Max`. The four words are a read-out of where the cycle is, not
+four targets — a button cannot contain a button, and one hit area with one hover
+state beats four with an ambiguous parent. `Tabs` gained `interactive`, which
+renders spans instead of buttons and makes the strip pointer-transparent, so the
+look stays defined in one component rather than restated in the table.
+
+The cell needs ~184px against the 96px it had. The identity column is the `1fr`,
+so it absorbs all of it and Lean slides left — which is what the design wanted
+anyway. Both widths are first guesses at real text.
+
+### One canonical rate order
+
+A row drew its rates in `Object.keys(production)` order — the order the yields
+happen to be typed in `buildings.ts`. That agreed with the frame's score block by
+luck, and luck stops being good enough the moment a head has to match its rows.
+`byRateOrder` in `badge.ts` sorts both: experience first, as in the score block,
+then karma negative-then-positive, as in Details and the grade table.
+
+## Figures
+
+### A decimal earns its place only under ten
+
+`f` printed two decimals at every magnitude, so a rail read `424.36` beside `0.33`
+and all the noise sat on the largest number. The rule now is one sentence: **a
+decimal earns its place only under ten, at whatever scale.** Under ten it is the
+difference between nothing and something (`basic` is one karma over three seconds,
+so a first cohort really does earn `0.33/s`, and rounding that to `0` would erase
+the early game). Between ten and a thousand the integer has already said it, and
+the tail is a precision you cannot act on. Past a thousand the suffix puts the
+number back under ten, so `1.24k` keeps its decimals for the same reason `4.17`
+does — there they carry magnitude rather than dust.
+
+It is a default, not a rule: `f(val, floats)` still takes an explicit count. No
+call site passes one, which is why changing the default changed every figure in
+the game at once, which is what was wanted.
+
+Dropping decimals lets a rounding carry past its own suffix — `999.99k` becomes
+`1,000k`, a scale nobody writes. `f` steps the suffix instead and prints `1M`.
+
+### A cost rounds up; a rate rounds to nearest
+
+`formatCost` is `f` with the rounding forced upward at whatever precision `f` will
+print. The asymmetry is the point: **a rate that reads low is an estimate, a cost
+that reads low is a button that does nothing when you press it.** A cohort priced
+at 1,234.6 shown as `1.23k` invites a player holding exactly `1.23k` to press a
+dead button and read it as a bug; shown as `1.24k` the only error left is the
+harmless one, and the button's own `affordable` state carries the truth either way.
+
+The cost of the ceiling is that it overstates by up to one displayed unit — a real
+42,360 reads `43k`. That is the same coarseness the rate rule imposes, pointed in
+the direction that cannot mislead. Four call sites use it: `CohortRow`, `TokenRow`
+(both the price and the passive alternative), `Chip`, `UpgradeRail`.
 
 ## Overview
 

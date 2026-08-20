@@ -7,7 +7,7 @@
     import type { Props as TippyProps } from 'tippy.js';
     import type { ResourceType, YieldType } from '$lib/types';
     import { badgeFor } from '$features/detail/badge';
-    import { f } from '$lib/utils';
+    import { formatCost } from '$lib/utils';
 
   interface Props {
     label: string;
@@ -53,7 +53,7 @@
       {#if costs}
         {#each Object.entries(costs) as [costType, costVal] }
           <span class="cost">
-            <span class="num">{f(costVal)}</span>
+            <span class="num">{formatCost(costVal)}</span>
             <Badge kind={badgeFor(costType as YieldType)} />
           </span>
         {/each}

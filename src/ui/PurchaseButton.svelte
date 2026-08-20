@@ -9,6 +9,8 @@
     affordable?: boolean;
     disabled?: boolean;
     onclick?: () => void;
+    onmouseenter?: () => void;
+    onmouseleave?: () => void;
   }
 
   let {
@@ -18,6 +20,8 @@
     affordable = false,
     disabled = false,
     onclick,
+    onmouseenter,
+    onmouseleave,
   }: Props = $props();
 </script>
 
@@ -26,6 +30,8 @@
   class={['purchase', { affordable }]}
   {disabled}
   {onclick}
+  {onmouseenter}
+  {onmouseleave}
 >
   {#if quantity}
     <span class="quantity">{quantity}×</span>

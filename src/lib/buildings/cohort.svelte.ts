@@ -8,8 +8,12 @@ import { reserve } from '$lib/reserve.svelte';
 export default class Cohort extends Building {
   #reserved = $derived.by(() => reserve.countHeld(this.count));
 
-  /** Reserved souls are still yours. They only stop incarnating. */
-  get active() { return this.count - this.#reserved; }
+  /**
+   * Reserved souls are still yours. They only stop incarnating — and the share is
+   * taken out of any count, so a preview of ten bought into a third held back
+   * prices seven and says so.
+   */
+  activeAt(count: number) { return count - reserve.countHeld(count); }
 
   get reserved() { return this.#reserved; }
 }

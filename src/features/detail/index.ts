@@ -7,7 +7,7 @@ import CohortRow from './CohortRow.svelte';
 import CohortTable from './CohortTable.svelte';
 import PlanetSection from './PlanetSection.svelte';
 import CycleStrip from './CycleStrip.svelte';
-import RateStatus from './RateStatus.svelte';
+import RateFigure from './RateFigure.svelte';
 
 export {
   AimControl,
@@ -19,7 +19,7 @@ export {
   CohortTable,
   PlanetSection,
   CycleStrip,
-  RateStatus,
+  RateFigure,
 };
 
 export type { Phase, PhaseKind, PurchaseMode } from './types';

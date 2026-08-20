@@ -10,36 +10,71 @@ export const numberFormat = Intl.NumberFormat('en-US', {
 });
 
 
+const BASE = 1000;
+
+/**
+ * A decimal earns its place only under ten, at whatever scale — there it is the
+ * difference between nothing and something, and between 1k and 1.9k. Past ten
+ * the integer has already said it and the tail is noise you cannot act on.
+ */
+function decimalsFor(val: number) {
+  return Math.abs(val) < 10 ? 2 : 0;
+}
+
 // p r o o m p t
-export function f(val: number, floats = 2, useLongForm = false) {
+export function f(val: number, floats?: number, useLongForm = false) {
   const suffixes = useLongForm
     ? ['', ' thousand', ' million', ' billion', ' trillion', ' quadrillion', ' quintillion', ' sextillion', ' septillion', ' octillion', ' nonillion' ]
     : ['', 'k', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No'];
   const prefixes = useLongForm
     ? ['', 'un', 'duo', 'tre', 'quattuor', 'quin', 'sex', 'septen', 'octo', 'novem']
     : ['', 'Un', 'Do', 'Tr', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No'];
-  const base = 1000;
-  let notationValue = '';
   if (!isFinite(val)) {
     return 'Infinity';
   }
-  if (val >= base ** suffixes.length) {
+  if (val >= BASE ** suffixes.length) {
     return 'Infinity';
   }
-  if (val >= base) {
-    let baseIndex = 1;
-    while (val >= base ** (baseIndex + 1)) {
+
+  let baseIndex = 0;
+  if (val >= BASE) {
+    baseIndex = 1;
+    while (val >= BASE ** (baseIndex + 1)) {
       baseIndex++;
     }
-    notationValue = suffixes[baseIndex];
-    val /= base ** baseIndex;
+    val /= BASE ** baseIndex;
   }
+
+  const decimals = floats ?? decimalsFor(val);
+  let rounded = Math.round(val * 10 ** decimals) / 10 ** decimals;
+
+  // Rounding can carry past the suffix: 999.99k with its decimals dropped is
+  // 1,000k, which is a scale nobody writes. Step the suffix instead.
+  if (rounded >= BASE && baseIndex + 1 < suffixes.length) {
+    rounded /= BASE;
+    baseIndex++;
+  }
+
   return (
-    (Math.round(val * 10 ** floats) / 10 ** floats).toString().replace(
+    rounded.toString().replace(
       /\B(?=(\d{3})+(?!\d))/g,
       ','
-    ) + notationValue
+    ) + suffixes[baseIndex]
   );
+}
+
+/**
+ * A price, rounded the way a price has to round: never below what you will be
+ * charged. A rate that reads low is an estimate; a cost that reads low is a
+ * button that does nothing when you press it.
+ */
+export function formatCost(val: number) {
+  if (!isFinite(val) || val <= 0) return f(val);
+
+  const scale = BASE ** Math.max(0, Math.floor(Math.log10(val) / 3));
+  const step = decimalsFor(val / scale) ? scale / 100 : scale;
+
+  return f(Math.ceil(val / step) * step);
 }
 
 

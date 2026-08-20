@@ -150,12 +150,13 @@ export default class Building {
 
   /**
    * Both piles per second, off the settled aim so the figure does not churn with
-   * drift. `detent` prices an aim you have not set — the row's arrow reads Even.
+   * drift. `detent` prices an aim you have not set — the row's arrow reads Even;
+   * `count` prices a purchase you have not made.
    */
-  karmaPerSecond(detent?: Detent) {
+  karmaPerSecond(detent?: Detent, count?: number) {
     const resolved = aim.resolveSettled(this.#id, this.#data, detent);
 
-    return this.#splitKarma(this.perSecond('karma'), resolved);
+    return this.#splitKarma(this.perSecond('karma', count), resolved);
   }
 
   toggleAutonomy(toggle?: boolean) {
@@ -215,12 +216,20 @@ export default class Building {
   get total() { return this.#total; }
   get production() { return this.#production; }
 
-  /** How many of the count are producing. Subclasses may hold some back. */
-  get active() { return this.#count; }
+  /**
+   * How many of a count would be producing. Subclasses may hold some back, which
+   * is the whole reason this takes a count instead of reading one — pricing a
+   * purchase asks what the *next* count would earn, and only the class knows how
+   * much of it works.
+   */
+  activeAt(count: number) { return count; }
 
-  perSecond(type: YieldType) {
+  /** How many of the count are producing. */
+  get active() { return this.activeAt(this.#count); }
+
+  perSecond(type: YieldType, count = this.#count) {
     const yielded = this.#production[type] ?? 0;
-    return yielded * this.active / ((this.duration || 1000) / 1000);
+    return yielded * this.activeAt(count) / ((this.duration || 1000) / 1000);
   }
 
   get duration() { return this.#duration; }

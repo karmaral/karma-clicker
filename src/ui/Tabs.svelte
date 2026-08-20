@@ -5,26 +5,37 @@
     tabs: readonly string[];
     active: string;
     size?: TabsSize;
+    /**
+     * Off makes the strip a read-out of where you are rather than four targets.
+     * Its only caller so far is a cell that is itself the button, and a button
+     * cannot contain one — this keeps the look here rather than restating it.
+     */
+    interactive?: boolean;
     onselect?: (tab: string) => void;
   }
 
-  let { 
+  let {
     tabs,
     active,
     size = 'default',
+    interactive = true,
     onselect,
   }: Props = $props();
 </script>
 
-<nav class={['tabs', size]}>
+<nav class={['tabs', size, { static: !interactive }]}>
   {#each tabs as tab (tab)}
-    <button
-      type="button"
-      class={['tab', { active: tab === active }]}
-      onclick={() => onselect?.(tab)}
-    >
-      {tab}
-    </button>
+    {#if interactive}
+      <button
+        type="button"
+        class={['tab', { active: tab === active }]}
+        onclick={() => onselect?.(tab)}
+      >
+        {tab}
+      </button>
+    {:else}
+      <span class={['tab', { active: tab === active }]}>{tab}</span>
+    {/if}
   {/each}
 </nav>
 
@@ -40,6 +51,7 @@
   }
 
   .tab {
+    display: inline-block;
     background: none;
     border: none;
     padding: 0 0 var(--sp-1);
@@ -62,6 +74,12 @@
 
   .tab:hover {
     color: var(--ink-500);
+  }
+
+  /* Invisible to the pointer, so a hover reads as one cell and a click reaches
+     whatever wraps the strip. */
+  .tabs.static .tab {
+    pointer-events: none;
   }
 
   .tab.active {
