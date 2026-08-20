@@ -18,6 +18,8 @@ export type BadgeKind =
 
 export type LabelSize = 'default' | 'sm';
 
+export type LabelTone = 'active' | 'inactive' | 'dead';
+
 export type FigureSize = 'xl' | 'lg' | 'md' | 'base';
 
 export type MeterFill = 'ink' | 'pos' | 'neg';

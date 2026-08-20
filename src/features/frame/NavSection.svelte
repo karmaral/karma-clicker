@@ -5,16 +5,22 @@
   interface Props {
     state: RevealState;
     active?: boolean;
+    /** The screen still exists but has nothing to open — Detail with no planet. */
+    dead?: boolean;
     onselect?: () => void;
     children?: Snippet;
   }
 
-  let { state, active = false, onselect, children }: Props = $props();
+  let { state, active = false, dead = false, onselect, children }: Props = $props();
 
-  const clickable = $derived(state === 'live' && !active);
+  const clickable = $derived(state === 'live' && !active && !dead);
 </script>
 
-<div class={['nav-section', { active }]}>
+<!-- The rule at the top of the cell is the whole tab affordance: 3px says you are
+     here, a hairline says you could be, a dash says there is nothing behind it.
+     The figures below stay full black in all three — an inactive section is a
+     live reading, not a disabled control. -->
+<div class={['nav-section', { active, dead }]}>
   {#if clickable}
     <button type="button" onclick={onselect}>
       {@render children?.()}
@@ -29,19 +35,29 @@
     display: grid;
     grid-template-rows: subgrid;
     grid-row: span 2;
-    border-bottom: var(--rule-card);
     min-width: 0;
     position: relative;
   }
 
-  .nav-section.active::after {
+  .nav-section::before {
     content: "";
-    width: 100%;
-    height: 2px;
-    background-color: var(--ink-900);
     position: absolute;
+    left: 0;
+    right: 0;
     top: 0;
-    translate: 0% -100%;
+    height: 1px;
+    background-color: var(--line-200);
+  }
+
+  .nav-section.active::before {
+    height: 3px;
+    background-color: var(--ink-900);
+  }
+
+  .nav-section.dead::before {
+    height: 0;
+    background-color: transparent;
+    border-top: 1px dashed var(--ink-200);
   }
 
   button {

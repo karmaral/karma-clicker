@@ -24,7 +24,7 @@ rather than as one global line. `git status` and `git log` for the list.
 
 ## Verified, and how
 
-- `npm run check` → **867 FILES 3 ERRORS 2 WARNINGS** — table at the end. Two
+- `npm run check` → **870 FILES 3 ERRORS 2 WARNINGS** — table at the end. Two
   are the standing baseline; the third (`TokenRow.svelte`) surfaced from the
   author's own uncommitted `PurchaseButton.svelte` edit (a new required
   `quantity` prop) never propagated to Refinery's call site — not touched, it's
@@ -91,9 +91,22 @@ rather than as one global line. `git status` and `git log` for the list.
 19. **The purchase-mode tabs (`1/10/Next/Max`) beside the "Cost" column head.**
     Moved out of the section aside into a 96px head cell; wrapping/spacing at
     real width never checked.
-20. **The header's per-resource `/s` rates.** xp under Overview, karma +/− under
-    Detail — never watched ticking live against actual purchases, and now sum
-    in whatever's left behind on harvested planets too.
+20. **The header's per-resource `/s` rates.** xp under the score block, karma +/−
+    under Detail — never watched ticking live against actual purchases, and now
+    sum in whatever's left behind on harvested planets too.
+21. **The whole 3a header.** Score block, twin bars, excess meter, the three tab
+    rules — nothing rendered. Walk beats 4 / 7 / 8 / 12 in that order; 8 is the
+    one to watch, Overview *inserts* between two live cells. §*Header*.
+22. **The bars at a real ratio.** Widths divide by the larger pile, so an
+    almost-even split is two near-identical lengths — check the matched hairline
+    still reads when it sits near the end.
+23. **The gate posts over the slug.** Two 2px posts with risers, drawn over a
+    hatched slug crossing them. Never seen against a real `excessGate`.
+24. **Detail dashing out.** `nav.isAvailable('detail')` now excludes a harvested
+    world, so the first harvest closes the tab and drops you on Overview. Watch
+    the handover, not the rule.
+25. **The 1fr Refinery column below 1440.** The flexible cell moved; nothing has
+    been looked at narrow.
 
 ## Parked — named, argued, not done
 

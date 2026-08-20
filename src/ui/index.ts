@@ -4,10 +4,12 @@ import Card from './Card.svelte';
 import Cell from './Cell.svelte';
 import Chip from './Chip.svelte';
 import ChipQueue from './ChipQueue.svelte';
+import ExcessMeter from './ExcessMeter.svelte';
 import Figure from './Figure.svelte';
 import HeaderBand from './HeaderBand.svelte';
 import Label from './Label.svelte';
 import Meter from './Meter.svelte';
+import PolarityBars from './PolarityBars.svelte';
 import PurchaseButton from './PurchaseButton.svelte';
 import Rail from './Rail.svelte';
 import Section from './Section.svelte';
@@ -25,10 +27,12 @@ export {
   Cell,
   Chip,
   ChipQueue,
+  ExcessMeter,
   Figure,
   HeaderBand,
   Label,
   Meter,
+  PolarityBars,
   PurchaseButton,
   Rail,
   Section,
@@ -49,6 +53,7 @@ export type {
   ChipStatus,
   FigureSize,
   LabelSize,
+  LabelTone,
   MeterFill,
   MeterTick,
 } from './types';

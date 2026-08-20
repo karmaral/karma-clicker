@@ -11,15 +11,20 @@ const NAV_KEY: Record<ScreenName, RevealKey> = {
 
 let requested = $state<ScreenName>('detail');
 
+/** A finished world is not somewhere you can still act — Detail closes with it. */
 function isAvailable(screen: ScreenName) {
-  if (screen === 'detail') return Boolean(PlanetManager.getActive());
+  if (screen === 'detail') {
+    const planet = PlanetManager.getActive();
+
+    return Boolean(planet) && !planet.isHarvested;
+  }
 
   return progression.isLive(NAV_KEY[screen]);
 }
 
 const active = $derived(isAvailable(requested) ? requested : 'overview');
 
-const detailLabel = $derived(planetTexts[PlanetManager.selected]?.title ?? '—');
+const detailLabel = $derived(planetTexts[PlanetManager.selected]?.title ?? SCREEN_LABELS.detail);
 
 export const nav = {
   get active() { return active; },
@@ -29,7 +34,9 @@ export const nav = {
   },
   isAvailable,
   label(screen: ScreenName) {
-    return screen === 'detail' ? detailLabel : SCREEN_LABELS[screen];
+    if (screen !== 'detail') return SCREEN_LABELS[screen];
+
+    return isAvailable('detail') ? detailLabel : SCREEN_LABELS.detail;
   },
   to(screen: ScreenName) {
     if (isAvailable(screen)) {

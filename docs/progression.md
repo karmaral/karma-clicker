@@ -310,6 +310,88 @@ returns all of them, `Cohort` subtracts the reserve, and both `#generateResource
 and `perSecond` read it — so income and the excess wall can never disagree about
 who is working.
 
+## Header
+
+The design bundle drew three candidate orders (3a / 3b / 3c) and left the pick
+open. **3a ships.** The whole layout rests on one division:
+
+> **Bars are quantities, the meter is state.**
+
+Two lengths under Detail say how big each karma pile is and which is bigger. The
+meter in the third cell says how far that difference has carried you and where the
+door is. Nothing is drawn twice, and no reading appears before the screen that
+acts on it. 3b fused both into a single nested instrument and 3c only reordered
+what was already there; both are recorded in the bundle if this needs revisiting.
+
+### Experience is not a tab
+
+The pin 3a pulls: experience is the score and there has never been a screen that
+acts on it, so keeping it among the tabs forced Overview to carry a number that is
+not about places. It moves into a tinted 214px block at the left with a heavier
+seam and no tab rule, ever. Overview then reads what it is a screen about —
+places, and the next gate.
+
+**Beat 4 lost its Overview promise as a direct consequence.** With experience
+gone the cell has nothing to read until beat 8, and an empty column is a worse
+promise than no column, so `nav.overview` now goes straight `absent → live` at
+`discovery`. This is the one place the frame does not accrete a cell before its
+screen, and it is deliberate. The cost is at beats 7 → 8: Overview arrives
+*between* two cells that already exist, so the row inserts rather than appends —
+which is why `SCREENS` is now header order (`detail`, `overview`, `refinery`) and
+the third cell's `1fr` slot is held open from the first beat.
+
+### Three rules, three states
+
+The tab affordance is the rule at the top of each cell and nothing else: 3px ink
+for the screen you are on, a hairline for one you could open, a dash for one with
+nothing behind it. Figures stay full black in all three — **an inactive section is
+a live reading, not a disabled control.**
+
+The dashed state is new and needed a fact to hang on: `nav.isAvailable('detail')`
+now excludes a *harvested* world. A finished planet still reads, but there is
+nothing left to do on it, so Detail closes with it, `nav.active` falls back to
+Overview on its own, and the section drops to the generic word with `no active
+planet` beside it. This is beat 12's picture and it now has a cause rather than a
+beat number.
+
+### The bars divide by the larger pile
+
+Not by the wall. `getWall()` is provisional (§*Excess*) and dividing by it would
+make both bars shrink as income grew, which is not what either bar is about. The
+larger pile fills its track, the smaller reads as its share of it, and the
+hairline where the shorter one ends is matched. Pure comparison, no constant.
+
+### The gate is a doorway, not a tick
+
+The reference drew one gate mark at a signed position. The condition is
+`Math.abs(excess) < threshold` — a band around zero — so the meter draws **two
+posts**, at ±threshold, and the label reads `Gate ±12%`. One tick would have said
+the door was only on the Comfort side. The reference's faint 46% / 54% guides were
+the same idea drawn twice and are gone.
+
+The track spans a full wall either way, zero at centre, and the slug runs from
+zero out to the reading — so its length is the excess and which way it runs is the
+side. **Side**, not pole: `anchor.ts` and the veil mask have owned *pole* since the
+harness was drawn, and a `getExcessPoleLabel` beside `veilPole` reads as the same
+word about the same sphere. `getExcessSideLabel` gives the bare word the meter
+prints, `getExcessSideNote` the `Comfort side` qualifier a section label wants.
+
+### Three hatch scales
+
+`--hatch-*-badge` (3/4) in a 9px badge, `--hatch-*` (4/5) in a short meter,
+`--hatch-*-bar` (7/9) in the header's bars and the meter slug, where a finer
+stripe fizzes to grey. Same stops throughout, so all three read as one mark.
+
+### Open
+
+- The flexible column is now Refinery rather than Detail, so window slack lands at
+  the right edge instead of on the cell that dies. Untested at any width but 1440.
+- The data says `cycles_per_age`, the screens say **phase**. The reference said
+  cycle. `getWaveLabel` is the one place the word is chosen; a rename is its own
+  decision, not a side effect of a layout pass.
+- `Label`'s default ink lightened `--ink-400` → `--ink-300` at weight 700 to match
+  the reference. Every `Section` and `Cell` label in the game moved with it.
+
 ## Overview
 
 One axis, three bands, each its own `Section` and its own reveal key: **Active**

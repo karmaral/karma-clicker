@@ -1,18 +1,24 @@
 /**
- * The one place code names and UI labels meet. `detail` has no fixed label —
- * it takes the active planet's proper noun. See nav.label().
+ * The one place code names and UI labels meet. `detail` takes the active planet's
+ * proper noun and only falls back to the generic word once there is no world to
+ * name. See nav.label().
  */
 
 import type { FirstHarvestCondition, Polarity } from '$types';
 
 export type ScreenName = 'overview' | 'detail' | 'refinery';
 
-export const SCREENS: ScreenName[] = ['overview', 'detail', 'refinery'];
+/**
+ * Header order, left to right. Detail leads because the minute you are living in
+ * leads; Overview arrives between two cells that already exist rather than at an
+ * end, which is what it costs to keep experience out of the tabs.
+ */
+export const SCREENS: ScreenName[] = ['detail', 'overview', 'refinery'];
 
 export const SCREEN_LABELS: Record<ScreenName, string> = {
   overview: 'Overview',
   refinery: 'Refinery',
-  detail: '—',
+  detail: 'Details',
 };
 
 /**
@@ -41,7 +47,7 @@ export const GRADE_SOURCES: Record<GradeKey, string> = {
 
 /**
  * How a planet was first harvested, which sets what its recurring harvest pays.
- * The karma column words, so nobody mistakes them for the excess poles.
+ * The karma column words, so nobody mistakes them for the excess sides.
  */
 export const FIRST_HARVEST_ALIGNMENT_LABELS: Record<Polarity, string> = {
   '-1': 'In the negative',
@@ -50,13 +56,34 @@ export const FIRST_HARVEST_ALIGNMENT_LABELS: Record<Polarity, string> = {
 };
 
 /**
- * Which pole the excess sits on. One signed reading, never two bars — the side
+ * Where the wave is. The data authors these as `cycles_per_age`; the screens have
+ * said phase since the wobble was drawn, and the two want reconciling in one pass
+ * rather than by whichever file is being edited.
+ */
+export function getPhaseLabel(phase: number, phasesPerAge: number) {
+  return `phase ${phase + 1} of ${phasesPerAge}`;
+}
+
+/** The header's one-line note: the same, plus which half of the wobble it is in. */
+export function getWaveLabel(phase: number, phasesPerAge: number, isDense: boolean) {
+  return `${getPhaseLabel(phase, phasesPerAge)} · ${isDense ? 'dense' : 'light'}`;
+}
+
+/**
+ * Which side the excess sits on. One signed reading, never two bars — the side
  * is a qualifier on the label, not a resource of its own (CONTEXT v3 §3.2).
  */
 export function getExcessSideLabel(excess: number | undefined) {
   if (!excess) return undefined;
 
-  return excess > 0 ? 'Comfort side' : 'Burden side';
+  return excess > 0 ? 'Comfort' : 'Burden';
+}
+
+/** The side as a section's qualifier — the meter says the bare word itself. */
+export function getExcessSideNote(excess: number | undefined) {
+  const side = getExcessSideLabel(excess);
+
+  return side && `${side} side`;
 }
 
 /**

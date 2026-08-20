@@ -60,8 +60,6 @@ export const beats: Beat[] = [
       'frame.rail': 'live',
       'detail.status': 'live',
       'nav.detail': 'live',
-      // Drawn, but there is no second screen to open until beat 8.
-      'nav.overview': 'inert',
     },
   },
 

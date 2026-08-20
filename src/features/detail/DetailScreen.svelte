@@ -1,6 +1,7 @@
 <script lang="ts">
   import { BuildingManager, PlanetManager } from '$lib/managers';
   import { progression } from '$lib/progression';
+  import { getPhaseLabel } from '$lib/labels';
   import { f } from '$lib/utils';
   import { pulse } from '$lib/loop';
   import type Building from '$lib/buildings/base.svelte';
@@ -48,7 +49,7 @@
   );
 
   const waveStatus = $derived(
-    planet ? `phase ${planet.phase + 1} of ${planet.phasesPerAge}` : '',
+    planet ? getPhaseLabel(planet.phase, planet.phasesPerAge) : '',
   );
 
   function incarnate() {
