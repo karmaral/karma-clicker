@@ -8,25 +8,15 @@
 
   const note = $derived(
     owed > 0
-      ? `Settling in — ${formatRounded(owed, 1)} phases of it left`
+      ? `Settling in — ${formatRounded(owed, 1)} phases left, karma down ${Math.round(aim.reaimPenalty * 100)}%`
       : 'Dense phases pay for negative, light for positive',
-  );
-
-  const status = $derived(
-    owed > 0 ? `karma down ${Math.round(aim.reaimPenalty * 100)}%` : '',
   );
 </script>
 
-<Section label="Aim">
+<Section label="Aim" reading={aim.detentLabel(aim.detent)}>
   {#snippet aside()}
-    {status}
+    {note}
   {/snippet}
 
-  <AimControl
-    value={aim.detent}
-    lean={aim.detentLabel(aim.detent)}
-    {note}
-    height="22px"
-    onaim={(value) => aim.set(value as Detent)}
-  />
+  <AimControl value={aim.detent} onaim={(value) => aim.set(value as Detent)} />
 </Section>

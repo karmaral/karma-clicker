@@ -5,11 +5,13 @@
   interface Props {
     label?: string;
     title?: string;
+    /** What the section's own control currently says. */
+    reading?: string;
     aside?: Snippet;
     children?: Snippet;
   }
 
-  let { label, title, aside, children }: Props = $props();
+  let { label, title, reading, aside, children }: Props = $props();
 </script>
 
 <section class="section">
@@ -20,6 +22,9 @@
       {/if}
       {#if title}
         <h2>{title}</h2>
+      {/if}
+      {#if reading}
+        <span class="reading">{reading}</span>
       {/if}
     </div>
     {#if aside}
@@ -61,6 +66,16 @@
     font-weight: 600;
     letter-spacing: -.01em;
     color: var(--ink-900);
+  }
+
+  /* Sentence case on purpose: the label's uppercase is worn by a word that holds
+     still. A reading substitutes itself, and a heading that rewrites its own text
+     and width on every drag reads as chrome misbehaving. */
+  .reading {
+    font-size: var(--fs-base);
+    font-weight: 600;
+    color: var(--ink-900);
+    line-height: 1;
   }
 
   .aside {

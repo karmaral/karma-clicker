@@ -1,38 +1,24 @@
 <script lang="ts">
-  import { crossfade } from 'svelte/transition';
-  import { cubicOut } from 'svelte/easing';
+  import { Badge, type BadgeKind } from '$ui';
+  import { aim, DETENTS, type Detent } from '$lib/aim';
 
   interface Props {
     value: number;
-    lean: string;
-    note?: string;
-    unaimable?: boolean;
-    height?: string;
     onaim?: (value: number) => void;
   }
 
-  let {
-    value,
-    lean,
-    note,
-    unaimable = false,
-    height = '18px',
-    onaim,
-  }: Props = $props();
+  let { value, onaim }: Props = $props();
 
-  const detents = [
-    { at: -2, label: '−−', name: 'Hard negative' },
-    { at: -1, label: '−', name: 'Negative' },
-    { at: 0, label: '◇', name: 'Neutral' },
-    { at: 1, label: '+', name: 'Positive' },
-    { at: 2, label: '++', name: 'Hard positive' },
-  ] as const;
+  /** Karma's own badges: the aim splits the karma pile, so it labels in karma. */
+  const MARKS: Record<Detent, BadgeKind[]> = {
+    [-2]: ['neg', 'neg'],
+    [-1]: ['neg'],
+    [0]: ['both'],
+    [1]: ['pos'],
+    [2]: ['pos', 'pos'],
+  };
 
-  const [send, receive] = crossfade({
-    duration: 120,
-    easing: cubicOut,
-    fallback: () => ({ duration: 120, easing: cubicOut, css: (t) => `opacity: ${t}` }),
-  });
+  const LAST = DETENTS.length - 1;
 
   const DRAG_THRESHOLD = 4;
 
@@ -42,10 +28,14 @@
   let startX = 0;
   let track: DOMRect | null = null;
 
+  /** Ticks sit on the ends, not on cell centres, so a step is a quarter of the track. */
+  const at = (i: number) => `${(i / LAST) * 100}%`;
+
   function detentAt(clientX: number) {
     if (!track) return value;
-    const i = Math.floor(((clientX - track.left) / track.width) * detents.length);
-    return detents[Math.max(0, Math.min(detents.length - 1, i))].at;
+    const i = Math.round(((clientX - track.left) / track.width) * LAST);
+
+    return DETENTS[Math.max(0, Math.min(LAST, i))];
   }
 
   function onpointerdown(e: PointerEvent) {
@@ -66,8 +56,8 @@
       (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
       captured = true;
     }
-    const at = detentAt(e.clientX);
-    if (at !== value) onaim?.(at);
+    const detent = detentAt(e.clientX);
+    if (detent !== value) onaim?.(detent);
   }
 
   function onpointerup(e: PointerEvent) {
@@ -86,62 +76,47 @@
   }
 </script>
 
-<div class="aim">
-  {#if unaimable}
-    <div class="volatile"></div>
-  {:else}
-    <div
-      class={['strip', { dragging }]}
-      style:height
-      role="group"
-      aria-label="Aim"
-      {onpointerdown}
-      {onpointermove}
-      {onpointerup}
-      onpointercancel={onpointerup}
-      {onclickcapture}
-    >
-      {#each detents as detent (detent.at)}
-        <button
-          type="button"
-          class={['detent', `d${detent.at}`]}
-          aria-label={detent.name}
-          aria-pressed={detent.at === value}
-          onclick={() => onaim?.(detent.at)}
-        >
-          {#if detent.at === value}
-            <span
-              class="knob"
-              in:receive={{ key: 'knob' }}
-              out:send={{ key: 'knob' }}
-            >{detent.label}</span>
-          {/if}
-        </button>
-      {/each}
-    </div>
-  {/if}
+<div
+  class={['strip', { dragging }]}
+  role="group"
+  aria-label="Aim"
+  {onpointerdown}
+  {onpointermove}
+  {onpointerup}
+  onpointercancel={onpointerup}
+  {onclickcapture}
+>
+  <div class="track">
+    <span class="rule"></span>
+    {#each DETENTS as detent, i (detent)}
+      <span class="tick" style:left={at(i)}></span>
+    {/each}
+    <span class="bar" style:left={at(DETENTS.indexOf(value as Detent))}></span>
+  </div>
 
-  <div class="meta">
-    <span class="lean">{lean}</span>
-    {#if note}
-      <span class={['note', { quiet: unaimable }]}>{note}</span>
-    {/if}
+  <div class="marks">
+    {#each DETENTS as detent, i (detent)}
+      <button
+        type="button"
+        class={['mark', { first: i === 0, last: i === LAST, on: detent === value }]}
+        style:left={at(i)}
+        aria-label={aim.detentLabel(detent)}
+        aria-pressed={detent === value}
+        onclick={() => onaim?.(detent)}
+      >
+        {#each MARKS[detent] as kind, n (n)}
+          <Badge {kind} />
+        {/each}
+      </button>
+    {/each}
   </div>
 </div>
 
 <style>
-  .aim {
+  .strip {
     display: flex;
     flex-direction: column;
     gap: var(--sp-2);
-    min-width: 0;
-  }
-
-  .strip {
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: 1fr;
-    gap: var(--sp-1);
     cursor: pointer;
     user-select: none;
     touch-action: pan-y;
@@ -151,84 +126,68 @@
     cursor: grabbing;
   }
 
-  .detent {
+  .track {
     position: relative;
-    padding: 0;
-    border: none;
+    height: 22px;
     min-width: 0;
-    cursor: inherit;
   }
 
-  .detent.d-2 {
-    background: repeating-linear-gradient(45deg,
-      #111111 1px, #111111 4px, #5a5a5a 4px, #5a5a5a 5px);
-  }
-
-  .detent.d-1 {
-    background: repeating-linear-gradient(45deg,
-      #5a5a5a 1px, #5a5a5a 4px, #9a9a9a 4px, #9a9a9a 5px);
-  }
-
-  .detent.d0 {
-    background: var(--line-100);
-  }
-
-  .detent.d1 {
-    background: repeating-linear-gradient(-45deg,
-      #ffffff 1px, #ffffff 4px, #a3a3a3 4px, #a3a3a3 5px);
-    box-shadow: var(--hatch-pos-edge);
-  }
-
-  .detent.d2 {
-    background: repeating-linear-gradient(-45deg,
-      #ffffff 1px, #ffffff 4px, #d4d4d4 4px, #d4d4d4 5px);
-    box-shadow: var(--hatch-pos-edge);
-  }
-
-  .knob {
+  .rule {
     position: absolute;
-    inset: -15% 20%;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--line-300);
+  }
+
+  .tick {
+    position: absolute;
+    top: 50%;
+    width: 1px;
+    height: 7px;
+    margin-top: -3px;
+    background: var(--line-300);
+    transform: translateX(-50%);
+  }
+
+  .bar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--ink-900);
+    transform: translateX(-50%);
+    transition: left var(--t-fast);
+  }
+
+  .marks {
+    position: relative;
+    height: var(--glyph-size);
+    min-width: 0;
+  }
+
+  .mark {
+    position: absolute;
+    top: 0;
     display: flex;
     align-items: center;
-    justify-content: center;
-    background: var(--surface);
-    border: 2px solid var(--ink-900);
-    font-size: var(--fs-xs);
-    font-weight: 600;
-    line-height: 1;
-    color: var(--ink-900);
-    user-select: none;
-    cursor: grab;
+    gap: 2px;
+    height: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: inherit;
+    opacity: .45;
+    transform: translateX(-50%);
+    transition: opacity var(--t-fast);
   }
 
-  .volatile {
-    height: 10px;
-    background: repeating-linear-gradient(45deg,
-      var(--ink-300) 0 1px, var(--surface) 1px 3px);
-    box-shadow: var(--hatch-pos-edge);
-  }
+  /* The ends align inward off their tick, so a hard aim never spills the track. */
+  .mark.first { transform: none; }
+  .mark.last  { transform: translateX(-100%); }
 
-  .meta {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--sp-3);
-    min-width: 0;
-  }
-
-  .lean {
-    font-size: var(--fs-xs);
-    font-weight: 600;
-    color: var(--ink-900);
-  }
-
-  .note {
-    font-size: var(--fs-xs);
-    color: var(--ink-500);
-    text-align: right;
-  }
-
-  .note.quiet {
-    color: var(--ink-300);
+  .mark.on {
+    opacity: 1;
   }
 </style>
