@@ -15,6 +15,8 @@ export interface LogEntry {
   key?: string;
   count: number;
   text: string;
+  /** Once-only reveals (beats, moments) — bold in the log, and toasted. */
+  highlight?: boolean;
 }
 
 type Format = (count: number) => string;
@@ -28,9 +30,9 @@ const written = new Set<string>();
 const pending = new Map<string, { count: number; format: Format }>();
 let timer: ReturnType<typeof setTimeout> | undefined;
 
-function prepend(text: string, key?: string, count = 1) {
+function prepend(text: string, key?: string, count = 1, highlight = false) {
   nextId += 1;
-  entries = [{ id: nextId, key, count, text }, ...entries].slice(0, MAX_ENTRIES);
+  entries = [{ id: nextId, key, count, text, highlight }, ...entries].slice(0, MAX_ENTRIES);
 }
 
 /** Only the head absorbs — once anything else lands, the run is closed. */
@@ -68,7 +70,8 @@ export const log = {
     if (written.has(key)) return;
 
     written.add(key);
-    this.add(text);
+    flush();
+    prepend(text, undefined, 1, true);
   },
 
   accumulate(key: string, format: Format) {

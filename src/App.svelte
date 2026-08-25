@@ -16,6 +16,7 @@
   import { OverviewScreen } from '$features/overview';
   import { RefineryScreen } from '$features/refinery';
   import DevPanel from '$features/dev/DevPanel.svelte';
+  import Log from '$features/Log.svelte';
 
   PlanetManager.unlock('first');
   PlanetManager.select('first');
@@ -91,6 +92,10 @@
 
 {#if import.meta.env.DEV}
   <DevPanel />
+{/if}
+
+{#if progression.isRevealed('shared.log')}
+  <Log />
 {/if}
 
 <SvelteToast />
