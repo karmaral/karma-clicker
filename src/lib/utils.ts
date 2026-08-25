@@ -87,6 +87,28 @@ export function formatClock(ms: number) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
+/**
+ * A length of time, as you would say it: `4m 10s`, `50s`, `1h 2m`. Two units at
+ * most and never a leading zero — `formatClock` is a countdown, where the digits
+ * hold still because they are being watched, and a span is read once.
+ */
+export function formatSpan(ms: number) {
+  const total = Math.max(0, Math.round(ms / 1000));
+  if (total < 60) return `${total}s`;
+
+  const minutes = Math.floor(total / 60);
+  if (minutes < 60) {
+    const seconds = total % 60;
+
+    return seconds ? `${minutes}m ${seconds}s` : `${minutes}m`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+
+  return rest ? `${hours}h ${rest}m` : `${hours}h`;
+}
+
 export function withinRange(val: number, min: number, max: number) {
   return val >= min && val < max;
 }

@@ -8,6 +8,7 @@
   import { DEFAULT_VISUAL, PlanetView } from '$widgets/planet';
   import planetVisuals from '$data/planet-visuals';
   import planetTexts from '$data/planets-texts';
+    import { nav } from '$lib/nav.svelte';
 
   interface Props {
     id: string;
@@ -57,6 +58,11 @@
     return `${f(planet.agesLived)} ages · phase ${planet.phase + 1} of ${planet.phasesPerAge}`;
   }
 
+  function onreach(id: string) {
+    PlanetManager.reach(id);
+    nav.to('details');
+  }
+
   const blockers = $derived(
     (planet?.unmetFirstHarvestConditions ?? []).map((condition) =>
       getFirstHarvestConditionLabel(condition, planet?.data.firstHarvest[condition] ?? 0),
@@ -67,44 +73,50 @@
   const isOffered = $derived(isHere && Boolean(planet) && !planet.isHarvested);
 </script>
 
-<Section label={getBandLabel()} title={name}>
-  {#snippet aside()}
-    {getStatus()}
-  {/snippet}
+{#if planet}
+  <Section label={getBandLabel()} title={name}>
+    {#snippet aside()}
+      {getStatus()}
+    {/snippet}
 
-  <div class="portrait">
-    <PlanetView
-      {visual}
-      widthPx={PORTRAIT_PX}
-      frame={PORTRAIT_FRAME}
-      backgroundToken="--surface"
-      clockKey={id}
-    />
-  </div>
+    <div class="portrait">
+      <PlanetView
+        {visual}
+        widthPx={PORTRAIT_PX}
+        frame={PORTRAIT_FRAME}
+        backgroundToken="--surface"
+        clockKey={id}
+      />
+    </div>
 
-  {#if description}
-    <p class="description">{description}</p>
-  {/if}
+    {#if description}
+      <p class="description">{description}</p>
+    {/if}
 
-  {#if progression.isRevealed('overview.firstHarvest') && isOffered}
-    <Button
-      label="Harvest {name}"
-      sub={blockers.length ? `Needs ${blockers.join(' · ')}` : 'Ready'}
-      disabled={!progression.isLive('overview.firstHarvest') || !planet.isFirstHarvestReady}
-      onclick={onharvest}
-    />
-  {/if}
+    {#if progression.isRevealed('overview.firstHarvest') && isOffered}
+      <Button
+        label="Harvest {name}"
+        sub={blockers.length ? `Needs ${blockers.join(' · ')}` : 'Ready'}
+        disabled={!progression.isLive('overview.firstHarvest') || !planet.isFirstHarvestReady}
+        onclick={onharvest}
+      />
+    {/if}
 
-  {#if progression.isRevealed('overview.ahead') && isAhead}
-    <Button
-      variant="outline"
-      label="Reach {name}"
-      sub={PlanetManager.canReach ? 'Ready' : `Harvest ${activeName} first`}
-      disabled={!progression.isLive('overview.ahead') || !PlanetManager.canReach}
-      onclick={() => PlanetManager.reach(id)}
-    />
-  {/if}
-</Section>
+    {#if progression.isRevealed('overview.ahead') && isAhead}
+      <Button
+        variant="outline"
+        label="Reach {name}"
+        sub={PlanetManager.canReach ? 'Ready' : `Harvest ${activeName} first`}
+        disabled={!progression.isLive('overview.ahead') || !PlanetManager.canReach}
+        onclick={() => onreach(id)}
+      />
+    {/if}
+  </Section>
+{:else}
+  <Section label="Active">
+    <p class="description">No active planet.</p>
+  </Section>
+{/if}
 
 <style>
   .portrait {

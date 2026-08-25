@@ -2,7 +2,7 @@
   /** What one finished world sends, and when the next batch lands. */
   import { Badge } from '$ui';
   import { f, formatClock } from '$lib/utils';
-  import { badgeFor } from '../detail/badge';
+  import { badgeFor } from '../details/badge';
   import type Planet from '$lib/planets/base.svelte';
   import type { ResourceType } from '$types';
 

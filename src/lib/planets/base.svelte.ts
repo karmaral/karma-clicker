@@ -15,6 +15,12 @@ export default class Planet {
   #merged = $state(0);
   #alignment = $state<Polarity>(0);
   #emitter = $state<ResourceEmitter>();
+  /**
+   * Milliseconds of the anchoring job done, across every anchor. One accumulator
+   * rather than one per anchor: they fill in order, which is what "next anchor
+   * in" means, and each meter is a slice of this.
+   */
+  #placedMs = $state(0);
 
   constructor(id: string, initData: PlanetData) {
     this.#id = id;
@@ -103,6 +109,39 @@ export default class Planet {
     return resolveHarvestDuration(harvest?.duration ?? 0, this.#merged, harvest ?? {});
   });
 
+  /**
+   * Job-time, not real time. What souls and hands buy is a *rate* on this — see
+   * `Harness` — so a split dragged mid-anchor moves the countdown and never the
+   * fill: work done is work done.
+   */
+  place(ms: number) {
+    if (ms <= 0 || this.#isHarvested) return;
+
+    this.#placedMs = Math.min(this.#anchorJob, this.#placedMs + ms);
+  }
+
+  #anchoring = $derived.by(() => this.#data.anchoring);
+
+  /** The whole job, in ms. 0 on a world that asks for no anchors. */
+  #anchorJob = $derived.by(() => {
+    const anchoring = this.#anchoring;
+
+    return anchoring ? anchoring.anchors * anchoring.duration : 0;
+  });
+
+  #anchorsPlaced = $derived.by(() => {
+    const anchoring = this.#anchoring;
+
+    return anchoring ? Math.floor(this.#placedMs / anchoring.duration) : 0;
+  });
+
+  /** One flag per anchor the world asks for — what `Anchors` draws. */
+  #anchored = $derived.by(() => {
+    const asked = this.#anchoring?.anchors ?? 0;
+
+    return Array.from({ length: asked }, (_, i) => i < this.#anchorsPlaced);
+  });
+
   #phasesPerAge = $derived.by(() => this.#data.cycles_per_age * 2);
 
   /**
@@ -161,6 +200,31 @@ export default class Planet {
   /** What one delivery brings, and how long it takes. The ledger's two figures. */
   get harvestYields() { return this.#harvestYields; }
   get harvestDuration() { return this.#harvestDuration; }
+
+  /**
+   * The anchoring readout, all of it in job-ms. `anchorRemaining` is what is
+   * left of the one in progress — the harness divides it by its speed to get a
+   * countdown, because only the harness knows how fast the job is running.
+   */
+  get anchorsAsked() { return this.#anchoring?.anchors ?? 0; }
+  get anchorsPlaced() { return Math.min(this.#anchorsPlaced, this.anchorsAsked); }
+  get anchorDuration() { return this.#anchoring?.duration ?? 0; }
+  get anchorBonus() { return this.#anchoring?.bonusPerAnchor ?? 0; }
+  get anchored() { return this.#anchored; }
+
+  /** How far into the one being placed, 0…1. Full once the last one is in. */
+  get anchorFill() {
+    if (!this.anchorDuration) return 1;
+    if (this.#placedMs >= this.#anchorJob) return 1;
+
+    return (this.#placedMs % this.anchorDuration) / this.anchorDuration;
+  }
+
+  get anchorRemaining() { return this.anchorDuration * (1 - this.anchorFill); }
+
+  /** A world with nothing to anchor is never anchoring, and never anchored. */
+  get isAnchoring() { return !this.#isHarvested && this.anchorsPlaced < this.anchorsAsked; }
+  get isAnchored() { return this.anchorsAsked > 0 && this.anchorsPlaced >= this.anchorsAsked; }
 
   /** The conditions still standing in the way, for the UI to name. */
   get unmetFirstHarvestConditions() { return this.#unmet; }

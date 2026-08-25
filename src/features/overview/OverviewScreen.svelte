@@ -1,18 +1,27 @@
 <script lang="ts">
-  /** One axis, three bands. Selecting feeds the right column; the verb lives there. */
+  /**
+   * One axis, three bands. Selecting feeds the right column; the verb lives there.
+   *
+   * And the verb's screen: the first harvest takes this screen's body rather
+   * than the frame, so the header stays and this tab stays lit while the one
+   * decision the Overview leads to is being taken. Hidden by the same `Screen`
+   * the tabs use rather than removed — a band is a planet apiece, and those
+   * WebGL contexts should come back turning instead of blank.
+   */
   import { Badge } from '$ui';
   import { PlanetManager } from '$lib/managers';
   import { FIRST_HARVEST_CONDITIONS, getFirstHarvestConditionLabel } from '$lib/labels';
   import { progression } from '$lib/progression';
   import { sumHarvestRates } from '$lib/planets/harvest';
   import { f } from '$lib/utils';
-  import { badgeFor } from '../detail/badge';
-  import FirstHarvestScreen from '../harvest/FirstHarvestScreen.svelte';
+  import { badgeFor } from '../details/badge';
   import PlanetList from './PlanetList.svelte';
   import PlanetDetail from './PlanetDetail.svelte';
   import HarvestLedger from './HarvestLedger.svelte';
   import HarvestRates from './HarvestRates.svelte';
-    import { nav } from '$lib/nav.svelte';
+  import { FirstHarvestScreen } from '$features/harvest';
+  import { Screen } from '$features/frame';
+  import { nav } from '$lib/nav.svelte';
 
   /** Size is the only thing that separates the three bands' pictures. */
   const BEHIND_PX = 24;
@@ -20,12 +29,6 @@
   const AHEAD_PX = 40;
 
   const TICK_MS = 1000;
-
-  /**
-   * The takeover owns the screen while open, but leaving it is free: nothing is
-   * committed until its own verb fires, and the header stays live throughout.
-   */
-  let isHarvesting = $state(false);
 
   let picked = $state('');
 
@@ -42,10 +45,6 @@
   });
 
   const selected = $derived(picked || PlanetManager.selected);
-  const active = $derived(PlanetManager.getPlanet(PlanetManager.selected));
-  const isOffered = $derived(
-    selected === PlanetManager.selected && Boolean(active) && !active.isHarvested,
-  );
 
   /** Whether the Behind band reports rates at all, or is still just a list. */
   const isReporting = $derived(progression.isRevealed('overview.harvest'));
@@ -63,10 +62,6 @@
 
   function getHereStat(id: string) {
     const planet = PlanetManager.getPlanet(id);
-
-    if (planet.isHarvested) {
-      return `${f(planet.merged)} merged`;
-    }
 
     return `${f(planet.agesLived)} ages · phase ${planet.phase + 1} of ${planet.phasesPerAge}`;
   }
@@ -101,65 +96,76 @@
   </span>
 {/snippet}
 
-{#if isHarvesting && isOffered}
-  <FirstHarvestScreen onclose={() => (isHarvesting = false)} />
-{:else}
-  <div class="overview view-layout">
+<div class="stack">
+  <Screen active={!nav.isHarvesting}>
+    <div class="overview view-layout">
 
-    <div class="detail">
-      {#if progression.isRevealed('overview.active')}
-        <PlanetDetail id={selected} onharvest={() => (isHarvesting = true)} />
-      {/if}
+      <div class="detail">
+        {#if progression.isRevealed('overview.active')}
+          <PlanetDetail id={selected} onharvest={() => nav.openHarvest()} />
+        {/if}
 
-      <!-- Only while the Behind band cannot carry the rates itself. -->
-      {#if isReporting && !PlanetManager.behind.length}
-        <HarvestLedger />
-      {/if}
+        <!-- Only while the Behind band cannot carry the rates itself. -->
+        {#if isReporting && !PlanetManager.behind.length}
+          <HarvestLedger />
+        {/if}
+      </div>
+
+      <div class="axis">
+        {#if progression.isRevealed('overview.active')}
+          <PlanetList
+            label="Active"
+            ids={PlanetManager.selected ? [PlanetManager.selected] : []}
+            {selected}
+            stat={getHereStat}
+            empty="No active planet."
+            stillPx={ACTIVE_PX}
+            onpick={(id) => (picked = id)}
+            ondblclick={() => nav.to('details')}
+          />
+        {/if}
+
+        {#if progression.isRevealed('overview.ahead')}
+          <PlanetList
+            label="Ahead"
+            ids={PlanetManager.ahead}
+            {selected}
+            stat={getAheadStat}
+            empty="Nowhere else is known."
+            stillPx={AHEAD_PX}
+            onpick={(id) => (picked = id)}
+          />
+        {/if}
+
+        {#if progression.isRevealed('overview.behind') && PlanetManager.behind.length}
+          <PlanetList
+            label="Behind"
+            ids={PlanetManager.behind}
+            {selected}
+            stat={isReporting ? undefined : getBehindStat}
+            rowAside={isReporting ? behindRates : undefined}
+            aside={isReporting && behindTotal.length ? behindHeader : undefined}
+            stillPx={BEHIND_PX}
+            onpick={(id) => (picked = id)}
+          />
+        {/if}
+
+      </div>
     </div>
+  </Screen>
 
-    <div class="axis">
-      {#if progression.isRevealed('overview.active')}
-        <PlanetList
-          label="Active"
-          ids={[PlanetManager.selected]}
-          {selected}
-          stat={getHereStat}
-          stillPx={ACTIVE_PX}
-          onpick={(id) => (picked = id)}
-          ondblclick={() => nav.to('detail')}
-        />
-      {/if}
-
-      {#if progression.isRevealed('overview.ahead')}
-        <PlanetList
-          label="Ahead"
-          ids={PlanetManager.ahead}
-          {selected}
-          stat={getAheadStat}
-          empty="Nowhere else is known."
-          stillPx={AHEAD_PX}
-          onpick={(id) => (picked = id)}
-        />
-      {/if}
-
-      {#if progression.isRevealed('overview.behind') && PlanetManager.behind.length}
-        <PlanetList
-          label="Behind"
-          ids={PlanetManager.behind}
-          {selected}
-          stat={isReporting ? undefined : getBehindStat}
-          rowAside={isReporting ? behindRates : undefined}
-          aside={isReporting && behindTotal.length ? behindHeader : undefined}
-          stillPx={BEHIND_PX}
-          onpick={(id) => (picked = id)}
-        />
-      {/if}
-
-    </div>
-  </div>
-{/if}
+  {#if nav.isHarvesting}
+    <FirstHarvestScreen onclose={() => nav.closeHarvest()} />
+  {/if}
+</div>
 
 <style>
+  /* The ground the hidden body is positioned out of flow against, while the
+     harvest holds the screen. */
+  .stack {
+    position: relative;
+  }
+
   .axis {
     display: flex;
     flex-direction: column;

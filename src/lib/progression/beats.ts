@@ -124,10 +124,7 @@ export const beats: Beat[] = [
     runs: ['harvest'],
     reveals: {
       'overview.firstHarvest': 'live',
-      'harvest.disc': 'live',
-      'harvest.verb': 'live',
-      'harvest.split': 'live',
-      'harvest.outcomes': 'live',
+      'harvest.screen': 'live',
     },
   },
 
@@ -154,13 +151,7 @@ export const beats: Beat[] = [
     reveals: {
       'nav.refinery': 'live',
       'reading.tokens': 'live',
-      'refinery.status': 'live',
-      'refinery.backlog': 'live',
-      'refinery.side': 'live',
-      'refinery.intake': 'live',
-      'refinery.rate': 'live',
-      'refinery.grades': 'live',
-      'refinery.split': 'live',
+      'refinery.screen': 'live',
     },
   },
 

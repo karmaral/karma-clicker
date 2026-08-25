@@ -78,7 +78,6 @@
     background: none;
     border: none;
     border-bottom: var(--rule-row);
-    cursor: pointer;
     text-align: left;
   }
 

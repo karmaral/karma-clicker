@@ -6,12 +6,15 @@ import data from '$data/planets';
 class PlanetManager {
   #selected = $state('');
   #planets: Record<string, Planet> = $state({});
+  /** Discovery order, kept apart from `#planets` — object key order is not a contract. */
+  #order: string[] = $state([]);
 
   unlock(target: string) {
     if (!Boolean(target in data)) return;
     if (Boolean(target in this.#planets)) return;
 
     this.#planets[target] = new Planet(target, data[target]);
+    this.#order.push(target);
   }
 
   select(id: string) {
@@ -40,8 +43,24 @@ class PlanetManager {
 
     const merged = BuildingManager.mergeSouls(mergeFraction);
     planet.completeFirstHarvest(merged, getFirstHarvestAlignment());
+    this.#grantBoons(planet);
+    this.#selected = '';
 
     return merged;
+  }
+
+  /**
+   * What the world leaves you with. Routed exactly as `UpgradeManager` routes a
+   * building-scoped effect, and keyed by the world so two planets granting the
+   * same change both land — `ModifierSet` drops a repeat id.
+   */
+  #grantBoons(planet: Planet) {
+    planet.data.boons?.forEach((boon, index) => {
+      BuildingManager.getBuilding(boon.target)?.addModifier({
+        id: `boon:${planet.id}:${index}`,
+        ...boon.effect,
+      });
+    });
   }
 
   getPlanet(id: string) {
@@ -52,7 +71,7 @@ class PlanetManager {
     return this.#planets[this.#selected];
   }
 
-  get planets() { return Object.keys(this.#planets); }
+  get planets() { return this.#order; }
   get selected() { return this.#selected; }
 
   /** The axis, minus where you are: harvested is behind you, the rest is ahead. */
@@ -64,8 +83,9 @@ class PlanetManager {
     return this.planets.filter((id) => id !== this.#selected && !this.#planets[id].isHarvested);
   }
 
+  /** Nothing is holding you here — the world you left clears itself the instant it's done. */
   get canReach() {
-    return this.getActive()?.isHarvested ?? false;
+    return !this.#selected;
   }
 
   /** Planets left for good — the count beats 10 and 12 read. */

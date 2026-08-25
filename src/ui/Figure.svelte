@@ -22,6 +22,8 @@
 
   .fig.muted { color: var(--ink-300); }
 
+  .fig.hero { font-size: var(--fs-hero); }
+  .fig.xxl  { font-size: var(--fs-xxl); }
   .fig.xl   { font-size: var(--fs-xl); }
   .fig.lg   { font-size: var(--fs-lg); }
   .fig.md   { font-size: var(--fs-md); }

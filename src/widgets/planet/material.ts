@@ -652,6 +652,103 @@ const soulFragment = /* glsl */ `
 `;
 
 /**
+ * The core: what the window is a window onto. A solid at the middle of the
+ * world, carrying the harvest's alignment as a ruling that leans one way on the
+ * negative and the other on the positive, and is simply absent on even.
+ *
+ * Ruled in **view space**, off the fragment's offset from the body's centre —
+ * the depth idiom five shaders above already use, spent here on a direction
+ * instead of a depth. Deliberately not ruled on the sphere the way the veil's
+ * hatch is: that family runs in latitude and converges on the world's poles,
+ * which is right for weather riding a surface and wrong for this. The core is a
+ * *reading*, a marked plane inside the world rather than a second world, and a
+ * lean that meant a different angle depending on how the planet was held would
+ * be no reading at all.
+ *
+ * So it does not turn, it does not shade, and it takes no key. Two ramp slots,
+ * one lean, and nothing else.
+ */
+const coreVertex = /* glsl */ `
+  varying vec3 vRel;
+
+  void main() {
+    vec4 origin = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+    vec4 viewPos = modelViewMatrix * vec4(position, 1.0);
+
+    // The mesh carries the core's radius as a scale, so this comes out in body
+    // radii and uDensity is strokes per radius without a zoom to divide by.
+    vRel = viewPos.xyz - origin.xyz;
+
+    gl_Position = projectionMatrix * viewPos;
+  }
+`;
+
+const coreFragment = /* glsl */ `
+  uniform vec3 uRamp[${RAMP_SLOTS}];
+  uniform float uLean;
+  uniform float uDensity;
+  uniform float uWidth;
+  uniform float uFeather;
+
+  varying vec3 vRel;
+
+  ${rampRead}
+  ${strokeAt}
+
+  // Fixed, not authored, one pair per reading — see CORE_TONES in the module.
+  const vec3 GROUND = vec3(
+    ${CORE_TONES.dark.ground}.0, ${CORE_TONES.even.ground}.0, ${CORE_TONES.light.ground}.0
+  );
+  const vec3 HATCH = vec3(
+    ${CORE_TONES.dark.hatch}.0, ${CORE_TONES.even.hatch}.0, ${CORE_TONES.light.hatch}.0
+  );
+
+  void main() {
+    // Normalised, so the two leans are mirror images at the same spacing rather
+    // than one being the diagonal of a rectangle the other is not.
+    vec2 axis = normalize(vec2(1.0, uLean));
+
+    // Perpendicular to the lean, so the strokes run *along* it.
+    float q = dot(vRel.xy, vec2(-axis.y, axis.x)) * uDensity;
+
+    // The clean rate, taken off the unwrapped coordinate. fract is
+    // discontinuous and a derivative of it spikes at every seam, which would
+    // draw a heavy stroke down each one — contourAt's argument, in its simplest
+    // form.
+    float perPixel = fwidth(q);
+
+    // Even has no lean and so has no ruling: the ground tone is the whole
+    // picture, which is the reading. Cut on the lean rather than on the width,
+    // so a world can author its strokes and still show a bare core.
+    float stroke = strokeAt(fract(q), 0.5, uWidth, perPixel) * step(0.5, abs(uLean));
+
+    // Which of the three readings this is, as a selector rather than a branch:
+    // uLean is -1, 0 or +1, so the three components pick themselves out and the
+    // shader has one path. The pair is the whole of the read — a glance gets
+    // black, grey or paper before it has resolved a single stroke.
+    vec3 pick = vec3(step(uLean, -0.5), 1.0 - step(0.5, abs(uLean)), step(0.5, uLean));
+    float ground = dot(GROUND, pick);
+    float hatch = dot(HATCH, pick);
+
+    // The border, softened. The mesh is a sphere scaled uniformly, so the
+    // direction of vRel *is* the surface normal in view space and no varying is
+    // needed for it — and this is the same fresnel the window is cut from, read
+    // on the core instead of on the body. It shuts the core's own limb rather
+    // than opening its front, which is that reading upside down and deliberate:
+    // a disc with a hard rim reads as a coin lying on the world, and a disc that
+    // gives its edge back to the ink reads as something *inside* it.
+    //
+    // Clamped off zero rather than branched: pow(0, 0) is undefined, and at
+    // uFeather 0 every other value comes out 1 and the rim is hard again.
+    float facing = clamp(abs(normalize(vRel).z), 1e-4, 1.0);
+
+    gl_FragColor = vec4(readRamp(mix(ground, hatch, stroke)), pow(facing, uFeather));
+
+    #include <colorspace_fragment>
+  }
+`;
+
+/**
  * The harness. One ribbon for the whole of it, with `level` — 0 innermost,
  * 1 outermost — carried per vertex, and `vRel` the fragment's offset from the
  * body's centre in camera axes. Under an orthographic camera that makes xy the
@@ -1943,6 +2040,34 @@ export function createSurfaceMaterial() {
 }
 
 /**
+ * The core. Transparent for its feathered rim, and so the bottom of the stack —
+ * `RENDER_ORDER.core`, under the body that blends over it. How much of it
+ * survives is exactly the body's alpha there, which is the reading: the body
+ * *thins onto* what it is holding rather than being holed through to it.
+ *
+ * It writes no depth. Nothing in the scene needs to know where it is: it is
+ * inside a world that already wrote its own, the souls that mill in it carry
+ * their own rule, and a feathered edge that claimed depth would claim it at full
+ * strength right out to where it had faded to nothing.
+ */
+export function createCoreMaterial() {
+  return new THREE.ShaderMaterial({
+    vertexShader: coreVertex,
+    fragmentShader: coreFragment,
+    side: THREE.FrontSide,
+    transparent: true,
+    depthWrite: false,
+    uniforms: {
+      uRamp: { value: readInkRamp() },
+      uLean: { value: 0 },
+      uDensity: { value: 12 },
+      uWidth: { value: 1.5 },
+      uFeather: { value: 0 },
+    },
+  });
+}
+
+/**
  * The two veil materials, and the reason there are two rather than one with a
  * mode uniform. It used to be that a mode was a blend and a blend is a
  * construction flag; the inversion is gone and that argument with it. What is
@@ -2586,6 +2711,30 @@ export function syncSurfaceUniforms(
   u.uShadeGrain.value = Math.max(0, visual.shadeGrain);
   u.uGrainScale.value = Math.max(0.1, visual.grainScale);
   u.uOrigin.value.copy(originOf(visual.seed));
+}
+
+/**
+ * `lean` is the harvest's alignment, −1, 0 or +1 — game state, so it arrives as
+ * an argument the way `merge` and `counts` reach the swarm. Everything else the
+ * core looks like is the world's own.
+ *
+ * No `zoom` here, unlike every other px-authored mark: `strokeAt` weighs its
+ * width against a screen derivative, so the pixels are already pixels by the
+ * time the fragment has them. `uDensity` is the one in body radii, and it is a
+ * spacing rather than a weight — the pair `veilHatchDensity` and
+ * `veilHatchWidth` already are.
+ */
+export function syncCoreUniforms(
+  material: THREE.ShaderMaterial,
+  visual: PlanetVisual,
+  lean: number,
+) {
+  const u = material.uniforms;
+
+  u.uLean.value = Math.sign(Math.round(lean));
+  u.uDensity.value = Math.max(0.1, visual.coreHatchDensity);
+  u.uWidth.value = Math.max(0, visual.coreHatchWidth);
+  u.uFeather.value = Math.max(0, visual.coreFeather);
 }
 
 /** `clarity` reaches the veil for the reason it reaches the body — see `syncSurfaceUniforms`. */

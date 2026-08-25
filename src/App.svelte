@@ -1,11 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { SvelteToast, toast } from '@zerodevx/svelte-toast';
-  import { Card, Value } from '$ui';
+  import { Card, Label, Value } from '$ui';
   import {
     PlanetManager, BuildingManager, NotificationManager, ResourceManager,
   } from '$lib/managers';
   import Notification from '$features/notification/Notification.svelte';
+  import planetTexts from '$data/planets-texts';
   import { progression, validate } from '$lib/progression';
   import { nav } from '$lib/nav.svelte';
   import { wire } from '$lib/wiring.svelte';
@@ -38,6 +39,9 @@
   const experience = $derived(f(ResourceManager.getAmount('experience')));
   const posKarma = $derived(f(ResourceManager.getAmount('karma_positive')));
 
+  const preludePlanet = $derived(PlanetManager.getActive());
+  const preludePlanetName = $derived(planetTexts[preludePlanet?.id ?? '']?.title);
+
   wire();
 
   onMount(() => {
@@ -62,12 +66,24 @@
       <Frame />
     {:else}
       <div class="prelude">
-        {#if progression.isRevealed('reading.experience')}
-          <Value kind="xp" value={experience} />
+        {#if preludePlanetName}
+          <div class="name"><Label text={preludePlanetName} tone="active" /></div>
         {/if}
-        {#if progression.isRevealed('reading.posKarma')}
-          <Value kind="pos" value={posKarma} />
-        {/if}
+
+        <div class="readings">
+          {#if progression.isRevealed('reading.experience')}
+            <div class="reading">
+              <Label text="Experience" size="sm" />
+              <Value kind="xp" value={experience} size="hero" />
+            </div>
+          {/if}
+          {#if progression.isRevealed('reading.posKarma')}
+            <div class="reading">
+              <Label text="Karma" size="sm" />
+              <Value kind="pos" value={posKarma} size="hero" />
+            </div>
+          {/if}
+        </div>
       </div>
     {/if}
 
@@ -104,7 +120,6 @@
   main {
     display: flex;
     justify-content: center;
-    padding: var(--sp-5);
     min-height: 100%;
   }
 
@@ -120,7 +135,22 @@
 
   .prelude {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    gap: var(--sp-4);
     padding: var(--sp-5) var(--sp-4) 0;
+  }
+
+  .readings {
+    display: flex;
+    justify-content: center;
+    gap: var(--sp-6);
+  }
+
+  .reading {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+    --badge-size: 18px;
+    --badge-gap: 12px;
   }
 </style>

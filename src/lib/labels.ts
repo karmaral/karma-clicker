@@ -4,7 +4,8 @@
  * tab holds still while the world it reads changes.
  */
 
-import type { FirstHarvestCondition, Polarity } from '$types';
+import buildingTexts from '$data/buildings-texts';
+import type { FirstHarvestCondition, HarvestBoon, Polarity } from '$types';
 
 export type ScreenName = 'overview' | 'details' | 'refinery';
 
@@ -86,6 +87,39 @@ export function getExcessSideNote(excess: number | undefined) {
   const side = getExcessSideLabel(excess);
 
   return side && `${side} side`;
+}
+
+/**
+ * What a boon acts on, said the way the screen says it. Buildings name
+ * themselves in `buildings-texts`; the click does not have an entry there and
+ * would not want its own title anyway — a boon on it moves *incarnation*, which
+ * is the verb, not the thing doing it.
+ */
+const BOON_TARGET_LABELS: Record<string, string> = {
+  main: 'incarnation',
+};
+
+/** The change itself, in the shortest form that stays true to the operator. */
+function getModifierFigure({ op, value }: HarvestBoon['effect']) {
+  switch (op) {
+    case 'boost':
+      return `${value < 0 ? '−' : '+'}${Math.abs(Math.round(value * 1000) / 10)}%`;
+    case 'mult':
+      return `×${value}`;
+    case 'pow':
+      return `^${value}`;
+    default:
+      return `${value < 0 ? '−' : '+'}${Math.abs(value)}`;
+  }
+}
+
+/** One boon as its own line: `+2% incarnation`. */
+export function getBoonLabel(boon: HarvestBoon) {
+  const named = BOON_TARGET_LABELS[boon.target]
+    ?? buildingTexts[boon.target]?.title.toLowerCase()
+    ?? boon.target;
+
+  return `${getModifierFigure(boon.effect)} ${named}`;
 }
 
 /**

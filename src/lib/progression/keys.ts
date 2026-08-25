@@ -45,19 +45,16 @@ export type RevealKey =
   | 'overview.firstHarvest'
   | 'overview.harvest'
 
-  // A takeover, not a fourth tab.
-  | 'harvest.disc'
-  | 'harvest.verb'
-  | 'harvest.split'
-  | 'harvest.outcomes'
+  // A takeover, not a fourth tab — and one key, because it arrives whole. Four
+  // keys revealed in one beat, all `live`, were three of them pretending to be
+  // a sequence. `overview.firstHarvest` is the gate that does have two states.
+  | 'harvest.screen'
 
-  | 'refinery.status'
-  | 'refinery.backlog'
-  | 'refinery.side'
-  | 'refinery.intake'
-  | 'refinery.rate'
-  | 'refinery.grades'
-  | 'refinery.split';
+  // A takeover, not a fifth `{#if}`: five reveal keys were revealed `live` in
+  // the same beat, in the same object literal, with no state where one was
+  // true and another false — see `harvest.screen` above. One key, and the
+  // screen has no internal guard.
+  | 'refinery.screen';
 
 export type SystemKey =
   | 'incarnation'
@@ -81,15 +78,9 @@ export const SYSTEM_SURFACES: Record<SystemKey, RevealKey[]> = {
   wave: ['details.wave'],
   aim: ['details.aimGlobal'],
   excess: ['reading.excess'],
-  harvest: ['harvest.disc', 'harvest.split'],
+  harvest: ['harvest.screen'],
   anchoring: ['details.field'],
-  refining: [
-    'refinery.status',
-    'refinery.rate',
-    'refinery.grades',
-    'refinery.backlog',
-    'reading.tokens',
-  ],
+  refining: ['refinery.screen', 'reading.tokens'],
   // `overview.harvest` is deliberately absent: the ledger is drawn empty from
   // beat 8 and only fills at beat 10, so it precedes the system it reports on.
   finishedPlanets: ['overview.behind'],

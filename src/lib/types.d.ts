@@ -20,8 +20,12 @@ export type BuyMode = number | 'next' | 'max';
 
 export type ModifierOp = 'flat' | 'boost' | 'mult' | 'pow' | 'final';
 
-/** `slots` is the refinery's third axis: how many souls it can put to work. */
-export type ModifierStat = 'yield' | 'duration' | 'slots';
+/**
+ * `slots` is how many souls a singleton can put to work — the refinery's third
+ * axis and the harness's first. `riders` is what the finished harness carries;
+ * `step` counts rungs down the split ladder, so it is an index, not a fraction.
+ */
+export type ModifierStat = 'yield' | 'duration' | 'slots' | 'riders' | 'step';
 
 export interface Modifier {
   id: string;
@@ -38,10 +42,11 @@ export type EffectVerb = 'unlock' | 'acquire' | 'autonomy' | 'discover';
  * What an upgrade bucket is scoped to. `cohort` and `building` both route to
  * `BuildingManager` — the split exists so a non-soul building has somewhere to
  * go that does not call itself a cohort. `refinery` names no entity because
- * there is exactly one of it; `global` names none because it owns nothing yet.
+ * there is exactly one of it — as with `harness`; `global` names none because it
+ * owns nothing yet.
  */
 export type UpgradeScope =
-  | { kind: 'global' | 'refinery'; entity?: undefined }
+  | { kind: 'global' | 'refinery' | 'harness'; entity?: undefined }
   | { kind: 'cohort' | 'building' | 'planet'; entity: string };
 
 /** `target` overrides the upgrade's `effect_target`, so one array can hit two yields. */
@@ -108,6 +113,32 @@ export interface PlanetHarvestMerge {
   maxMergeSpeed?: number;
 }
 /**
+ * What taking the first harvest leaves you holding, for good. A reward, so it is
+ * not a `PlanetFirstHarvest` field — that interface is what the world *demands*.
+ *
+ * Shaped like an upgrade's effect and routed the same way: `target` names the
+ * building the change lands on, and the modifier is the change.
+ */
+export interface HarvestBoon {
+  target: string;
+  effect: Omit<Modifier, 'id'>;
+}
+
+/**
+ * What a world asks before it will let its souls incarnate. Authored per world
+ * rather than fixed globally, for the same reason `harvest` is: a late world
+ * should ask more anchors and pay less for each.
+ */
+export interface PlanetAnchoring {
+  /** How many the world asks for, 1…`ANCHOR_MAX`. */
+  anchors: number;
+  /** What one anchor takes, in ms of the job. Souls set how fast that job runs. */
+  duration: number;
+  /** What each placed anchor adds to a carried soul's yields. */
+  bonusPerAnchor: number;
+}
+
+/**
  * A phase is a half-wave, light or dense; two make a cycle; `cycles_per_age` of
  * those make an age. Three words, used the same way in code and in the UI.
  */
@@ -129,6 +160,10 @@ export interface PlanetData {
     yields: Partial<Record<YieldType, number>>;
     duration: number;
   };
+  /** Absent means a world you may incarnate on the moment you arrive. */
+  anchoring?: PlanetAnchoring;
+  /** Kept when you leave, unlike the yields — see `HarvestBoon`. */
+  boons?: HarvestBoon[];
 }
 export interface ItemTextData {
   title: string;

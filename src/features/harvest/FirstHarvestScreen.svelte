@@ -1,16 +1,37 @@
 <script lang="ts">
   /**
-   * A takeover, not a fourth tab. One verb, and the split that arms it — your
-   * own count drops as you drag, so the cost is felt rather than explained.
+   * A takeover, not a fourth tab — but of the **Overview**, not of the frame.
+   * The header and the rail stay: they are how you get back out, and a screen
+   * with nothing lit in the header above it is a room with no door. The
+   * Overview's tab stays lit because this is the Overview, holding the one
+   * decision it can lead to.
+   *
+   * Its home there is **provisional** — whether the harvest belongs to the
+   * Overview or to Details is not settled, which is why the flag that opens it
+   * lives in `nav` rather than in this feature or that screen.
+   *
+   * The layout is a **shoulder on each side and the controls down the middle**,
+   * on a world drawn across the whole block and held above them. The three
+   * float on that world with no ground of their own — the panels are the only
+   * opaque things here — so the swarm strays out *behind* what you are reading
+   * rather than into a margin. Top to bottom the middle is world, then split,
+   * then verb: the order the decision is made in.
+   *
+   * **`Not yet` stays** even with the tabs back. It is redundant with them, and
+   * it is the only thing on the screen that says leaving is free.
+   *
+   * One verb, and the split that arms it. Everything here arrives at once, which
+   * is why there is one reveal key and no `{#if}` inside.
    */
-  import { Button, Section } from '$ui';
+  import { Button } from '$ui';
   import { BuildingManager, PlanetManager } from '$lib/managers';
   import { getFirstHarvestAlignment } from '$lib/excess';
   import { FIRST_HARVEST_ALIGNMENT_LABELS, getFirstHarvestConditionLabel } from '$lib/labels';
-  import { progression } from '$lib/progression';
-  import { f } from '$lib/utils';
   import { pulse } from '$lib/loop';
-  import RevealStub from '../RevealStub.svelte';
+  import AlignmentPanel from './AlignmentPanel.svelte';
+  import HarvestStage from './HarvestStage.svelte';
+  import MergeSplit from './MergeSplit.svelte';
+  import OutputPanel from './OutputPanel.svelte';
   import planetTexts from '$data/planets-texts';
 
   interface Props {
@@ -39,15 +60,39 @@
   const merged = $derived(BuildingManager.countMergeable(mergeFraction));
   const kept = $derived(souls - merged);
 
-  const alignment = $derived(FIRST_HARVEST_ALIGNMENT_LABELS[getFirstHarvestAlignment()]);
+  /** The same rows the cohort table draws, as counts — one band per cohort. */
+  const soulsPerCohort = $derived.by(() => {
+    const counts: number[] = [];
 
-  const blockers = $derived(
+    for (const id of BuildingManager.buildings) {
+      const cohort = BuildingManager.getBuilding(id);
+      if (!cohort || cohort.data.role === 'click') continue;
+
+      counts.push(cohort.count);
+    }
+
+    return counts;
+  });
+
+  /**
+   * Kept as the reading rather than as its label, because the world draws it
+   * too: the stage's core carries the same figure as a lean, and the verb's
+   * subtitle says it in words. One read, two marks.
+   */
+  const alignment = $derived(getFirstHarvestAlignment());
+  const alignmentLabel = $derived(FIRST_HARVEST_ALIGNMENT_LABELS[alignment]);
+
+  /**
+   * You cannot arrive here unready — the beat fires on the world being
+   * harvestable and the Overview's verb is dead until it is. But `excessGate`
+   * reads a live figure, so readiness can *lapse* under you while the screen is
+   * open, and that is what this says. Empty is the normal state of the screen.
+   */
+  const lapsed = $derived(
     (planet?.unmetFirstHarvestConditions ?? []).map((condition) =>
       getFirstHarvestConditionLabel(condition, planet?.data.firstHarvest[condition] ?? 0),
     ),
   );
-
-  const held = $derived(blockers.length ? `Needs ${blockers.join(' · ')}` : `${f(merged)} merged`);
 
   function completeFirstHarvest() {
     PlanetManager.completeFirstHarvest(mergeFraction);
@@ -57,123 +102,135 @@
 </script>
 
 <div class="first-harvest">
-  <Section label="First harvest" title={name}>
-    {#snippet aside()}
+  {#if planet}
+    <HarvestStage
+      id={planet.id}
+      cohorts={soulsPerCohort}
+      merge={mergeFraction}
       {alignment}
-    {/snippet}
-
-    <RevealStub
-      name="harvest.disc"
-      note="the departure disc — wanted, not yet mocked (§6)"
-      height="180px"
     />
+  {/if}
 
-    {#if progression.isRevealed('harvest.split')}
-      <div class="split">
-        <input
-          type="range"
-          min={floorPercent}
-          max="100"
-          value={percent}
-          oninput={(event) => (mergedPercent = Number(event.currentTarget.value))}
-          disabled={!progression.isLive('harvest.split')}
-          aria-label="Souls to merge"
+  <div class="decision">
+    <div class="shoulder">
+      {#if planet}
+        <AlignmentPanel yields={planet.data.harvest?.yields ?? {}} />
+      {/if}
+    </div>
+
+    <div class="middle">
+      {#if planet}
+        <MergeSplit
+          staying={merged}
+          returning={kept}
+          value={mergeFraction}
+          floor={floorPercent / 100}
+          minimum={planet.mergeMinimum}
+          merge={planet.data.harvest ?? {}}
+          onchange={(share) => (mergedPercent = share * 100)}
         />
-        <div class="counts">
-          <span><b class="num">{f(merged)}</b> merged</span>
-          {#if floorPercent}
-            <span class="toll">{f(planet.mergeMinimum)} asked</span>
-          {/if}
-          <span><b class="num">{f(kept)}</b> kept</span>
-        </div>
-      </div>
-    {/if}
+      {/if}
 
-    {#if progression.isRevealed('harvest.outcomes')}
-      <ul class="outcomes">
-        <li>
-          Merged souls stop being yours. {name} keeps incarnating without you,
-          paying <b>{alignment.toLowerCase()}</b> for good.
-        </li>
-        <li>Kept souls come with you, and are all you start the next planet with.</li>
-      </ul>
-    {/if}
-
-    {#if progression.isRevealed('harvest.verb')}
       <div class="verb">
         <Button
-          label="Leave for good"
-          sub={held}
+          layout="spread"
+          label="Harvest {name}"
+          sub={alignmentLabel}
           disabled={!planet?.isFirstHarvestReady}
           onclick={completeFirstHarvest}
         />
-        <Button label="Not yet" variant="outline" onclick={() => onclose?.()} />
+
+        <div class="warning">
+          <span class="note">
+            {#if lapsed.length}
+              Needs {lapsed.join(' · ')}
+            {:else}
+              The first harvest cannot be reversed. Departure is final.
+            {/if}
+          </span>
+          <button class="quit" onclick={() => onclose?.()}>Not yet</button>
+        </div>
       </div>
-    {/if}
-  </Section>
+    </div>
+
+    <div class="shoulder right">
+      {#if planet}
+        <OutputPanel {planet} {merged} />
+      {/if}
+    </div>
+  </div>
 </div>
 
 <style>
   .first-harvest {
-    display: flex;
-    flex-direction: column;
+    position: relative;
+    min-width: 0;
+  }
+
+  .decision {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 620px) minmax(0, 1fr);
+    align-items: start;
+    gap: var(--sp-5);
     padding: var(--sp-5) var(--sp-4);
-    min-width: 0;
+    min-height: 680px;
   }
 
-  .split {
-    display: flex;
-    flex-direction: column;
-    gap: var(--sp-2);
+  .shoulder {
     min-width: 0;
-  }
-
-  .split input {
     width: 100%;
-    accent-color: var(--ink-900);
-    cursor: pointer;
+    max-width: 380px;
   }
 
-  .split input:disabled {
-    cursor: default;
+  .right {
+    justify-self: end;
   }
 
-  .counts {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--sp-4);
-    font-size: var(--fs-sm);
-    color: var(--ink-500);
-  }
-
-  .counts b {
-    color: var(--ink-900);
-    font-weight: 600;
-  }
-
-  .toll {
-    color: var(--ink-400);
-  }
-
-  .outcomes {
+  .middle {
     display: flex;
     flex-direction: column;
-    gap: var(--sp-2);
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    font-size: var(--fs-sm);
-    color: var(--ink-700);
-  }
-
-  .outcomes b {
-    color: var(--ink-900);
-    font-weight: 600;
+    justify-content: flex-end;
+    gap: var(--sp-5);
+    min-width: 0;
+    height: 100%;
   }
 
   .verb {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: var(--sp-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    width: min(100%, 545px);
+    margin-inline: auto;
+
+    & :global(.btn) {
+      padding-block: var(--sp-4);
+
+    }
+  }
+
+  .warning {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    padding: 0 var(--sp-2) var(--sp-3);
+  }
+
+  .note {
+    flex: 1;
+    font-size: var(--fs-sm);
+    color: var(--ink-500);
+    font-weight: 500;
+  }
+
+  .quit {
+    padding: 0;
+    border: none;
+    background: none;
+    font-size: var(--fs-sm);
+    color: var(--ink-900);
+    font-weight: 500;
+    text-decoration: underline;
   }
 </style>
