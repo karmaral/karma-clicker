@@ -13,6 +13,11 @@
   --canvas:#f4f4f2;
   --ink-inverse:#ffffff;
 
+  --cursor-rest: url("/cursors/rest.svg") 2 2, auto;
+  --cursor-press: url("/cursors/press.svg") 2 2, auto;
+  --cursor-grab-rest: url("/cursors/grab-rest.svg") 2 2, auto;
+  --cursor-grab-drag: url("/cursors/grab-drag.svg") 2 2, auto;
+
   --res-xp:#2f7d4f;
   --res-red:#9e2b25;
   --res-yellow:#9a7b21;
@@ -106,12 +111,37 @@ body {
   line-height: 1.5;
   font-weight: 400;
   color: var(--ink-900);
+  cursor: var(--cursor-rest);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+}
+
+/* The paper-dart cursor system: every button gets its rest/press states from
+   here, once, rather than declaring cursor: pointer locally. */
+button:not(:disabled) {
+  cursor: var(--cursor-rest);
+}
+
+button:not(:disabled):active {
+  cursor: var(--cursor-press);
+}
+
+button:disabled {
+  cursor: default;
+}
+
+/* The two draggable controls (AimControl, SliderBar) opt in via this
+   attribute instead of each declaring their own grab/grabbing cursor. */
+[data-cursor-grab] {
+  cursor: var(--cursor-grab-rest);
+}
+
+[data-cursor-grab][data-cursor-dragging="true"] {
+  cursor: var(--cursor-grab-drag);
 }
 
 /* The palette has no blue in it; the browser's default selection was the one
