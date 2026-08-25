@@ -12,7 +12,7 @@ export type RevealKey =
 
   // Exactly three, permanently — the header is the navigation.
   | 'nav.overview'
-  | 'nav.detail'
+  | 'nav.details'
   | 'nav.refinery'
 
   // `reading.*`, not `header.*` — these predate the header and the frame
@@ -27,14 +27,14 @@ export type RevealKey =
   | 'shared.log'
 
   // "Close-up" in the design docs.
-  | 'detail.disc'
-  | 'detail.status'
-  | 'detail.wave'
-  | 'detail.cohortTable'
-  | 'detail.aimGlobal'
-  | 'detail.aimPerRow'
-  | 'detail.split'
-  | 'detail.field'
+  | 'details.disc'
+  | 'details.status'
+  | 'details.wave'
+  | 'details.cohortTable'
+  | 'details.aimGlobal'
+  | 'details.aimPerRow'
+  | 'details.split'
+  | 'details.field'
 
   // One axis: behind you, active, ahead of you. Reaching is an action on
   // `ahead`, not a reveal of its own — the last beat would be unreachable otherwise.
@@ -74,15 +74,15 @@ export type SystemKey =
 
 /** Lets validate() enforce that a system runs before its panel is drawn. */
 export const SYSTEM_SURFACES: Record<SystemKey, RevealKey[]> = {
-  incarnation: ['detail.disc'],
+  incarnation: ['details.disc'],
   posKarma: ['reading.posKarma'],
   negKarma: ['reading.negKarma'],
-  cohort: ['detail.cohortTable'],
-  wave: ['detail.wave'],
-  aim: ['detail.aimGlobal'],
+  cohort: ['details.cohortTable'],
+  wave: ['details.wave'],
+  aim: ['details.aimGlobal'],
   excess: ['reading.excess'],
   harvest: ['harvest.disc', 'harvest.split'],
-  anchoring: ['detail.field'],
+  anchoring: ['details.field'],
   refining: [
     'refinery.status',
     'refinery.rate',

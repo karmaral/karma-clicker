@@ -6,19 +6,19 @@
 
 import type { FirstHarvestCondition, Polarity } from '$types';
 
-export type ScreenName = 'overview' | 'detail' | 'refinery';
+export type ScreenName = 'overview' | 'details' | 'refinery';
 
 /**
- * Header order, left to right. Detail leads because the minute you are living in
+ * Header order, left to right. Details leads because the minute you are living in
  * leads; Overview arrives between two cells that already exist rather than at an
  * end, which is what it costs to keep experience out of the tabs.
  */
-export const SCREENS: ScreenName[] = ['detail', 'overview', 'refinery'];
+export const SCREENS: ScreenName[] = ['details', 'overview', 'refinery'];
 
 export const SCREEN_LABELS: Record<ScreenName, string> = {
   overview: 'Overview',
   refinery: 'Refinery',
-  detail: 'Details',
+  details: 'Details',
 };
 
 /**

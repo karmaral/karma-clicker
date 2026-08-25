@@ -157,10 +157,120 @@ const simplex3D = /* glsl */ `
 `;
 
 /**
+ * A stroke centred on `at`, `width` px wide, measured against a coordinate that
+ * runs 1.0 at the ring's own radius. `perPixel` is passed in because a
+ * derivative has to be taken in uniform control flow, and the width test is not.
+ *
+ * Up here with the other shared chunks rather than beside the halo that was its
+ * first caller: the core's ruling includes it too, and a const is not hoisted —
+ * `simplex3D`'s move, for `simplex3D`'s reason.
+ */
+const strokeAt = /* glsl */ `
+  float strokeAt(float q, float at, float width, float perPixel) {
+    if (width <= 0.0) return 0.0;
+
+    float pixels = abs(q - at) / max(perPixel, 1e-6);
+
+    return 1.0 - smoothstep(width * 0.5 - 0.5, width * 0.5 + 0.5, pixels);
+  }
+`;
+
+/**
+ * The window, as a **factor on whatever the shader was about to draw**. The
+ * fresnel one screen down is how far a facet turns *from* the camera; this is
+ * the same reading the other way, so the front opens and the limb stays whole —
+ * and the limb is where a world's silhouette is read, which is why it is the
+ * half that may not be spent.
+ *
+ * Shared, because a world is more than its surface. The body and both veil
+ * modes call it on the same radial normal, so the three open together and the
+ * weather over an opened front is as thin as the front is. A window cut in the
+ * body alone left the cloud hanging in the hole, which read as a lid.
+ *
+ * `uClarity`, `uClarityGamma` and `uClaritySteps` are declared by each shader
+ * that calls this rather than here — `rampRead`'s arrangement, and the one the
+ * join check reads.
+ */
+const clarityOpen = /* glsl */ `
+  float clarityAt(vec3 normal) {
+    if (uClarity <= 0.0) return 1.0;
+
+    float face = pow(clamp(abs(normal.z), 0.0, 1.0), uClarityGamma);
+
+    // Steepened about its middle before it is spent. The bare fresnel is a
+    // gradient with no edge anywhere on it, and a window whose edge is
+    // everywhere reads as haze over the world rather than as a hole in it. The
+    // S puts the whole falloff in one band, so uClarityGamma moves a rim
+    // instead of stretching a wash.
+    //
+    // Twice, because once was still a slope: the second pass flattens what the
+    // first left of the shoulders and halves the band again. Composed rather
+    // than written as one curve so the knob keeps its meaning — this is the
+    // same S the window has always had, applied again.
+    face = face * face * (3.0 - 2.0 * face);
+    face = face * face * (3.0 - 2.0 * face);
+
+    float alpha = clamp(1.0 - uClarity * face, 0.0, 1.0);
+
+    // And then quantised, which is the ramp's own argument spent on the one
+    // quantity on this world that had escaped it. The lattice is fixed at 0 and
+    // 1 and does not move with uClarity, so a level is a level: a half-open
+    // window is the same half-open the next world's is, and turning the clarity
+    // down drops bands off the middle rather than sliding all of them.
+    float steps = max(2.0, uClaritySteps) - 1.0;
+
+    return floor(alpha * steps + 0.5) / steps;
+  }
+`;
+
+/**
+ * The core's inks, three readings' worth, and they are **not** authorable.
+ * Everything else the planet draws is a world's own character; this one mark is
+ * a *reading* of the harvest, and a reading each world stated in its own colours
+ * would be one nobody could learn. Same argument that keeps the hatch's axis off
+ * the sliders.
+ *
+ * The ramp runs 0 `--surface` to 6 `--ink-900`, so the three readings take the
+ * two ends and the middle: **positive is paper, negative is black, even is a
+ * mid-light grey**. That ordering is the copy's, not a palette's — service to
+ * others is the light one — and it is the strongest signal on the screen
+ * because it is the one thing a glance has to get right.
+ *
+ * Each ruled end hatches **one step in from its own ground**, which is why the
+ * two are not simply the ramp's ends against its darkest ink: a hatch far from
+ * its ground is a second mark sitting on the core, and a hatch one step off it
+ * is the ground itself, worked. Even is bare — no ruling at all, because neither
+ * side was taken.
+ *
+ * The souls get **two** numbers per reading rather than borrowing the hatch's,
+ * because a dot has to *carry* at a few pixels where a stroke only has to be
+ * legible. Both ruled ends give the dot their own ground and ring it in the far
+ * end of the ramp: an arrived soul is a bubble the colour of the world it went
+ * into, and what the eye picks up at 4px is the rim. Even keeps the shape and
+ * spends its contrast inside the ramp instead of across it — a step lighter than
+ * its ground, rimmed two steps darker — so the swarm is legible there without
+ * either end of the ramp on it, which is what would read as a decision.
+ *
+ * The ring is fixed here for the same reason the ground is. Outside the core the
+ * swarm keeps its own rule — the far end of the ramp from whatever the fill
+ * landed on — because out there the dot is over the world, not over a reading.
+ */
+const CORE_TONES = {
+  even: { ground: 2, hatch: 2, soul: 1, ring: 4 },
+  light: { ground: 0, hatch: 1, soul: 0, ring: 6 },
+  dark: { ground: 6, hatch: 5, soul: 6, ring: 0 },
+};
+
+/**
  * No lights, no gradient map, no `MeshToonMaterial`. Under an orthographic
  * camera the view vector is a constant, so the fresnel collapses to how far a
  * facet turns from the screen — `1 − |N.z|`. Everything else is where that gets
  * quantised.
+ *
+ * That one term is read twice and in opposite directions. As `rim` it is the
+ * shade at the limb; as `open` it is the **window**, which is the same reading
+ * turned round — the front dissolves and the silhouette stays whole, so what is
+ * spent is the half of the disc that says least about the world's shape.
  */
 const surfaceVertex = /* glsl */ `
   attribute float height;
@@ -204,6 +314,9 @@ const surfaceFragment = /* glsl */ `
   uniform float uShadeGrain;
   uniform float uGrainScale;
   uniform vec3 uOrigin;
+  uniform float uClarity;
+  uniform float uClarityGamma;
+  uniform float uClaritySteps;
 
   varying float vHeight;
   varying vec3 vNormal;
@@ -211,6 +324,7 @@ const surfaceFragment = /* glsl */ `
 
   ${rampRead}
   ${simplex3D}
+  ${clarityOpen}
 
   /**
    * A band boundary drawn as a stroked path rather than left as the step between
@@ -262,6 +376,20 @@ const surfaceFragment = /* glsl */ `
     float fade = 1.0 - smoothstep(0.25, 0.5, uGrainScale * perStep);
     float grain = snoise(vDir * uGrainScale + uOrigin) * 0.5 * fade;
 
+    // The window, on the field's own normal so the front opens along the
+    // terrain rather than along the sphere it was displaced from. Spent as an
+    // **alpha**, and this is the one mark on the world where the seven inks do
+    // not hold: a blend puts the ramp value and whatever stands behind it in the
+    // same pixel and the answer is between them. Taken knowingly.
+    //
+    // A dithered cutout was here first and held the inks, saying the same thing
+    // as a density of holes — but a hole is all or nothing, so a barely open
+    // window came out as sparse confetti, and thin is most of what this window
+    // is. It carried a speckle after that, and the speckle went the same way:
+    // the window is a *clearing*, and grain in it read as damage to the surface
+    // rather than as the surface thinning.
+    float alpha = clarityAt(N);
+
     // The texture. vHeight is a vertex attribute, so this is the only term that
     // turns with the surface — and it is quantised alone, so the pattern is a
     // property of the world rather than of where the camera is standing. Left
@@ -304,7 +432,14 @@ const surfaceFragment = /* glsl */ `
     // the light is.
     float contourInk = mix(uContourTone, uContourShadowTone, step(0.5, shadeLevel));
 
-    gl_FragColor = vec4(mix(readRamp(index), readRamp(contourInk), contourAt(band, perPixel)), 1.0);
+    // Last, and that is the whole of why it is here rather than up beside its
+    // own noise: a discard makes the control flow non-uniform for everything
+    // after it, and every fwidth in this shader is above this line. A fully open
+    // pixel is dropped rather than blended at nought, so it does not leave a
+    // depth write behind for the burst to be cut against.
+    if (alpha <= 0.0) discard;
+
+    gl_FragColor = vec4(mix(readRamp(index), readRamp(contourInk), contourAt(band, perPixel)), alpha);
 
     #include <colorspace_fragment>
   }
@@ -378,14 +513,27 @@ const burstFragment = /* glsl */ `
 const soulVertex = /* glsl */ `
   uniform float uRing;
 
+  // How far this soul has committed to the world, 0 in its orbit and 1 berthed.
+  // Per instance, because the swarm crosses a few at a time and the rest are
+  // still leaving.
+  attribute float stay;
+
   varying vec2 vUv;
+  varying float vStay;
 
   // The fragment's offset from the body's centre, in camera axes. Under an
   // orthographic camera that makes xy the silhouette and z the near/far test.
   varying vec3 vRel;
 
+  // The same offset for the dot's *centre*, and the dot's own radius with it.
+  // Constant across the quad, so a test written on these is a test about the
+  // whole soul rather than about the pixel.
+  varying vec3 vAt;
+  varying float vSpan;
+
   void main() {
     vUv = uv;
+    vStay = stay;
 
     vec4 origin = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
     vec4 centre = modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
@@ -396,6 +544,9 @@ const soulVertex = /* glsl */ `
 
     vec4 viewPos = centre + vec4(position.xy * span, 0.0, 0.0);
     vRel = viewPos.xyz - origin.xyz;
+
+    vAt = centre.xyz - origin.xyz;
+    vSpan = span * 0.5;
 
     gl_Position = projectionMatrix * viewPos;
   }
@@ -413,6 +564,19 @@ const soulVertex = /* glsl */ `
  *
  * `uRim` is the body's *drawn* edge, outline included — see `syncSoulUniforms`.
  * At the sphere alone a soul coming round the back reappeared inside the outline.
+ *
+ * `uCore` is the third place, and the one exception to all of the above: inside
+ * it there is no far half to hide, because the thing a soul would be hidden
+ * behind is the core it has arrived in. Both halves are drawn, over the core, in
+ * an ink of their own. At 0 the whole test is inert and this is the two-ink
+ * shader it was.
+ *
+ * Being hidden is the soul's own commitment: `stay` scales the far half's
+ * hiding, so a soul still in orbit is never behind the world and one crossing
+ * into it sinks behind it over the crossing. A leaver clipped by a silhouette it
+ * is not going into read as the world eating it. Spent on the alpha rather than
+ * on a discard because a half-committed soul is halfway hidden, which no cut can
+ * say.
  */
 const soulFragment = /* glsl */ `
   uniform vec3 uRamp[${RAMP_SLOTS}];
@@ -420,9 +584,15 @@ const soulFragment = /* glsl */ `
   uniform float uRing;
   uniform float uOutTone;
   uniform float uFrontTone;
+  uniform float uCore;
+  uniform float uCoreTone;
+  uniform float uCoreRing;
 
   varying vec2 vUv;
+  varying float vStay;
   varying vec3 vRel;
+  varying vec3 vAt;
+  varying float vSpan;
 
   ${rampRead}
 
@@ -442,19 +612,38 @@ const soulFragment = /* glsl */ `
     float over = step(reach, edge);
     float front = step(surface, vRel.z);
 
-    // Behind the world is behind the world. Per fragment, so a dot crossing the
-    // silhouette is cut in half rather than vanishing whole.
-    if (over > 0.5 && front < 0.5) discard;
+    // A soul that has arrived. Tested on the same silhouette radius the ink
+    // switches on, so the core is a disc in the same measure as everything else
+    // here — the sphere it is drawn from is never asked about.
+    //
+    // Whole dot, unlike everything else in this shader: arriving is something a
+    // soul does and not something a pixel does, and per fragment it cropped a
+    // berthed soul to the crescent of itself that was over the core. The dot's
+    // own radius is added, so a soul touching the rim is in and the wobble
+    // cannot carry an outermost berth back out of it.
+    float span = uCore + vSpan;
+    float inCore = step(dot(vAt.xy, vAt.xy), span * span) * step(0.001, uCore);
 
-    float tone = mix(uOutTone, uFrontTone, over);
+    // Behind the world is behind the world, for whatever has thrown in with it.
+    // Per fragment, so a dot crossing the silhouette is cut in half rather than
+    // vanishing whole.
+    float behind = over * (1.0 - front) * (1.0 - inCore);
+    alpha *= 1.0 - behind * clamp(vStay, 0.0, 1.0);
+    if (alpha <= 0.0) discard;
 
-    // The ring takes the far end of the ramp from whatever the fill landed on,
-    // rather than an ink of its own: a fourth authored tone would need setting
-    // once per place a soul can be, and would still be wrong for one of them.
+    float tone = mix(mix(uOutTone, uFrontTone, over), uCoreTone, inCore);
+
+    // Over the world the ring takes the far end of the ramp from whatever the
+    // fill landed on, rather than an ink of its own: an authored tone would need
+    // setting once per place a soul can be, and would still be wrong for one of
+    // them. Over the core it is fixed with the rest of the reading, because
+    // there the pair is the mark — a dot in the ground's own tone that is only
+    // seen at all by its rim.
     // Gated, or at width 0 the ring would still claim the dot's own soft edge.
     float core = 1.0 / (1.0 + uRing);
     float ring = smoothstep(core - aa, core, spread) * step(0.001, uRing);
-    tone = mix(tone, mix(6.0, 0.0, step(3.5, tone)), ring);
+    float ringTone = mix(mix(6.0, 0.0, step(3.5, tone)), uCoreRing, inCore);
+    tone = mix(tone, ringTone, ring);
 
     gl_FragColor = vec4(readRamp(tone), alpha);
 
@@ -695,21 +884,6 @@ const anchorGhostFragment = /* glsl */ `
     if (invert <= 0.0) discard;
 
     gl_FragColor = vec4(vec3(invert), 1.0);
-  }
-`;
-
-/**
- * A stroke centred on `at`, `width` px wide, measured against a coordinate that
- * runs 1.0 at the ring's own radius. `perPixel` is passed in because a
- * derivative has to be taken in uniform control flow, and the width test is not.
- */
-const strokeAt = /* glsl */ `
-  float strokeAt(float q, float at, float width, float perPixel) {
-    if (width <= 0.0) return 0.0;
-
-    float pixels = abs(q - at) / max(perPixel, 1e-6);
-
-    return 1.0 - smoothstep(width * 0.5 - 0.5, width * 0.5 + 0.5, pixels);
   }
 `;
 
@@ -1379,6 +1553,9 @@ const veilAlphaFragment = /* glsl */ `
   uniform float uPoleEdge;
   uniform float uKey;
   uniform vec3 uKeyDir;
+  uniform float uClarity;
+  uniform float uClarityGamma;
+  uniform float uClaritySteps;
 
   varying vec3 vDir;
   varying vec3 vNormal;
@@ -1386,6 +1563,7 @@ const veilAlphaFragment = /* glsl */ `
   ${rampRead}
   ${simplex3D}
   ${veilField}
+  ${clarityOpen}
 
   void main() {
     float line;
@@ -1400,7 +1578,11 @@ const veilAlphaFragment = /* glsl */ `
 
     // The line carries its own opacity rather than borrowing the fill's, so an
     // outline is still a line where the cloud under it has gone to nothing.
-    float alpha = max(cover, line);
+    //
+    // The window thins the whole layer, its outline included. A veil that kept
+    // its edge over an opened front would draw a clean contour around a hole,
+    // which is the one thing that would make the hole read as a hole.
+    float alpha = max(cover, line) * clarityAt(normalize(vNormal));
     if (alpha <= 0.0) discard;
 
     gl_FragColor = vec4(mix(readRamp(uTone), readRamp(uOutlineTone), line), alpha);
@@ -1468,6 +1650,9 @@ const veilHatchFragment = /* glsl */ `
   uniform float uHatchGrainScale;
   uniform float uHatchSoften;
   uniform float uHatchShade;
+  uniform float uClarity;
+  uniform float uClarityGamma;
+  uniform float uClaritySteps;
 
   varying vec3 vDir;
   varying vec3 vNormal;
@@ -1475,6 +1660,7 @@ const veilHatchFragment = /* glsl */ `
   ${rampRead}
   ${simplex3D}
   ${veilField}
+  ${clarityOpen}
 
   /**
    * Where a direction falls across the ruling, counted in stroke periods. The
@@ -1701,7 +1887,11 @@ const veilHatchFragment = /* glsl */ `
     // here the key is a shading and a cloud does not lose its edge to the dark.
     float drawn = step(0.5, line);
 
-    alpha = max(alpha, drawn);
+    // The window, last and over everything this mode drew — the density read
+    // included. It is the third knob here that spends the seven inks, and the
+    // only one that is not the veil's own doing: an opened front thins the
+    // weather over it whatever the pen was set to.
+    alpha = max(alpha, drawn) * clarityAt(normalize(vNormal));
     if (alpha <= 0.0) discard;
 
     gl_FragColor = vec4(readRamp(mix(uTone + reached + deeper, uOutlineTone, drawn)), alpha);
@@ -1715,6 +1905,16 @@ export function createSurfaceMaterial() {
     vertexShader: surfaceVertex,
     fragmentShader: surfaceFragment,
     side: THREE.FrontSide,
+    // The window is an alpha, so the body sorts as a transparent mark — see
+    // `RENDER_ORDER.body`. At uClarity 0 every pixel is alpha 1 and this costs
+    // the picture nothing, which is what lets the eight views that never open a
+    // window be unaffected by the one that does.
+    transparent: true,
+    // Kept, though three's default for a transparent material is off. The body
+    // is the depth cue the whole scene is built against — the burst is cut
+    // against it, the outline hull's near half is rejected by it — and none of
+    // that may change because the front went thin.
+    depthWrite: true,
     uniforms: {
       uRamp: { value: readInkRamp() },
       uRim: { value: 0.75 },
@@ -1735,6 +1935,9 @@ export function createSurfaceMaterial() {
       uShadeGrain: { value: 0 },
       uGrainScale: { value: 30 },
       uOrigin: { value: new THREE.Vector3() },
+      uClarity: { value: 0 },
+      uClarityGamma: { value: 2 },
+      uClaritySteps: { value: 5 },
     },
   });
 }
@@ -1793,6 +1996,9 @@ export function createVeilAlphaMaterial() {
       uPoleEdge: { value: 2 },
       uKey: { value: 0 },
       uKeyDir: { value: new THREE.Vector3(0, 0, 1) },
+      uClarity: { value: 0 },
+      uClarityGamma: { value: 2 },
+      uClaritySteps: { value: 5 },
     },
   });
 }
@@ -1826,6 +2032,9 @@ export function createVeilHatchMaterial() {
       uPoleEdge: { value: 2 },
       uKey: { value: 0 },
       uKeyDir: { value: new THREE.Vector3(0, 0, 1) },
+      uClarity: { value: 0 },
+      uClarityGamma: { value: 2 },
+      uClaritySteps: { value: 5 },
       uHatchDensity: { value: 24 },
       uHatchWidth: { value: 1 },
       uHatchAlpha: { value: 0.85 },
@@ -1894,6 +2103,9 @@ export function createSoulMaterial() {
       uRing: { value: 0 },
       uOutTone: { value: 6 },
       uFrontTone: { value: 0 },
+      uCore: { value: 0 },
+      uCoreTone: { value: 6 },
+      uCoreRing: { value: 0 },
     },
   });
 }
@@ -1905,6 +2117,12 @@ export function createHarnessMaterial() {
     // A ribbon's winding follows whichever way its segment happens to run, so
     // there is no consistent front to cull.
     side: THREE.DoubleSide,
+    // Transparent, though every fragment it writes is alpha 1. Three draws the
+    // whole opaque pass before the transparent one and honours `renderOrder`
+    // only *within* a pass, so once the body blends nothing opaque can sit
+    // above it — an opaque harness is painted over by the world it crosses,
+    // front loops and all. Costs one blend of a fully opaque source.
+    transparent: true,
     // The lines behind the planet stay visible and pale rather than
     // disappearing, so the depth buffer must not have an opinion about them.
     depthTest: false,
@@ -1928,6 +2146,10 @@ export function createAnchorMaterial() {
     vertexShader: anchorVertex,
     fragmentShader: anchorFragment,
     side: THREE.FrontSide,
+    // Alpha 1 throughout; this is only a pass, not a blend — see
+    // `createHarnessMaterial`. It keeps writing depth, which is what the pair
+    // below and the body's own test still go by.
+    transparent: true,
     // The edges lie exactly on these faces. Without the offset they z-fight,
     // and with it the two need no render order between them. The edges pull the
     // other way by as much again, because a stroke with a width to it covers a
@@ -1950,6 +2172,7 @@ export function createAnchorEdgeMaterial() {
     vertexShader: anchorEdgeVertex,
     fragmentShader: anchorEdgeFragment,
     side: THREE.DoubleSide,
+    transparent: true,
     // See `createAnchorMaterial`: the facets go back a unit, these come forward
     // one, and a wide stroke keeps its clearance over the slope it lies on.
     polygonOffset: true,
@@ -2259,6 +2482,8 @@ export function syncSoulUniforms(
   material: THREE.ShaderMaterial,
   visual: SwarmVisual,
   bleed: number,
+  reach: number,
+  lean: number,
 ) {
   const u = material.uniforms;
 
@@ -2266,6 +2491,34 @@ export function syncSoulUniforms(
   u.uRing.value = visual.ring;
   u.uOutTone.value = Math.round(visual.outTone);
   u.uFrontTone.value = Math.round(visual.frontTone);
+
+  // How far out a soul still counts as arrived, not a swarm field: it is the
+  // *body's* core, the same argument that keeps `bleed` a parameter rather than
+  // a slider. 0 is a world with no core, and the third place is then unreachable.
+  //
+  // Deliberately not the core's radius. A berth sits inside it but the wobble
+  // rides on top, so souls on the outer shell crossed a radius-tight boundary
+  // and back as they milled — a flicker on the one mark that has to be steady.
+  // The caller widens it by what the wobble can spend; the shader adds the dot.
+  //
+  // That third place's pair is fixed, unlike the two tones above it, and takes
+  // the *lean* rather than a slider: the core's ground is paper on one reading
+  // and black on the other, so one authored tone would be a dot that disappears
+  // on half the harvests. See `CORE_TONES` for why it is a fill and a ring and
+  // not simply the hatch's ink.
+  u.uCore.value = Math.max(0, reach);
+  u.uCoreTone.value = coreOf(lean).soul;
+  u.uCoreRing.value = coreOf(lean).ring;
+}
+
+/** Which of the three readings a lean is. `syncCoreUniforms` and the swarm must agree. */
+function coreOf(lean: number) {
+  const at = Math.sign(Math.round(lean));
+
+  if (at > 0) return CORE_TONES.light;
+  if (at < 0) return CORE_TONES.dark;
+
+  return CORE_TONES.even;
 }
 
 /**
@@ -2293,8 +2546,22 @@ function originOf(seed: number) {
   );
 }
 
-export function syncSurfaceUniforms(material: THREE.ShaderMaterial, visual: PlanetVisual) {
+/**
+ * `clarity` is passed rather than read off the visual, because the window is not
+ * a property of the world on its own — it is half of one mark, and the other
+ * half is the core, and a core is only drawn where there is an alignment to put
+ * in it. A view with none passes 0 and the body is the solid it always was.
+ */
+export function syncSurfaceUniforms(
+  material: THREE.ShaderMaterial,
+  visual: PlanetVisual,
+  clarity: number,
+) {
   const u = material.uniforms;
+
+  u.uClarity.value = Math.max(0, Math.min(1, clarity));
+  u.uClarityGamma.value = Math.max(0.01, visual.clarityGamma);
+  u.uClaritySteps.value = Math.max(2, Math.round(visual.claritySteps));
 
   u.uRim.value = visual.rim;
   u.uRimGamma.value = visual.rimGamma;
@@ -2321,8 +2588,17 @@ export function syncSurfaceUniforms(material: THREE.ShaderMaterial, visual: Plan
   u.uOrigin.value.copy(originOf(visual.seed));
 }
 
-export function syncVeilUniforms(material: THREE.ShaderMaterial, visual: PlanetVisual) {
+/** `clarity` reaches the veil for the reason it reaches the body — see `syncSurfaceUniforms`. */
+export function syncVeilUniforms(
+  material: THREE.ShaderMaterial,
+  visual: PlanetVisual,
+  clarity: number,
+) {
   const u = material.uniforms;
+
+  u.uClarity.value = Math.max(0, Math.min(1, clarity));
+  u.uClarityGamma.value = Math.max(0.01, visual.clarityGamma);
+  u.uClaritySteps.value = Math.max(2, Math.round(visual.claritySteps));
 
   u.uVeil.value = Math.max(0, visual.veil);
   u.uHeight.value = Math.max(0, visual.veilHeight);

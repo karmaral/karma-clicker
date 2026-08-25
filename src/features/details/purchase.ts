@@ -16,7 +16,7 @@ export function resolveQuantity(cohort: Building, mode: PurchaseMode) {
   return Number(mode);
 }
 
-/** What the button charges for. One is the floor — a zero buy still shows a price. */
-export function resolveBuyable(cohort: Building, mode: PurchaseMode) {
+/** What the button charges for. One is the floor — a zero purchase still shows a price. */
+export function resolvePurchasable(cohort: Building, mode: PurchaseMode) {
   return Math.max(1, resolveQuantity(cohort, mode));
 }

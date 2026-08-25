@@ -3,8 +3,9 @@
  * stated once rather than as four numbers that have to agree.
  *
  * ```
+ * -3 core           the harvest's alignment, inside the world and under all of it
+ * -2 body           writes depth, so the far side of everything solid is hidden
  * -1 burst          the click, the world's own shape thrown out behind it
- * 0  body           writes depth, so the far side of everything solid is hidden
  * 0  veil           the same shell again, over the body it is a layer on — no
  *                   depth test, and its far half is culled rather than cut
  * 1  placed anchor  depth-tested, so the solid caps the lines that end in it
@@ -34,10 +35,35 @@
  * would read as having happened somewhere else.
  */
 /**
- * The burst is the one negative, and it is behind the body rather than in front
- * of it — the only mark here that is. Being transparent, three draws it after
- * the opaque pass whatever this says; what the order buys is that it is first
- * among the transparent marks, so the halo and the sparks land over it.
+ * The body is here at all because its window is an **alpha**, so the surface is
+ * transparent and no longer sorts itself by being opaque. It takes the bottom
+ * but one, and the core takes the bottom: everything the window is for is that
+ * the core is already on screen when the front blends over it, and how much of
+ * it survives is exactly the body's alpha there.
+ *
+ * The core is under the *outline hull* too, which is opaque and so drawn ahead
+ * of both regardless. That is what the core is seen against wherever its own rim
+ * has feathered away — the hull's far hemisphere in `outlineTone`, and the
+ * reason the fade lands on ink rather than on paper.
+ *
+ * The body writes depth, at full alpha and at none. That is what keeps the burst
+ * below reading the way it did when the body was opaque.
+ *
+ * And it puts one condition on everything above it: **a mark listed after the
+ * body must be transparent too.** Three draws the whole opaque pass first and
+ * sorts by `renderOrder` only within a pass, so an opaque mark above the body is
+ * still drawn *before* it and painted over — the harness and both anchor
+ * materials are `transparent` for that reason alone, at alpha 1 throughout.
+ * Only the outline hull is exempt, and only because being ahead of both is what
+ * it is for.
+ */
+/**
+ * The burst is behind the body and drawn **after** it, which only looks like a
+ * contradiction. It depth-tests on strictly-less against a body that has just
+ * written its own depth, so every fragment the body covers is rejected and what
+ * survives is the ring outside the silhouette — the same picture the opaque body
+ * used to cut for it from the pass in front. Ordered before the veil and the
+ * marks above so those still land over it.
  */
 /**
  * The veil takes the body's own number rather than one of its own. It is not a
@@ -53,6 +79,8 @@
  * shell that was built by discarding it.
  */
 export const RENDER_ORDER = {
+  core: -3,
+  body: -2,
   burst: -1,
   veil: 0,
   anchor: 1,

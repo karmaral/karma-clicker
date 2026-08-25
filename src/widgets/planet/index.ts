@@ -22,8 +22,8 @@ export {
 export { keyLight } from './light.svelte';
 export {
   DEFAULT_SWARM, SOUL_CAPACITY, SWARM_GROUPS, SWARM_PARAMS,
-  cloneSwarm, printSwarm, riderCount,
-  type SwarmGroup, type SwarmParam, type SwarmVisual,
+  berthOf, berthRoom, cloneSwarm, printSwarm, rankOf, riderCount, settleScale, shareOf, travelOf,
+  type Soul, type SwarmGroup, type SwarmParam, type SwarmVisual,
 } from './orbit';
 export {
   DEFAULT_PULSE, PULSE_CAPACITY, PULSE_GROUPS, PULSE_PARAMS,
@@ -34,7 +34,8 @@ export { setWatched, useWatched } from './watched';
 export { buildGeometry } from './geometry';
 export { readInkHexes, RAMP_SIZE } from './ink';
 export {
-  DEFAULT_VISUAL, LEAN_REACH, STILL_OUTLINE, TILT_REACH, VISUAL_GROUPS, VISUAL_PARAMS,
-  cloneVisual, printVisual, toStill,
+  DEFAULT_VISUAL, HARVEST_ANCHOR, HARVEST_RADIUS,
+  LEAN_REACH, STAGE_RADIUS, STILL_OUTLINE, TILT_REACH, VISUAL_GROUPS, VISUAL_PARAMS,
+  cloneVisual, printVisual, scaleInk, toStill,
   type PlanetVisual, type VisualGroup, type VisualParam,
 } from './visual';

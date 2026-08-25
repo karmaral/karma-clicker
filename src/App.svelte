@@ -12,7 +12,7 @@
   import { f } from '$lib/utils';
   import * as loop from '$lib/loop';
   import { Frame, Screen } from '$features/frame';
-  import { DetailScreen } from '$features/detail';
+  import { DetailsScreen } from '$features/details';
   import { OverviewScreen } from '$features/overview';
   import { RefineryScreen } from '$features/refinery';
   import DevPanel from '$features/dev/DevPanel.svelte';
@@ -74,8 +74,8 @@
          hidden rather than destroyed, so its planet keeps the context it was
          drawn in and comes back turning instead of blank. -->
     <div class="screens">
-      <Screen active={nav.active === 'detail'}>
-        <DetailScreen />
+      <Screen active={nav.active === 'details'}>
+        <DetailsScreen />
       </Screen>
 
       <Screen active={nav.active === 'overview'}>

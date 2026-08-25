@@ -12,7 +12,7 @@
   import LeanMeter from './LeanMeter.svelte';
   import RateFigure from './RateFigure.svelte';
   import { badgeFor, byRateOrder } from './badge';
-  import { resolveBuyable, resolveQuantity } from './purchase';
+  import { resolvePurchasable, resolveQuantity } from './purchase';
   import texts from '$data/buildings-texts';
 
   interface Props {
@@ -23,6 +23,8 @@
     /** The head prices the same buy this row is previewing. Undefined clears it. */
     onpreview?: (id: string | undefined) => void;
     onpurchase?: (quantity: number) => void;
+    /** Right-clicking the button advances the mode, without leaving the row. */
+    oncyclemode?: () => void;
   }
 
   let {
@@ -32,10 +34,11 @@
     compact = true,
     onpreview,
     onpurchase,
+    oncyclemode,
   }: Props = $props();
 
   const resolvedQuantity = $derived(resolveQuantity(cohort, purchaseMode));
-  const quantity = $derived(resolveBuyable(cohort, purchaseMode));
+  const quantity = $derived(resolvePurchasable(cohort, purchaseMode));
   const cost = $derived(cohort.getCost(quantity) ?? 0);
   const affordable = $derived(resolvedQuantity > 0 && BuildingManager.canAfford(cohort.id, resolvedQuantity));
   const aimed = $derived(aim.resolve(cohort.id, cohort.data));
@@ -202,6 +205,7 @@
       onclick={() => onpurchase?.(quantity)}
       onmouseenter={startPreview}
       onmouseleave={endPreview}
+      oncycle={oncyclemode}
       {quantity}
     />
   </div>

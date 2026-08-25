@@ -2,6 +2,7 @@
   import { T, useTask, useThrelte } from '@threlte/core';
   import { onDestroy, type Snippet } from 'svelte';
   import type * as THREE from 'three';
+  import PlanetCore from './PlanetCore.svelte';
   import { buildGeometry, trimGeometryCache } from './geometry';
   import { readInkRamp } from './ink';
   import {
@@ -38,6 +39,15 @@
      */
     veilAngle?: number;
     /**
+     * The harvest's alignment, −1, 0 or +1. It is what the **core** says, and so
+     * it is also what decides there is one: absent, no core is mounted and the
+     * body's window stays shut, because a window onto nothing is a hole.
+     *
+     * Game state, so it is a prop rather than a `PlanetVisual` field — the same
+     * separation `cohorts` and `merge` already keep one layer up.
+     */
+    alignment?: number;
+    /**
      * Drawn inside the body's hold but outside its spin — orbits and markers
      * share the world's axis without being dragged round by its surface.
      */
@@ -50,8 +60,11 @@
   }
 
   let {
-    visual, zoom, spinAngle = 0, veilAngle = 0, pulse, pulses, children, standing,
+    visual, zoom, spinAngle = 0, veilAngle = 0, alignment, pulse, pulses, children, standing,
   }: Props = $props();
+
+  /** One mark, two halves — see `alignment`. Neither is drawn without it. */
+  const hasCore = $derived(alignment !== undefined && visual.core > 0);
 
   const { invalidate } = useThrelte();
   const ramp = readInkRamp();
@@ -69,7 +82,7 @@
 
   $effect(() => {
     geometry;
-    syncSurfaceUniforms(surface, visual);
+    syncSurfaceUniforms(surface, visual, hasCore ? visual.clarity : 0);
     syncOutlineUniforms(outline, visual, ramp, zoom);
 
     if (pulse) syncBurstUniforms(burst, outline, pulse, ramp, zoom);
@@ -105,7 +118,7 @@
   $effect(() => {
     if (!veilMaterial) return;
 
-    syncVeilUniforms(veilMaterial, visual);
+    syncVeilUniforms(veilMaterial, visual, hasCore ? visual.clarity : 0);
     invalidate();
   });
 
@@ -149,7 +162,10 @@
         {#if visual.outline > 0}
           <T.Mesh {geometry} material={outline} />
         {/if}
-        <T.Mesh {geometry} material={surface} />
+        <!-- Ordered, unlike the outline above it: the surface is transparent
+             (the window is an alpha) and so it sorts among the marks rather
+             than being drawn ahead of them all. `stack.ts` has the reasoning. -->
+        <T.Mesh {geometry} material={surface} renderOrder={RENDER_ORDER.body} />
 
         {@render standing?.()}
       </T.Group>
@@ -171,6 +187,15 @@
             frustumCulled={false}
           />
         </T.Group>
+      {/if}
+
+      <!-- Outside the spin, unlike everything above it: a reading is not ground,
+           and a core that turned with the surface would be saying something
+           about the world rather than about the harvest. It sorts under the body
+           and under the hull both, which is `stack.ts`'s bottom entry — so the
+           front blends over it and its own feathered rim fades onto ink. -->
+      {#if hasCore}
+        <PlanetCore {visual} lean={alignment ?? 0} />
       {/if}
 
       {@render children?.()}

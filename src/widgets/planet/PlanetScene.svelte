@@ -15,13 +15,21 @@
   import { buildLoops, trimLoopCache, type HarnessVisual } from './harness';
   import { readToken } from './ink';
   import type { SwarmVisual } from './orbit';
-  import { createPulses, PULSE_CAPACITY, type PulseVisual } from './pulse';
+  import { createPulses, PULSE_CAPACITY, sparkWorldPosition, type PulseVisual } from './pulse';
   import type { PlanetVisual } from './visual';
 
   interface Props {
     visual: PlanetVisual;
     /** World units across the viewport's short axis — the framing, not the planet. */
     frame?: number;
+    /**
+     * How far down the camera stands, in world units — so the world is seen
+     * *above* the box's middle. A translation and not a look-at: under an
+     * orthographic camera every mark keeps the direction it was drawn in, and
+     * the shaders read view-space offsets from the body's centre rather than
+     * screen positions, so nothing is passed a uniform for this.
+     */
+    offsetY?: number;
     /**
      * `null` leaves the canvas clear, which is what a picture that will be drawn
      * onto some other ground needs: a row highlights by changing what is under
@@ -34,11 +42,22 @@
      * caller is unchanged — and a world with no cohorts is bare, not broken.
      */
     cohorts?: number[];
+    /** The share of the swarm staying with the world. See `SoulSwarm`. */
+    merge?: number;
+    /**
+     * The harvest's alignment, −1, 0 or +1 — and the one switch for the whole
+     * core. Absent draws no core, holds the body's window shut and leaves the
+     * arriving souls at `settleAt`, so every view that does not pass it is the
+     * picture it always was. See `PlanetBody`.
+     */
+    alignment?: number;
     anchors?: AnchorVisual;
     /** One flag per anchor. Empty draws no harness, the way `cohorts` does. */
     anchored?: boolean[];
     /** The lines between the anchors. Absent draws poles and nothing strung. */
     harness?: HarnessVisual;
+    /** How many souls the harness carries. See `SoulSwarm`. */
+    riders?: number;
     /** What a click leaves behind. Absent means the world does not answer one. */
     pulse?: PulseVisual;
     /**
@@ -48,10 +67,25 @@
      */
     clockKey?: string;
     /**
-     * A running count of clicks. Every rise flashes the world once, so the
+     * A running count of clicks. Every rise echoes the world once, so the
      * caller owns the event and the scene only owns what it looks like.
      */
     flashes?: number;
+    /**
+     * A running count of landed yields — not clicks. Every rise sparks the
+     * ground once, so the mark answers to the payout rather than to the press
+     * that queued it.
+     */
+    yields?: number;
+    /** Where the spark a `yields` rise just planted lands on screen, in px. */
+    onspark?: (point: { x: number; y: number }) => void;
+    /**
+     * And where the anchor currently going down is, in the same px. Pushed on
+     * the frame rather than read, because the world turns under it — the caller
+     * keeps the last one and uses it when it has something to say there.
+     * `undefined` once every anchor is in.
+     */
+    onplacing?: (point: { x: number; y: number } | undefined) => void;
     /**
      * Drawn, but not looked at. A screen that has been left keeps its canvas so
      * it can come back drawn, and a world nobody sees should not be asking for
@@ -64,15 +98,22 @@
   let {
     visual,
     frame = 2.7,
+    offsetY = 0,
     backgroundToken = '--canvas',
     swarm,
     cohorts,
+    merge,
+    alignment,
     anchors,
     anchored,
     harness,
+    riders,
     pulse,
     clockKey,
     flashes = 0,
+    yields = 0,
+    onspark,
+    onplacing,
     isPaused = false,
   }: Props = $props();
 
@@ -109,6 +150,14 @@
   const worldSize = $derived(Math.max(0.05, visual.size));
 
   /**
+   * Where a soul that stays ends up, in body radii — 0 when there is no core, so
+   * `SoulSwarm` keeps its old destination. Worked out here for the reason
+   * `bleed` is: a mark standing beside the world should not read a
+   * `PlanetVisual` to find out how far in the world goes.
+   */
+  const core = $derived(alignment !== undefined ? Math.max(0, visual.core) : 0);
+
+  /**
    * The anchors as this world wears them. Adjusted here rather than inside
    * `Anchors`, because `placeAnchors` is read from both places and a solid built
    * at one size standing on a placement computed at another is the one way this
@@ -125,19 +174,18 @@
   const field = $derived(hasAnchors || pulse ? createSurfaceField(visual) : undefined);
 
   /**
-   * The nodes a line may be strung between: the *placed* ones. A harness is
-   * what has been driven in, so it grows anchor by anchor instead of being
-   * drawn in full and waiting for them.
+   * Every anchor, placed or ghost — and the placements rather than the bare
+   * figure, because each one carries the `peak` a line converges on, as the
+   * terrain under it actually left it.
    *
-   * The placements rather than the bare figure, because each one carries the
-   * `peak` its lines converge on — so a line ends on the top of a pole, and on
-   * the top of the pole as the terrain under it actually left it.
+   * `strung` is the *placed* half of it: a harness is what has been driven in,
+   * so it grows anchor by anchor instead of being drawn in full and waiting.
    */
-  const strung = $derived(
-    poles && anchored?.length && field
-      ? placeAnchors(poles, anchored, field.sampleRadius).filter((node) => node.isPlaced)
-      : [],
+  const placements = $derived(
+    poles && anchored?.length && field ? placeAnchors(poles, anchored, field.sampleRadius) : [],
   );
+
+  const strung = $derived(placements.filter((node) => node.isPlaced));
 
   /**
    * Built here rather than inside `Harness`, because the swarm rides the same
@@ -210,17 +258,48 @@
   $effect(() => {
     const at = flashes;
 
-    if (answered === undefined || !pulse || !field) {
+    if (answered === undefined || !pulse) {
       answered = at;
       return;
     }
 
     // Clamped to the buffer: a burst longer than it would only overwrite its own
-    // oldest marks, and every one of those is a field sample.
+    // oldest marks.
     for (let i = Math.max(answered, at - PULSE_CAPACITY); i < at; i++) {
-      // Untracked: where the world is held is read *at* the click and is not
-      // something this effect answers to. Subscribing would re-run it on every
-      // frame the spin advances and on every drag of the hold's puck.
+      pulses.echo();
+    }
+
+    answered = at;
+    invalidate();
+  });
+
+  /**
+   * Where world (x, y) lands on screen, in px from the top-left of the canvas.
+   * The camera stands unrotated on the Z axis, so this is the whole of the
+   * orthographic projection — no perspective divide, and `z` never mattered.
+   */
+  function projectToScreen(x: number, y: number) {
+    return {
+      x: size.current.width / 2 + x * zoom,
+      y: size.current.height / 2 - (y - offsetY) * zoom,
+    };
+  }
+
+  /** Same cursor discipline as `flashes`, kept apart because a yield is not a click. */
+  let sparked: number | undefined;
+
+  $effect(() => {
+    const at = yields;
+
+    if (sparked === undefined || !pulse || !field) {
+      sparked = at;
+      return;
+    }
+
+    for (let i = Math.max(sparked, at - PULSE_CAPACITY); i < at; i++) {
+      // Untracked for the same reason `flashes` used to read it this way: where
+      // the world is held is read *at* the yield, not answered to on every
+      // frame the spin advances.
       const held = untrack(() => ({
         lean: visual.lean,
         tilt: visual.tilt,
@@ -228,11 +307,45 @@
         spin: spinAngle,
       }));
 
-      pulses.flash(Math.round(pulse.sparks), field, pulse.sparkFace, held);
+      const written = pulses.spark(Math.round(pulse.sparks), field, pulse.sparkFace, held);
+
+      // No spark to land on (the count slider at 0) reads as the planet's own
+      // centre — rotating the origin leaves it the origin.
+      const world = written.length > 0 ? sparkWorldPosition(written[0], held) : { x: 0, y: 0 };
+
+      onspark?.(projectToScreen(world.x, world.y));
     }
 
-    answered = at;
+    sparked = at;
     invalidate();
+  });
+
+  /**
+   * The one going down: they fill in order, so it is the first ghost. −1 once
+   * the harness is complete, which is what puts the readout away.
+   */
+  const placing = $derived(placements.findIndex((node) => !node.isPlaced));
+
+  /**
+   * Reported per frame rather than on demand, because the world turns under it
+   * and a caller outside the canvas has no way to ask. Cheap — one rotation and
+   * a projection, and only on a world that is being anchored at all.
+   */
+  useTask(() => {
+    if (!onplacing) return;
+
+    const node = placements[placing];
+    if (!node) {
+      onplacing(undefined);
+      return;
+    }
+
+    const world = sparkWorldPosition(
+      { x: node.x, y: node.y, z: node.z, r: node.peak },
+      { lean: visual.lean, tilt: visual.tilt, turn: visual.turn, spin: spinAngle },
+    );
+
+    onplacing(projectToScreen(world.x, world.y));
   });
 
   /**
@@ -257,9 +370,9 @@
   });
 </script>
 
-<T.OrthographicCamera makeDefault position={[0, 0, 5]} {zoom} />
+<T.OrthographicCamera makeDefault position={[0, offsetY, 5]} {zoom} />
 
-<PlanetBody {visual} {zoom} {spinAngle} {veilAngle} {pulse} {pulses}>
+<PlanetBody {visual} {zoom} {spinAngle} {veilAngle} {alignment} {pulse} {pulses}>
   {#snippet standing()}
     {#if harness && loops}
       <Harness visual={harness} {loops} {zoom} {rim} size={worldSize} />
@@ -281,9 +394,13 @@
       counts={cohorts}
       {zoom}
       {loops}
+      {riders}
       {clock}
       {spinAngle}
       {bleed}
+      {merge}
+      {core}
+      lean={alignment ?? 0}
       size={worldSize}
     />
   {/if}

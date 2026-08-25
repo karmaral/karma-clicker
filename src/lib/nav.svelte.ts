@@ -4,15 +4,15 @@ import { SCREEN_LABELS, type ScreenName } from '$lib/labels';
 
 const NAV_KEY: Record<ScreenName, RevealKey> = {
   overview: 'nav.overview',
-  detail: 'nav.detail',
+  details: 'nav.details',
   refinery: 'nav.refinery',
 };
 
-let requested = $state<ScreenName>('detail');
+let requested = $state<ScreenName>('details');
 
 /** A finished world is not somewhere you can still act — Detail closes with it. */
 function isAvailable(screen: ScreenName) {
-  if (screen === 'detail') {
+  if (screen === 'details') {
     const planet = PlanetManager.getActive();
 
     return Boolean(planet) && !planet.isHarvested;

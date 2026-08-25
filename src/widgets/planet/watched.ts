@@ -13,9 +13,18 @@ import { getContext, setContext } from 'svelte';
 
 const KEY = Symbol('watched');
 
-/** Told by whatever owns the showing. A getter, so the reader stays reactive. */
+/**
+ * Told by whatever owns the showing. A getter, so the reader stays reactive.
+ *
+ * Composed with whatever is already above it, because these nest: a screen
+ * inside a frame that has itself been taken over is not watched, however active
+ * it is on its own. Without the `&&` the inner answer would shadow the outer
+ * one and a hidden frame would go on painting three worlds nobody can see.
+ */
 export function setWatched(isWatched: () => boolean) {
-  setContext(KEY, isWatched);
+  const above = useWatched();
+
+  setContext(KEY, () => above() && isWatched());
 }
 
 /** The predicate itself rather than its answer — read once, at init, and called after. */

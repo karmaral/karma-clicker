@@ -7,27 +7,60 @@
   import type { PulseVisual } from './pulse';
   import type { PlanetVisual } from './visual';
   import { useWatched } from './watched';
+  import { f } from '$lib/utils';
+
+  /** A beat past `sparkLife`'s default, so the number outlives the mark it named. */
+  const POPUP_LIFE_MS = 900;
+
+  /** Pre-formatted, so the two sources — the payout and the press — share a render. */
+  interface Popup {
+    id: number;
+    x: number;
+    y: number;
+    text: string;
+  }
 
   interface Props {
     visual: PlanetVisual;
     widthPx?: number;
     heightPx?: number;
     frame?: number;
+    /** Where the camera stands, in world units. See `PlanetScene`. */
+    offsetY?: number;
     backgroundToken?: string;
     swarm?: SwarmVisual;
     cohorts?: number[];
+    /** The share of the swarm staying with the world. See `SoulSwarm`. */
+    merge?: number;
+    /** The harvest's alignment, and the whole switch for the core. See `PlanetScene`. */
+    alignment?: number;
     anchors?: AnchorVisual;
     anchored?: boolean[];
     harness?: HarnessVisual;
+    /** How many souls the harness carries. See `SoulSwarm`. */
+    riders?: number;
     pulse?: PulseVisual;
+    disabled?: boolean;
     /**
      * Who this world is, for keeping time. Two views of one world pass the same
      * key and share its spin, so changing screens — or scrolling a view out of
      * the observer's range and back — does not put it at nought.
      */
     clockKey?: string;
-    clickActionLabel?: string;
+    clickActionVerb?: string;
     onclickaction?: () => void;
+    /** A running count of landed yields. See `PlanetScene`. */
+    yields?: number;
+    /** What the next spark's popup should read. Read fresh, not captured at the click. */
+    yieldValue?: number;
+    /**
+     * What a press itself is worth. Popped at the anchor it is going into, not
+     * under the cursor: the press buys progress on a particular pole, and the
+     * number belongs where it lands. Falls back to the pointer when there is no
+     * anchor to name. Absent pops nothing.
+     */
+    pressValue?: number;
+    pressFormat?: (value: number) => string;
   }
 
   let {
@@ -35,20 +68,82 @@
     widthPx = 240,
     heightPx,
     frame = 2.7,
+    offsetY = 0,
     backgroundToken = '--canvas',
     swarm,
     cohorts,
+    merge,
+    alignment,
     anchors,
     anchored,
     harness,
+    riders,
     pulse,
     clockKey,
-    clickActionLabel = 'Incarnate',
+    clickActionVerb = 'Incarnate',
+    disabled = false,
     onclickaction,
+    yields = 0,
+    yieldValue = 0,
+    pressValue,
+    pressFormat = (value: number) => `+${f(value)}`,
   }: Props = $props();
 
   let host: HTMLDivElement | undefined = $state();
   let isShown = $state(false);
+
+  let popups: Popup[] = $state([]);
+  let nextPopupId = 0;
+
+  function pop(x: number, y: number, text: string) {
+    const id = nextPopupId++;
+
+    popups.push({ id, x, y, text });
+    setTimeout(() => {
+      popups = popups.filter((popup) => popup.id !== id);
+    }, POPUP_LIFE_MS);
+  }
+
+  function onspark(point: { x: number; y: number }) {
+    // A payout of nothing has nothing to say. The mark on the ground still
+    // lands — the click happened — but the number would be a "+0".
+    if (yieldValue <= 0) return;
+
+    pop(point.x, point.y, `+${f(yieldValue)}`);
+  }
+
+  /**
+   * Where the anchor being placed is, in px. A plain variable and not a rune:
+   * the scene writes it every frame and only a press ever reads it, so putting
+   * it through the reactive graph would re-render the view sixty times a second
+   * for a number nothing draws.
+   */
+  let placingPoint: { x: number; y: number } | undefined;
+
+  function onplacing(point: { x: number; y: number } | undefined) {
+    placingPoint = point;
+  }
+
+  /** At the anchor it pays into, or at the pointer when there is no anchor. */
+  function onpress(e: MouseEvent) {
+    flashes++;
+    onclickaction?.();
+
+    if (pressValue === undefined) return;
+
+    if (placingPoint) {
+      pop(placingPoint.x, placingPoint.y, pressFormat(pressValue));
+      return;
+    }
+
+    // A keyboard press carries no coordinates, so it pops from the middle.
+    const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const isPointed = e.clientX !== 0 || e.clientY !== 0;
+    const x = isPointed ? e.clientX - box.left : box.width / 2;
+    const y = isPointed ? e.clientY - box.top : box.height / 2;
+
+    pop(x, y, pressFormat(pressValue));
+  }
 
   /**
    * Whether the screen this sits on is the one being looked at. A hidden screen
@@ -96,16 +191,23 @@
       <PlanetScene
         {visual}
         {frame}
+        {offsetY}
         isPaused={!isLive}
         {backgroundToken}
         {swarm}
         {cohorts}
+        {merge}
+        {alignment}
         {anchors}
         {anchored}
         {harness}
+        {riders}
         {pulse}
         {clockKey}
         {flashes}
+        {yields}
+        {onspark}
+        {onplacing}
       />
     </Canvas>
   {/if}
@@ -115,10 +217,17 @@
   {#if pulse}
     <button
       class="press"
-      onclick={() => { flashes++; onclickaction?.(); }}
-      aria-label={clickActionLabel}
+      {disabled}
+      onclick={onpress}
+      aria-label={clickActionVerb}
     ></button>
   {/if}
+
+  {#each popups as popup (popup.id)}
+    <span class="yield-popup" style:left="{popup.x}px" style:top="{popup.y}px">
+      {popup.text}
+    </span>
+  {/each}
 </div>
 
 <style>
@@ -134,6 +243,28 @@
     padding: 0;
     border: none;
     background: none;
-    cursor: pointer;
+  }
+
+  .yield-popup {
+    position: absolute;
+    translate: -50% -50%;
+    font-weight: 600;
+    font-size: var(--fs-sm);
+    color: white;
+    -webkit-text-stroke: 2px var(--ink-900);
+    paint-order: stroke fill;
+    pointer-events: none;
+    animation: yield-rise 900ms ease-out forwards;
+  }
+
+  @keyframes yield-rise {
+    from {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(-24px);
+      opacity: 0;
+    }
   }
 </style>

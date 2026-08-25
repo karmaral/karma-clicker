@@ -1,22 +1,54 @@
 <script lang="ts">
   import { DEFAULT_PULSE, DEFAULT_SWARM, DEFAULT_VISUAL, PlanetView } from '$widgets/planet';
+  import type { AnchorVisual, HarnessVisual } from '$widgets/planet';
+  import { SweepBar } from '$ui';
+  import { f } from '$lib/utils';
+  import type { Listener } from '$lib/emission';
   import planetVisuals from '$data/planet-visuals';
+  import { STAGE_WIDTH } from './planet-viewport';
 
   interface Props {
     id: string;
     /** Souls per cohort, in row order. Empty is a bare world, not a broken one. */
     cohorts?: number[];
-    clickActionLabel?: string;
-    sub?: string;
+    clickActionVerb?: string;
+    clickActionSub?: string;
+    /** The click's own duration — 0 once it has ramped to instant. */
+    duration?: number;
+    isInProgress?: boolean;
+    subscribe?: (fn: Listener) => () => void;
     onclickaction?: () => void;
+    /** A running count of landed yields. See `PlanetView`. */
+    yields?: number;
+    yieldValue?: number;
+    /** The harness this world wears, and how much of it is down. See `PlanetScene`. */
+    anchors?: AnchorVisual;
+    anchored?: boolean[];
+    harness?: HarnessVisual;
+    /** How many souls the finished harness carries. See `SoulSwarm`. */
+    riders?: number;
+    /** What a press is worth while it is placing anchors. See `PlanetView`. */
+    pressValue?: number;
+    pressFormat?: (value: number) => string;
   }
 
   let {
     id,
     cohorts = [],
-    clickActionLabel = 'Incarnate',
-    sub,
+    clickActionVerb = 'Incarnate',
+    clickActionSub,
+    duration = 0,
+    isInProgress = false,
+    subscribe,
     onclickaction,
+    yields = 0,
+    yieldValue = 0,
+    anchors,
+    anchored,
+    harness,
+    riders,
+    pressValue,
+    pressFormat,
   }: Props = $props();
 
   const visual = $derived(planetVisuals[id] ?? DEFAULT_VISUAL);
@@ -27,8 +59,6 @@
    */
   const SWARM_FRAME = 3.2;
 
-  /** Full size; a narrower column shrinks the box on the same ratio. */
-  const STAGE_WIDTH = 406;
   const STAGE_RATIO = 355 / 406;
 
   let width = $state(0);
@@ -48,15 +78,30 @@
       {cohorts}
       pulse={DEFAULT_PULSE}
       clockKey={id}
-      {clickActionLabel}
+      {clickActionVerb}
+      disabled={isInProgress}
       {onclickaction}
+      {yields}
+      {yieldValue}
+      {anchors}
+      {anchored}
+      {harness}
+      {riders}
+      {pressValue}
+      {pressFormat}
     />
   {/if}
 
   <div class="caption">
-    <span class="verb">{clickActionLabel}</span>
-    {#if sub}
-      <span class="sub num">{sub}</span>
+    <span class="verb">{clickActionVerb}</span>
+    {#if clickActionSub}
+      <span class="sub num">{clickActionSub}</span>
+    {/if}
+    {#if duration && subscribe}
+      <span class="cooldown">
+        <SweepBar {subscribe} width="6rem" />
+        {f(duration / 1000)}s
+      </span>
     {/if}
   </div>
 </div>
@@ -82,6 +127,15 @@
   .verb {
     font-size: var(--fs-base);
     font-weight: 600;
+  }
+
+  .cooldown {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    font-size: var(--fs-sm);
+    color: var(--ink-500);
+    margin-top: 2px;
   }
 
   .sub {

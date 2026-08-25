@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Label } from '$ui';
+  import { buildWavePath, H, markerY as markerYAt, MID } from './wave-math';
 
   interface Props {
     phases: number;
@@ -12,31 +13,13 @@
 
   let { phases, current, position, flatten = 0, height = '70px' }: Props = $props();
 
-  const H = 70;
-  const MID = H / 2;
-  const AMP = H * 0.371;
-
   const W = $derived(phases * 100);
   const seg = $derived(W / phases);
 
-  const r = (n: number) => Math.round(n * 100) / 100;
-
-  const CTRL = (4 / 3) * AMP;
-
   const scale = $derived(1 - Math.min(1, Math.max(0, flatten)));
 
-  const ctrlY = (i: number, k: number) => MID + (i % 2 === 1 ? CTRL : -CTRL) * k;
-
-  const build = (k: number) => {
-    let d = `M0,${MID} C${r(seg / 3)},${r(ctrlY(0, k))} ${r((2 * seg) / 3)},${r(ctrlY(0, k))} ${seg},${MID}`;
-    for (let i = 1; i < phases; i++) {
-      d += ` S${r(i * seg + (2 * seg) / 3)},${r(ctrlY(i, k))} ${r((i + 1) * seg)},${MID}`;
-    }
-    return d;
-  };
-
-  const path = $derived(build(scale));
-  const ghost = $derived(build(1));
+  const path = $derived(buildWavePath(phases, W, scale));
+  const ghost = $derived(buildWavePath(phases, W, 1));
 
   const FLATTEN_FADE_THRESHOLD = 0.15;
 
@@ -45,12 +28,7 @@
     return t * t * (3 - 2 * t);
   });
 
-  const markerY = $derived.by(() => {
-    const g = position * phases;
-    const i = Math.min(phases - 1, Math.floor(g));
-    const t = g - i;
-    return MID * ((1 - t) ** 3 + t ** 3) + 3 * ctrlY(i, scale) * t * (1 - t);
-  });
+  const markerY = $derived(markerYAt(phases, position, scale));
 </script>
 
 <div class="wave" style:height>

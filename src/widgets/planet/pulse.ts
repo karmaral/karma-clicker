@@ -234,6 +234,34 @@ export function haloSpreadOf(visual: PulseVisual) {
 
 
 /**
+ * A spark's position in the scene's own frame — object space undone, so a
+ * screen can be told where it landed. The forward reading of `spark`'s own
+ * backward chain: `Ry(turn + spin)` first, then `Rx(tilt)`, then `Rz(-lean)`,
+ * signs un-flipped since nothing here is being undone this time.
+ */
+export function sparkWorldPosition(mark: Pick<Spark, 'x' | 'y' | 'z' | 'r'>, held: Facing) {
+  const px = mark.x * mark.r, py = mark.y * mark.r, pz = mark.z * mark.r;
+
+  const round = held.turn + held.spin;
+  const roundC = Math.cos(round), roundS = Math.sin(round);
+  const qx = px * roundC + pz * roundS;
+  const qz = pz * roundC - px * roundS;
+  const qy = py;
+
+  const tiltC = Math.cos(held.tilt), tiltS = Math.sin(held.tilt);
+  const ry = qy * tiltC - qz * tiltS;
+  const rz = qy * tiltS + qz * tiltC;
+  const rx = qx;
+
+  const leanC = Math.cos(held.lean), leanS = Math.sin(held.lean);
+  const wx = rx * leanC + ry * leanS;
+  const wy = ry * leanC - rx * leanS;
+  const wz = rz;
+
+  return { x: wx, y: wy, z: wz };
+}
+
+/**
  * How far through its life a mark is: 0 at the flash, 1 when it is gone. Past
  * 1 nothing draws it, which is the whole of the expiry — a slot is free because
  * it is old, not because anything swept it.
@@ -297,11 +325,11 @@ export function createPulses() {
   }
 
   /**
-   * One click. The directions are `Math.random` and not the seeded stream the
-   * swarm and the caps use: a flash is an *event*, so two clicks landing in the
-   * same place is the failure, not the unreproducibility.
+   * The click itself: the halo's pair of rings and the outline's blink. No
+   * `Facing` needed — a ring about the whole world reads the same wherever the
+   * world is held.
    */
-  function flash(count: number, field: SurfaceField, face: number, held: Facing) {
+  function echo() {
     const halo = halos[nextHalo];
 
     burst.born = now;
@@ -310,6 +338,18 @@ export function createPulses() {
     halo.scatter = Math.random() * 2 - 1;
 
     nextHalo = (nextHalo + 1) % PULSE_CAPACITY;
+  }
+
+  /**
+   * Where a click landed. The directions are `Math.random` and not the seeded
+   * stream the swarm and the caps use: a spark is an *event*, so two landing
+   * in the same place is the failure, not the unreproducibility.
+   *
+   * Returns what it wrote — the ring buffer has no other way to say which
+   * slots are new.
+   */
+  function spark(count: number, field: SurfaceField, face: number, held: Facing) {
+    const written: Spark[] = [];
 
     const lean = Math.cos(held.lean), leanS = Math.sin(held.lean);
     const tilt = Math.cos(held.tilt), tiltS = Math.sin(held.tilt);
@@ -342,8 +382,11 @@ export function createPulses() {
       mark.z = cz * spun - bx * spunS;
       mark.r = field.sampleRadius(mark.x, mark.y, mark.z);
 
+      written.push(mark);
       nextSpark = (nextSpark + 1) % PULSE_CAPACITY;
     }
+
+    return written;
   }
 
   /** Whether anything is still drawing, so a quiet world stops asking for frames. */
@@ -359,7 +402,8 @@ export function createPulses() {
     sparks,
     get now() { return now; },
     advance,
-    flash,
+    echo,
+    spark,
     isLive,
   };
 }

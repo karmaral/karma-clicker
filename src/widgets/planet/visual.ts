@@ -232,6 +232,78 @@ export interface PlanetVisual {
   outlineTone: number;
 
   /**
+   * The window and what it shows. One feature and one group, because neither
+   * half is worth anything alone: a body opened onto nothing is a hole, and a
+   * core behind a solid body is not drawn.
+   *
+   * Neither is on unless the view says so. The mark *is* the harvest's
+   * alignment, and a view with no alignment to draw passes `clarity` 0 and
+   * mounts no core — so the sliders here author what the harvest screen looks
+   * like, and every other view is untouched however they are set.
+   *
+   * `clarity` is how far open the front goes, read off the same fresnel the
+   * shade's `rim` is and turned round: the front dissolves and the limb stays
+   * whole, because the silhouette is where a world's shape is read and is the
+   * one half that may not be spent.
+   *
+   * It is spent as an **opacity**, and it is the one place on the world where
+   * the seven inks are knowingly broken: a blend lands between the surface's
+   * slot and the core's. A dithered cutout held the inks and was tried first,
+   * but a hole is all or nothing, so a barely-open window came out as confetti
+   * rather than as thin — and thin is what most of this window is. A speckle on
+   * the alpha went the same way after it: the window is a *clearing*, and grain
+   * in it read as damage to the surface rather than as the surface thinning.
+   *
+   * **The veil opens with it.** Both veil modes take the same factor off the
+   * same radial normal, so the weather over an opened front is as thin as the
+   * front is — a cloud left hanging in the hole read as a lid.
+   *
+   * `clarityGamma` is how far down the sphere the window reaches: low is a wide
+   * one that closes only at the limb, high is a small clearing dead centre. The
+   * fresnel is put through an S before the clarity is spent on it, so this moves
+   * a rim rather than stretching a wash — a falloff spread over the whole disc
+   * reads as haze over the world instead of an opening in it.
+   *
+   * `claritySteps` bands the result, which is `steps`' own argument spent on the
+   * one quantity here that had escaped it: the window is a few fixed opacities
+   * and nothing between, the way the surface is a few fixed inks. The lattice is
+   * fixed at 0 and 1 rather than laid across whatever `clarity` reaches, so a
+   * level means the same thing on every world and lowering the clarity drops
+   * bands off the open end instead of sliding all of them.
+   */
+  clarity: number;
+  clarityGamma: number;
+  claritySteps: number;
+  /**
+   * The core's radius, in body radii. 0 draws none — and then the swarm has
+   * nowhere to arrive, so souls settle to `settleAt` as they always did.
+   *
+   * **Its inks are not here.** They are fixed in `material.ts` — `CORE_TONES` —
+   * because this one mark is a *reading* of the harvest rather than a world's
+   * own character, and a reading each world stated in its own colours would be
+   * one nobody could learn. Positive is paper, negative is black, even is a
+   * mid-light grey, and each ruled end hatches one step in from its own ground.
+   * The souls in it are fixed there too, fill and ring both. Only the core's
+   * *shape* is authored below.
+   *
+   * `coreFeather` softens the rim, on the same fresnel the window is cut from
+   * and read the other way round — it shuts the core's own limb instead of
+   * opening its front. 0 is a hard edge, which reads as a coin lying on the
+   * world; up from there the edge gives itself back to the ink and the core
+   * reads as something inside it.
+   *
+   * `coreHatchDensity` is strokes per body radius, so the ruling holds its
+   * spacing against the core rather than against the box. `coreHatchWidth` is
+   * the stroke weight in px, and it is a **line** rather than a floor — so
+   * `scaleInk` brings it up on a push-in, where `veilHatchWidth` is deliberately
+   * left alone.
+   */
+  core: number;
+  coreFeather: number;
+  coreHatchDensity: number;
+  coreHatchWidth: number;
+
+  /**
    * A second surface, above the first. It is a cloud deck at one tuning and an
    * aurora at another, and the difference between them is four sliders: how
    * high it sits, how far toward the poles it is allowed, how hard its edge is,
@@ -442,7 +514,8 @@ export interface PlanetVisual {
   turn: number;
 }
 
-export type VisualGroup = 'Shape' | 'Caps' | 'Texture' | 'Shade' | 'Outline' | 'Veil' | 'Motion';
+export type VisualGroup =
+  'Shape' | 'Caps' | 'Texture' | 'Shade' | 'Outline' | 'Core' | 'Veil' | 'Motion';
 
 export interface VisualParam {
   key: keyof PlanetVisual;
@@ -510,6 +583,16 @@ export const VISUAL_PARAMS: VisualParam[] = [
   { key: 'outline', label: 'Outline px', group: 'Outline', min: 0, max: 8, step: 0.25 },
   { key: 'outlineTone', label: 'Outline tone', group: 'Outline', min: 0, max: 6, step: 1 },
 
+  // Not one `shape` here either: the window is a cut in the body's own fragment
+  // and the core is a sphere of its own, so nothing in the group rebuilds a mesh.
+  { key: 'clarity', label: 'Clarity', group: 'Core', min: 0, max: 1, step: 0.01 },
+  { key: 'clarityGamma', label: 'Clarity falloff', group: 'Core', min: 0.25, max: 8, step: 0.05 },
+  { key: 'claritySteps', label: 'Clarity bands', group: 'Core', min: 2, max: 12, step: 1 },
+  { key: 'core', label: 'Core', group: 'Core', min: 0, max: 0.8, step: 0.005 },
+  { key: 'coreFeather', label: 'Core feather', group: 'Core', min: 0, max: 8, step: 0.05 },
+  { key: 'coreHatchDensity', label: 'Core hatch density', group: 'Core', min: 2, max: 40, step: 0.5 },
+  { key: 'coreHatchWidth', label: 'Core hatch px', group: 'Core', min: 0, max: 6, step: 0.25 },
+
   // Not one `shape` in the group, and that is the point: the shell borrows the
   // body's geometry and its field lives in the fragment, so every slider here
   // is a uniform write and nothing under it rebuilds a mesh.
@@ -552,7 +635,9 @@ export const VISUAL_PARAMS: VisualParam[] = [
 export const TILT_REACH = 0.8;
 export const LEAN_REACH = 1.6;
 
-export const VISUAL_GROUPS: VisualGroup[] = ['Shape', 'Caps', 'Texture', 'Shade', 'Outline', 'Veil', 'Motion'];
+export const VISUAL_GROUPS: VisualGroup[] = [
+  'Shape', 'Caps', 'Texture', 'Shade', 'Outline', 'Core', 'Veil', 'Motion',
+];
 
 export const DEFAULT_VISUAL: PlanetVisual = {
   seed: 1,
@@ -608,6 +693,18 @@ export const DEFAULT_VISUAL: PlanetVisual = {
 
   outline: 2,
   outlineTone: 6,
+
+  /**
+   * Off. The numbers under it are a reading waiting on two sliders, and nothing
+   * draws either until a view hands the world an alignment to put in the core.
+   */
+  clarity: 1,
+  clarityGamma: 1.6,
+  claritySteps: 4,
+  core: 0.8,
+  coreFeather: 0.2,
+  coreHatchDensity: 18,
+  coreHatchWidth: 2.25,
 
   /** Off, and the numbers below are the cloud reading the slider opens onto. */
   veil: 0,
@@ -670,8 +767,79 @@ export function cloneVisual(visual: PlanetVisual): PlanetVisual {
  * 400px and around 9% at a 48px row — seven times the weight for no edit. One
  * pixel is a list row's ink, and it belongs to the still rather than to the
  * nine records.
+ *
+ * The other end of the same argument is `scaleInk`: shrink the widget and the
+ * line is held, push in and it comes along.
  */
 export const STILL_OUTLINE = 1;
+
+/**
+ * The world's drawn radius on the detail stage — 355px of box over `frame` 3.2
+ * — and so the size every px-authored mark on a `PlanetVisual` was last judged
+ * at. Kept here rather than read off `PlanetStage`, which is a screen and cannot
+ * be imported by the widget; if that stage's box or framing moves, this moves.
+ */
+export const STAGE_RADIUS = 111;
+
+/**
+ * The same world drawn nearer, with its ink brought along.
+ *
+ * There are two ways a world can change size on screen and they want opposite
+ * things. A **smaller widget** is the world further off in the same drawing, so
+ * its ink holds its weight — that is what a px-authored mark is for, and why a
+ * 24px row still has a legible outline. A **push-in** is the drawing itself
+ * getting bigger, and there a fixed 2px line is a hairline scratched across a
+ * world three times its authored size.
+ *
+ * Everything measured in body radii already does this for free: souls are sized
+ * in radii, so `zoom` carries them and their rings with them, and the anchors
+ * and sparks the same. Only the px marks are stranded, so only they are scaled.
+ *
+ * The four that scale are **lines** — the silhouette, the band hairline, the
+ * veil's edge, the core's ruling — chosen for their weight against the world.
+ * What is deliberately left alone is the **floors**: `dotFloor`,
+ * `veilHatchWidth`. A floor is not a mark but a legibility rule about the
+ * smallest thing this screen can draw, and a push-in is exactly the case where
+ * it should stop biting. `coreHatchWidth` sits on the near side of that line
+ * despite the name it shares with one: it is the stroke's own weight, and the
+ * core is only ever seen at the one size that pushes in.
+ *
+ * `HarnessVisual.width` is px too and is not reached from here — it is its own
+ * record, and no view that pushes in draws a harness yet.
+ */
+export function scaleInk(visual: PlanetVisual, radiusPx: number): PlanetVisual {
+  const by = Math.max(0, radiusPx) / STAGE_RADIUS;
+
+  return {
+    ...visual,
+    outline: visual.outline * by,
+    contour: visual.contour * by,
+    veilOutline: visual.veilOutline * by,
+    coreHatchWidth: visual.coreHatchWidth * by,
+  };
+}
+
+/**
+ * The world the harvest is decided over: one disc drawn across the whole block
+ * with the decision standing on it, a shade larger than the detail stage's —
+ * `STAGE_RADIUS` there against this. Near enough that it is recognisably the
+ * same world seen again rather than a poster of it; the screen reads as a
+ * takeover because it takes the Overview whole, not because the disc is big.
+ *
+ * A **radius rather than a `frame`**, and that is the whole of the size. `frame`
+ * is world units across the short axis, so the same number is a different planet
+ * in every box, and this box is whatever the window is. The stage divides
+ * instead: `frame = min(width, height) / HARVEST_RADIUS`, and the world is the
+ * same size at any window it is dragged to.
+ *
+ * `HARVEST_ANCHOR` is where **down** the box that disc's centre sits — 0.5 is
+ * the middle, and this holds it above it, because the split and the verb take
+ * the foot of the block and the swarm wants the room over them. A **ratio
+ * rather than a pixel count**, because the row it answers to is one: a px offset
+ * would hold still while the controls moved with the window.
+ */
+export const HARVEST_RADIUS = 120;
+export const HARVEST_ANCHOR = 0.34;
 
 /**
  * The world as a picture rather than as a view.

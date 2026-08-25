@@ -93,6 +93,72 @@ export interface SwarmVisual {
   riders: number;
 
   /**
+   * The two ends of one travel, and neither is a resting state: a soul sits on
+   * its own orbit until a caller's `merge` share drives it off, and no caller
+   * that leaves that unset moves a soul at all.
+   *
+   * `settleAt` is in body radii and sits under `rim`, so a soul that stays is
+   * taken *into* the world rather than parked over it: on the near side it is
+   * drawn against the surface, and on the far side the ink rule has already
+   * swallowed it. How deep is a look, and the range runs past the rim for the
+   * one that hovers instead.
+   *
+   * `strayTo` is a multiple of the soul's own orbit, so a wide band strays wider
+   * than a tight one and the swarm keeps its shape on the way out. Its ceiling
+   * is the box: a swarm strayed past the frame's edge is a swarm that has left
+   * before the decision was taken.
+   */
+  settleAt: number;
+  strayTo: number;
+
+  /**
+   * The two knobs that make the split a movement rather than a readout, and
+   * neither is worth much without the other.
+   *
+   * `crossing` is how many souls are in the air at once — the width of the
+   * boundary in `travelOf`. `mergeLag` is how long the swarm takes to catch up
+   * to a split that has already moved, as the time constant of an exponential
+   * chase in seconds: the number is where the swarm has got to about 63% of the
+   * way, so the tail is a good deal longer than it reads.
+   *
+   * The lag is the one thing in the swarm that is **not** a pure function of
+   * `elapsed` — it carries a value between frames, which is exactly what the
+   * berths were built to avoid. It is a much smaller sin: one scalar for the
+   * whole swarm and not one per soul, and it converges, so two views of a world
+   * whose split has stopped moving still agree on where every soul is. Only the
+   * drag itself is a view's own business. 0 turns it off and the swarm tracks
+   * the slider frame for frame, which is what every screen but the harvest does
+   * anyway, having no split to drag.
+   */
+  crossing: number;
+  mergeLag: number;
+
+  /**
+   * Where a soul that is staying leaves its orbit for the core, as a point on
+   * its own travel. Below this it is still coming in radially and `settleAt` is
+   * what it is coming in *to*; above it, it is crossing to a berth.
+   *
+   * The chord objection that keeps a rider off a partly-travelled harness line
+   * does not reach this. That one is about two points on a *sphere*, where the
+   * straight line between them passes through the world; both ends of this are
+   * already inside the world, so there is nothing for a chord to cut.
+   */
+  berthEnter: number;
+  /**
+   * How far a berthed soul strays from its berth, as a share of the room it has.
+   * The room is half the gap to the nearest other berth, so at 1 two neighbours
+   * at their furthest still do not meet and **nothing here is ever tested for a
+   * collision** — the packing is what does the avoiding, and the wobble only
+   * ever spends what the packing left over.
+   *
+   * That is the whole reason the core is berthed rather than simulated. A
+   * separation pass would want a velocity per soul carried between frames, and
+   * the swarm is a pure function of `elapsed`: every soul's place comes from its
+   * seed and the clock, so two views of one world agree without talking.
+   */
+  berthWobble: number;
+
+  /**
    * Two inks, one per place a soul can be *seen*: off the body and in front of
    * it. The far half is hidden. A pale third ink was tried for it and cut —
    * motion already says the path closes, and a dot that is neither in front nor
@@ -234,9 +300,148 @@ export function createSouls(visual: SwarmVisual, counts: number[]): Soul[] {
   return souls;
 }
 
+/** A share of a swarm as the whole souls it comes to. */
+export function shareOf(share: number, souls: number) {
+  return Math.max(0, Math.min(souls, Math.round(share * souls)));
+}
+
 /** How many souls ride, from the share. A share that buys none buys nothing. */
 export function riderCount(visual: SwarmVisual, souls: number) {
-  return Math.max(0, Math.min(souls, Math.round(visual.riders * souls)));
+  return shareOf(visual.riders, souls);
+}
+
+/**
+ * And how many actually ride here: a caller's own count when it has one, the
+ * authored share otherwise. The count wins because riders are *bought* a soul at
+ * a time — a share is what the lab has to author with, since it drags a swarm
+ * whose size moves under it, but a game that knows the figure should not have to
+ * turn it back into a fraction of a number it cannot see.
+ */
+export function ridersOf(visual: SwarmVisual, souls: number, riders?: number) {
+  if (riders === undefined) return riderCount(visual, souls);
+
+  return Math.max(0, Math.min(souls, Math.floor(riders)));
+}
+
+/**
+ * Which side of the split a soul is on, 0…1 — 1 stays with the world, 0 comes
+ * away with you. Read from the **top** of the dealing order, because `riders`
+ * reads it from the bottom: the two must not pick the same souls first, or a
+ * drag would strip the harness before it touched anything else.
+ *
+ * Fractional on purpose, for `crossing` souls at a time. At 1 the boundary is a
+ * single soul part of the way over and the swarm switches a dot at a step, which
+ * is honest and reads as a counter; wider and the boundary is a band with a
+ * leading edge, which reads as a current. The decision is a flow of people and
+ * should look like one, so the default is wide.
+ *
+ * The share is scaled by `souls + crossing` rather than by `souls`, so widening
+ * the band does not cost the ends: at a share of 1 the last soul still reaches
+ * a full 1 instead of stalling `crossing` places short of the middle.
+ */
+export function travelOf(soul: Soul, share: number, souls: number, crossing = 1) {
+  const width = Math.max(1, crossing);
+
+  return Math.max(0, Math.min(1, (share * (souls + width) - rankOf(soul, souls)) / width));
+}
+
+/**
+ * A soul's rank in the split — 0 is the first to stay, and the last to leave.
+ * Its own two callers have to read it the same way round or a soul would cross
+ * to a berth that belongs to a different one.
+ */
+export function rankOf(soul: Soul, souls: number) {
+  return souls - 1 - soul.place;
+}
+
+/**
+ * The room a berth has, in body radii: half the gap to the nearest other berth,
+ * which is what a wobble may spend without two souls ever meeting.
+ *
+ * `n` berths packed into a ball of radius `radius` each own `4/3·π·r³/n` of it,
+ * so the gap between centres is the cube root of that volume — the same
+ * arithmetic that gives `berthOf` its radii, read the other way.
+ */
+export function berthRoom(souls: number, radius: number) {
+  if (souls < 2) return radius;
+
+  return radius * Math.cbrt((4 * Math.PI) / (3 * souls)) * 0.5;
+}
+
+/**
+ * Van der Corput base 2 — the bits of `n` reflected about the binary point.
+ *
+ * Wanted over a golden-ratio sequence for one property: **every prefix is well
+ * spread**, not just the whole. The core fills in rank order, so what has to
+ * look even is the first k of these for every k, and that is exactly what a
+ * radical inverse guarantees — each new value lands in the largest gap left.
+ */
+function radicalInverse(n: number) {
+  let bits = n >>> 0;
+
+  bits = ((bits << 16) | (bits >>> 16)) >>> 0;
+  bits = (((bits & 0x5555_5555) << 1) | ((bits & 0xaaaa_aaaa) >>> 1)) >>> 0;
+  bits = (((bits & 0x3333_3333) << 2) | ((bits & 0xcccc_cccc) >>> 2)) >>> 0;
+  bits = (((bits & 0x0f0f_0f0f) << 4) | ((bits & 0xf0f0_f0f0) >>> 4)) >>> 0;
+  bits = (((bits & 0x00ff_00ff) << 8) | ((bits & 0xff00_ff00) >>> 8)) >>> 0;
+
+  return bits * 2.328_306_436_538_696_3e-10;
+}
+
+/**
+ * Where a soul that has arrived stands, from its rank alone — so a berth is
+ * fixed for the whole drag and a soul crossing to one is not chasing it.
+ *
+ * **Radius and direction come from different sequences, and that is the whole
+ * of it.** The rank gives the radius, cube-rooted so the ball fills evenly
+ * rather than crowding the shell — volume goes as r³. The direction is a
+ * Fibonacci spiral: the azimuth from the golden angle, the latitude from the
+ * radical inverse of the same rank.
+ *
+ * Taking the latitude from the *radius* instead, as the plain spiral does, was
+ * the bug this replaces. Both terms then ran off one number, so the outermost
+ * berth was always at the south pole and the innermost always at the north —
+ * and since the innermost has no radius to speak of, the whole packing came out
+ * as a ball with a spike hanging off the bottom and nothing at the top. It read
+ * exactly as it was: the souls sat low and never reached the core's edge.
+ *
+ * Rank 0 still lands at the middle, which is the read: the core fills from its
+ * centre outward as more of the swarm is given to it, rather than growing a
+ * crust. And the packing is for the **whole** swarm rather than for the merged
+ * count, so dragging the split fills more berths instead of moving all of them.
+ */
+export function berthOf(
+  rank: number,
+  souls: number,
+  radius: number,
+  out: { x: number; y: number; z: number },
+) {
+  const at = (rank + 0.5) / Math.max(1, souls);
+
+  const radial = radius * Math.cbrt(at);
+  const y = 1 - 2 * radicalInverse(rank);
+  const ring = Math.sqrt(Math.max(0, 1 - y * y));
+  const angle = GOLDEN_ANGLE * rank;
+
+  out.x = radial * ring * Math.cos(angle);
+  out.y = radial * y;
+  out.z = radial * ring * Math.sin(angle);
+}
+
+/**
+ * What to multiply a placed soul's position by. Radial, so the soul never
+ * leaves the plane of its own orbit — the objection that keeps a rider off a
+ * partly-travelled harness line does not reach this, because there is no chord.
+ *
+ * A split shows both of its sides at once: everything not staying is already on
+ * its way out, which is why a share of 0 is a swarm gathered to leave rather
+ * than a swarm at rest. A caller with nothing to split passes no share at all
+ * and none of this runs.
+ */
+export function settleScale(soul: Soul, travel: number, visual: SwarmVisual) {
+  const held = soul.radius > 1e-6 ? visual.settleAt / soul.radius : 1;
+
+  return visual.strayTo + (held - visual.strayTo) * travel;
 }
 
 /** Where a soul is at `elapsed`. Writes into `out`, so the loop allocates nothing. */
@@ -300,6 +505,12 @@ export const SWARM_PARAMS: SwarmParam[] = [
   { key: 'dotScatter', label: 'Dot scatter', group: 'Souls', min: 0, max: 0.06, step: 0.002 },
   { key: 'dotFloor', label: 'Dot floor px', group: 'Souls', min: 0, max: 4, step: 0.25 },
   { key: 'riders', label: 'Riders', group: 'Souls', min: 0, max: 1, step: 0.01 },
+  { key: 'settleAt', label: 'Settle at', group: 'Souls', min: 0, max: 1.2, step: 0.005 },
+  { key: 'strayTo', label: 'Stray to', group: 'Souls', min: 1, max: 4, step: 0.05 },
+  { key: 'crossing', label: 'Crossing at once', group: 'Souls', min: 1, max: 24, step: 1 },
+  { key: 'mergeLag', label: 'Merge lag s', group: 'Souls', min: 0, max: 2, step: 0.05 },
+  { key: 'berthEnter', label: 'Berth from', group: 'Souls', min: 0, max: 1, step: 0.01 },
+  { key: 'berthWobble', label: 'Berth wobble', group: 'Souls', min: 0, max: 1, step: 0.01 },
   { key: 'ring', label: 'Ring', group: 'Souls', min: 0, max: 0.8, step: 0.02 },
   { key: 'outTone', label: 'Tone outside', group: 'Souls', min: 0, max: 6, step: 1 },
   { key: 'frontTone', label: 'Tone in front', group: 'Souls', min: 0, max: 6, step: 1 },
@@ -322,6 +533,12 @@ export const DEFAULT_SWARM: SwarmVisual = {
   dotScatter: 0.012,
   dotFloor: 1.5,
   riders: 0,
+  settleAt: 0.8,
+  strayTo: 1.1,
+  crossing: 24,
+  mergeLag: 0.25,
+  berthEnter: 0.75,
+  berthWobble: 1,
   ring: 0.3,
   outTone: 6,
   frontTone: 0,

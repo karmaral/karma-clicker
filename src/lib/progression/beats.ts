@@ -26,7 +26,7 @@ export const beats: Beat[] = [
     // The wave runs from the start so beat 5 explains noise already felt.
     runs: ['incarnation', 'wave'],
     reveals: {
-      'detail.disc': 'live',
+      'details.disc': 'live',
       'shared.log': 'live',
       'reading.experience': 'live',
     },
@@ -47,7 +47,7 @@ export const beats: Beat[] = [
     when: (ctx) => ctx.totalSouls >= 1,
     floor: 1_100,
     runs: ['cohort'],
-    reveals: { 'detail.cohortTable': 'live' },
+    reveals: { 'details.cohortTable': 'live' },
   },
 
   // The figures fly up into the header; the disc stays where it was.
@@ -58,8 +58,8 @@ export const beats: Beat[] = [
     reveals: {
       'frame.header': 'live',
       'frame.rail': 'live',
-      'detail.status': 'live',
-      'nav.detail': 'live',
+      'details.status': 'live',
+      'nav.details': 'live',
     },
   },
 
@@ -68,7 +68,7 @@ export const beats: Beat[] = [
     id: 'wave',
     when: (ctx) => ctx.hasUpgrade(GLOBAL, 'read_the_wave'),
     floor: 26_900,
-    reveals: { 'detail.wave': 'live' },
+    reveals: { 'details.wave': 'live' },
   },
 
   // A choice and nothing else: how dirty do you want to run.
@@ -80,9 +80,9 @@ export const beats: Beat[] = [
     runs: ['negKarma', 'aim'],
     reveals: {
       'reading.negKarma': 'live',
-      'detail.aimGlobal': 'live',
+      'details.aimGlobal': 'live',
       // The row's lean meter: what each cohort is doing, with no way to steer it.
-      'detail.aimPerRow': 'inert',
+      'details.aimPerRow': 'inert',
     },
   },
 
@@ -138,8 +138,8 @@ export const beats: Beat[] = [
     when: (ctx) => ctx.planetsFinished >= 1,
     runs: ['anchoring', 'finishedPlanets'],
     reveals: {
-      'detail.field': 'live',
-      'detail.split': 'live',
+      'details.field': 'live',
+      'details.split': 'live',
       'overview.behind': 'live',
     },
   },

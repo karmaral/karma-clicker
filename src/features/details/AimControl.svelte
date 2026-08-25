@@ -86,7 +86,7 @@
   onpointercancel={onpointerup}
   {onclickcapture}
 >
-  <div class="track">
+  <div class="track" data-cursor-grab data-cursor-dragging={dragging}>
     <span class="rule"></span>
     {#each DETENTS as detent, i (detent)}
       <span class="tick" style:left={at(i)}></span>
@@ -117,13 +117,8 @@
     display: flex;
     flex-direction: column;
     gap: var(--sp-2);
-    cursor: pointer;
     user-select: none;
     touch-action: pan-y;
-  }
-
-  .strip.dragging {
-    cursor: grabbing;
   }
 
   .track {
@@ -177,7 +172,6 @@
     padding: 0;
     border: none;
     background: none;
-    cursor: inherit;
     opacity: .45;
     transform: translateX(-50%);
     transition: opacity var(--t-fast);

@@ -12,7 +12,7 @@
   import CohortRow from './CohortRow.svelte';
   import RateFigure from './RateFigure.svelte';
   import { byRateOrder } from './badge';
-  import { resolveBuyable } from './purchase';
+  import { resolvePurchasable } from './purchase';
 
   interface Props {
     title?: string;
@@ -20,7 +20,7 @@
     purchaseModes?: readonly PurchaseMode[];
     purchaseMode?: PurchaseMode;
     showAim?: boolean;
-    /** The rail of totals. Gated by `detail.status`, the beat that reveals rates. */
+    /** The rail of totals. Gated by `details.status`, the beat that reveals rates. */
     showRates?: boolean;
     note?: string;
     onpurchasemode?: (mode: PurchaseMode) => void;
@@ -41,8 +41,8 @@
 
   const columns = $derived(
     showAim
-      ? '20px minmax(0, 1fr) 44px 170px 184px'
-      : '20px minmax(0, 1fr) 170px 184px',
+      ? '20px minmax(0, 1fr) 50px 200px 150px'
+      : '20px minmax(0, 1fr) 200px 150px',
   );
 
   /** Which row is hovering its purchase button, if any. */
@@ -62,7 +62,7 @@
 
     cohorts.forEach((cohort) => {
       const count = cohort.id === preview
-        ? cohort.count + resolveBuyable(cohort, purchaseMode)
+        ? cohort.count + resolvePurchasable(cohort, purchaseMode)
         : cohort.count;
 
       Object.keys(cohort.production).forEach((key) => {
@@ -109,13 +109,13 @@
     <div class="head">
       <span class="count right"><Label text="N" size="sm" /></span>
 
-      <span><Label text="Cohort · level" size="sm" /></span>
+      <span><Label text="Cohort" size="sm" /></span>
 
       {#if showAim}
         <span class="lean"><Label text="Lean" size="sm" /></span>
       {/if}
 
-      <span class="output right"><Label text="Rate" size="sm" /></span>
+      <span class="output rate"><Label text="Rate" size="sm" /></span>
 
       <!-- The head cell is the switcher: the words are a read-out of where the
            cycle is, and clicking anywhere in the cell advances it. -->
@@ -132,6 +132,7 @@
         {purchaseMode}
         onpreview={(id) => (previewId = id)}
         onpurchase={(quantity) => onpurchase?.(cohort.id, quantity)}
+        oncyclemode={cyclePurchaseMode}
       />
     {/each}
   </div>
@@ -184,7 +185,6 @@
     margin: calc(var(--sp-1) * -1) calc(var(--sp-2) * -1);
     border: none;
     background: transparent;
-    cursor: pointer;
     line-height: 1;
     white-space: nowrap;
   }
