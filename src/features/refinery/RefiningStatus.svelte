@@ -25,22 +25,26 @@
 
   const intake = $derived(refinery.batch * 2);
 
-  const subscribe: (fn: Listener) => () => void = (fn) => {
-    refinery.addListener('queue', fn);
+  /** The clock keeps pulsing unstaffed, but a sweep to nowhere is a lie. */
+  const isIdle = $derived(refinery.workers <= 0);
 
-    return () => refinery.removeListener('queue', fn);
+  const subscribe: (fn: Listener) => () => void = (fn) => {
+    const wrapped: Listener = (detail) => { if (!isIdle) fn(detail); };
+    refinery.addListener('queue', wrapped);
+
+    return () => refinery.removeListener('queue', wrapped);
   };
 </script>
 
 <Section label="Refining">
   <div class="rate">
-    <Figure value={f(cleared)} />
+    <Figure value={f(cleared)} size="xxl" />
     <span class="unit">karma/s<br>cleared</span>
   </div>
 
   <div class="clock">
     <SweepBar {subscribe} width="100%" height="10px" />
-    <span class="next">next {nextIn.toFixed(1)}s</span>
+    <span class="next">{isIdle ? 'idle' : `next ${nextIn.toFixed(1)}s`}</span>
   </div>
 
   <div class="batch">
@@ -50,7 +54,7 @@
     <span class="num">{f(intake)} Crimson</span>
   </div>
 
-  <p class="note">Pulses on its own cadence.</p>
+  <p class="note">{isIdle ? 'Unstaffed — nothing to clear.' : 'Pulses on its own cadence.'}</p>
 </Section>
 
 <style>

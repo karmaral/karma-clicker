@@ -7,37 +7,25 @@
   import TokenTable from './TokenTable.svelte';
 </script>
 
-<div class="refinery view-layout">
-  <div class="engine">
-    {#if progression.isRevealed('refinery.status')}
+{#if progression.isRevealed('refinery.screen')}
+  <div class="refinery view-layout">
+    <div class="engine">
       <RefiningStatus />
-    {/if}
-  </div>
-
-  <div class="grades">
-    {#if progression.isRevealed('refinery.intake')}
       <IntakeBar />
-    {/if}
-
-    {#if progression.isRevealed('refinery.backlog')}
       <RateCeiling />
-    {/if}
+    </div>
 
-    {#if progression.isRevealed('refinery.split')}
-      <SplitControl />
-    {/if}
-
-    {#if progression.isRevealed('refinery.grades')}
+    <div class="grades">
       <TokenTable />
-    {/if}
+      <SplitControl />
+    </div>
   </div>
-</div>
+{/if}
 
 <style>
   .engine {
     display: flex;
     flex-direction: column;
-    gap: var(--sp-5);
     padding: 0 var(--sp-4);
     border-right: var(--rule-card);
     min-width: 0;

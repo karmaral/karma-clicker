@@ -7,7 +7,6 @@
   import { Label, Section } from '$ui';
   import { ResourceManager } from '$lib/managers';
   import { getUnpairedKarma } from '$lib/excess';
-  import { progression } from '$lib/progression';
   import { f } from '$lib/utils';
 
   const negative = $derived(ResourceManager.getAmount('karma_negative'));
@@ -22,18 +21,13 @@
 
   const isComfort = $derived(unpaired > 0);
 
-  const isSideShown = $derived(progression.isRevealed('refinery.side'));
-
   const share = (amount: number) => (total > 0 ? `${(amount / total) * 100}%` : '0%');
 </script>
 
 <Section label="Intake">
-  {#snippet aside()}
-    what is paired, and what is not
-  {/snippet}
 
   <div class="bar">
-    {#if isSideShown && leftover > 0 && !isComfort}
+    {#if leftover > 0 && !isComfort}
       <span class="span tail" style:width={share(leftover)}></span>
     {/if}
 
@@ -44,37 +38,35 @@
       <span class="figure">{f(matched)}</span>
     </span>
 
-    {#if isSideShown && leftover > 0 && isComfort}
+    {#if leftover > 0 && isComfort}
       <span class="span tail" style:width={share(leftover)}></span>
     {/if}
   </div>
 
-  {#if isSideShown}
-    <div class="poles">
-      <span class={['pole', { held: leftover > 0 && !isComfort }]}>
-        {#if leftover > 0 && !isComfort}
-          <span class="mark">▲ {f(leftover)}</span>
-        {:else}
-          <span class="mark">—</span>
-        {/if}
-        <Label text="Burden" size="sm" />
-      </span>
-      <span class={['pole right', { held: leftover > 0 && isComfort }]}>
-        {#if leftover > 0 && isComfort}
-          <span class="mark">▲ {f(leftover)}</span>
-        {:else}
-          <span class="mark">—</span>
-        {/if}
-        <Label text="Comfort" size="sm" />
-      </span>
-    </div>
-  {/if}
+  <div class="poles">
+    <span class={['pole', { held: leftover > 0 && !isComfort }]}>
+      {#if leftover > 0 && !isComfort}
+        <span class="mark">▲ {f(leftover)}</span>
+      {:else}
+        <span class="mark">—</span>
+      {/if}
+      <Label text="Burden" size="sm" />
+    </span>
+    <span class={['pole right', { held: leftover > 0 && isComfort }]}>
+      {#if leftover > 0 && isComfort}
+        <span class="mark">▲ {f(leftover)}</span>
+      {:else}
+        <span class="mark">—</span>
+      {/if}
+      <Label text="Comfort" size="sm" />
+    </span>
+  </div>
 </Section>
 
 <style>
   .bar {
     display: flex;
-    height: 56px;
+    height: 32px;
     background: var(--line-100);
     min-width: 0;
   }

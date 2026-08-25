@@ -48,7 +48,7 @@
 <style>
   .bar {
     display: flex;
-    height: 44px;
+    height: 8px;
     background: var(--line-100);
     min-width: 0;
   }

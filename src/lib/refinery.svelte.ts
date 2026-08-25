@@ -7,6 +7,7 @@
 import { ResourceEmitter, type Listener } from '$lib/emission';
 import { ModifierSet } from '$lib/modifiers';
 import { BuildingManager, ResourceManager } from '$lib/managers';
+import { harness } from '$lib/harness.svelte';
 import balance from '$data/balance';
 import type { Modifier, ResourceType } from '$types';
 
@@ -26,7 +27,14 @@ class Refinery {
   /** Bought slots. Reserved souls fill them — neither on its own refines anything. */
   #slots = $derived(this.#modifiers.apply(0, 'slots'));
 
-  #workers = $derived(Math.min(BuildingManager.countReserved(), this.#slots));
+  /**
+   * Held souls the harness has not taken. One soul does one job: a world still
+   * going down is what stands in the way, so anchoring draws first and the
+   * refinery works the remainder — and gets them all back once it is down.
+   */
+  #free = $derived(Math.max(0, BuildingManager.countReserved() - harness.workers));
+
+  #workers = $derived(Math.min(this.#free, this.#slots));
 
   /**
    * Per pile. Staffing is linear here and absent from the interval: in both, it
