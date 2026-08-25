@@ -8,9 +8,16 @@ const data: Record<string, PlanetData> = {
     initial_phase_amount: 100,
     densities: 3,
     max_initial_density: 1,
-    firstHarvest: { excessGate: 0.12, agesLived: 1, mergeMinimum: 10 },
+    firstHarvest: { 
+      excessGate: 0.12,
+      agesLived: 1,
+      mergeMinimum: 10 
+    },
     harvest: {
-      yields: { experience: 90, karma: 150 },
+      yields: { 
+        experience: 50_000,
+        karma: 150_000,
+      },
       duration: 60_000,
       mergeHalving: 50,
       maxMergeSpeed: 8,
@@ -23,25 +30,39 @@ const data: Record<string, PlanetData> = {
     initial_phase_amount: 100,
     densities: 3,
     max_initial_density: 1,
-    firstHarvest: { excessGate: 0.08, agesLived: 2, mergeMinimum: 120 },
+    firstHarvest: { 
+      excessGate: 0.08,
+      agesLived: 2,
+      mergeMinimum: 70 
+    },
+    anchoring: { anchors: 2, duration: 36_000, bonusPerAnchor: 0.25 },
     harvest: {
-      yields: { experience: 1200, karma: 4500 },
+      yields: { experience: 120_000, karma: 450_000 },
       duration: 60_000,
       mergeHalving: 200,
-      maxMergeSpeed: 6,
+      maxMergeSpeed: 5,
     },
   },
   'third': {
     ages: 4,
-    cycles_per_age: 16,
-    phase_multiplier: 3,
+    cycles_per_age: 12,
+    phase_multiplier: 2.5,
     initial_phase_amount: 1000,
     densities: 6,
     max_initial_density: 1,
-    firstHarvest: { excessGate: 0.05, agesLived: 4, mergeMinimum: 600 },
+    firstHarvest: { 
+      excessGate: 0.05,
+      agesLived: 4,
+      mergeMinimum: 200 
+    },
+    anchoring: { 
+      anchors: 3, 
+      duration: 180_000,
+      bonusPerAnchor: 0.45,
+    },
     harvest: {
-      yields: { experience: 30_000, karma: 120_000 },
-      duration: 60_000,
+      yields: { experience: 300_000, karma: 1_200_000 },
+      duration: 90_000,
       mergeHalving: 800,
       maxMergeSpeed: 4,
     },

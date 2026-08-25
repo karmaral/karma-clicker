@@ -2,8 +2,8 @@ import type { ItemTextData } from '$lib/types';
 
 const data: Record<string, ItemTextData> = {
   'basic': {
-    title: 'Basic soul',
-    description: 'Doesn\'t know much. Doesn\'t do much. Kinda just being.',
+    title: 'Impulse',
+    description: 'A singular vector of force or perception with zero complex internal structure yet.',
   },
   'steady': {
     title: 'Steady soul',

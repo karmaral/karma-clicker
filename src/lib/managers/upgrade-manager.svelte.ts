@@ -1,5 +1,5 @@
 import { tick } from 'svelte';
-import type { Effect, Modifier, ResourceType, UpgradeData } from '$types';
+import type { Effect, Modifier, ResourceType, UnlockType, UpgradeData } from '$types';
 import data, { parseScope } from '$data/upgrades';
 import texts from '$data/upgrades-texts';
 import { refinery } from '$lib/refinery.svelte';
@@ -30,9 +30,15 @@ class UpgradeManager {
     const item = upgradeMap[target][id];
     if (!item) return;
 
-    const [unlock_type, unlocks_at] = Object.entries(item.unlocks_at)[0] as [ResourceType, number];
+    const [unlock_type, unlocks_at] = Object.entries(item.unlocks_at)[0] as [UnlockType, number];
 
-    return ResourceManager.getTotal(unlock_type) < unlocks_at;
+    if (unlock_type === 'count_total') {
+      const tgt = BuildingManager.getBuilding(target);
+      if (!tgt) return;
+
+      return tgt.total <= unlocks_at;
+    }
+    return ResourceManager.getTotal(unlock_type as ResourceType) < unlocks_at;
   }
 
   isAcquired(target: string, id: string) {

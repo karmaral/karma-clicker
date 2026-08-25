@@ -16,7 +16,7 @@ export default {
 
   /** What one worker clears from each pile, and how often. Placeholder figures. */
   refinery: {
-    batchPerWorker: 25,
+    batchPerWorker: 250,
     interval: 4000,
   },
 
@@ -46,15 +46,13 @@ export default {
 
   /** What the wave pays a polarity running with it, and against it. */
   wave: {
-    biasWith: 1.4,
-    biasAgainst: 0.6,
+    biasWith: 1.5,
+    biasAgainst: 0.5,
   },
 
-  /** Defaults for what a world does not author itself. */
   harvest: {
-    /** What an even alignment takes instead of the karma it cannot place. */
-    evenExperienceBonus: 0.5,
-    mergeHalving: 50,
+    evenExperienceBonus: 2.0,
+    mergeHalving: 25,
     maxMergeSpeed: 8,
   },
 };

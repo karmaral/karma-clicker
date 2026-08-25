@@ -1,6 +1,7 @@
 /** Red only ever exists polarised; yellow and blue are matched pairs, so neutral. */
 export type ResourceType =
 | 'experience'
+| 'wisdom'
 | 'karma_negative'
 | 'karma_positive'
 | 'red_negative'
@@ -52,13 +53,15 @@ export type UpgradeScope =
 /** `target` overrides the upgrade's `effect_target`, so one array can hit two yields. */
 export type Effect = EffectVerb | Omit<Modifier, 'id'>;
 
+export type UnlockType = ResourceType | 'count_total';
+
 export interface UpgradeData {
   id: string;
   /** Omitted where the purchase itself is the point — a `global` trigger has nothing to act on. */
   effect?: Effect | Effect[];
   effect_target?: YieldType | 'all';
   /** Single-entry table: `{ karma_positive: 15 }`. Only the first entry is read. */
-  unlocks_at: Partial<Record<ResourceType, number>>;
+  unlocks_at: Partial<Record<UnlockType, number>>;
   /** Single-entry table: `{ karma_positive: 15 }`. Only the first entry is read. */
   costs?: Partial<Record<ResourceType, number>>;
 }

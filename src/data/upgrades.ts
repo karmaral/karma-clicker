@@ -148,12 +148,26 @@ const data: Record<string, UpgradeData[]> = {
     },
   ],
   'building:main': [
-    // {
-    //   id: 'speed_3',
-    //   effect: { op: 'flat', value: -10_000 },
-    //   effect_target: 'duration',
-    //   unlocks_at: { experience: 500 },
-    // },
+    // Ramps the click's duration back toward instant. mult 0 on speed_3 lands
+    // on the same zero-duration path the emitter already treats as synchronous.
+    {
+      id: 'speed_1',
+      effect: { op: 'mult', value: 0.6, stat: 'duration' },
+      unlocks_at: { experience: 100 },
+      costs: { experience: 80 },
+    },
+    {
+      id: 'speed_2',
+      effect: { op: 'mult', value: 0.5, stat: 'duration' },
+      unlocks_at: { experience: 400 },
+      costs: { experience: 300 },
+    },
+    {
+      id: 'speed_3',
+      effect: { op: 'mult', value: 0, stat: 'duration' },
+      unlocks_at: { experience: 900 },
+      costs: { experience: 700 },
+    },
     {
       id: 'str_1',
       effect: { op: 'mult', value: 1.5 },
@@ -198,12 +212,11 @@ const data: Record<string, UpgradeData[]> = {
     },
     {
       id: 'str_1',
-      // The two yields ride different level curves, so they take different factors.
       effect: [
         { op: 'mult', value: 1.6, target: 'experience' },
         { op: 'mult', value: 6.6, target: 'karma' },
       ],
-      unlocks_at: { karma_positive: 10_000 },
+      unlocks_at: { count_total: 25 },
       costs: { karma_positive: 10_000 },
     },
   ],
@@ -218,7 +231,7 @@ const data: Record<string, UpgradeData[]> = {
       // `duration_reduction: 0` — steady is the one cohort count never speeds up.
       id: 'speed_1',
       effect: { op: 'mult', value: 0.75, stat: 'duration' },
-      unlocks_at: { karma_positive: 20 },
+      unlocks_at: { count_total: 25 },
       costs: { experience: 200 },
     }
   ],
