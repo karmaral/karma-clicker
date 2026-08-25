@@ -1,7 +1,14 @@
 import Building from '$lib/buildings/base.svelte';
+import Click from '$lib/buildings/click.svelte';
 import Cohort from '$lib/buildings/cohort.svelte';
 import { ResourceManager } from '.';
 import data from '$data/buildings';
+
+/** Named in, never excluded out: an unlisted role is a plain building. */
+const KINDS: Record<string, typeof Building> = {
+  soul: Cohort,
+  click: Click,
+};
 
 class BuildingManager {
   #buildings: Record<string, Building> = $state({});
@@ -22,15 +29,16 @@ class BuildingManager {
 
   /**
    * `role` is read here and nowhere else — the class carries it afterwards.
-   * Chosen by naming souls, never by excluding the click, so a later role that
-   * is not souls does not become a cohort by default.
+   * Chosen by naming the role, never by excluding another, so a later role
+   * nobody has written a class for is a plain building rather than the last
+   * branch's leftovers.
    */
   unlock(target: string) {
     if (!Boolean(target in data)) return;
     if (Boolean(target in this.#buildings)) return;
 
     const initData = data[target];
-    const Kind = (initData.role ?? 'soul') === 'soul' ? Cohort : Building;
+    const Kind = KINDS[initData.role ?? 'soul'] ?? Building;
 
     this.#buildings[target] = new Kind(target, initData);
   }
