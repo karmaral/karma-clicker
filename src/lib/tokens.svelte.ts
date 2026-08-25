@@ -16,10 +16,12 @@ import type { Polarity, ResourceType } from '$types';
  * Red from **each** pile, per yellow — the figure is per side, not the total, so
  * what the button reads is what a pile loses. Placeholder figure.
  */
-const YELLOW_PRICE = 12;
+const YELLOW_PRICE = 1500;
 
 /** Yellow per blue. Placeholder figure. */
-const BLUE_PRICE = 12;
+const BLUE_PRICE = 3000;
+
+const WISDOM_PRICE = 1_000_000;
 
 /**
  * Opposite red for the first single unit inverted. Flat prices above; this one
@@ -49,6 +51,7 @@ class Tokens {
   #posRed = $derived(ResourceManager.getAmount('red_positive'));
   #negRed = $derived(ResourceManager.getAmount('red_negative'));
   #yellow = $derived(ResourceManager.getAmount('yellow'));
+  #experience = $derived(ResourceManager.getAmount('experience'));
 
   /**
    * Cumulative over the counter, the same shape `Building.#cumulativePrice`
@@ -66,8 +69,8 @@ class Tokens {
     return sum;
   }
 
-  /** Both piles pay, so a partial buy is not a thing — pairing is the point. */
-  buyYellow(n = 1) {
+  /** Both piles pay, so a partial purchase is not a thing — pairing is the point. */
+  purchaseYellow(n = 1) {
     const price = n * YELLOW_PRICE;
     if (n < 1) return;
     if (this.#posRed < price || this.#negRed < price) return;
@@ -79,7 +82,7 @@ class Tokens {
     return true;
   }
 
-  buyBlue(n = 1) {
+  purchaseBlue(n = 1) {
     const price = n * BLUE_PRICE;
     if (n < 1) return;
     if (this.#yellow < price) return;
@@ -88,6 +91,15 @@ class Tokens {
     ResourceManager.add('blue', n);
 
     return true;
+  }
+  
+  purchaseWisdom(n = 1) {
+    const price = n * WISDOM_PRICE;
+    if (n < 1) return;
+    if (this.#experience < price) return;
+
+    ResourceManager.remove('experience', price);
+    ResourceManager.add('wisdom', n);
   }
 
   /** Named for where it lands, because the row it sits on is the destination. */
@@ -105,16 +117,22 @@ class Tokens {
     return true;
   }
 
-  canInvert(to: Polarity) {
-    return ResourceManager.getAmount(redFor(oppositeOf(to))) >= this.inversionCost(1);
+  canInvert(to: Polarity, n = 1) {
+    return ResourceManager.getAmount(redFor(oppositeOf(to))) >= this.inversionCost(n);
   }
 
-  get canBuyYellow() {
-    return this.#posRed >= YELLOW_PRICE && this.#negRed >= YELLOW_PRICE;
+  canPurchaseYellow(n = 1) {
+    const price = n * YELLOW_PRICE;
+
+    return this.#posRed >= price && this.#negRed >= price;
   }
 
-  get canBuyBlue() {
-    return this.#yellow >= BLUE_PRICE;
+  canPurchaseBlue(n = 1) {
+    return this.#yellow >= n * BLUE_PRICE;
+  }
+
+  canPurchaseWisdom(n = 1) {
+    return this.#experience >= n * WISDOM_PRICE;
   }
 
   /** The ladder teaches itself: the grade opens once the one below it exists. */
@@ -124,9 +142,33 @@ class Tokens {
 
   get yellowPrice() { return YELLOW_PRICE; }
   get bluePrice() { return BLUE_PRICE; }
+  get wisdomPrice() { return WISDOM_PRICE; }
 
   /** The inversion price's only input. */
   get inversions() { return this.#inversions; }
+
+  /** How many of this red the opposite pile can pay for, one at a time — the curve is geometric. */
+  getMaxInvert(to: Polarity) {
+    const balance = ResourceManager.getAmount(redFor(oppositeOf(to)));
+    let n = 0;
+
+    while (this.inversionCost(n + 1) <= balance) n++;
+
+    return n;
+  }
+
+  /** Flat prices, so the ceiling is a straight division — no scan needed. */
+  getMaxYellow() {
+    return Math.floor(Math.min(this.#posRed, this.#negRed) / YELLOW_PRICE);
+  }
+
+  getMaxBlue() {
+    return Math.floor(this.#yellow / BLUE_PRICE);
+  }
+
+  getMaxWisdom() {
+    return Math.floor(this.#experience / WISDOM_PRICE);
+  }
 }
 
 export const tokens = new Tokens();

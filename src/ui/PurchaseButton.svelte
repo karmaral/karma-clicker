@@ -11,6 +11,8 @@
     onclick?: () => void;
     onmouseenter?: () => void;
     onmouseleave?: () => void;
+    /** Right-click. Given one, the browser menu is suppressed on this button. */
+    oncycle?: () => void;
   }
 
   let {
@@ -22,7 +24,15 @@
     onclick,
     onmouseenter,
     onmouseleave,
+    oncycle,
   }: Props = $props();
+
+  function contextmenu(event: MouseEvent) {
+    if (!oncycle) return;
+
+    event.preventDefault();
+    oncycle();
+  }
 </script>
 
 <button
@@ -32,6 +42,7 @@
   {onclick}
   {onmouseenter}
   {onmouseleave}
+  oncontextmenu={contextmenu}
 >
   {#if quantity}
     <span class="quantity">{quantity}×</span>
@@ -55,7 +66,6 @@
     background: transparent;
     border-color: currentColor;
     color: var(--ink-300);
-    cursor: pointer;
     white-space: nowrap;
   }
 
@@ -77,9 +87,5 @@
       color: white;
       background-color: var(--ink-900);
     }
-  }
-
-  .purchase:disabled {
-    cursor: default;
   }
 </style>

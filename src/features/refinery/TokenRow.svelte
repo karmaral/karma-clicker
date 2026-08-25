@@ -8,21 +8,22 @@
   import type { BadgeKind } from '$ui';
   import { f, formatCost } from '$lib/utils';
   import { GRADE_LABELS, GRADE_SOURCES, type GradeKey } from '$lib/labels';
-  import { badgeFor } from '$features/detail/badge';
+  import { badgeFor } from '$features/details/badge';
 
   interface Props {
     grade: GradeKey;
     held: number;
-    /** What the refinery adds each batch. Only red has one; the rest draw a dash. */
     perBatch?: number;
     /** The passive route, drawn beside the price and never a control. */
     passive?: { amount: number; kind: BadgeKind };
     cost?: number;
     costKind?: BadgeKind;
+    quantity?: number;
     affordable?: boolean;
-    /** Why the price is what it is. Native title — the figure moves, the reason does not. */
     note?: string;
-    onbuy?: () => void;
+    onpurchased?: () => void;
+    /** Right-clicking the button advances the mode, without leaving the row. */
+    oncyclemode?: () => void;
   }
 
   let {
@@ -32,9 +33,11 @@
     passive,
     cost,
     costKind = 'red-both',
+    quantity = 1,
     affordable = false,
     note,
-    onbuy,
+    onpurchased,
+    oncyclemode,
   }: Props = $props();
 
   const isLocked = $derived(cost === undefined);
@@ -71,7 +74,14 @@
     {#if isLocked}
       <button type="button" class="locked-button" disabled>Locked</button>
     {:else}
-      <PurchaseButton kind={costKind} amount={formatCost(cost!)} {affordable} onclick={onbuy} />
+      <PurchaseButton
+        kind={costKind}
+        amount={formatCost(cost!)}
+        {quantity}
+        {affordable}
+        onclick={onpurchased}
+        oncycle={oncyclemode}
+      />
     {/if}
   </div>
 </div>
@@ -175,6 +185,5 @@
     font-weight: 600;
     line-height: 1;
     white-space: nowrap;
-    cursor: default;
   }
 </style>
