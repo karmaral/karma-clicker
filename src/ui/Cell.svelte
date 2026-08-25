@@ -41,7 +41,12 @@
       <Label text={label} size={labelSize} tone={labelTone} />
       {#if labelNote}
         <span class="divider" aria-hidden="true"></span>
-        <Label text={labelNote} size={labelSize} muted />
+        <Label 
+          text={labelNote} 
+          size={labelSize} 
+          muted 
+          classValue={'note'}
+        />
       {/if}
     </span>
     {#if header}
@@ -96,8 +101,6 @@
     min-width: 0;
   }
 
-  /* The note is a different sentence, not a second word of the label — a rule
-     says so where a gap alone reads as a pair of headings. */
   .divider {
     flex: none;
     width: 1px;

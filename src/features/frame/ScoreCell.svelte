@@ -13,10 +13,6 @@
 <div class="score">
   <Cell label="Experience" {caption} banded>
     <Value kind="xp" value={amount} {rate} />
-
-    {#snippet foot()}
-      the score · not a screen
-    {/snippet}
   </Cell>
 </div>
 

@@ -6,7 +6,7 @@
     import Badge from './Badge.svelte';
     import type { Props as TippyProps } from 'tippy.js';
     import type { ResourceType, YieldType } from '$lib/types';
-    import { badgeFor } from '$features/detail/badge';
+    import { badgeFor } from '$features/details/badge';
     import { formatCost } from '$lib/utils';
 
   interface Props {
@@ -61,7 +61,7 @@
     </span>
 
     {#if caption}
-    <span class="sub">
+    <span class="caption">
       {@render caption()}
     </span>
     {/if}
@@ -92,13 +92,8 @@
     padding: 7px var(--sp-3);
     background: var(--surface);
     border: 1px solid var(--line-300);
-    cursor: pointer;
     white-space: nowrap;
     transition: border-color var(--t-fast), color var(--t-fast);
-  }
-
-  .chip:disabled {
-    cursor: default;
   }
 
   .header {
@@ -109,7 +104,7 @@
   }
 
   .name {
-    font-size: var(--fs-sm);
+    font-size: 12px;
     font-weight: 600;
   }
 
@@ -124,6 +119,8 @@
 
   .caption {
     display: block;
+    font-size: var(--fs-label-sm);
+    letter-spacing: 0.015em;
   }
 
   .chip.affordable {

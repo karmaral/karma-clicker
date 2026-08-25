@@ -69,7 +69,6 @@
     font-weight: 600;
     color: var(--ink-900);
     border-bottom: 1px solid var(--ink-900);
-    cursor: pointer;
     white-space: nowrap;
   }
 

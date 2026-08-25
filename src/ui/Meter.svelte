@@ -9,6 +9,7 @@
     height?: string;
     track?: boolean;
     ticks?: MeterTick[];
+    theme?: 'dark' | 'medium';
   }
 
   let {
@@ -18,6 +19,7 @@
     align = 'start',
     height = '8px',
     track = true,
+    theme = 'medium',
     ticks = [],
   }: Props = $props();
 
@@ -28,7 +30,7 @@
   );
 </script>
 
-<div class={['meter', { track }]} style:height>
+<div class={['meter', { track }, theme ]} style:height>
   <span class={['fill', fillClass, align]} style:width={pct(value)}></span>
   {#each ticks as tick (tick.at)}
     <span class={['tick', { strong: tick.strong }]} style:left={pct(tick.at)}></span>
@@ -58,6 +60,9 @@
 
   .fill.ink {
     background: var(--ink-400);
+  }
+  .meter.dark .ink {
+    background: var(--ink-900);
   }
 
   .tick {

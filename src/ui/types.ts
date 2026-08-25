@@ -5,6 +5,7 @@
  */
 export type BadgeKind =
   | 'xp'
+  | 'wisdom'
   | 'red'
   | 'red-pos'
   | 'red-neg'
@@ -18,9 +19,9 @@ export type BadgeKind =
 
 export type LabelSize = 'default' | 'sm';
 
-export type LabelTone = 'active' | 'inactive' | 'dead';
+export type LabelTone = 'active' | 'inactive' | 'disabled';
 
-export type FigureSize = 'xl' | 'lg' | 'md' | 'base';
+export type FigureSize = 'hero' | 'xxl' | 'xl' | 'lg' | 'md' | 'base';
 
 export type MeterFill = 'ink' | 'pos' | 'neg';
 
@@ -32,6 +33,14 @@ export interface MeterTick {
 }
 
 export type ButtonVariant = 'filled' | 'outline';
+
+/**
+ * Where the sub sits. `stacked` is a caption under a verb; `spread` puts the two
+ * on one rail, the verb at one end and a reading at the other — which is what a
+ * button wide enough to be a bar wants, and what a caption centred under one
+ * cannot do.
+ */
+export type ButtonLayout = 'stacked' | 'spread';
 
 export type ChipStatus = 'affordable' | 'unlocked' | 'approaching';
 

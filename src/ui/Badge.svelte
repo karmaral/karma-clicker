@@ -26,6 +26,9 @@
     transform: none;
     background: var(--res-xp);
   }
+  .badge.wisdom {
+    background: var(--res-xp);
+  }
 
   .badge.red    { background: var(--res-red); }
   .badge.yellow { background: var(--res-yellow); }
@@ -60,18 +63,18 @@
   /* Karma's three treatments at red's hue. Same shapes and the same clip, so a
      polarised red reads as the polarity it is before it reads as a token. */
   .badge.red-pos {
-    border-radius: 50%;
+    border-radius: 32.5%;
     background: var(--hatch-red-pos-badge);
     box-shadow: var(--hatch-red-edge);
   }
 
   .badge.red-neg {
-    border-radius: 50%;
+    border-radius: 32.5%;
     background: var(--hatch-red-neg-badge);
   }
 
   .badge.red-both {
-    border-radius: 50%;
+    border-radius: 32.5%;
     background: var(--hatch-red-neg-badge);
   }
 

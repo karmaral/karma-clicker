@@ -1,10 +1,11 @@
 <script lang="ts">
-  import type { ButtonVariant } from './types';
+  import type { ButtonLayout, ButtonVariant } from './types';
 
   interface Props {
     label: string;
     sub?: string;
     variant?: ButtonVariant;
+    layout?: ButtonLayout;
     progress?: number;
     disabled?: boolean;
     onclick?: () => void;
@@ -14,6 +15,7 @@
     label,
     sub,
     variant = 'filled',
+    layout = 'stacked',
     progress,
     disabled = false,
     onclick,
@@ -22,7 +24,7 @@
 
 <button
   type="button"
-  class={['btn', variant]}
+  class={['btn', variant, layout]}
   {disabled}
   {onclick}
 >
@@ -47,12 +49,7 @@
     width: 100%;
     padding: var(--sp-3) var(--sp-4);
     border: 1px solid transparent;
-    cursor: pointer;
     transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
-  }
-
-  .btn:disabled {
-    cursor: default;
   }
 
   .progress {
@@ -76,6 +73,26 @@
   .sub {
     font-size: var(--fs-sm);
     line-height: 1.2;
+  }
+
+  /* One rail, and the sub is a reading rather than a caption — so it wears the
+     label's case and sits at the far end of the width instead of centring. */
+  .btn.spread {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--sp-4);
+  }
+
+  .btn.spread .label {
+    font-size: var(--fs-md);
+  }
+
+  .btn.spread .sub {
+    font-size: var(--fs-label-sm);
+    letter-spacing: var(--ls-label-sm);
+    font-weight: 700;
+    text-transform: uppercase;
   }
 
   .btn.filled {

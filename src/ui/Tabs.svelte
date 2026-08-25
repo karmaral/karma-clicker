@@ -61,7 +61,6 @@
     font-weight: 600;
     color: var(--ink-200);
     border-bottom: 2px solid transparent;
-    cursor: pointer;
     transition: color var(--t-fast);
   }
 

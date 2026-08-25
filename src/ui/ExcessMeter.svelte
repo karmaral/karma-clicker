@@ -33,12 +33,12 @@
 <div class="excess">
   <div class="readout">
     <span class="reading">
-      <Label text={side ?? 'Excess'} size="sm" />
+      <Label text={side ?? 'Excess'} size="sm" classValue="tag" />
       <span class="num">{figure}</span>
     </span>
     {#if gate !== undefined}
       <span class="reading gate">
-        <Label text="Gate" size="sm" />
+        <Label text="Gate" size="sm" classValue="tag" />
         <span class="num">±{Math.round(gate * 100)}%</span>
       </span>
     {/if}
@@ -66,30 +66,36 @@
 
 <style>
   .excess {
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    width: 100%;
+    width: 18ch;
     min-width: 0;
+    margin-left: auto;
   }
 
+  /* Taken out of flow so the big figures float above the track instead of
+     stretching the row that holds it. */
   .readout {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -4px;
     display: flex;
     align-items: baseline;
-    gap: var(--sp-3);
+    gap: var(--sp-4);
+    translate: 0 100%;
   }
 
   .reading {
-    display: flex;
-    align-items: baseline;
-    gap: var(--sp-1);
+    position: relative;
     white-space: nowrap;
   }
 
   .reading .num {
     font-size: var(--fs-label-sm);
-    letter-spacing: var(--ls-label-sm);
-    font-weight: 700;
+    font-weight: 600;
+    line-height: 1;
     color: var(--ink-900);
   }
 
@@ -97,7 +103,7 @@
 
   .track {
     position: relative;
-    height: 14px;
+    height: 6px;
     background: var(--line-100);
   }
 

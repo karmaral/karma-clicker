@@ -1,26 +1,28 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import type { RevealState } from '$lib/progression';
+    import type { ClassValue } from 'svelte/elements';
 
   interface Props {
     state: RevealState;
     active?: boolean;
     /** The screen still exists but has nothing to open — Detail with no planet. */
-    dead?: boolean;
+    disabled?: boolean;
+    classValue?: ClassValue;
     onselect?: () => void;
     children?: Snippet;
   }
 
-  let { state, active = false, dead = false, onselect, children }: Props = $props();
+  let { state, active = false, disabled = false, classValue, onselect, children }: Props = $props();
 
-  const clickable = $derived(state === 'live' && !active && !dead);
+  const clickable = $derived(state === 'live' && !active && !disabled);
 </script>
 
 <!-- The rule at the top of the cell is the whole tab affordance: 3px says you are
      here, a hairline says you could be, a dash says there is nothing behind it.
      The figures below stay full black in all three — an inactive section is a
      live reading, not a disabled control. -->
-<div class={['nav-section', { active, dead }]}>
+<div class={['nav-section', { active, disabled }, classValue ]}>
   {#if clickable}
     <button type="button" onclick={onselect}>
       {@render children?.()}
@@ -54,7 +56,7 @@
     background-color: var(--ink-900);
   }
 
-  .nav-section.dead::before {
+  .nav-section.disabled::before {
     height: 0;
     background-color: transparent;
     border-top: 1px dashed var(--ink-200);
@@ -70,7 +72,6 @@
     font: inherit;
     color: inherit;
     text-align: left;
-    cursor: pointer;
     min-width: 0;
   }
 </style>

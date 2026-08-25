@@ -22,9 +22,6 @@
     grid-auto-columns: minmax(0, 1fr);
     grid-template-rows: auto 1fr;
     padding: 14px 14px 0;
-    /* Room for the split and the bars under it, so the frame does not resize
-       on the beat that reveals them. */
-    min-height: 176px;
   }
 
   .band.rule {
@@ -32,7 +29,7 @@
   }
 
   .band > :global(*) {
-    padding: 10px 22px 0;
+    padding: 10px 22px 4px;
     min-width: 0;
   }
 

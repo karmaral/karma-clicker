@@ -5,8 +5,8 @@
    *
    * The division the layout rests on is **bars are quantities, the meter is
    * state**. Two lengths under Details say how big each karma pile is and which
-   * is bigger; the meter in the third cell says how far that difference has
-   * carried you and where the door is. Nothing is drawn twice.
+   * is bigger; the meter beside them says how far that difference has carried
+   * you and where the door is. Nothing is drawn twice.
    */
   import { Badge, Cell, ExcessMeter, Figure, HeaderBand, Label, PolarityBars, Rail, Value } from '$ui';
   import { BuildingManager, PlanetManager, ResourceManager } from '$lib/managers';
@@ -38,7 +38,7 @@
   const SCORE_WIDTH = '214px';
 
   const WIDTHS: Record<ScreenName, string> = {
-    detail: '520px',
+    details: '600px',
     overview: '236px',
     refinery: 'minmax(0, 1fr)',
   };
@@ -78,7 +78,7 @@
       .reduce((sum, rate) => sum + rate.perSecond, 0);
   }
 
-  const showRates = $derived(progression.isRevealed('detail.status'));
+  const showRates = $derived(progression.isRevealed('details.status'));
   const karmaRates = $derived(BuildingManager.countKarmaPerSecondByPolarity());
   const experienceRate = $derived(
     f(BuildingManager.countExperiencePerSecond() + harvestRateFor('experience')),
@@ -100,7 +100,7 @@
   const planet = $derived(PlanetManager.getActive());
 
   /** A finished world still reads, but there is nothing left to open on it. */
-  const isDetailDead = $derived(!nav.isAvailable('detail'));
+  const isDetailsDisabled = $derived(!nav.isAvailable('details'));
 
   const yielding = $derived(PlanetManager.behind.length);
 
@@ -115,12 +115,12 @@
   const matched = $derived(Math.min(negAmount, posAmount));
   const backlog = $derived(negAmount + posAmount);
 
-  const detailFoot = $derived.by(() => {
+  const detailsFoot = $derived.by(() => {
     if (!isSplit) return 'the split arrives when there is something to hold back for';
 
     const parts = [`aim ${aim.detentLabel(aim.detent).toLowerCase()}`];
 
-    if (progression.isRevealed('detail.split')) {
+    if (progression.isRevealed('details.split')) {
       const reserved = BuildingManager.countReserved();
 
       parts.push(`souls ${f(BuildingManager.countSouls() - reserved)} out, ${f(reserved)} in reserve`);
@@ -137,8 +137,8 @@
 
   function getSectionNote(screen: ScreenName) {
     if (screen === 'refinery' && !isRefineryTab) return getExcessSideNote(reading);
-    if (screen !== 'detail') return undefined;
-    if (isDetailDead || !planet) return 'no active planet';
+    if (screen !== 'details') return undefined;
+    if (isDetailsDisabled || !planet) return 'no active planet';
 
     const name = planetTexts[planet.id]?.title ?? planet.id;
 
@@ -146,7 +146,7 @@
   }
 
   function getSectionTone(screen: ScreenName) {
-    if (screen === 'detail' && isDetailDead) return 'dead' as const;
+    if (screen === 'details' && isDetailsDisabled) return 'disabled' as const;
 
     return nav.active === screen ? ('active' as const) : ('inactive' as const);
   }
@@ -162,8 +162,9 @@
     <NavSection
       state={nav.state(screen)}
       active={nav.active === screen}
-      dead={screen === 'detail' && isDetailDead}
+      disabled={screen === 'details' && isDetailsDisabled}
       onselect={() => nav.to(screen)}
+      classValue={screen}
     >
       <Cell
         label={getSectionLabel(screen)}
@@ -174,17 +175,21 @@
           : undefined}
         banded
       >
-        {#if screen === 'detail'}
+        {#if screen === 'details'}
+          <Label text="Karma" size="sm" />
           {#if progression.isRevealed('reading.negKarma')}
             <Value kind="neg" value={f(negAmount)} rate={showRates ? negKarmaRate : undefined} />
           {/if}
           {#if progression.isRevealed('reading.posKarma')}
             <Value kind="pos" value={f(posAmount)} rate={showRates ? posKarmaRate : undefined} />
           {/if}
+          {#if reading !== undefined}
+            <span class="meter">
+              <ExcessMeter value={reading} gate={excessGate} side={getExcessSideLabel(reading)} />
+            </span>
+          {/if}
 
         {:else if screen === 'overview'}
-          <!-- Places, not experience: what Overview is a screen about. Until a
-               world is behind you there is nothing yielding, so it counts itself. -->
           <Figure
             value={yielding ? `${yielding} yielding` : `${places} ${places === 1 ? 'planet' : 'planets'}`}
             size="lg"
@@ -193,7 +198,7 @@
         {:else if isRefineryTab}
           <!-- One badge between two figures: red is the only token still holding
                a side, and the pair is the reading. Negative left, the order the
-               detail section and the grade table both take. Empty rungs are drawn
+               details section and the grade table both take. Empty rungs are drawn
                greyed rather than withheld, so the ladder shows its height from the
                beat that reveals it. -->
           <span class="pair">
@@ -212,30 +217,6 @@
             value={reading === undefined ? '—' : `${Math.abs(Math.round(reading * 100))}%`}
           />
         {/if}
-
-        {#snippet graphic()}
-          {#if screen === 'detail' && isSplit}
-            <div class="bars"><PolarityBars negative={negAmount} positive={posAmount} /></div>
-          {/if}
-        {/snippet}
-
-        {#snippet foot()}
-          {#if screen === 'detail'}
-            {detailFoot}
-
-          {:else if screen === 'overview'}
-            <Label text="Next gate" size="sm" />
-            <span class="gate">
-              <span class={['where', { none: !gate }]}>{gate ? gateLabel : 'nowhere else yet'}</span>
-              {#if gate}
-                <span class="status">{PlanetManager.canReach ? 'open' : 'gated'}</span>
-              {/if}
-            </span>
-
-          {:else if reading !== undefined}
-            <ExcessMeter value={reading} gate={excessGate} side={getExcessSideLabel(reading)} />
-          {/if}
-        {/snippet}
       </Cell>
     </NavSection>
   {/each}
@@ -256,6 +237,11 @@
     gap: var(--badge-gap);
   }
 
+  .meter {
+    flex: 1;
+    min-width: 0;
+  }
+
   .bars {
     max-width: 470px;
   }
@@ -272,5 +258,12 @@
   .status {
     font-size: var(--fs-xs);
     color: var(--ink-900);
+  }
+
+  :global(.nav-section.details .divider:has(~.label.note)) {
+    display: none;
+  }
+  :global(.nav-section.details .label.note) {
+    margin-left: auto;
   }
 </style>

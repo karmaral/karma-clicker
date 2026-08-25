@@ -8,8 +8,8 @@
   import {
     ExperienceModule, InertiaModule, KarmaModule, ManualModule,
   } from '$features/header';
-  import { CohortTable, PlanetSection } from '$features/detail';
-  import type { Phase, PurchaseMode } from '$features/detail';
+  import { CohortTable, PlanetSection } from '$features/details';
+  import type { Phase, PurchaseMode } from '$features/details';
   import Building from '$lib/buildings/base.svelte';
   import buildingData from '$data/buildings';
 

@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { LabelSize, LabelTone } from './types';
+  import type { ClassValue } from 'svelte/elements';
 
   interface Props {
     text: string;
@@ -8,12 +9,19 @@
     tone?: LabelTone;
     /** A qualifier sitting beside a label, never a label on its own. */
     muted?: boolean;
+    classValue?: ClassValue;
   }
 
-  let { text, size = 'default', tone = 'inactive', muted = false }: Props = $props();
+  let { 
+    text,
+    size = 'default',
+    tone = 'inactive',
+    muted = false,
+    classValue,
+  }: Props = $props();
 </script>
 
-<span class={['label', size, tone, { muted }]}>{text}</span>
+<span class={['label', size, tone, { muted }, classValue ]}>{text}</span>
 
 <style>
   .label {
@@ -26,7 +34,7 @@
   }
 
   .label.active { color: var(--ink-900); }
-  .label.dead   { color: var(--ink-200); }
+  .label.disabled  { color: var(--ink-200); }
 
   .label.sm {
     font-size: var(--fs-label-sm);

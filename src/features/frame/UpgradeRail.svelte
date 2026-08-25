@@ -2,12 +2,14 @@
   import { Badge, Chip, ChipQueue, Label } from '$ui';
   import type { ChipStatus } from '$ui';
   import { ResourceManager, UpgradeManager } from '$lib/managers';
-  import type { ResourceType, YieldType } from '$types';
+  import type { ResourceType, UpgradeData, YieldType } from '$types';
   import { pulse } from '$lib/loop';
   import { formatCost } from '$lib/utils';
-  import { badgeFor } from '$features/detail/badge';
+  import { badgeFor } from '$features/details/badge';
   import data, { parseScope } from '$data/upgrades';
   import texts from '$data/upgrades-texts';
+  import planetTexts from '$data/planets-texts';
+  import buildingTexts from '$data/buildings-texts';
 
   const VISIBLE = 5;
 
@@ -17,6 +19,7 @@
     label: string;
     scope: string;
     costs?: Record<ResourceType, number>;
+    effect?: UpgradeData['effect'];
     status: ChipStatus;
     distanceToAffordable: number;
     textData: Record<string, string>;
@@ -36,6 +39,7 @@
     const [cost_type, cost] = Object.entries(item.costs)[0] as [ResourceType, number];
     const locked = UpgradeManager.isLocked(target, id);
     const held = ResourceManager.getAmount(cost_type);
+    const effect = item.effect;
 
     let status: ChipStatus = 'unlocked';
     if (locked) {
@@ -53,9 +57,38 @@
       scope: entity ?? kind,
       costs: item.costs as Record<ResourceType, number>,
       status,
+      effect,
       distanceToAffordable: cost - held,
       textData: { ...text },
     };
+  }
+
+  function getEffectVerbs(upgrade: Upgrade) {
+    if (!upgrade.effect) return [];
+    return Array.isArray(upgrade.effect) ? upgrade.effect : [upgrade.effect];
+  }
+
+  function getScopeLabel(upgrade: Upgrade) {
+    const effect = getEffectVerbs(upgrade);
+
+    if (effect.includes('unlock')) return 'Cohort';
+    if (effect.includes('discover')) return 'Planet';
+    return upgrade.scope;
+  }
+
+  /** The entity a discover/unlock names; other effects have nothing to add here. */
+  function getEffectLabel(upgrade: Upgrade) {
+    const effect = getEffectVerbs(upgrade);
+
+    if (effect.includes('unlock')) {
+      return buildingTexts[upgrade.scope]?.title ?? upgrade.scope;
+    }
+
+    if (effect.includes('discover')) {
+      return planetTexts[upgrade.scope]?.title ?? upgrade.scope; 
+    }
+
+    return '';
   }
 
   const upgrades = $derived.by(() => {
@@ -95,9 +128,9 @@
         onclick={() => buy(upgrade)}
       >
         {#snippet caption()}
-          <span class="scope">{upgrade.scope}</span>
+          <span class="scope">{getScopeLabel(upgrade)}</span>
           ·
-          <span class="effect">{upgrade.effect || ''}</span>
+          <span class="effect">{getEffectLabel(upgrade)}</span>
         {/snippet}
 
         {#snippet tooltipContent()}

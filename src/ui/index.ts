@@ -49,6 +49,7 @@ export { tooltip } from './actions/tooltip';
 
 export type {
   BadgeKind,
+  ButtonLayout,
   ButtonVariant,
   ChipStatus,
   FigureSize,

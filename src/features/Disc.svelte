@@ -74,7 +74,6 @@
     border-radius: 50%;
     padding: 0;
     background: var(--ink-900);
-    cursor: pointer;
     transition: transform .08s ease-out;
   }
 
