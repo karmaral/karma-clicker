@@ -3,6 +3,7 @@ import type { Effect, Modifier, ResourceType, UpgradeData } from '$types';
 import data, { parseScope } from '$data/upgrades';
 import texts from '$data/upgrades-texts';
 import { refinery } from '$lib/refinery.svelte';
+import { harness } from '$lib/harness.svelte';
 import {
   ResourceManager,
   BuildingManager,
@@ -100,12 +101,14 @@ class UpgradeManager {
 
     const { kind, entity } = parseScope(target);
 
-    // The one scope with a singleton behind it. Verbs act on entities, so a
-    // refinery upgrade is always a modifier and never a verb.
-    if (kind === 'refinery') {
+    // The scopes with a singleton behind them. Verbs act on entities, so these
+    // upgrades are always modifiers and never verbs.
+    if (kind === 'refinery' || kind === 'harness') {
       if (typeof effect === 'string') return;
 
-      return refinery.addModifier(this.#toModifier(item, effect, index));
+      const target = kind === 'refinery' ? refinery : harness;
+
+      return target.addModifier(this.#toModifier(item, effect, index));
     }
 
     // A global-scoped bucket names no entity, so nothing here can act for it yet.

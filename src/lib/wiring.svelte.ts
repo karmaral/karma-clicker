@@ -1,6 +1,7 @@
 import { BuildingManager, PlanetManager, ResourceManager } from '$lib/managers';
 import { beats, createTriggerContext, milestones, progression } from '$lib/progression';
 import { refinery } from '$lib/refinery.svelte';
+import { harness } from '$lib/harness.svelte';
 import { pulse } from '$lib/loop';
 import { log } from '$lib/log.svelte';
 import texts from '$data/log-texts';
@@ -85,6 +86,25 @@ function watchRefinery() {
   });
 }
 
+/**
+ * The same clock rule as the refinery's, plus the hand. Paying into anchoring
+ * off the click's existing `action` event keeps the press to one verb — you
+ * incarnate, and on a world still being anchored that also helps get it down.
+ */
+function watchHarness() {
+  // Bound once, so the teardown hands back the reference it registered.
+  const placeByHand = () => harness.placeByHand();
+
+  $effect(() => {
+    if (!progression.runs('anchoring')) return;
+
+    harness.start();
+    BuildingManager.addListener('main', 'action', placeByHand);
+
+    return () => BuildingManager.removeListener('main', 'action', placeByHand);
+  });
+}
+
 export function wire() {
   watchExperience();
   watchWave();
@@ -92,4 +112,5 @@ export function wire() {
   watchMoments();
   watchBuildings();
   watchRefinery();
+  watchHarness();
 }

@@ -29,6 +29,36 @@ const data: Record<string, Record<string, ItemTextData>> = {
       description: 'Twelve more slots.',
     },
   },
+  'harness': {
+    'slots_1': {
+      title: 'Hands on the lines',
+      description: 'Six slots. Reserved souls fill them; the rest wait their turn.',
+    },
+    'split_1': {
+      title: 'A finer hand',
+      description: 'Set the allocation in quarters instead of halves.',
+    },
+    'riders_1': {
+      title: 'Something to hold',
+      description: 'Forty souls can ride the finished harness and take what it pays.',
+    },
+    'slots_2': {
+      title: 'The whole crew',
+      description: 'Twenty-four more slots.',
+    },
+    'split_2': {
+      title: 'Finer still',
+      description: 'Set the allocation in tenths.',
+    },
+    'riders_2': {
+      title: 'Room for the rest',
+      description: 'Four hundred souls ride instead of forty.',
+    },
+    'split_3': {
+      title: 'To the soul',
+      description: 'Set the allocation in twentieths.',
+    },
+  },
   'planet:second': {
     'discover': {
       title: 'Somewhere else',

@@ -115,7 +115,7 @@ export default class Building {
 
   #generateResources() {
     Object.keys(this.#production).forEach((type: YieldType) => {
-      const value = this.#production[type] * this.active;
+      const value = this.#production[type] * this.active * this.yieldScale;
 
       if (type === 'karma') {
         this.#payKarma(value);
@@ -230,9 +230,17 @@ export default class Building {
   /** How many of the count are producing. */
   get active() { return this.activeAt(this.#count); }
 
+  /**
+   * What every yield is multiplied by after the count is settled. 1 here for the
+   * same reason `activeAt` is identity: the base states the general case, and a
+   * subclass that answers to something outside itself narrows it. Read in the
+   * payout and in `perSecond` both, so the readout cannot drift from the ledger.
+   */
+  get yieldScale() { return 1; }
+
   perSecond(type: YieldType, count = this.#count) {
     const yielded = this.#production[type] ?? 0;
-    return yielded * this.activeAt(count) / ((this.duration || 1000) / 1000);
+    return yielded * this.activeAt(count) * this.yieldScale / ((this.duration || 1000) / 1000);
   }
 
   get duration() { return this.#duration; }

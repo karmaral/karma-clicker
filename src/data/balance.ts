@@ -20,6 +20,21 @@ export default {
     interval: 4000,
   },
 
+  /**
+   * What the harness holds and how fast it goes down. `perWorker` is a rate, not
+   * an amount: how much of a second of the job one worker places per real second,
+   * so souls speed the clock rather than adding to a pile. `clickMs` is what one
+   * press takes off the job — a deliberate trickle, so a hand can open a world
+   * alone but stops mattering once souls arrive.
+   */
+  harness: {
+    slots: 0,
+    riders: 0,
+    perWorker: 0.2,
+    clickMs: 250,
+    splitSteps: [0.25, 0.15, 0.5, 0.1, 0.05],
+  },
+
   aim: {
     /** How far a resisted cohort wanders, in detents. */
     driftDetents: 0.55,

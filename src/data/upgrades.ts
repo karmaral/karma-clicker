@@ -9,9 +9,9 @@ const ENTITY_KINDS = ['cohort', 'building', 'planet'] as const;
 export function parseScope(key: string): UpgradeScope {
   const [kind, entity] = key.split(':');
 
-  // The refinery is the one scope with a singleton behind it rather than an entity.
-  if (!entity && kind === 'refinery') {
-    return { kind: 'refinery' };
+  // The two scopes with a singleton behind them rather than an entity.
+  if (!entity && (kind === 'refinery' || kind === 'harness')) {
+    return { kind };
   }
 
   if (!entity) {
@@ -75,7 +75,57 @@ const data: Record<string, UpgradeData[]> = {
       costs: { red_positive: 6000 },
     },
   ],
-  'harness': [],
+  /**
+   * Two capacities and a precision. Work slots decide how many reserved souls
+   * can place at once, so the split gets an optimum instead of "always max";
+   * rider slots cap how many souls the finished harness pays the anchor bonus
+   * to. `step` is a rung down the split ladder, not a fraction — see
+   * `balance.harness.splitSteps`. Placeholder figures.
+   */
+  'harness': [
+    {
+      id: 'slots_1',
+      effect: { op: 'flat', value: 6, stat: 'slots' },
+      unlocks_at: { karma_positive: 40_000 },
+      costs: { karma_positive: 60_000 },
+    },
+    {
+      id: 'split_1',
+      effect: { op: 'flat', value: 1, stat: 'step' },
+      unlocks_at: { karma_positive: 80_000 },
+      costs: { experience: 500_000 },
+    },
+    {
+      id: 'riders_1',
+      effect: { op: 'flat', value: 40, stat: 'riders' },
+      unlocks_at: { karma_negative: 50_000 },
+      costs: { karma_positive: 150_000 },
+    },
+    {
+      id: 'slots_2',
+      effect: { op: 'flat', value: 24, stat: 'slots' },
+      unlocks_at: { red_positive: 1000 },
+      costs: { red_positive: 2500 },
+    },
+    {
+      id: 'split_2',
+      effect: { op: 'flat', value: 1, stat: 'step' },
+      unlocks_at: { red_positive: 4000 },
+      costs: { red_positive: 5000 },
+    },
+    {
+      id: 'riders_2',
+      effect: { op: 'flat', value: 400, stat: 'riders' },
+      unlocks_at: { red_positive: 10_000 },
+      costs: { red_positive: 12_000 },
+    },
+    {
+      id: 'split_3',
+      effect: { op: 'flat', value: 1, stat: 'step' },
+      unlocks_at: { yellow: 500 },
+      costs: { yellow: 750 },
+    },
+  ],
   /**
    * Entity is the planet id. `costs` decides the shape: a priced discovery is
    * sought from the rail, a costless one arrives once `unlocks_at` holds.

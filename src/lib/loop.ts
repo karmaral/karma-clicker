@@ -1,5 +1,6 @@
 import { progression } from '$lib/progression';
 import { aim } from '$lib/aim';
+import { harness } from '$lib/harness.svelte';
 import { UpgradeManager } from '$lib/managers';
 
 /**
@@ -27,6 +28,9 @@ export function stop() {
 /** Call directly after a discrete event rather than waiting for the tick. */
 export function pulse() {
   aim.tick();
+  // Both read `clock` deltas rather than the interval, so the direct calls after
+  // a discrete event cost nothing and a simulated run fast-forwards them.
+  harness.tick();
   // Before the triggers, so a beat gated on what it unlocked sees it this tick.
   UpgradeManager.acquireUnpriced();
   progression.evaluate();

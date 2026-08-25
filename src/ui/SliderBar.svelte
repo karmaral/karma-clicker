@@ -5,17 +5,29 @@
    */
   interface Props {
     value: number;
+    /**
+     * Ground the handle cannot be dragged onto, 0…1, drawn dead. Clamped here
+     * rather than by the caller: a bar whose handle can be pulled somewhere it
+     * then springs back from is a bar arguing with the hand on it.
+     */
+    floor?: number;
+    /**
+     * The detent the handle snaps to, 0…1. 0 is continuous — the default, so a
+     * caller that never asked for detents keeps the bar it had.
+     */
+    step?: number;
     height?: string;
     label?: string;
     onchange?: (value: number) => void;
   }
 
-  let { value, height = '18px', label = 'Split', onchange }: Props = $props();
+  let { value, floor = 0, step = 0, height = '18px', label = 'Split', onchange }: Props = $props();
 
   /** Below this a press is a click on a position, not a drag. */
   const DRAG_THRESHOLD = 4;
 
-  const STEP = 0.05;
+  /** What an arrow key moves when nothing coarser is asked for. */
+  const ARROW_STEP = 0.05;
 
   let dragging = $state(false);
   let slid = false;
@@ -23,12 +35,22 @@
   let startX = 0;
   let track: DOMRect | null = null;
 
-  const pct = $derived(`${Math.max(0, Math.min(1, value)) * 100}%`);
+  const held = $derived(Math.max(0, Math.min(1, floor)));
+
+  const pct = $derived(`${Math.max(held, Math.min(1, value)) * 100}%`);
+  const floorPct = $derived(`${held * 100}%`);
+
+  /** Snapped before it is clamped, so the floor is never rounded away from. */
+  function snap(fraction: number) {
+    if (!step) return fraction;
+
+    return Math.round(fraction / step) * step;
+  }
 
   function fractionAt(clientX: number) {
     if (!track?.width) return value;
 
-    return Math.max(0, Math.min(1, (clientX - track.left) / track.width));
+    return Math.max(held, Math.min(1, snap((clientX - track.left) / track.width)));
   }
 
   function set(next: number) {
@@ -85,21 +107,24 @@
   }
 
   function onkeydown(e: KeyboardEvent) {
-    const step = e.key === 'ArrowLeft' ? -STEP : e.key === 'ArrowRight' ? STEP : 0;
-    if (!step) return;
+    const size = step || ARROW_STEP;
+    const moved = e.key === 'ArrowLeft' ? -size : e.key === 'ArrowRight' ? size : 0;
+    if (!moved) return;
 
     e.preventDefault();
-    set(Math.max(0, Math.min(1, value + step)));
+    set(Math.max(held, Math.min(1, snap(value + moved))));
   }
 </script>
 
 <div
   class={['slider', { dragging }]}
   style:height
+  data-cursor-grab
+  data-cursor-dragging={dragging}
   role="slider"
   tabindex="0"
   aria-label={label}
-  aria-valuemin={0}
+  aria-valuemin={Math.round(held * 100)}
   aria-valuemax={100}
   aria-valuenow={Math.round(value * 100)}
   {onpointerdown}
@@ -110,6 +135,11 @@
   {onkeydown}
 >
   <span class="fill" style:width={pct}></span>
+  <!-- Over the fill, not under it: the dead ground is filled too, and what
+       separates it is that no drag can give it back. -->
+  {#if held > 0}
+    <span class="floor" style:width={floorPct}></span>
+  {/if}
   <span class="handle" style:left={pct}></span>
 </div>
 
@@ -119,13 +149,8 @@
     width: 100%;
     min-width: 0;
     background: var(--line-100);
-    cursor: pointer;
     user-select: none;
     touch-action: pan-y;
-  }
-
-  .slider.dragging {
-    cursor: grabbing;
   }
 
   .slider:focus-visible {
@@ -140,6 +165,13 @@
     background: var(--ink-900);
   }
 
+  .floor {
+    position: absolute;
+    inset: 0 auto 0 0;
+    display: block;
+    background: var(--line-300);
+  }
+
   /* Sits astride the fill's edge, so the grab point is the boundary itself. */
   .handle {
     position: absolute;
@@ -147,10 +179,5 @@
     width: 8px;
     translate: -50%;
     background: var(--ink-500);
-    cursor: grab;
-  }
-
-  .slider.dragging .handle {
-    cursor: grabbing;
   }
 </style>
