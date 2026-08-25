@@ -1,4 +1,4 @@
-# Handoff — 2026-08-19
+# Handoff — 2026-08-20
 
 **Orientation only, and a board rather than an essay.** Three rules keep it that
 way:
@@ -13,25 +13,25 @@ way:
 
 ## Tree
 
-Branch `dev-next`. Last commit `4382963 rebuild checkpoint 17`, which carries
-Detail's cohort table rebuilt around *the head is the sum of its rows* — the `/s`
-totals moved onto the section rail, per-row rates gone quiet until hover, a
-purchase priced in green before you make it, the cost head turned into the
-quantity switcher — and `f` re-rounded game-wide: decimals only under ten, costs
-round up. Uncommitted: Lean bent into a **dial**, giving the ident 86px back; and
-Overview, in the author's hands. `git status` and `git log` for the list.
+Branch `dev-next`, last commit `9e3069d details tab includes its label`. Behind
+it, `e33eaa5 rebuild checkpoint 18` and `73a587e simplify aim controls`;
+checkpoint 17 carried the cohort table rebuilt around *the head is the sum of
+its rows* and `f` re-rounded game-wide. Uncommitted: **step 7b**, the harvest
+screen — see §*The harvest screen*. `git status` and `git log` for the list.
 
 `planet-visuals.ts` carries a **UTF-8 BOM**, and a new required field on
 `PlanetVisual` means editing all nine records.
 
 ## Verified, and how
 
-- `npm run check` → **871 FILES 3 ERRORS 2 WARNINGS** — table at the end. All
-  three are now committed defects; two are live.
+- `npm run check` → **904 FILES 2 ERRORS 2 WARNINGS** — table at the end. Both
+  are committed defects; #3 (`TokenRow`) has since been fixed and is gone.
 - `npx vite build` clean.
 - **The probe** — `esbuild` the model modules into the scratchpad, run under
   node. Works only because `pulse` / `harness` / `anchor` / `orbit` / `visual` /
-  `field` **never import three**. Keep it that way. Nine groups passing.
+  `field` **never import three**. Keep it that way. Nine groups passing, plus
+  the split: `travelOf` monotone, at most one soul mid-travel at any share, and
+  the first soul taken is never a rider.
 - `node scripts/uniform-join.mjs src/widgets/planet/material.ts` → **15
   materials, 28 shaders, 0 broken joins**. Not wired into `check`. Only the
   **0** is the assertion; the two counts move whenever a shader is added.
@@ -124,7 +124,75 @@ Overview, in the author's hands. `git status` and `git log` for the list.
 30. **The preview against a reserve.** Drag Soul allocation to ~30% and re-hover —
     the preview should add about 0.7 of what you buy. `activeAt` is what makes
     that true and nothing tests it.
-31. **The lean dial, in four states.** 36×18, and nothing has drawn one. Walk them
+31. **The takeover taking the Overview.** Header and rail stay and the Overview's
+    tab stays lit; what `nav.isHarvesting` hides is that screen's *body*, with
+    the same `Screen` the tabs use. Three things to watch. That the bands behind
+    it **stop painting** — their contexts are kept, which is the point, but
+    `setWatched` composes so nothing hidden is still asking for frames. That
+    `Not yet` lands you on the Overview *as you left it*, picked world and all,
+    rather than on a rebuilt one. And that switching to Details and back leaves
+    the harvest still open underneath, since the flag is on `nav` and not on the
+    Overview. **Whether it belongs to the Overview at all is unsettled** —
+    Details is the live alternative, and that is why the flag lives where it
+    does.
+32. **A shoulder each side, controls down the middle.** Three even columns, not
+    the house `view-layout` two, and the world is **not** one of them: the stage
+    is the whole block and the three parts stand on it with no ground of their
+    own — a panel at each outer edge, and split over verb down the middle, with
+    the world showing through above them. Panels are the only opaque things
+    drawn. Watch that souls stray **behind** the panels rather than stopping at
+    them. Nothing else in the game lays a control straight onto a canvas.
+33. **The harvest world's size and place.** `HARVEST_RADIUS` 120px against the
+    detail stage's 111 — near enough that it reads as the same world seen again;
+    the screen does its work by taking the Overview whole, not by the disc being
+    big. Drawn to a *pixel radius* rather than to a `frame`
+    (`frame = min(width, height) / 120`), so it holds still while the card
+    moves. `HARVEST_ANCHOR` 0.34 holds it **above** the controls as a share of
+    the *height*, so the room under the swarm survives the block changing size.
+    The block itself is 680px, a pixel count and not `100svh` minus a guess at
+    the header. The lab's harvest cell carries **World px**, **Room px** and
+    **Anchor %**; whatever they land on is typed back into `visual.ts` by hand.
+34. **The split moving the swarm.** Souls staying settle to `settleAt` 0.8,
+    against the surface, and the rest stray to `strayTo` 1.35×. Drag slowly:
+    exactly one soul is mid-travel at a time, so it should read as dots walking
+    in one at a time. A whole band snapping means `travelOf` is being read at
+    the wrong end. Then drag to both ends — 0% is the whole swarm gathered to
+    leave, which is a state nothing else in the game shows.
+35. **The world's ink at a push-in.** `scaleInk` multiplies `outline`, `contour`
+    and `veilOutline` by the drawn radius over `STAGE_RADIUS` 111, so at 120 the
+    2px silhouette is 2.2px — the shipped push-in barely exercises this. Drag
+    **World px** to its ceiling to actually test it: the line should
+    stay a line rather than thinning to a scratch — and the *floors*
+    (`dotFloor`, `veilHatchWidth`) are left out on purpose, so a pushed-in world
+    should also stop showing the dot floor's dust. Worlds carrying a `contour`
+    or a `veilOutline` are the untested half; nothing ships either yet.
+36. **`strayTo` against the box.** The outermost band strays to 2.00 world units
+    — 240px at a 120px world — so a full return should reach well out over the
+    block without leaving through it. The edge it meets first is now the **split's
+    top**, not the card's: a centre at 34% of 680px is 231px down, plus 240px of
+    stray is 471px, against controls that start around 480. It clears by a hair,
+    and whether that hair reads as room or as a near miss is the thing to judge.
+    **Room px** buys margin, **World px** spends it, **Anchor %** decides how
+    much goes over the swarm and how much under it. The three are one decision.
+    §*The harvest screen*.
+37. **The alignment track's three zones.** Negative hatch, `evenBand` as plain
+    ground at its true width, positive hatch — a deviation from the reference's
+    one uniform hatch, chosen. At `evenBand: 0.02` the plain gap is 2% of the
+    track, which may read as a seam rather than as a band.
+38. **The spread button at real text width.** `Harvest ⟨name⟩` left,
+    `IN THE POSITIVE` right, one rail, capped at 545px so it reads narrower than
+    the split above it. The longest world name against the longest alignment
+    word is the case; nothing has drawn either. The warning line under it shares
+    a row with `Not yet`.
+39. **The boons row reading `—`.** `PlanetData.boons` is wired end to end —
+    typed, granted at the harvest, labelled — and **unauthored**, so the row is
+    an em dash until `planets.ts` says otherwise.
+40. **The cycle legend.** `LONGEST LONG EVEN SHORT SHORTEST`, read off
+    `resolveHarvestDuration` at both ends so it cannot disagree with the panel's
+    figure. Two things to watch: whether it steps at all across the drag's real
+    range, and that **EVEN** here means a mid-length cycle while EVEN eight
+    inches to the left means an alignment. The reference's word, kept.
+41. **The lean dial, in four states.** 36×18, and nothing has drawn one. Walk them
     in this order: **even** (needle up, no wedge — if it reads *empty* rather than
     *centred*, the plate is too faint at `--line-200`); **a plain aim** at
     `resistance: 0` (one wedge, needle still and on its outer edge; hard negative
@@ -132,6 +200,46 @@ Overview, in the author's hands. `git status` and `git log` for the list.
     is 9s, so it must creep and not jitter); **unpredictable** (wide band, grey
     needle). Then check the light wedge against a hovered row — its `.edge`
     hairline is the only thing terminating it. §*Lean is a dial*.
+
+42. **The whole anchoring phase.** Nothing here has been rendered.
+    §*Anchoring — primitives built, design provisional*. Walk it in this order:
+    beat 10 with a second world reached — roster gone, `AnchorPanel` in its
+    place, **two** ghost anchors on the world, split still under it. Then press
+    with no slots bought: the countdown reads `—` **and the meter still fills**,
+    each press popping `−<clickMs>s` **at the ghost anchor going down** while the
+    button's own sub reads the same, and no `+experience`, **and no spark on the
+    ground** — the halo and the mark still answer the press, but nobody landed.
+    Then buy `harness slots_1` and drag the split mid-anchor: the countdown
+    must move at once and the fill must **not** jump. Then watch one land —
+    ghost fills, a line strings to it, the popup moves to the next ghost; on the
+    last the roster returns, the press pays experience again, and every cohort's
+    `/s` is up by `bonusPerAnchor × anchors`, capped by riders.
+43. **The split in detents.** `SliderBar` now snaps at `harness.step`, which
+    starts at 50% — so the Refinery's copy of the lever changed too, before any
+    anchoring exists. Watch whether a two-detent bar reads as broken rather than
+    as coarse; `split_1` buys quarters.
+44. **The idle count in the split's aside.** It reads
+    `96 out · 6 anchoring · 12 idle` now that a held soul does one job and
+    anchoring draws before the refinery. The surplus is the point — but check
+    that a bar which cannot help reading *idle* at every position past the first
+    detent does not read as a mistake. §*One soul, one job*.
+45. **Whether ten minutes is the right second world.** `second` is now
+    `2 × 36_000` job-ms — roughly ten real minutes at the six slots `slots_1`
+    buys, less if you press. `third` is `5 × 360_000`, roughly fifty at the
+    thirty `slots_2` buys. Neither has been played.
+46. **Souls on the finished harness.** `harness.riders` now reaches the swarm as
+    a count, so buy `riders_1` (40) with anchors down and watch: 40 dots leave
+    their orbits for the lines, spread across the whole harness rather than
+    crowded onto the first pair. They appear **as the lines do**, one placed
+    anchor at a time — check that a half-strung harness with riders on it reads
+    as progress and not as a glitch. Nothing rides before `riders_1`, since
+    `balance.harness.riders` is 0; that is the upgrade's whole content.
+    §*A rider is a count, not a share*.
+47. **The header between worlds.** Finish a first harvest and stop before
+    reaching the next: every cohort `/s` is now 0 and the header shows only the
+    worlds behind you. Check that this reads as *the souls have nowhere to go*
+    and not as the game having stopped — there may want to be a word for it in
+    the Overview's empty state. §*Between worlds, souls earn nothing*.
 
 ## Parked — named, argued, not done
 
@@ -152,25 +260,24 @@ Overview, in the author's hands. `git status` and `git log` for the list.
 
 ## Does not exist
 
-- **No screen draws an anchor or a harness.** `Disc.svelte` is unrendered but
-  left in the tree.
+- ~~No screen draws an anchor or a harness.~~ Detail does, from `detail.field`
+  on. `Disc.svelte` is still unrendered, left in the tree.
 - **A shared renderer** — parked, and no longer blocking anything. The Overview's
   rows are stills: §*A still world needs no context*, price in §*Parked*.
 - **The type→parameter table** (design handoff §4), so `planet-visuals.ts` is the
   only source rather than an override layer.
 - **Surface objects** — only the field they would query.
 - **Any reader of `$data/planet-visuals` but the lab**, so no id mismatch is
-  caught. `ridged` and `banded` are stale specimens.
+  caught. `ridged` is the last stale specimen; `banded` has been re-authored.
 - **A shared frame for families** — each link is laid out about its own chord.
 - `@threlte/extras` is unused, kept for pointer picking.
 
 ## Next
 
-From the course table: **step 7b**, the Harvest layout — the last one open, two
-stubs, and a design pass. 7a is done: §*The refinery screen*; `detail.split`
-now carries the same `SliderBar` too. Outside the table: `log-texts.ts`
-(sixteen placeholders), re-authoring `ridged` and `banded`, the type→parameter
-table.
+**The course table is closed.** 7b is done — §*The harvest screen* — and with it
+the last row. What is left is outside it: `log-texts.ts` (sixteen placeholders),
+re-authoring `ridged`, the type→parameter table, and authoring
+`PlanetData.boons` for the three worlds that now have somewhere to put them.
 
 Owed, and compounding: the **doc pass** (§*The context files are themselves an
 open task* — CONTEXT v3 §3.2 and §3.5 are superseded and unamended at source)

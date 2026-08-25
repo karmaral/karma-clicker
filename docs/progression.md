@@ -106,9 +106,12 @@ I have the dev server up and I'm watching all the time."*
 
 Design decisions deferred on purpose. None of these are oversights.
 
-- **The Harvest layout** is stubbed pending a design pass: where Harvest's verb
-  sits relative to its disc is an open question — don't improvise it. Overview
-  is no longer one of these; see Overview below.
+- ~~**The Harvest layout**~~ — the design pass came and the layout is built. The
+  verb stands on the world rather than beside it; see *The harvest screen*.
+  Overview is no longer one of these either; see Overview below.
+- **Which screen the harvest belongs to.** It takes the Overview's body today.
+  Details is the live alternative — the world being left is the one Details is
+  about — which is why the flag lives on `nav` and not on either screen.
 - **Per-cohort aiming** is far future. Rows read their lean; only the global
   detent steers.
 - **A shared renderer.** One canvas drawing many worlds. It is not what the
@@ -856,7 +859,9 @@ Place cannot know what is *under* a dot, and the body owns the whole ramp — so
 every dot also carries a ring in the ramp's far end, which is the argument the
 planet's outline already makes. Its ink is derived from the fill rather than
 authored, because a fourth authored tone would need setting once per place a soul
-can be and would still be wrong for one of them.
+can be and would still be wrong for one of them. The one exception is the core,
+where the fill and the ring are both fixed with the rest of the reading — there
+what is under the dot *is* known, and the pair is the mark.
 
 `SOUL_CAPACITY` is the instance allocation and nothing else, so it is set to what
 the lab's own sliders can ask for rather than to a guess at a good number: eight
@@ -2001,9 +2006,17 @@ context ceiling is still theirs alone to press. The app now holds two live
 contexts once both screens have been visited, and three while the snapshot
 canvas is up.
 
-**Two things now outlive a tab switch that did not before.** The Overview's
-picked world, and the first-harvest takeover: leave it open, come back, it is
-still open. Both read as correct, and both are new.
+**One thing now outlives a tab switch that did not before**: the Overview's
+picked world. It reads as correct, and it is new. The first-harvest screen is
+the other: a tab switch can happen underneath it, since it is the Overview's
+body it replaces rather than the frame — see §*The harvest screen*.
+
+**`setWatched` composes with whatever is above it**, and has to. The predicates
+nest: a band inside an Overview that has itself been taken over is not watched
+however active it is on its own, and without the `&&` the inner answer shadows
+the outer one — a hidden screen goes on painting worlds nobody can see. That was
+latent while nothing nested, and the first-harvest takeover is what put a
+`Screen` inside a `Screen`.
 
 ### A second surface, on its own clock
 
@@ -2443,6 +2456,296 @@ widget size.
 **`veilHatchGrain` is `veilHatchGrainScale`.** It was always a scale, and with
 `grain` on the body meaning an amount the two would have read as opposites.
 
+### A window and what is behind it
+
+The first harvest screen tells the decision's two facts in DOM alone —
+`AlignmentPanel` on the left shoulder, the split in the middle — while the world
+the decision is *about* says neither. The core answers the first of them, and the
+window is what lets it be seen.
+
+**The window is the fresnel, turned round.** `1 − |N.z|` is already the shade's
+`rim`; `|N.z|` is the same reading the other way, so the front opens and the limb
+stays whole. That is the whole of why it is this half and not the other: the
+silhouette is where a world's shape is read, and it is the one part of the disc
+that cannot be spent.
+
+**It is an opacity, and that is a rule broken on purpose.** It was a dithered
+cutout first, for the reason a cutout is always tempting here: a hard threshold
+and a `discard` keep every surviving pixel a ramp value, so the seven inks hold
+and the surface stays opaque. Where an alpha says half a body as a grey between
+two slots, a cutout says it as a density of holes — the hatch's argument, one
+layer down. It was seen, and it was wrong. A hole is all or nothing, so a
+*barely* open window comes out as sparse confetti rather than as thin, and thin
+is most of what this window is. The blend is worth an ink rule that was only ever
+a rule about drawing, not about seeing through.
+
+So this is the one mark on the world where a pixel is not one of the seven. It
+lands between the surface's slot and the core's, and how much of the core
+survives is exactly the body's alpha there — the body *thins onto* what it is
+holding, which is the reading a hole could not give.
+
+**The window has no grain**, and that went the way the cutout did. It carried a
+speckle multiplied around a mean of 1 — the same opening, unevenly spent — and
+the two readings were not the same picture at all. The window is a *clearing*:
+the surface thinning until it is not there. Noise in it read as the surface being
+*damaged*, which is a thing that happened to the world rather than a thing the
+world is doing. So `clarityGrain` and `clarityGrainScale` are gone, and the whole
+mark is one clean wash with `clarityGamma` deciding how far down the sphere it
+reaches.
+
+**The wash is steepened before it is spent.** A bare fresnel has no edge anywhere
+on it — every point on the disc is a slightly different alpha from its neighbour
+— and a window whose edge is everywhere reads as haze *over* the world rather
+than as an opening *in* it. Which is the same complaint the grain answered
+wrongly. So the fresnel is put through an S before the clarity is multiplied on:
+the shoulders flatten, the middle steepens, and the whole falloff collects into
+one band. `clarityGamma` then moves a rim rather than stretching a wash, which is
+what a knob named for a falloff should do.
+
+Twice, in the end — once was still a slope on a disc this size. The second pass
+flattens what the first left of the shoulders and halves the band again. It is
+composed rather than written as one steeper curve on purpose: the knob keeps
+meaning what it meant, and there is one shape here applied twice rather than two
+shapes to hold in mind.
+
+**And then quantised**, which is where the alpha comes back into the fold. The
+opacity was the one quantity on this world with a continuum in it, and the answer
+was the one the surface already gives everything else: `claritySteps` fixed
+opacities and nothing between. The window stops being a fade and becomes a set of
+concentric plates, each a level, the way the terrain is a set of bands — and the
+picture is not a compromise on the ink rule so much as the ink rule reaching a
+second axis. Seven inks and a handful of veilings, still nothing between.
+
+The lattice is fixed at 0 and 1 rather than laid across whatever `clarity`
+reaches. So a level means the same thing on every world and at every setting, and
+turning the clarity down drops plates off the open end instead of sliding all of
+them — a window half open is *literally* the same plates as a window fully open,
+minus the innermost ones.
+
+**The veil opens with the body.** Both veil fragments take the same factor off the
+same radial normal — the shell is pushed out along it, so the two fresnels agree —
+and the veil's outline goes with it: a cloud that kept its contour over an opened
+front drew a clean edge around a hole, which is the one thing that would make the
+hole read as a hole rather than as thinning. It is `clarityAt`, shared, and the
+uniforms are declared per shader the way `rampRead`'s are.
+
+There is still a `discard`, for a fully open pixel only, and it is the **last
+statement in `main`**. Every `fwidth` in that shader is above it, and a discard
+makes the control flow non-uniform for everything after. What it buys is that a
+window at full alpha leaves no depth write behind for the burst to be cut against.
+
+**The alpha moved the body in the sort.** An opaque surface sorted itself by
+being opaque; a transparent one has to be placed. It takes the bottom of
+`RENDER_ORDER` at −2, so every opaque draw — the outline hull, the core, a placed
+anchor — is on screen before the front blends over it, which is the ordering the
+window exists for. Depth is still written at every alpha, so nothing that read the
+body as a depth cue behaves differently for the front having gone thin.
+
+The burst went from −1 to sitting *after* the body, which only looks like a
+contradiction: it depth-tests on strictly-less against a body that has just
+written its own depth, so every fragment the body covers is rejected and what
+survives is the ring outside the silhouette — the same picture the opaque body
+used to cut for it from the pass in front.
+
+**The core is ruled in view space.** The veil's hatch runs in latitude on the
+world's own axis, which is right for weather riding a surface. It is wrong here:
+the core is a *reading*, a marked plane inside the world rather than a second
+world, and a lean that meant a different angle depending on how the planet was
+held would be no reading at all. So the ruling is off `vRel` — the fragment's
+offset from the body's centre in camera axes, the depth idiom five shaders were
+already using, spent on a direction instead. It does not turn, does not shade and
+takes no key.
+
+Negative and positive lean opposite ways. **Even has no ruling at all** — a bare
+mid tone, saying that neither side was taken — and the cut is on the lean rather
+than on the stroke width, so a world can author its hatch and still show a bare
+core. The rate the stroke is weighed in comes off the unwrapped coordinate rather
+than off `fract` of it: `fract` is discontinuous and a derivative of it spikes at
+every seam, which would draw a heavy stroke down each one. `contourAt`'s argument,
+in its simplest form.
+
+**The inks are fixed, and there are three sets of them.** The ramp runs 0
+`--surface` to 6 `--ink-900`, and the three readings take its two ends and its
+middle: **positive is paper, negative is black, even is a mid-light grey**. That
+ordering is the copy's rather than a palette's — service to others is the light
+one — and it is the loudest signal on the screen, because it is the one thing a
+glance has to get right. The lean of the ruling is the second reading underneath
+it, not the first.
+
+Each ruled end hatches **one step in from its own ground** — paper ruled at
+`--ink-200`, black ruled at `--ink-700` — rather than both being ruled in the
+ramp's darkest ink. A hatch far from its ground is a second mark sitting on the
+core; a hatch one step off it is the ground itself, worked.
+
+None of that is authorable, which is the point. Everything else the planet draws
+is a world's own character, and this one mark is a reading — a reading each world
+stated in its own colours would be one nobody could learn. It is the argument that
+already keeps the veil hatch's axis off the sliders, spent on a colour.
+
+The **souls in the core get a pair of their own per reading** rather than
+borrowing the hatch's. A dot has to carry at a few pixels where a stroke only has
+to be legible, and it is also why the swarm now takes a `lean` at all — a single
+fixed soul ink would have disappeared on half the harvests.
+
+Both ruled ends give the dot the core's **own ground** and ring it in the ramp's
+far end: an arrived soul is a bubble the colour of the thing it went into, seen
+by its rim. That is a stronger mark than a contrasting fill and a truer one — the
+soul is not *on* the reading, it is in it — and at 4px the rim is what the eye
+picks up anyway, which the outline argument already says everywhere else. Even
+keeps the shape and spends its contrast *inside* the ramp rather than across it —
+a step lighter than its ground, rimmed two steps darker — so its souls are as
+legible as anyone's without either end of the ramp on them, and it is the absence
+of the ends that says nothing was taken. It was rimmed in the ground's own tone
+first, which is a rim only in the source: on screen it was a bare disc, and even
+would have been the one reading whose souls had no edge at all. The ring's usual rule, the far end of the ramp from the fill, still holds
+outside the core: out there a dot is over the world, not over a reading.
+
+`strokeAt` moved up beside `rampRead` and `simplex3D` for this, which is
+`simplex3D`'s own move for `simplex3D`'s own reason — a `const` is not hoisted.
+
+**One mark, and the mark is the alignment.** Neither half is drawn unless a view
+hands the world one, so `PlanetView` without an `alignment` is byte-identical to
+what it was: no core mounted, `uClarity` at 0, and souls settling to `settleAt` as
+before. The harvest stage is the only view in the game that passes one. That is
+what lets `clarity` be authored per world in `planet-visuals.ts` without a list
+row or a still ever showing a hollow planet.
+
+**The core's rim is feathered**, on that same fresnel read the other way round
+again — it shuts the core's own limb instead of opening the body's front. A disc
+with a hard edge reads as a coin lying on the world; a disc that gives its edge
+back to the ink reads as something inside it. That made the core transparent,
+which is why it now has a `stack.ts` entry of its own at the bottom, under the
+body and under the hull both. It writes no depth: nothing needs to know where it
+is, and a feathered edge that claimed depth would claim it at full strength right
+out to where it had faded to nothing.
+
+**What the window opens onto is the outline's hull.** Wherever the core does not
+reach, at least: the outline is an inverted `BackSide` hull, so what it draws is
+the world's *far* hemisphere at
+`outlineTone` — invisible until now except as the ring standing past the
+silhouette. Through the holes it becomes the interior wall, and the core is seen
+against ink rather than against the page. Not designed, but kept: a mid-tone core
+with a pale ruling reads far better on it than it would on paper. If it ever wants
+separating from the edge's own ink it needs a field of its own, and it does not
+have one yet.
+
+**Souls in the core take a third ink.** `soulFragment` discards anything inside
+the rim and behind the sphere, which is every soul that has arrived — the core is
+well inside that radius, so all of them would have vanished. `uCore` is a third
+place a soul can be seen, tested on the same silhouette radius the ink already
+switches on, and both halves are drawn there. Souls that are merely *behind* the
+world are still gone: the ink rule is their depth cue and it does not know the
+front has opened. That is a look to check, not a bug.
+
+### Berths, not a separation pass
+
+Souls staying with the world used to settle radially to `settleAt` and stop. They
+now cross into the core from `berthEnter` on and take a **berth** apiece.
+
+The straight line between the two would be the chord objection that keeps a rider
+off a partly-travelled harness line — except that objection is about two points on
+a *sphere*, and both ends of this are already inside the world. There is nothing
+for a chord to cut.
+
+**A Fibonacci spiral with a cube-root radius.** The plain spiral spreads points
+over a sphere; the cube root turns that into a ball, since volume goes as r³ and
+an untreated radius crowds every berth onto the shell. The index is the soul's
+rank in the split — the same figure `travelOf` reads from the top of the deal — so
+rank 0 lands at the middle and **the core fills from its centre outward** as more
+of the swarm is given to it, rather than growing a crust. Berths are packed for
+the whole swarm rather than for the merged count, so a drag fills more of them
+instead of moving all of them.
+
+**Radius and direction have to come from different sequences**, and the first
+version did not do that. The plain spiral takes its latitude from the same
+parameter as its radius, so the outermost berth was always at the south pole and
+the innermost always at the north — and since the innermost has no radius to speak
+of, the packing came out as a ball with a spike hanging off the bottom and nothing
+at the top. It read exactly as it was: the souls sat low and never reached the
+core's edge.
+
+The radius keeps the rank, since centre-outward filling is the read. The latitude
+moved to the **radical inverse** of the rank — van der Corput base 2 — chosen over
+a golden-ratio sequence for one property: every *prefix* is well spread, not just
+the whole. The core fills in rank order, so what has to look even is the first k
+values for every k, and each new radical inverse lands in the largest gap left.
+
+**Nothing is ever tested for a collision.** `berthWobble` spends a share of
+`berthRoom` — half the gap to the nearest other berth — divided by the diagonal of
+the three axes it is spent on, so at full wobble the *corner* of a soul's box is
+that half-gap and two neighbours at their furthest still do not meet. The packing
+is what does the avoiding; the wobble only spends what the packing left over.
+
+That is the whole reason it is berths rather than a separation pass. A spatial
+hash and a push-apart would want a velocity per soul carried between frames, and
+the swarm is a pure function of `elapsed` — every soul's place comes from its seed
+and the clock, so two views of one world agree without talking. The wobble rides
+the soul's own `wobbleRate` and `phase`, already per-soul and already
+decorrelated, so a core of arrivals mills instead of pulsing as one.
+
+### The split has weight
+
+The first version was correct and read as nothing. `travelOf` gave exactly one
+soul a fractional travel — whoever sat on the boundary — so dragging the split
+switched dots on and off one at a time, at the speed of the mouse. It was an
+honest counter and it was not a decision.
+
+Two knobs give it a body, and neither is worth much without the other.
+
+**`crossing` is how many souls are in the air at once**, the width of the
+boundary. At 1 it is the old behaviour. Wider and the boundary is a band with a
+leading edge, so what the eye sees is a current running into the core rather than
+a tally being kept. The share is scaled by `souls + crossing` rather than by
+`souls`, so widening the band costs nothing at the ends: at a full share the last
+soul still reaches a full 1 instead of stalling `crossing` places short of the
+middle.
+
+**`mergeLag` is how long the swarm takes to catch up** to a split that has
+already moved — an exponential chase on the frame's own delta, not a fixed ramp,
+so a drag is answered *at once* and only the tail of it is slow. That is the
+difference between a heavy control and a laggy one, and it is the whole of the
+feel: the number under the slider is right immediately, and the world takes a
+beat to agree with it.
+
+It is also the one thing in the swarm that is **not** a pure function of
+`elapsed`. That rule is why the core is berthed rather than simulated, and this
+carries a value between frames in plain violation of it. It is a much smaller
+sin, and worth naming rather than hiding: one scalar for the whole swarm and not
+one per soul, and it *converges* — two views of a world whose split has stopped
+moving still agree on where every soul is. Only the drag itself is a view's own
+business, and a drag is a thing a person is doing rather than a thing the world
+is.
+
+**Being hidden by the world is a soul's own commitment.** The swarm's far half is
+cut at the body's drawn edge, which is right for a swarm that belongs to the
+world and wrong the moment half of it is leaving: a soul still in orbit was being
+clipped by a silhouette it is not going into, and at the rim that read as the
+world eating it. So the travel figure is spent twice — once on where the soul is,
+and once as how much of the body's silhouette it is subject to. A leaver is never
+behind anything; a soul crossing sinks behind the world over its crossing. It is
+spent on the alpha rather than on the discard because a half-committed soul is
+halfway hidden, which no cut can say, and it costs one per-instance float.
+
+**Arriving is the one thing the shader asks about the whole dot.** Everything
+else in it is per fragment, and deliberately: a dot straddling the silhouette is
+cut into two inks rather than switching whole, because switching whole reads as a
+bug at 4px. The core test was written the same way and should not have been. A
+berthed soul near the core's rim was inside it on some of its pixels and behind
+the world on the rest, so it came out as the crescent of itself that overlapped
+the core. Arriving is something a *soul* does. The test moved to the instance's
+own centre, with the dot's radius added to the core's — a soul touching the rim
+is in.
+
+The radius it is tested against is **not the core's**, either. A berth sits
+inside the core but the wobble rides on top of it, so souls on the outer shell
+crossed a radius-tight boundary and came back as they milled — a flicker in both
+the ink and the world's occlusion, on the one mark that has to be steady. The
+figure the shader gets is the core plus everything the wobble can spend, which is
+the swarm's own `berthRoom` times `berthWobble` and is a bound rather than a
+fudge: it is exactly how far the outermost berth can reach. What it costs is that
+a soul still crossing takes the core's inks a little before it lands, which is
+the cheaper of the two — early is a soul arriving, and flicker is a bug.
+
 ### Open
 
 The planet is in the game on the detail screen, and now in the Overview: a live
@@ -2738,7 +3041,7 @@ point: it lands on its own and moves at least one number in the gauge.
 | ~~5~~ | ~~`PlanetData.harvest`~~ | ~~merged planets actually pay~~ | **done** — see *What a finished world pays* |
 | ~~9~~ | ~~The token purchases — Ochre, Indigo, opposite Crimson~~ | ~~red gets a sink~~ | **done** — see *The grades are bought above the refinery* |
 | 7a | ~~Refinery layout~~ | ~~6 stubs~~ | **done** — see *The refinery screen* |
-| 7b | Harvest layout | 2 stubs | design pass — see Parked |
+| ~~7b~~ | ~~Harvest layout~~ | ~~2 stubs~~ | **done** — see *The harvest screen* |
 
 **Step 2 was supposed to be the keystone. It was half of one.** Discovery landed
 beat 8 on its own trigger, but beat 12 asks for `planetsFinished >= 2` and a
@@ -2945,8 +3248,8 @@ refinery's placeholders either.
 Step 7's Refinery half. Five modules, and none of them changed the engine — this
 was a layout pass and the mechanics it draws are the ones argued above.
 
-**Backlog is a pressure, not a quantity.** `refinery.backlog` was the last key
-with no agreed meaning, and what it draws is *arriving against cleared*:
+**Backlog is a pressure, not a quantity.** The rate-ceiling bar was the last
+module with no agreed meaning, and what it draws is *arriving against cleared*:
 `countKarmaPerSecond()` on one side, the refinery's `clearedPerSecond` on the
 other, with the overflow in `--res-red`. A held figure was the obvious reading and
 is the wrong one — it says how much karma you have, which the header already says,
@@ -2979,9 +3282,408 @@ same lever. This is the first thing outside `DevPanel` to write `reserve`.
 closure, which is what let the refinery's clock drive the same bar — the component
 never knew what a cohort was, it only knew where to find one.
 
-One deviation from the design, chosen not inherited: Split sits **above** the
-grade table rather than below it, so the right column runs reading, reading,
-lever, table.
+One deviation from the design, chosen not inherited: Split sat **above** the
+grade table rather than below it, so the right column ran reading, reading,
+lever, table. Reversed in the overflow pass below — the lever now anchors the
+bottom of the column, matching the cohort screen's table-then-control order.
+
+**Diagnostics moved left, the lever stayed pinned right.** The right column
+was carrying all four modules and running taller than the viewport with no
+scroll to hide it in — `.view-layout` is a plain grid, nothing clips. Intake
+and the rate ceiling are readings, the same kind as the status card already
+on the left, so they joined it there. The grade table and its Split lever are
+the one actionable pair, and they stayed right with Split last — the same
+shape as the cohort screen's table-then-lever column.
+
+**Seven reveal keys became one.** `refinery.status`, `.backlog`, `.side`,
+`.intake`, `.rate`, `.grades`, and `.split` were all revealed `live` in the
+same beat, in the same object literal, with no state where one was true and
+another false — the same situation `harvest.screen` (below) was named for.
+`refinery.screen` replaces them; the screen has no internal guard.
+
+### The harvest screen
+
+Step 7's other half, and the last row of the course table. The layout was parked
+pending a design pass — *where Harvest's verb sits relative to its disc is an
+open question, don't improvise it* — and the pass, when it came, answered
+something larger than where the verb sits.
+
+**A horizon was built first, and it was wrong.** The reference reads as one: the
+limb crossing the whole card with its apex a third of the way up, so that you
+are standing on the world rather than looking at it. It is two numbers — the
+body is drawn at radius 1 whatever a world says its `size` is, so a big limb is
+only a tight `frame` with the camera lifted above the body's centre, and
+`PlanetScene`'s hardwired `position={[0, 0, 5]}` was the only thing in the way.
+
+What it cost was **the world**. At that magnification a planet has no
+silhouette, no strata and no weather — the picture the whole visual system is
+for is off the top of the frame, and what is left is a wall of surface. So the
+takeover holds **one whole disc** instead, and the argument the horizon was
+making is made by size and position rather than by cropping: the world is bigger
+here than anywhere else in the game, and the decision is laid out over it.
+
+The pan went with it — and came back one layout later on the other axis, which
+is the finding that was worth keeping: a camera move here is **free**. Under an
+orthographic camera a pure translation is invisible to every ink rule in the
+widget, since the soul and harness shaders read `vRel` as `viewPos − centre`,
+both view-space, and the body's key is ambient. Whatever brings the camera back
+is a layout change, not a shader one.
+
+**The world is a size, not a framing.** `frame` is world units across the short
+axis, so one number means a different planet in every box — and this box is
+whatever the window is. The stage divides instead:
+`frame = min(widthPx, heightPx) / HARVEST_RADIUS`, with `HARVEST_RADIUS` at
+120px against the detail stage's 111. Barely a push-in, and on purpose: the
+takeover is already the whole window, and a disc blown up to match would say the
+same thing twice while costing the swarm the room it wants. It is the same world
+seen again, standing somewhere else. Drag the window and the world does not
+move; only the sky around it does. The short side, whichever it is: the card is
+wide at a window and tall at a phone, and the same number has to mean the same
+world in both.
+
+**And a place, which is the camera coming back.** `HARVEST_ANCHOR` is where
+**down** that box the disc's centre stands — 0.5 would be the middle, 0.34 holds
+it above one. It is a **ratio, not a pixel count**, because the thing it answers
+to is one: the split and the verb sit at the foot of the block, and a px offset
+would hold still while they moved with the window.
+`offsetY = (anchor − 0.5) × heightPx / radius`, body radii because `zoom` *is*
+the radius in px, and negative because screen Y runs down while world Y runs up
+— the camera drops so the world rises. The sign is the only thing that changed
+when the anchor turned ninety degrees from the layout before it.
+
+What that buys is the swarm's room. Everything above the controls is sky, so a
+full return crowds out sideways behind the two panels rather than into a margin,
+and the edge it comes near is the split's top rather than the card's: 240px of
+stray under a centre held at 34% of a 680px block, which clears it by a hair.
+`strayTo`'s ceiling is that box: a swarm strayed past the frame's edge has left
+before the decision was taken, and the outermost band strays to two world units.
+
+**The slider moves the swarm.** This is the part that is not layout. Dragging
+the split pulls the souls staying with the world in against its surface and
+pushes the ones coming with you out past their orbits, so the cost is seen
+before it is read. First pass is **by position only**: one radial multiplier per soul, no
+rate change, no ink change, no fade.
+
+Three decisions inside it:
+
+- **A split shows both of its sides.** A share of 0 is not a swarm at rest, it
+  is a swarm gathered to leave — everything not staying is already on its way
+  out. A caller with nothing to split passes no share at all and no soul moves,
+  which is every screen but this one.
+- **The travel is radial**, so a soul never leaves the plane of its own orbit.
+  The argument that keeps a rider off a partly-travelled harness line — the
+  straight line between two points on a sphere is a chord through the world —
+  does not reach this, because there is no chord.
+- **The split reads the dealing order from the top, `riders` reads it from the
+  bottom.** Both index `soul.place`, and if both read the same end a drag would
+  strip the harness before it touched anything else. From opposite ends the two
+  are disjoint until the split eats the whole swarm, and the picture is right:
+  the souls you have put on your lines are the last ones the world takes.
+
+Both ends of that travel are authored under `rim`'s neighbourhood rather than
+picked freely, and the framing is what decides them. `settleAt` at 0.8 puts a
+staying soul against the surface on the near side, where the ink rule has not
+swallowed it — deep enough to read as taken in, not so deep that the whole
+arrival happens behind the world. `strayTo` at 1.35 is the other end, capped by
+the box as above. Both are lab knobs, and the lab's harvest cell carries **World
+px**, **Room px** and **Anchor %** so they can be found against a real box
+rather than guessed — the cell works its framing out the same way the stage
+does, since one that took an easier route would flatter what the card will do.
+
+**Four reveal keys became one.** `harvest.disc`, `harvest.verb`, `harvest.split`
+and `harvest.outcomes` were all revealed `live` in the same beat, in the same
+object literal, with no beat at which one was drawn without the others. Four
+`{#if}`s that can only be all true or all false are not progression; they are
+three keys pretending to be a sequence. `harvest.screen` replaces them and the
+screen has no internal guard. The gate that does have two states is untouched:
+`overview.firstHarvest` is `inert` at beat 8 and `live` at the harvest beat, and
+it is the only door in.
+
+**There is no blockers list on this screen.** The beat fires on
+`isActivePlanetHarvestable` and the Overview's verb is dead until
+`isFirstHarvestReady`, so nothing unmet could ever be read here — the old
+`Needs …` string was unreachable. One line survives it, and only because
+`excessGate` reads a *live* figure: readiness can lapse under you while the
+screen is open. Reached by drifting, never by arriving.
+
+**A boon is a reward, so it is not a `PlanetFirstHarvest` field.** That
+interface is what the world *demands* before it lets you go. `PlanetData.boons`
+is what it leaves you holding afterwards, shaped like an upgrade's effect and
+routed through `Building.addModifier` exactly as `UpgradeManager` routes a
+building-scoped one — keyed by world, so two planets granting the same change
+both land. Unauthored as of this pass; the row reads `—`.
+
+**The takeover takes the Overview, not the frame.** It went the other way first,
+and the argument for that was sound on paper: none of what the header carries
+bears on this decision — the score, the tabs' readings and the rail are all
+about a world you are in the middle of leaving, and the room they cost is the
+room the world wants. So it moved up to `App` and hid the frame entire.
+
+Seen running, what that costs is the way out. A screen reached by one verb and
+left by one word, with nothing lit above it, is a room with no walls. The
+obvious fix — make it a fourth tab — is worse in a different way: it is one
+world's decision and not a place you live, and it would sit in the strip beside
+three screens that are. Which leaves the header up and the Overview's tab lit,
+with the **Overview's body** as the thing replaced. That is where it started,
+and it goes back.
+
+The state stays on `nav` all the same — `isHarvesting`, opened by the Overview's
+verb — because **which screen hosts it is not settled**. Overview holds it
+today; Details is the live alternative, since the world being left is the world
+Details is about. A flag on `nav` is the one place either can read. It is
+**derived rather than stored**: `asked` is the flag, but the screen is only open
+while the active world is still one you could leave, so completing the harvest
+closes it without anything calling back.
+
+The hidden body is hidden by the same `Screen` the tabs use rather than removed,
+so opening the harvest does not cost a WebGL context per band to enter and the
+same to come back to — which is what made `setWatched` need to compose, since
+this is a `Screen` inside a `Screen`. **`Not yet` stays** even with the tabs
+back: it is redundant with them, and it is the only thing on the screen that
+says leaving is free.
+
+**A push-in is not a bigger widget, and the ink has to know which it is.** Every
+px-authored mark on a `PlanetVisual` holds its weight at any widget size — that
+is the whole point of authoring it in px, and it is what leaves a 24px row with
+a legible outline. But this screen is not a bigger widget showing the same
+drawing; it is the drawing itself getting bigger, and a fixed 2px line across a
+world three times its authored size is a scratch rather than a silhouette.
+
+Anything measured in **body radii** already gets this right for free — souls are
+sized in radii, so `zoom` carries them and their rings with them, which is why
+the swarm looked correct at the horizon framing while the body did not.
+`scaleInk(visual, radiusPx)` does the same for the three px marks that are
+**lines**: `outline`, `contour`, `veilOutline`, each multiplied by the drawn
+radius over `STAGE_RADIUS`, the detail stage's 111px.
+
+What it deliberately does not touch is the **floors** — `dotFloor`,
+`veilHatchWidth`. A floor is not a mark but a rule about the smallest thing a
+screen can draw, and a push-in is precisely the case where it should stop
+biting. `STILL_OUTLINE` is the same argument from the other end: shrink the
+widget and the line is held, push in and it comes along.
+
+**A shoulder each side, the controls down the middle, the world above them.**
+The house division was tried in between — `view-layout`'s `4fr / 7fr`, verb
+alone on the left, panels and split on the right — on the argument that the
+takeover should sit with the other screens. It reads as two unrelated stacks
+with a planet behind one of them. This is one verb about one world, and a
+left/right split is a shape for a screen with two subjects.
+
+So: a panel at each outer edge, and the middle column running **world, split,
+verb** top to bottom — the order the decision is made in. Three even columns
+rather than the house two, so the middle is centred on the card whatever the
+panels come to.
+
+The world is **not one of the columns**. The stage stays the block's whole
+ground and the three parts are laid over it with no ground of their own; the
+panels are the only opaque things on the screen. That is what lets the souls
+stray out **behind what you are reading** rather than into a margin — putting
+the disc in a column would crop a swarm that reaches two body radii, and boxing
+the canvas would clip it at the edges.
+
+Its height is a **pixel count and not a share of the window**: a full return is
+`2 × strayTo × HARVEST_RADIUS` ≈ 480px and the controls take ≈ 200px under it,
+so the block is 680px. Subtracting a guess at the header and the rail from
+`100svh` reaches the same number and goes stale the moment either moves.
+
+Two readings deviate from the reference, both chosen and both cheap to reverse:
+
+- **The alignment track is hatched in three zones, not one.** The reference has
+  one uniform hatch across the whole bar. Negative hatch, the `evenBand` at its
+  true width as plain ground, positive hatch says the same thing and also says
+  which way is which — and the word EVEN under the gap then names the gap rather
+  than a point.
+- **Even pays 1.5×, not 2×.** `balance.harvest.evenExperienceBonus` is 0.5, and
+  the three multipliers are read off `resolveHarvestYields` rather than
+  transcribed, so the panel cannot drift from what taking the harvest does. If
+  2× is the intent that is a `balance.ts` edit.
+
+`SliderBar` grew a `floor`, which clamps inside `set()` — the old screen clamped
+after the fact with `Math.max`, so the handle could be dragged somewhere it then
+sprang back from. `Button` grew a `spread` layout, for a button wide enough that
+a caption centred under the verb is not what the second line wants to be.
+
+## Anchoring — primitives built, design provisional
+
+Beat 10 declared `runs: ['anchoring']` and revealed `detail.field` two rebuilds
+before anything implemented it. The visual half was finished and unwired —
+`anchor.ts` / `harness.ts` take a count and an `anchored: boolean[]` and never
+learn what placing one costs, which is why this was a state-and-wiring pass and
+not a rendering one. The game design is deliberately unsettled; what follows is
+the shape the primitives take, so that retuning is a data edit and not a
+restructure.
+
+### The phase
+
+Arriving at a world past the first puts you in a **forced** anchoring phase.
+`PlanetData.anchoring` is what declares it — a world without the field never
+anchors, which is why `first` has none and beat 10 fires *after* it is finished.
+The roster stands aside for `AnchorPanel` while `planet.isAnchoring`; the split
+is the only lever, and the press is the only other input. `SplitControl` renders
+under both, so the lever never moves on screen when the panel does.
+
+Souls still incarnate throughout. The cost of anchoring is the held souls not
+earning, not a stopped world — the mockup's **CAN INCARNATE 96 of 564** is the
+split's own readout and is why the phase is a tax and not a gate.
+
+The **hand** is the exception: while `harness.isPlacing`, the press buys job-time
+*instead* of experience, not as well as it. One verb with one payoff at a time,
+so the trade the phase imposes is legible. It is a `Click extends Building`
+overriding `yieldScale` to 0 rather than a branch at the call site, so the spark,
+the sweep and the cooldown are the same press they always were — only the number
+is gone, and `PlanetView` withholds a `+0` popup on a payout of nothing.
+`BuildingManager.unlock` picks the class off a `KINDS` map now: roles are named
+in, so a role nobody has written a class for is a plain building rather than the
+last branch's leftovers.
+
+### Progress is a time
+
+The thing that moves is **milliseconds of the job**, never an abstract work unit.
+An anchor is `anchoring.duration` ms of job; `Planet.place(ms)` adds to it; one
+accumulator serves every anchor because they fill in order, which is exactly what
+*next anchor in* means.
+
+Souls do not add work — they set how fast job-time runs. `harness.speed` is
+job-ms per real ms, so **next anchor in** is `anchorRemaining / speed`. This is
+`resolveHarvestDuration`'s idea with the division moved to the *reading* rather
+than the base: a split dragged mid-anchor moves the countdown at once and never
+moves the fill, because work done is work done.
+
+The press is the reason for the denomination. `balance.harness.clickMs` comes
+off the job directly, so a world can be clicked open at zero staffing — and the
+same press is a much smaller dent in the *countdown* once souls are on it.
+Clicking matters at the start of a world and stops mattering as souls arrive,
+which is the shape the lever wants, and it is why the popup reads `−0.01s` in
+job-time rather than in the countdown.
+
+`clickMs: 10` is a deliberate trickle, but it is *not* negligible against the
+retuned durations: four presses a second is 40 job-ms a second, against 120 for
+six staffed slots. The hand is a third of a full crew at the start of a world and
+a rounding error by the end of one, which is the shape wanted. If a world cannot
+be clicked open in a tolerable time unstaffed, that constant is the one to turn —
+not the model.
+
+The popup lands **at the anchor going down**, not under the cursor: the press
+buys progress on a particular pole and the number belongs where it lands. That
+costs a projection — `PlanetScene` reports the first ghost's peak through
+`onplacing` every frame, because the world turns under it and a caller outside
+the canvas has no way to ask. `PlanetView` keeps it in a plain variable and not a
+rune; only a press reads it, and putting a per-frame number through the reactive
+graph would re-render the view sixty times a second for something nothing draws.
+The pointer stays as the fallback for a keyboard press and for a world with no
+ghost left.
+
+The first durations were authored in an abstract register and read as absurd once
+the rate was real — `second` asked 3 × 600_000 job-ms, which at six slots is over
+four hours. They are now **2 × 36_000** and **5 × 360_000**: about ten minutes of
+real time for the second world at six slots, and about fifty for the third at the
+thirty `slots_2` buys. A job-ms figure is only meaningful beside the `perWorker`
+rate and the slot count that will be in hand, so retune the three together.
+
+### Two capacities, and a covered share
+
+Work slots cap how many reserved souls place at once, so the split has an optimum
+rather than *always max*. Rider slots cap how many souls the finished harness
+pays. Both are `ModifierSet` stats bought exactly as `refinery.slots` is.
+
+"Only riders get the bonus" resolves into one scalar rather than two soul
+populations:
+
+```
+multiplierFor(souls) = 1 + bonusPerAnchor × placed × min(riders, souls) / souls
+```
+
+The covered share scales it, which keeps a cohort's payout a single multiply and
+keeps the cap honest at every count. It reaches the payout through a generic
+`Building.yieldScale` hook returning 1 — the same doc-comment argument as
+`activeAt`: the base states the general case, a subclass that answers to
+something outside itself narrows it. `Cohort` overrides it; `Building` never
+learns what a harness is. Read in `#generateResources` *and* in `perSecond`, so
+the readout cannot drift from the ledger.
+
+### One soul, one job
+
+The refinery and the harness both staffed themselves `min(countReserved(), slots)`
+off the same pool, so a held soul refined *and* anchored — one soul doing two
+jobs, and a `SplitControl` aside that named only one of them. The pool is
+exclusive now, and **anchoring draws first**: a world still going down is what
+stands in the way, so the harness takes its slots' worth and `refinery.#free` is
+the remainder. `harness.#workers` is gated on `isPlacing`, so a finished world
+hands every soul back rather than holding a crew for a job that is done.
+
+That makes the surplus visible and therefore the allocation decidable: the aside
+reads `96 out · 6 anchoring · 12 idle`, and those twelve are what the split is
+overspending. Before this, a bar dragged past the slot count did nothing and said
+nothing.
+
+`isPlacing` — running, and with a world that still wants anchors — is now the
+single condition everything asking *is the phase on* reads: the press pays under
+it, the hand's yields are suspended under it, the souls are held by it, and the
+`SplitControl` aside names its job by it.
+
+### The split became a decision
+
+`reserve` was continuous, which is why getting the allocation right cost nothing.
+`balance.harness.splitSteps` is a ladder — `0.5 / 0.25 / 0.1 / 0.05` — indexed by
+a `step` modifier counting rungs bought. `SliderBar` gained `step?: number`,
+defaulting to 0 = continuous, so no other caller changed; the arrow keys reuse
+the same snap in place of the old hardcoded `STEP`.
+
+`step` is an **index, not a fraction**, which is why it is a `flat` op of value 1
+and why the ladder stays authorable data.
+
+### What was deferred, and why
+
+- **Per-world anchor and harness visuals.** `harness-visuals.ts` is one record
+  seeded from the widget defaults. `harness-lab.svelte.ts` already notes a pair's
+  family comes from the pair alone; the lab's copy button prints a literal when
+  a second is worth authoring.
+- **Anchor-slot upgrades** toward `ANCHOR_MAX = 8`. Work slots and rider slots
+  are the two capacities chosen; a third is speculative.
+
+### A rider is a count, not a share
+
+`SwarmVisual.riders` is a share of the swarm, and it had to be: the lab drags a
+swarm whose size moves under it, so a fraction is the only thing a slider there
+can mean. The game knows the actual figure — `harness.riders`, bought a soul at a
+time — and turning it back into a fraction of a number no caller can see was the
+wiring nobody wrote, which is why nothing rode a finished harness however many
+riders were bought.
+
+`ridersOf(visual, souls, riders?)` settles it in one place: a caller's count when
+it has one, the authored share otherwise. `SoulSwarm` takes `riders` as a **prop
+and not a visual field**, the separation `counts` and `merge` already keep — game
+state is passed in, look is authored. The lab is untouched.
+
+Riders appear as the lines do, not when the last anchor lands: `loops` is built
+from the *placed* nodes alone, so the swarm populates a growing harness. Nothing
+rides until `riders_1` is bought, since `balance.harness.riders` is 0 — that is
+the upgrade's whole content, and it is worth checking it reads as a purchase
+rather than as a bug.
+
+### A spark is where a soul landed
+
+The press keeps its mark on the ground and its halo while a world is being
+anchored — the click happened, and the world should answer it — but not its
+**spark**: a spark is a soul arriving, and during the phase nobody arrives. So
+`DetailScreen` stops advancing `yields` under `isAnchoring` rather than gating
+anything in the scene. `yields` is already the *payout* count and not the press
+count, which is what makes suppressing it exact.
+
+### Between worlds, souls earn nothing
+
+`completeFirstHarvest` clears `#selected`, so from the last harvest until the
+next world is reached there is no active planet — and cohorts went on paying
+karma and experience into the pools the whole time. A soul incarnates
+*somewhere*; with nowhere to be born the roster should keep its count and stop
+earning.
+
+Fixed at `Cohort.yieldScale` — 0 with no active world — rather than in the
+header, because `yieldScale` is read by `#generateResources` and `perSecond`
+both. One edit stops the ledger and the readout together, and the header's `/s`
+figures fall back to `sumHarvestRates` over the worlds behind you with no change
+in `Frame.svelte` at all. Zero rather than a stopped emitter: the cohorts are
+still there, still bought, still the thing the next world will run on.
 
 ## Excess — provisional, revisit before balancing
 
