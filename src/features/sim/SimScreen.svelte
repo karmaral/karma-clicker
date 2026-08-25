@@ -433,7 +433,6 @@
     background: var(--surface);
     border: var(--rule-card);
     padding: 2px var(--sp-2);
-    cursor: pointer;
   }
 
   button:hover {
@@ -455,7 +454,6 @@
   .go:disabled {
     color: var(--ink-300);
     border-color: var(--line-300);
-    cursor: default;
   }
 
   .dim {

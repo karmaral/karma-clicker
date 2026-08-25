@@ -112,7 +112,6 @@
     color: var(--surface);
     border: none;
     padding: var(--sp-2) var(--sp-3);
-    cursor: pointer;
     font: inherit;
     text-align: left;
     flex: none;
@@ -189,7 +188,6 @@
     background: var(--surface);
     border: var(--rule-card);
     padding: 2px var(--sp-2);
-    cursor: pointer;
     font: inherit;
   }
 

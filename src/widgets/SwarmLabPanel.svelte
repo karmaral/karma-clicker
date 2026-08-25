@@ -7,11 +7,24 @@
 
   const current = $derived(swarmLab.current);
   const size = $derived(swarmLab.size);
+  const stage = $derived(swarmLab.stage);
 
   /** Counts, not authoring — so they sit above the groups `copy` prints. */
   const counts = [
     { key: 'bands', label: 'Cohorts', min: 1, max: 8 },
     { key: 'per', label: 'Souls each', min: 0, max: 100 },
+  ] as const;
+
+  /**
+   * The harvest cell's framing: two pixel measures and one position. Not printed
+   * either — these are the screen's numbers, and they go back into `visual.ts`
+   * by hand. `Anchor` stops at 50 because that is the middle; past it the world
+   * would sit under the controls rather than above them.
+   */
+  const stageRows = [
+    { key: 'radius', label: 'World px', min: 60, max: 320 },
+    { key: 'room', label: 'Room px', min: 240, max: 900 },
+    { key: 'anchor', label: 'Anchor %', min: 0, max: 50 },
   ] as const;
 
   async function copy() {
@@ -52,10 +65,48 @@
       </label>
     {/each}
 
+    {#each stageRows as row (row.key)}
+      <label class="row">
+        <span class="id">{row.label}</span>
+        <input
+          type="range"
+          min={row.min}
+          max={row.max}
+          step="1"
+          value={stage[row.key]}
+          oninput={(e) => swarmLab.restage(row.key, Number(e.currentTarget.value))}
+        />
+        <span class="num">{stage[row.key]}</span>
+      </label>
+    {/each}
+
+    <!-- Counts too, and off by default — a swarm with no split is the state
+         every screen but Harvest is in, and `Settle at` / `Stray to` say
+         nothing until there is one. -->
+    <label class="row">
+      <span class="id">Split</span>
+      <input
+        type="range"
+        min="0"
+        max="1"
+        step="0.01"
+        value={swarmLab.merge ?? 0}
+        disabled={swarmLab.merge === undefined}
+        oninput={(e) => swarmLab.setMerge(Number(e.currentTarget.value))}
+      />
+      <button onclick={() => swarmLab.setMerge(swarmLab.merge === undefined ? 0.5 : undefined)}>
+        {swarmLab.merge === undefined ? 'off' : 'on'}
+      </button>
+    </label>
+
     <!-- `Riders` is a share and the harness is bought a soul at a time, so the
-         number that matters is the one the share came out as. -->
+         number that matters is the one the share came out as. The split is the
+         same kind of figure and reads beside it. -->
     <div class="row">
-      <span class="id">{swarmLab.riders} of {swarmLab.souls} riding</span>
+      <span class="id">
+        {swarmLab.riders} of {swarmLab.souls} riding{#if swarmLab.staying !== undefined}
+          · {swarmLab.staying} staying{/if}
+      </span>
     </div>
   {/snippet}
 </LabPanel>

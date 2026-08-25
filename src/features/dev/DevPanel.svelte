@@ -39,7 +39,7 @@
     pulse();
   }
 
-  /** The only way to set the split until `detail.split` is built. */
+  /** The only way to set the split until `details.split` is built. */
   function reserveSouls(fraction: number) {
     reserve.set(fraction);
     pulse();
@@ -150,7 +150,6 @@
     color: var(--surface);
     border: none;
     padding: var(--sp-2) var(--sp-3);
-    cursor: pointer;
     font: inherit;
     text-align: left;
   }
@@ -178,7 +177,6 @@
     background: var(--surface);
     border: var(--rule-card);
     padding: 2px var(--sp-2);
-    cursor: pointer;
     font: inherit;
   }
 

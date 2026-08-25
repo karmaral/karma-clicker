@@ -6,18 +6,24 @@
   import PlanetLabPanel from './PlanetLabPanel.svelte';
   import PulseLabPanel from './PulseLabPanel.svelte';
   import SwarmLabPanel from './SwarmLabPanel.svelte';
-  import { PlanetStill, PlanetView } from './planet';
+  import {
+    HARVEST_ANCHOR, HARVEST_RADIUS, PlanetStill, PlanetView, scaleInk,
+  } from './planet';
   import { anchorLab } from './anchor-lab.svelte';
   import { harnessLab } from './harness-lab.svelte';
   import { planetLab } from './planet-lab.svelte';
   import { pulseLab } from './pulse-lab.svelte';
   import { swarmLab } from './swarm-lab.svelte';
+  import type { Polarity } from '$lib/types';
 
   /**
    * Shipping sizes, coarsened. Four rows draw this list, so every entry costs four
    * WebGL contexts — 40 and 56 were dropped as the two that read the same.
    */
   const trueSizes = [80, 120, 180];
+
+  /** A lab width for the takeover, and one context. Its height is a slider. */
+  const HARVEST_PX = 860;
 
   /**
    * Row sizes, well below anything looked at before. These are snapshots rather
@@ -47,6 +53,34 @@
 
   /** Rim-hugging orbits still need more room than a bare body. */
   const swarmFrame = 3.2;
+
+  /**
+   * The harvest cell's two derived numbers, worked out the way `HarvestStage`
+   * works them out — the short side over the radius, and the anchor as a camera
+   * that has stepped down. Written twice on purpose: a cell that computed its
+   * framing some easier way would flatter what the card will actually do.
+   */
+  const harvestFrame = $derived(
+    Math.min(HARVEST_PX, swarmLab.stage.room) / swarmLab.stage.radius,
+  );
+
+  const harvestOffset = $derived(
+    ((swarmLab.stage.anchor / 100 - 0.5) * swarmLab.stage.room) / swarmLab.stage.radius,
+  );
+
+  /**
+   * The harvest's alignment, which the split cell is the only thing on this page
+   * that passes. Local rather than a lab field: it is *game state* on the screen
+   * this stands in for, so there is nothing here to author and nothing to paste
+   * back — it is a switch for looking at the three readings, and no more.
+   */
+  const leans: { at: Polarity; label: string }[] = [
+    { at: -1, label: 'negative' },
+    { at: 0, label: 'even' },
+    { at: 1, label: 'positive' },
+  ];
+
+  let alignment = $state<Polarity>(1);
 
   /** The outermost loop stands a quarter of a radius off the surface. */
   const harnessFrame = 3.2;
@@ -224,6 +258,100 @@
           <span class="spec">{px}px</span>
         </div>
       {/each}
+    </div>
+
+    <p class="note">
+      The <b>split</b>, at the harvest screen's framing — the whole block as one box, with
+      the world held at a size in <i>pixels</i> however big that box is, so
+      <code>frame</code> is divided out rather than authored, and held <b>above</b> the
+      middle rather than centred: the screen's split and verb take the foot. <b>World px</b>,
+      <b>Room px</b> and <b>Anchor %</b> are the three sliders it is tuned with, and they
+      go back into <code>HARVEST_RADIUS</code> and <code>HARVEST_ANCHOR</code> by hand.
+      The anchor is a share of the height, not a pixel count, so it keeps leaving the same
+      room under the swarm however tall the block is. This is a <b>push-in</b> rather than a
+      bigger widget, so <code>scaleInk</code> brings the world's px lines up with it — the
+      souls' marks are in body radii and were already doing it. Souls staying with the
+      world settle to
+      <code>settleAt</code> and the rest stray to <code>strayTo</code>. This is where
+      <code>strayTo</code> meets its ceiling: past the box's edge the swarm has left before
+      the decision was taken. With the split off nothing here moves.
+      <code>Crossing at once</code> is how many souls are in the air together — at 1 the
+      boundary is a single dot and the swarm reads as a counter, wider and it is a current
+      — and <code>Merge lag s</code> is how long the swarm takes to catch up to a slider
+      that has already moved. Drag it fast to see the second one: the number under the
+      handle is right immediately and the world takes a beat to agree.
+    </p>
+    <p class="note">
+      And the <b>core</b>, which is the one thing on this page that is not a picture of a
+      world: it is the harvest's <i>alignment</i>, drawn inside it. The body opens a
+      <b>window</b> on its front — the shade's own fresnel turned round, so the front
+      dissolves and the silhouette stays whole — spent as an <b>opacity</b>, and so the
+      one mark on the world where a pixel is not one of the seven inks. A dithered cutout
+      held the inks and was tried first, but a hole is all or nothing and a barely-open
+      window came out as confetti rather than as thin. The fresnel goes through an
+      <b>S</b> before the clarity is spent on it, so <code>Clarity falloff</code> moves a
+      rim rather than stretching a wash — a falloff spread over the whole disc reads as
+      haze over the world instead of an opening in it. <code>Clarity bands</code> then
+      quantises what is left, so the window is a set of concentric <b>plates</b> at fixed
+      opacities rather than a fade: the ramp's own argument, reaching the one quantity
+      here that had a continuum in it. <b>The veil opens with it</b>, on
+      the same normal: weather left hanging in the hole read as a lid.
+      Behind it the core carries the reading as a <b>ground plus a ruling</b>: positive is
+      paper, negative is black, and even is a mid-light grey with <b>no ruling at all</b>,
+      because neither side was taken. Each ruled end hatches one step in from its own
+      ground — a hatch further off would be a second mark sitting on the core rather than
+      the ground worked — and the strokes run in <b>view space</b>, since a lean that meant
+      a different angle depending on how the world was held would be no reading. None of
+      those inks are <b>on this page</b>: the core is a reading of the harvest and not a
+      world's own character, and one each world stated in its own colours would be a
+      reading nobody could learn. <code>Core feather</code> is the same fresnel read the other
+      way round, shutting the core's own limb — at 0 it is a coin lying on the world, and
+      up from there the edge gives itself back to the ink. Souls staying with the world
+      cross into it from <code>Berth from</code> on and take a <b>berth</b> apiece, packed
+      centre-outward so the core fills rather than crusts. In it they take the core's
+      <b>own ground</b> and a ring in the ramp's far end — an arrived soul is a bubble the
+      colour of the thing it went into, seen by its rim — and even keeps the shape but
+      spends its contrast inside the ramp, a step lighter than its ground and rimmed two
+      steps darker, so it carries without either end of the ramp on it.
+      <code>Berth wobble</code> spends
+      what is left of the gap to the nearest neighbour, so they jostle and <b>nothing here
+      is ever tested for a collision</b>. Souls <i>leaving</i> are never behind the world at
+      all — the same travel figure decides how much of the body's silhouette a soul is
+      subject to, so a leaver keeps its whole dot at the rim and one crossing sinks behind
+      the world as it goes. The three-way is game state on the real screen
+      and authors nothing — the sliders are in the panel, under <b>Core</b>.
+    </p>
+    <div class="frame-pick">
+      <span class="spec">Alignment</span>
+      {#each leans as lean (lean.at)}
+        <button
+          class="lean"
+          class:on={alignment === lean.at}
+          onclick={() => (alignment = lean.at)}
+        >{lean.label}</button>
+      {/each}
+    </div>
+    <div class="canvas">
+      <div class="member">
+        <PlanetView
+          visual={scaleInk(planetLab.current, swarmLab.stage.radius)}
+          widthPx={HARVEST_PX}
+          heightPx={swarmLab.stage.room}
+          frame={harvestFrame}
+          offsetY={harvestOffset}
+          backgroundToken="--surface"
+          swarm={swarmLab.current}
+          {cohorts}
+          merge={swarmLab.merge}
+          {alignment}
+        />
+        <span class="spec">
+          harvest · {swarmLab.stage.radius}px world at {swarmLab.stage.anchor}% down
+          {swarmLab.stage.room}px · frame {harvestFrame.toFixed(2)}
+          {#if swarmLab.stage.radius !== HARVEST_RADIUS}· shipped {HARVEST_RADIUS}{/if}
+          {#if swarmLab.stage.anchor !== HARVEST_ANCHOR * 100}· shipped {HARVEST_ANCHOR * 100}%{/if}
+        </span>
+      </div>
     </div>
   </section>
 
@@ -603,6 +731,21 @@
     gap: var(--sp-3);
     font-size: var(--fs-sm);
     color: var(--ink-500);
+  }
+
+  .lean {
+    padding: var(--sp-1) var(--sp-3);
+    border: 1px solid var(--ink-300);
+    background: none;
+    font-size: var(--fs-xs);
+    color: var(--ink-500);
+    cursor: pointer;
+  }
+
+  .lean.on {
+    border-color: var(--ink-900);
+    background: var(--ink-900);
+    color: var(--surface);
   }
 
   .stills {

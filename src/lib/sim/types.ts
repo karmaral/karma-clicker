@@ -60,6 +60,8 @@ export interface Sample {
   beat: number;
   souls: number;
   reserved: number;
+  /** Anchors down on the world being stood on — what the split's cost bought. */
+  anchorsPlaced: number;
   excess: number | undefined;
   karmaPerSecond: number;
   experiencePerSecond: number;

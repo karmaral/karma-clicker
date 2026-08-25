@@ -12,6 +12,7 @@ import { BuildingManager, PlanetManager, ResourceManager, UpgradeManager } from 
 import { beats, progression } from '$lib/progression';
 import { pulse } from '$lib/loop';
 import { refinery } from '$lib/refinery.svelte';
+import { harness } from '$lib/harness.svelte';
 import { reserve } from '$lib/reserve.svelte';
 import { aim } from '$lib/aim';
 import { getExcess } from '$lib/excess';
@@ -86,6 +87,11 @@ export async function run(
   PlanetManager.unlock('first');
   PlanetManager.select('first');
   BuildingManager.unlock('main');
+
+  // What `watchHarness` does in the live game: the press pays into anchoring on
+  // the payout landing, not on the queue, so a run clicks a world open the same
+  // way a player does.
+  BuildingManager.addListener('main', 'action', () => harness.placeByHand());
 
   function click() {
     BuildingManager.getBuilding('main')?.queueAction();
@@ -230,6 +236,7 @@ export async function run(
       beat: progression.beat,
       souls: BuildingManager.countSouls(),
       reserved: BuildingManager.countReserved(),
+      anchorsPlaced: PlanetManager.getActive()?.anchorsPlaced ?? 0,
       excess: getExcess(),
       karmaPerSecond: BuildingManager.countKarmaPerSecond(),
       experiencePerSecond: BuildingManager.countExperiencePerSecond(),
@@ -257,12 +264,13 @@ export async function run(
       aimSet = true;
     }
 
-    if (!reserveSet && progression.isLive('detail.split')) {
+    if (!reserveSet && progression.isLive('details.split')) {
       reserve.set(config.reserveFraction);
       reserveSet = true;
     }
 
     if (progression.runs('refining')) refinery.start();
+    if (progression.runs('anchoring')) harness.start();
 
     buyUpgrades();
     buyCohorts();
