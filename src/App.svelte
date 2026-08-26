@@ -12,7 +12,8 @@
   import { wire } from '$lib/wiring.svelte';
   import { f } from '$lib/utils';
   import * as loop from '$lib/loop';
-  import { Frame, Screen } from '$features/frame';
+  import { AllUpgrades, Frame, Screen } from '$features/frame';
+  import { catalogue } from '$features/frame/upgrades.svelte';
   import { DetailsScreen } from '$features/details';
   import { OverviewScreen } from '$features/overview';
   import { RefineryScreen } from '$features/refinery';
@@ -60,7 +61,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Encode+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </svelte:head>
 
-<main>
+<main inert={catalogue.isOpen}>
   <Card>
     {#if progression.isRevealed('frame.header')}
       <Frame />
@@ -112,6 +113,10 @@
 
 {#if progression.isRevealed('shared.log')}
   <Log />
+{/if}
+
+{#if catalogue.isOpen}
+  <AllUpgrades />
 {/if}
 
 <SvelteToast />

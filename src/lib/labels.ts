@@ -5,7 +5,11 @@
  */
 
 import buildingTexts from '$data/buildings-texts';
-import type { FirstHarvestCondition, HarvestBoon, Polarity } from '$types';
+import planetTexts from '$data/planets-texts';
+import { parseScope } from '$data/upgrades';
+import type {
+  Effect, EffectVerb, FirstHarvestCondition, HarvestBoon, ModifierStat, Polarity, YieldType,
+} from '$types';
 
 export type ScreenName = 'overview' | 'details' | 'refinery';
 
@@ -100,7 +104,7 @@ const BOON_TARGET_LABELS: Record<string, string> = {
 };
 
 /** The change itself, in the shortest form that stays true to the operator. */
-function getModifierFigure({ op, value }: HarvestBoon['effect']) {
+export function getModifierFigure({ op, value }: HarvestBoon['effect']) {
   switch (op) {
     case 'boost':
       return `${value < 0 ? '−' : '+'}${Math.abs(Math.round(value * 1000) / 10)}%`;
@@ -120,6 +124,84 @@ export function getBoonLabel(boon: HarvestBoon) {
     ?? boon.target;
 
   return `${getModifierFigure(boon.effect)} ${named}`;
+}
+
+/**
+ * The catalogue's left-hand column. Only the irregulars are listed — a bucket
+ * with an entity resolves through the same tables the rest of the game already
+ * names things with, so `cohort:steady` reads `buildingTexts.steady.title`
+ * rather than repeating it here.
+ */
+const SCOPE_LABELS: Record<string, string> = {
+  global: 'Global',
+  cohorts: 'All cohorts',
+  refinery: 'Refinery',
+  harness: 'Harness',
+  'building:main': 'You',
+};
+
+export function getScopeLabel(bucket: string): string {
+  if (bucket in SCOPE_LABELS) return SCOPE_LABELS[bucket];
+
+  const { kind, entity } = parseScope(bucket);
+  if (!entity) return SCOPE_LABELS[kind] ?? kind;
+  if (kind === 'cohort') return buildingTexts[entity]?.title ?? entity;
+  if (kind === 'planet') return planetTexts[entity]?.title ?? entity;
+
+  return entity;
+}
+
+/** A stat's noun, where the bare `ModifierStat` word would not read as one. */
+const STAT_NOUNS: Partial<Record<ModifierStat, string>> = {
+  duration: 'return time',
+  step: 'allocation steps',
+};
+
+/** `karma_positive` → `positive karma` — the order every other reading already takes. */
+function targetNoun(type: YieldType | 'all') {
+  if (type === 'all') return 'yield';
+
+  const [family, polarity] = type.split('_');
+  if (polarity === 'positive' || polarity === 'negative') return `${polarity} ${family}`;
+
+  return type;
+}
+
+/** `unlock`/`discover` name themselves; `acquire` and `autonomy` ride along unlabelled. */
+const VERB_EFFECT_LABELS: Partial<Record<EffectVerb, string>> = {
+  unlock: 'unlocked',
+  discover: 'discovered',
+};
+
+/**
+ * The catalogue's effect column: noun first, figure last — `return time ×0.75` —
+ * the reverse of `getBoonLabel`'s `+2% incarnation`. A boon is a line of its own
+ * where the figure leads; a row here already has a name above it, so the noun is
+ * what makes a column of these scannable. Do not "fix" one to match the other.
+ */
+export function getEffectLabel(
+  effect: Effect | Effect[] | undefined,
+  effectTarget?: YieldType | 'all',
+): string {
+  if (!effect) return '';
+
+  const list = Array.isArray(effect) ? effect : [effect];
+
+  return list
+    .flatMap((entry) => {
+      if (typeof entry === 'string') {
+        const verbLabel = VERB_EFFECT_LABELS[entry];
+
+        return verbLabel ? [verbLabel] : [];
+      }
+
+      const noun = entry.stat
+        ? STAT_NOUNS[entry.stat] ?? entry.stat
+        : targetNoun(entry.target ?? effectTarget ?? 'all');
+
+      return [`${getModifierFigure(entry)} ${noun}`];
+    })
+    .join(' · ');
 }
 
 /**

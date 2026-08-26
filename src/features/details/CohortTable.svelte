@@ -109,7 +109,7 @@
     <div class="head">
       <span class="count right"><Label text="N" size="sm" /></span>
 
-      <span><Label text="Cohort" size="sm" /></span>
+      <span><Label text="Soul cohort" size="sm" /></span>
 
       {#if showAim}
         <span class="lean"><Label text="Lean" size="sm" /></span>

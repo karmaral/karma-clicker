@@ -22,6 +22,7 @@
     grid-auto-columns: minmax(0, 1fr);
     grid-template-rows: auto 1fr;
     padding: 14px 14px 0;
+    min-height: 95px;
   }
 
   .band.rule {

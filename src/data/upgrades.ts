@@ -9,8 +9,8 @@ const ENTITY_KINDS = ['cohort', 'building', 'planet'] as const;
 export function parseScope(key: string): UpgradeScope {
   const [kind, entity] = key.split(':');
 
-  // The two scopes with a singleton behind them rather than an entity.
-  if (!entity && (kind === 'refinery' || kind === 'harness')) {
+  // The scopes with a singleton, or a fan-out, behind them rather than an entity.
+  if (!entity && (kind === 'refinery' || kind === 'harness' || kind === 'cohorts')) {
     return { kind };
   }
 
@@ -258,6 +258,27 @@ const data: Record<string, UpgradeData[]> = {
       unlocks_at: { red_positive: 5000 },
       costs: { red_positive: 5000 },
     },
-  ]
+  ],
+  /**
+   * Every cohort at once. Placeholder and deliberately unreachable —
+   * `UpgradeManager#processEffect` has nowhere to route a scope naming no
+   * entity, so a bought one would be inert. `unlocks_at` is set past anything
+   * the game currently reaches on purpose, so these sit under the catalogue's
+   * locked fold rather than being buyable no-ops. Comes down with the routing.
+   */
+  'cohorts': [
+    {
+      id: 'shorter_lives_1',
+      effect: { op: 'boost', value: -0.06, stat: 'duration' },
+      unlocks_at: { karma_positive: 1_000_000_000 },
+      costs: { karma_positive: 310_000 },
+    },
+    {
+      id: 'hard_season',
+      effect: { op: 'boost', value: -0.12, stat: 'duration' },
+      unlocks_at: { karma_positive: 1_000_000_000 },
+      costs: { karma_positive: 2400 },
+    },
+  ],
 };
 export default data;

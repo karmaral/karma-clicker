@@ -3126,6 +3126,34 @@ second it is held, efficiency is bought once. Batch and interval stay genuinely
 distinct for a separate reason: at equal throughput, big slow batches leave karma
 sitting unrefined longer, and unrefined karma is exactly what excess measures.
 
+**The level is not a fourth axis.** All three axes above only move when something
+is bought, so throughput is a step function of the upgrade table and flatlines
+when that table runs out. The level is growth the refinery *earns by running*,
+and it earns it the way `Building` does: by scaling the **base** of an existing
+axis, `batchPerWorker × (1 + yieldPerLevel)^(level - 1)`, inside the derived and
+before `ModifierSet.apply` ever sees it. Level is not a modifier, for the same
+reason a cohort's is not.
+
+It scales the batch and **never the interval**. Moving both would make throughput
+quadratic in level — the identical failure the staffing knob was closed over —
+and the interval also floors at `MIN_INTERVAL`, so that axis would die at a
+knowable level anyway.
+
+**Experience is karma actually moved**, summed from what the piles gave up, not a
+flat tick per pulse. That is what makes it scale late: the refinery levels at the
+rate the world feeds it, a starved pile halves the rate, and an unstaffed one
+earns nothing while its clock keeps pulsing. The compounding is real but
+self-damping — the batch grows `(1 + yieldPerLevel)^(L-1)` while the rung grows
+`expGrowth^(L-1)`, so `expGrowth` must stay above `1 + yieldPerLevel` or the
+ladder outruns its own thresholds. At `1.35` against `1.08` each level takes
+about a quarter longer than the last.
+
+The cost is named rather than hidden: `#exp` is the **first accumulated,
+non-rederivable number in the game**. Everything else is a pure function of
+`owned`, `level` and which upgrades are held, so a save could store ids and
+rebuild the rest. Nothing breaks today — there is no save, and a fresh module
+graph is the reset — but a save must store this counter raw.
+
 `$lib/refinery.svelte.ts` is the singleton, next to `reserve`. It **composes**
 `ResourceEmitter` like every other producer, so its clock, its autonomy and its
 `action` event are the ones the rest of the app already speaks. Its clock starts

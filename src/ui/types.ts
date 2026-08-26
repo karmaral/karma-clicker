@@ -42,6 +42,7 @@ export type ButtonVariant = 'filled' | 'outline';
  */
 export type ButtonLayout = 'stacked' | 'spread';
 
-export type ChipStatus = 'affordable' | 'unlocked' | 'approaching';
+/** `arriving` is neither: unpriced, and granted the moment `unlocks_at` holds. */
+export type ChipStatus = 'affordable' | 'unlocked' | 'approaching' | 'arriving';
 
 export type TabsSize = 'default' | 'sm';

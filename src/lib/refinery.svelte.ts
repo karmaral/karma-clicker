@@ -2,6 +2,9 @@
  * Throughput, not matching. X karma a batch every Y seconds, drawn at the same
  * rate from both piles — so the difference between them, which is the excess,
  * carries through into the token layer untouched. Polarity survives the step.
+ *
+ * It also levels on the karma it moved, so throughput keeps climbing after the
+ * upgrade table runs dry. Level scales the batch base only — never the interval.
  */
 
 import { ResourceEmitter, type Listener } from '$lib/emission';
@@ -14,6 +17,9 @@ import type { Modifier, ResourceType } from '$types';
 /** Under this the emitter would re-queue inside its own payout. */
 const MIN_INTERVAL = 100;
 
+/** A free rung would let one batch level forever. The lab can dial `expBase` to 0. */
+const MIN_RUNG = 1;
+
 /** Each pile has exactly one destination; nothing crosses over in here. */
 const PILES: [ResourceType, ResourceType][] = [
   ['karma_positive', 'red_positive'],
@@ -23,6 +29,8 @@ const PILES: [ResourceType, ResourceType][] = [
 class Refinery {
   #modifiers = new ModifierSet();
   #emitter: ResourceEmitter;
+  #level = $state(1);
+  #exp = $state(0);
 
   /** Bought slots. Reserved souls fill them — neither on its own refines anything. */
   #slots = $derived(this.#modifiers.apply(0, 'slots'));
@@ -36,11 +44,16 @@ class Refinery {
 
   #workers = $derived(Math.min(this.#free, this.#slots));
 
+  /** Earned growth, on the base. The interval is deliberately not on this axis. */
+  #leveled = $derived(Math.pow(1 + balance.refinery.yieldPerLevel, this.#level - 1));
+
   /**
    * Per pile. Staffing is linear here and absent from the interval: in both, it
    * would make throughput quadratic in souls and the other two axes decorative.
    */
-  #batch = $derived(this.#modifiers.apply(balance.refinery.batchPerWorker, 'yield') * this.#workers);
+  #batch = $derived(
+    this.#modifiers.apply(balance.refinery.batchPerWorker * this.#leveled, 'yield') * this.#workers,
+  );
 
   #interval = $derived(
     Math.max(MIN_INTERVAL, this.#modifiers.apply(balance.refinery.interval, 'duration')),
@@ -63,13 +76,37 @@ class Refinery {
     const batch = this.#batch;
     if (batch <= 0) return;
 
+    let moved = 0;
+
     PILES.forEach(([karma, red]) => {
       const taken = Math.min(batch, ResourceManager.getAmount(karma));
       if (taken <= 0) return;
 
       ResourceManager.remove(karma, taken);
       ResourceManager.add(red, taken);
+      moved += taken;
     });
+
+    this.#gainExp(moved);
+  }
+
+  /** What the next rung costs. Ascends, so a fat batch can cross more than one. */
+  #expForNext(level: number) {
+    const rung = balance.refinery.expBase * Math.pow(balance.refinery.expGrowth, level - 1);
+
+    return Math.max(MIN_RUNG, rung);
+  }
+
+  /** Karma refined is the only thing that levels it — an empty pull earns nothing. */
+  #gainExp(amount: number) {
+    if (amount <= 0) return;
+
+    this.#exp += amount;
+
+    while (this.#exp >= this.#expForNext(this.#level)) {
+      this.#exp -= this.#expForNext(this.#level);
+      this.#level += 1;
+    }
   }
 
   addModifier(modifier: Modifier) {
@@ -88,6 +125,12 @@ class Refinery {
   get workers() { return this.#workers; }
   get batch() { return this.#batch; }
   get interval() { return this.#interval; }
+  get level() { return this.#level; }
+  get exp() { return this.#exp; }
+  get expToNext() { return this.#expForNext(this.#level); }
+
+  /** 0–100, matching Building's convention so Meter takes it directly. */
+  get levelProgress() { return (this.#exp / this.#expForNext(this.#level)) * 100; }
 
   /** When the queued batch lands. */
   get nextAt() { return this.#emitter.nextAt; }

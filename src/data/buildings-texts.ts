@@ -6,21 +6,21 @@ const data: Record<string, ItemTextData> = {
     description: 'A singular vector of force or perception with zero complex internal structure yet.',
   },
   'steady': {
-    title: 'Steady soul',
+    title: 'Steady',
     description: 'Takes longer but yields considerably more.',
   },
   'chaos': {
-    title: 'Chaos soul',
+    title: 'Chaos',
     description: 'Explores polarity at random. Can grow out of control quickly.',
   },
   'zealot': {
-    title: 'Zealot soul', 
+    title: 'Zealot',
     description: 'Extremely narrow into its own polarity bias. Can work out either way.',
   },
   'red_basic': {
-    title: 'Red Refiner soul', 
+    title: 'Red refiner',
     description: 'Produces red learning tokens on its own, karma free.',
-    
+
   }
 };
 export default data;

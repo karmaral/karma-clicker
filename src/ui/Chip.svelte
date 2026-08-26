@@ -148,4 +148,13 @@
     color: var(--ink-300);
     border-color: var(--line-300);
   }
+
+  /* Not locked, not for sale — it is granted the moment unlocks_at holds. Same
+     dashed register as approaching, one ink step lighter so the two never read
+     as the same wait. */
+  .chip.arriving {
+    border-style: dashed;
+    border-color: var(--line-300);
+    color: var(--ink-300);
+  }
 </style>

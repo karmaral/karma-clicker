@@ -61,7 +61,7 @@
   }
 </script>
 
-<Section>
+<Section label={"Learning Tokens"}>
   <div class="table" style:--token-cols={COLUMNS}>
 
     <div class="head">

@@ -80,7 +80,9 @@ screen — see §*The harvest screen*. `git status` and `git log` for the list.
     the sweep restarting each batch and the countdown; the intake bar with one
     pile empty, which is all tail and no matched span; the ceiling bar with
     `arriving` under and then over `cleared`; the split drag moving `workers` and
-    the batch figure together. §*The refinery screen*.
+    the batch figure together. §*The refinery screen*. Now two stacked bars in
+    `RefiningStatus` — the level meter under the sweep, thinner and pulled up by
+    `-sp-2`. If it reads crowded, keep `LEVEL n` in the aside and drop the meter.
 17. **`SliderBar`'s handle at a real width.** 8px astride the fill edge, `--sp`
     nothing — the first number picked without seeing the reference at size. Now
     doubly live: `SplitControl` carries the same handle onto Detail too.

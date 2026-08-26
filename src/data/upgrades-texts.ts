@@ -5,10 +5,12 @@ const data: Record<string, Record<string, ItemTextData>> = {
     'read_the_wave': {
       title: 'The shape of it',
       description: 'The unevenness you have been feeling can be read.',
+      effect: 'the wave, drawn',
     },
     'the_other_way': {
       title: 'The other way',
       description: 'Aim the lives to serve themselves. What they gain, they take.',
+      effect: 'the other polarity, aimable',
     },
   },
   'refinery': {
@@ -99,6 +101,7 @@ const data: Record<string, Record<string, ItemTextData>> = {
     'str_4': {
       title: 'Upgrade',
       description: 'Incarnation XP yield squared',
+      effect: 'incarnation yield squared',
     },
   },
   'cohort:basic': {
@@ -109,6 +112,7 @@ const data: Record<string, Record<string, ItemTextData>> = {
     'str_1': {
       title: 'A singular purpose',
       description: 'The collective of souls unifies under a single purpose.\n Current yield squared.',
+      effect: 'current yield squared',
     },
   },
   'cohort:steady': {
@@ -137,6 +141,16 @@ const data: Record<string, Record<string, ItemTextData>> = {
     'first': {
       title: 'Auto Refinery',
       description: 'A refiner soul that can produce tokens without consuming karma. Just like magic.',
+    },
+  },
+  'cohorts': {
+    'shorter_lives_1': {
+      title: 'Shorter Lives I',
+      description: 'Placeholder. Every cohort turns over a little faster.',
+    },
+    'hard_season': {
+      title: 'Hard Season',
+      description: 'Placeholder. A harder push, felt across every cohort at once.',
     },
   },
 };

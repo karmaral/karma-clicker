@@ -109,6 +109,7 @@
       <div class="row">
         <span class="id">
           slots {refinery.workers}/{refinery.slots}
+          · lvl {refinery.level} ({f(refinery.exp)}/{f(refinery.expToNext)})
           · {f(refinery.perSecond)}/s each way
           · red {f(ResourceManager.getAmount('red_positive'))}
           /{f(ResourceManager.getAmount('red_negative'))}

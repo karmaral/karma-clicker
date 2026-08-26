@@ -44,10 +44,11 @@ export type EffectVerb = 'unlock' | 'acquire' | 'autonomy' | 'discover';
  * `BuildingManager` — the split exists so a non-soul building has somewhere to
  * go that does not call itself a cohort. `refinery` names no entity because
  * there is exactly one of it — as with `harness`; `global` names none because it
- * owns nothing yet.
+ * owns nothing yet. `cohorts` (plural) is every cohort at once — authored, not
+ * yet routable, see `upgrades.ts`'s `cohorts` bucket.
  */
 export type UpgradeScope =
-  | { kind: 'global' | 'refinery' | 'harness'; entity?: undefined }
+  | { kind: 'global' | 'refinery' | 'harness' | 'cohorts'; entity?: undefined }
   | { kind: 'cohort' | 'building' | 'planet'; entity: string };
 
 /** `target` overrides the upgrade's `effect_target`, so one array can hit two yields. */
@@ -172,6 +173,8 @@ export interface ItemTextData {
   title: string;
   description: string;
   flavour?: string;
+  /** Wins over a derived effect line where the formula reads true but ugly. */
+  effect?: string;
 }
 
 export type WaveSlotType = 'low' | 'mid' | 'high';

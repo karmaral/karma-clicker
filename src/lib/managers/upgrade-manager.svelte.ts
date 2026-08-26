@@ -24,6 +24,9 @@ class UpgradeManager {
     Object.fromEntries(Object.keys(data).map((name) => [name, []])),
   );
 
+  /** Acquisition order, flat across every bucket — what "newest first" reads. */
+  #acquiredLog: string[] = $state([]);
+
   isLocked(target: string, id: string) {
     if (!Boolean(target in this.#upgrades)) return;
 
@@ -33,7 +36,10 @@ class UpgradeManager {
     const [unlock_type, unlocks_at] = Object.entries(item.unlocks_at)[0] as [UnlockType, number];
 
     if (unlock_type === 'count_total') {
-      const tgt = BuildingManager.getBuilding(target);
+      // The building the count is asked of, not the upgrade's own bucket key —
+      // 'cohort:basic' has no building, 'basic' does.
+      const { entity } = parseScope(target);
+      const tgt = entity && BuildingManager.getBuilding(entity);
       if (!tgt) return;
 
       return tgt.total <= unlocks_at;
@@ -87,6 +93,7 @@ class UpgradeManager {
 
     NotificationManager.notify(texts[target][id]);
     this.#upgrades[target].push(id);
+    this.#acquiredLog.push(`${target}/${id}`);
 
     if (item.effect) {
       this.#handleEffect(target, item);
@@ -148,6 +155,11 @@ class UpgradeManager {
 
   get upgrades() {
     return this.#upgrades;
+  }
+
+  /** `target/id` pairs, oldest first — reverse for newest-first reading. */
+  get acquiredLog() {
+    return this.#acquiredLog;
   }
 }
 
