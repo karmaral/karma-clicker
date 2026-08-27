@@ -5,7 +5,7 @@
   } from '$lib/managers';
   import { pulse } from '$lib/loop';
   import { getExcess } from '$lib/excess';
-  import { reserve } from '$lib/reserve.svelte';
+  import { reserve, type SplitJob } from '$lib/reserve.svelte';
   import { refinery } from '$lib/refinery.svelte';
   import { f } from '$lib/utils';
   import buildingData from '$data/buildings';
@@ -39,9 +39,9 @@
     pulse();
   }
 
-  /** The only way to set the split until `details.split` is built. */
-  function reserveSouls(fraction: number) {
-    reserve.set(fraction);
+  /** The only way to set either split until its screen is built. */
+  function reserveSouls(job: SplitJob, fraction: number) {
+    reserve.set(job, fraction);
     pulse();
   }
 
@@ -99,11 +99,20 @@
 
       <div class="row">
         <span class="id">
-          reserve {BuildingManager.countReserved()} of {BuildingManager.countSouls()}
+          anchoring {BuildingManager.countAnchoring()} of {BuildingManager.countSouls()}
         </span>
-        <button onclick={() => reserveSouls(0)}>0</button>
-        <button onclick={() => reserveSouls(0.25)}>25%</button>
-        <button onclick={() => reserveSouls(0.5)}>50%</button>
+        <button onclick={() => reserveSouls('anchoring', 0)}>0</button>
+        <button onclick={() => reserveSouls('anchoring', 0.25)}>25%</button>
+        <button onclick={() => reserveSouls('anchoring', 0.5)}>50%</button>
+      </div>
+
+      <div class="row">
+        <span class="id">
+          refining {BuildingManager.countRefining()} of {BuildingManager.countSouls()}
+        </span>
+        <button onclick={() => reserveSouls('refining', 0)}>0</button>
+        <button onclick={() => reserveSouls('refining', 0.25)}>25%</button>
+        <button onclick={() => reserveSouls('refining', 0.5)}>50%</button>
       </div>
 
       <div class="row">

@@ -177,7 +177,7 @@
     {/if}
 
     {#if progression.isRevealed('details.split')}
-      <SplitControl />
+      <SplitControl job="anchoring" />
     {/if}
   </div>
 </div>

@@ -11,6 +11,8 @@
      * then springs back from is a bar arguing with the hand on it.
      */
     floor?: number;
+    /** The same ground at the far end, 0…1. 1 is the whole bar — no ceiling at all. */
+    ceiling?: number;
     /**
      * The detent the handle snaps to, 0…1. 0 is continuous — the default, so a
      * caller that never asked for detents keeps the bar it had.
@@ -21,7 +23,15 @@
     onchange?: (value: number) => void;
   }
 
-  let { value, floor = 0, step = 0, height = '18px', label = 'Split', onchange }: Props = $props();
+  let {
+    value,
+    floor = 0,
+    ceiling = 1,
+    step = 0,
+    height = '18px',
+    label = 'Split',
+    onchange,
+  }: Props = $props();
 
   /** Below this a press is a click on a position, not a drag. */
   const DRAG_THRESHOLD = 4;
@@ -36,11 +46,30 @@
   let track: DOMRect | null = null;
 
   const held = $derived(Math.max(0, Math.min(1, floor)));
+  const capped = $derived(Math.min(1, Math.max(held, ceiling)));
 
-  const pct = $derived(`${Math.max(held, Math.min(1, value)) * 100}%`);
+  const pct = $derived(`${clamp(value) * 100}%`);
   const floorPct = $derived(`${held * 100}%`);
+  const ceilingPct = $derived(`${(1 - capped) * 100}%`);
 
-  /** Snapped before it is clamped, so the floor is never rounded away from. */
+  /**
+   * Every reachable position, drawn. The dead ground is marked too — a tick the
+   * handle stops short of is what says the other lever took it.
+   */
+  const ticks = $derived.by(() => {
+    if (!step) return [];
+
+    const marks: number[] = [];
+    for (let at = step; at < 1 - 1e-6; at += step) marks.push(at);
+
+    return marks;
+  });
+
+  function clamp(fraction: number) {
+    return Math.max(held, Math.min(capped, fraction));
+  }
+
+  /** Snapped before it is clamped, so neither end is ever rounded away from. */
   function snap(fraction: number) {
     if (!step) return fraction;
 
@@ -50,7 +79,7 @@
   function fractionAt(clientX: number) {
     if (!track?.width) return value;
 
-    return Math.max(held, Math.min(1, snap((clientX - track.left) / track.width)));
+    return clamp(snap((clientX - track.left) / track.width));
   }
 
   function set(next: number) {
@@ -112,7 +141,7 @@
     if (!moved) return;
 
     e.preventDefault();
-    set(Math.max(held, Math.min(1, snap(value + moved))));
+    set(clamp(snap(value + moved)));
   }
 </script>
 
@@ -125,7 +154,7 @@
   tabindex="0"
   aria-label={label}
   aria-valuemin={Math.round(held * 100)}
-  aria-valuemax={100}
+  aria-valuemax={Math.round(capped * 100)}
   aria-valuenow={Math.round(value * 100)}
   {onpointerdown}
   {onpointermove}
@@ -140,6 +169,13 @@
   {#if held > 0}
     <span class="floor" style:width={floorPct}></span>
   {/if}
+  {#if capped < 1}
+    <span class="ceiling" style:width={ceilingPct}></span>
+  {/if}
+  <!-- Over both grounds, under the handle: a detent stays legible wherever it falls. -->
+  {#each ticks as at (at)}
+    <span class="tick" style:left={`${at * 100}%`}></span>
+  {/each}
   <span class="handle" style:left={pct}></span>
 </div>
 
@@ -170,6 +206,22 @@
     inset: 0 auto 0 0;
     display: block;
     background: var(--line-300);
+  }
+
+  .ceiling {
+    position: absolute;
+    inset: 0 0 0 auto;
+    display: block;
+    background: var(--line-300);
+  }
+
+  /* Matches Meter's, so the two bar families read as one. */
+  .tick {
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    width: 1px;
+    background: var(--ink-200);
   }
 
   /* Sits astride the fill's edge, so the grab point is the boundary itself. */

@@ -17,7 +17,7 @@
 
     <div class="grades">
       <TokenTable />
-      <SplitControl />
+      <SplitControl job="refining" />
     </div>
   </div>
 {/if}

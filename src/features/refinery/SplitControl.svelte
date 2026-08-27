@@ -1,49 +1,60 @@
 <script lang="ts">
   /**
-   * The soul allocation, set from the side that consumes it. Both Close-up and
-   * the refinery draw it, which is why it stays here rather than moving to
-   * either — one lever, named by whatever the reserved souls are doing.
+   * One job's share of the souls. Close-up draws the anchoring one and the
+   * refinery draws the refining one, which is why it stays here rather than
+   * moving to either — the same lever, named by the job that consumes it.
    *
    * The detents come from the harness: coarse at first, so the allocation is a
-   * decision with a cost and not a number to nudge into place.
+   * decision with a cost and not a number to nudge into place. What overshoots
+   * the slots is idle, and the aside says so — that overshoot is what the
+   * granularity upgrades buy back.
    */
   import { SliderBar, Section } from '$ui';
   import { BuildingManager } from '$lib/managers';
-  import { reserve } from '$lib/reserve.svelte';
+  import { reserve, type SplitJob } from '$lib/reserve.svelte';
   import { harness } from '$lib/harness.svelte';
   import { refinery } from '$lib/refinery.svelte';
   import { f } from '$lib/utils';
 
+  interface Props {
+    job: SplitJob;
+  }
+
+  let { job }: Props = $props();
+
+  const isAnchoring = $derived(job === 'anchoring');
+
   const souls = $derived(BuildingManager.countSouls());
-  const reserved = $derived(BuildingManager.countReserved());
-  const incarnating = $derived(souls - reserved);
+  const incarnating = $derived(souls - BuildingManager.countReserved());
+
+  const held = $derived(
+    isAnchoring ? BuildingManager.countAnchoring() : BuildingManager.countRefining(),
+  );
 
   /**
    * Employed, and the rest. A held soul does one job, and only as many are held
    * to a job as there are slots to hold them — so the surplus is what the
    * allocation is overspending, and the bar needs to say so or it has no optimum.
    */
-  const working = $derived(harness.workers + refinery.workers);
-  const idle = $derived(Math.max(0, reserved - working));
+  const working = $derived(isAnchoring ? harness.workers : refinery.workers);
+  const idle = $derived(Math.max(0, held - working));
 
-  /**
-   * Named for the phase rather than for the majority: while a world is going
-   * down that is what the allocation is about, and the refinery has a panel of
-   * its own to say what it got.
-   */
-  const job = $derived(harness.isPlacing ? 'anchoring' : 'clearing');
+  const label = $derived(isAnchoring ? 'Anchoring split' : 'Refining split');
 </script>
 
-<Section label="Soul allocation">
+<Section {label}>
   {#snippet aside()}
-    {f(incarnating)} out{#if working} · {f(working)} {job}{/if}{#if idle} · {f(idle)} idle{/if}
+    {f(held)} held{#if working} · {f(working)} working{/if}{#if idle} · {f(idle)} idle{/if} ·
+    {f(incarnating)} incarnating
   {/snippet}
 
-  <!-- Filled from the incarnating end, so the bar reads left to right with the aside. -->
+  <!-- Filled from this job's end: with two levers, the fill is the share you set
+       rather than the remainder someone else left. -->
   <SliderBar
-    value={1 - reserve.fraction}
+    value={reserve.shareOf(job)}
+    ceiling={reserve.ceilingFor(job)}
     step={harness.step}
-    label="Soul allocation"
-    onchange={(share) => reserve.set(1 - share)}
+    {label}
+    onchange={(share) => reserve.set(job, share)}
   />
 </Section>

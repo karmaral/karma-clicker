@@ -15,7 +15,10 @@ export interface SimConfig {
   merge: MergeStance;
   hours: number;
   clicksPerSecond: number;
+  /** The refining lever. Held for the refinery, whatever the world is doing. */
   reserveFraction: number;
+  /** The anchoring lever. Only bites while a world is going down. */
+  anchorFraction: number;
   detent: Detent;
   sampleSeconds: number;
   /** What `generous` adds on top of the floor. */

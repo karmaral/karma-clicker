@@ -2,6 +2,7 @@ import Building from '$lib/buildings/base.svelte';
 import Click from '$lib/buildings/click.svelte';
 import Cohort from '$lib/buildings/cohort.svelte';
 import { ResourceManager } from '.';
+import { reserve } from '$lib/reserve.svelte';
 import data from '$data/buildings';
 
 /** Named in, never excluded out: an unlisted role is a plain building. */
@@ -67,9 +68,28 @@ class BuildingManager {
     return this.#cohorts().reduce((sum, cohort) => sum + cohort.count, 0);
   }
 
-  /** Souls held back from incarnating. Summed per cohort, matching the rounding. */
+  /** Souls held back from incarnating, both jobs. Summed per cohort, matching the rounding. */
   countReserved() {
     return this.#cohorts().reduce((sum, cohort) => sum + cohort.reserved, 0);
+  }
+
+  /** Held for the harness — 0 unless a world is actually being anchored. */
+  countAnchoring() {
+    return this.#cohorts().reduce((sum, cohort) => sum + cohort.anchoring, 0);
+  }
+
+  /** Held for the refinery. Unlike anchoring, this one holds between worlds. */
+  countRefining() {
+    return this.#cohorts().reduce((sum, cohort) => sum + cohort.refining, 0);
+  }
+
+  /**
+   * What the levers name, ignoring whether the phase is on. Progression reads
+   * this rather than `countReserved`: a beat asking whether the player has ever
+   * held a soul back must not un-fire when the world it was anchoring finishes.
+   */
+  countHeldBySplit() {
+    return this.#cohorts().reduce((sum, cohort) => sum + reserve.countHeld(cohort.count), 0);
   }
 
   /**

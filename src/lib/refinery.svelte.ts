@@ -10,7 +10,6 @@
 import { ResourceEmitter, type Listener } from '$lib/emission';
 import { ModifierSet } from '$lib/modifiers';
 import { BuildingManager, ResourceManager } from '$lib/managers';
-import { harness } from '$lib/harness.svelte';
 import balance from '$data/balance';
 import type { Modifier, ResourceType } from '$types';
 
@@ -36,13 +35,11 @@ class Refinery {
   #slots = $derived(this.#modifiers.apply(0, 'slots'));
 
   /**
-   * Held souls the harness has not taken. One soul does one job: a world still
-   * going down is what stands in the way, so anchoring draws first and the
-   * refinery works the remainder — and gets them all back once it is down.
+   * The refining share, capped by the slots. Its own lever, not a remainder: the
+   * harness cannot reach these souls and they are never released to it, so a
+   * world going down does not quietly stop the refinery.
    */
-  #free = $derived(Math.max(0, BuildingManager.countReserved() - harness.workers));
-
-  #workers = $derived(Math.min(this.#free, this.#slots));
+  #workers = $derived(Math.min(BuildingManager.countRefining(), this.#slots));
 
   /** Earned growth, on the base. The interval is deliberately not on this axis. */
   #leveled = $derived(Math.pow(1 + balance.refinery.yieldPerLevel, this.#level - 1));

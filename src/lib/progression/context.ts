@@ -13,7 +13,7 @@ export interface TriggerContext {
   readonly excess: number | undefined;
   /** Whether the active planet's own conditions are all met. It sets them, not the beat. */
   readonly isActivePlanetHarvestable: boolean;
-  /** Souls held back from incarnating. Set by the soul split. */
+  /** Souls the split holds back, phase or no phase — see `countHeldBySplit`. */
   readonly reserve: number;
   readonly planetsUnlocked: number;
   readonly planetsFinished: number;
@@ -44,6 +44,6 @@ export function createTriggerContext(): TriggerContext {
       return PlanetManager.finished;
     },
 
-    get reserve() { return BuildingManager.countReserved(); },
+    get reserve() { return BuildingManager.countHeldBySplit(); },
   };
 }

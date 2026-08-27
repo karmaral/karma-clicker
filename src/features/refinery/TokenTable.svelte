@@ -69,8 +69,6 @@
       <span class="right"><Label text="Held" size="sm" /></span>
       <span class="right"><Label text="Per batch" size="sm" /></span>
 
-      <!-- The head cell is the switcher: the words are a read-out of where the
-           cycle is, and clicking anywhere in the cell advances it. -->
       <button type="button" class="cost right" onclick={cyclePurchaseMode}>
         <Label text="Cost ×" size="sm" />
         <Tabs tabs={PURCHASE_MODES} active={purchaseMode} size="sm" interactive={false} />

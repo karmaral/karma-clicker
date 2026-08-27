@@ -20,6 +20,14 @@
   const souls = $derived(BuildingManager.countSouls());
   const incarnating = $derived(souls - BuildingManager.countReserved());
 
+  /**
+   * What the souls the split let go are earning right now. Both figures run
+   * through `yieldScale`, so an anchor landing moves them in the same frame the
+   * bar fills — which is the whole reason they stand beside the bars.
+   */
+  const experience = $derived(BuildingManager.countExperiencePerSecond());
+  const karma = $derived(BuildingManager.countKarmaPerSecond());
+
   /** Placed ones read full, the one in progress reads live, the rest read empty. */
   const rows = $derived.by(() => {
     return Array.from({ length: planet.anchorsAsked }, (_, i) => ({
@@ -28,6 +36,16 @@
       isPlaced: i < planet.anchorsPlaced,
     }));
   });
+
+  /** Nominal, per anchor. What one more down adds before coverage takes its cut. */
+  const bonus = $derived(`+${Math.round(planet.anchorBonus * 100)}%`);
+
+  /**
+   * What the placed ones actually pay. Below the nominal sum whenever the harness
+   * carries fewer souls than are out, which is what the `Carried` row explains.
+   */
+  const multiplier = $derived(harness.multiplierFor(incarnating));
+  const carried = $derived(Math.min(harness.riders, incarnating));
 
   /**
    * Real time, not job time — the job is what the world asks, the countdown is
@@ -43,17 +61,25 @@
     {f(harness.workers)} of {f(harness.slots)} slots
   {/snippet}
 
+  <!-- The cost of the lever, priced. Everything below is what buys it back. -->
+  <p class="out">
+    <span class="num">{f(incarnating)}</span> of {f(souls)} incarnating ·
+    <span class="num">{f(experience)}</span> xp/s ·
+    <span class="num">{f(karma)}</span> karma/s
+  </p>
+
   <div class="anchors">
     {#each rows as row (row.index)}
       <div class="row">
         <span class="index num">{row.index + 1}</span>
-        <Meter 
-          value={row.fill} 
-          max={1} 
+        <Meter
+          value={row.fill}
+          max={1}
           height="10px"
           theme="dark"
         />
         <span class="state">{row.isPlaced ? 'down' : row.fill > 0 ? 'placing' : 'waiting'}</span>
+        <span class={['bonus', 'num', { placed: row.isPlaced }]}>{bonus}</span>
       </div>
     {/each}
   </div>
@@ -64,9 +90,15 @@
       <span class="num">{f(planet.anchorsPlaced)} of {f(planet.anchorsAsked)}</span>
     </div>
     <div class="stat">
-      <Label text="Can incarnate" />
-      <span class="num">{f(incarnating)} of {f(souls)}</span>
+      <Label text="Anchor bonus" />
+      <span class="num">×{multiplier.toFixed(2)}</span>
     </div>
+    {#if carried < incarnating}
+      <div class="stat">
+        <Label text="Carried" />
+        <span class="num">{f(carried)} of {f(incarnating)}</span>
+      </div>
+    {/if}
     <div class="stat">
       <Label text="Next anchor in" />
       <span class="num">{countdown}</span>
@@ -81,6 +113,19 @@
 </Section>
 
 <style>
+  .out {
+    margin: 0;
+    padding: var(--sp-3) 0;
+    font-size: var(--fs-sm);
+    color: var(--ink-500);
+    border-bottom: var(--rule-card);
+  }
+
+  .out .num {
+    font-weight: 600;
+    color: var(--ink-900);
+  }
+
   .anchors {
     display: flex;
     flex-direction: column;
@@ -90,7 +135,7 @@
 
   .row {
     display: grid;
-    grid-template-columns: 1.5rem 1fr 4rem;
+    grid-template-columns: 1.5rem 1fr 4rem 3rem;
     align-items: center;
     gap: var(--sp-3);
   }
@@ -104,6 +149,18 @@
     font-size: var(--fs-sm);
     color: var(--ink-500);
     text-align: right;
+  }
+
+  /* Dim until it is paying. The row of them lighting up in turn is the reading. */
+  .bonus {
+    font-size: var(--fs-sm);
+    color: var(--ink-200);
+    text-align: right;
+  }
+
+  .bonus.placed {
+    font-weight: 600;
+    color: var(--ink-900);
   }
 
   dl {

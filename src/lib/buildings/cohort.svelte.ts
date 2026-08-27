@@ -8,14 +8,30 @@ import { harness } from '$lib/harness.svelte';
  * merged. Aim and karma stay on `Building` — the click yields karma too.
  */
 export default class Cohort extends Building {
-  #reserved = $derived.by(() => reserve.countHeld(this.count));
+  /**
+   * The anchoring share only withholds while a world is going down. The phase
+   * gate lives here rather than in `Reserve` because a lever left set between
+   * worlds should cost nothing — and because `Reserve` knowing about the harness
+   * would close a cycle back through the manager.
+   */
+  #anchoringAt(count: number) {
+    return harness.isPlacing ? reserve.countHeld(count, 'anchoring') : 0;
+  }
+
+  #heldAt(count: number) {
+    return Math.min(count, this.#anchoringAt(count) + reserve.countHeld(count, 'refining'));
+  }
+
+  #anchoring = $derived(this.#anchoringAt(this.count));
+  #refining = $derived(reserve.countHeld(this.count, 'refining'));
+  #reserved = $derived(this.#heldAt(this.count));
 
   /**
    * Reserved souls are still yours. They only stop incarnating — and the share is
    * taken out of any count, so a preview of ten bought into a third held back
    * prices seven and says so.
    */
-  activeAt(count: number) { return count - reserve.countHeld(count); }
+  activeAt(count: number) { return count - this.#heldAt(count); }
 
   /**
    * What the placed anchors pay — and nothing at all between worlds. A soul
@@ -31,5 +47,7 @@ export default class Cohort extends Building {
     return harness.multiplierFor(this.active);
   }
 
+  get anchoring() { return this.#anchoring; }
+  get refining() { return this.#refining; }
   get reserved() { return this.#reserved; }
 }

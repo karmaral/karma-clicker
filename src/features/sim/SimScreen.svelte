@@ -44,6 +44,7 @@
   let hours = $state(6);
   let clicksPerSecond = $state(4);
   let reserveFraction = $state(0.25);
+  let anchorFraction = $state(0.25);
   let detent = $state<Detent>(0);
   let policies = $state<PolicyId[]>(['cheapest', 'payback']);
   let stances = $state<MergeStance[]>(['floor']);
@@ -66,6 +67,7 @@
           hours,
           clicksPerSecond,
           reserveFraction,
+          anchorFraction,
           detent,
           overrides: balanceLab.overrides,
         });
@@ -183,8 +185,13 @@
       </label>
 
       <label>
-        Reserve
+        Refining
         <input type="number" min="0" max="1" step="0.05" bind:value={reserveFraction} />
+      </label>
+
+      <label>
+        Anchoring
+        <input type="number" min="0" max="1" step="0.05" bind:value={anchorFraction} />
       </label>
 
       <label>

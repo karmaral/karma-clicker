@@ -40,13 +40,11 @@ class Harness {
   );
 
   /**
-   * Held souls, capped by the slots — and none at all once the world is down.
-   * The harness draws before the refinery does, because a world still being
-   * anchored is what is standing in the way; what it leaves is the refinery's.
+   * The anchoring share, capped by the slots. `countAnchoring` is already zero
+   * off-phase, so the lever and the phase are asked once, in one place — and the
+   * refinery's share is not reachable from here at all.
    */
-  #workers = $derived(
-    this.#isPlacing ? Math.min(BuildingManager.countReserved(), this.#slots) : 0,
-  );
+  #workers = $derived(Math.min(BuildingManager.countAnchoring(), this.#slots));
 
   /** Job-ms placed per real ms. At 5, a ten-minute anchor lands in two. */
   #speed = $derived(this.#workers * this.#modifiers.apply(balance.harness.perWorker, 'yield'));

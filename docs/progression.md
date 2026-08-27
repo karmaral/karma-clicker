@@ -290,6 +290,39 @@ yours, unlike merged ones. They only stop earning, and that is the whole of what
 reserving costs. Rounding is per cohort, so `countReserved()` sums what each
 cohort actually holds rather than recomputing from the fraction.
 
+### Two levers, not one
+
+`Reserve` holds an **anchoring** share and a **refining** share. Both are shares
+of the whole population, clamped so they sum to at most one; whatever neither
+claims incarnates. This replaced a single fraction that both screens drew and a
+priority rule underneath it — the harness drained the pool and the refinery
+worked the remainder. That made two decisions into one: staffing the harness
+silently stopped the refinery, and there was no way to say so.
+
+Neither lever can take from the other, so `set` clamps against what the other
+leaves rather than pushing it down. The bar draws that ceiling as dead ground at
+the far end, the same treatment `floor` already had — a handle that can be
+dragged somewhere it springs back from is a bar arguing with the hand on it.
+
+**Overshoot is the cost.** A share larger than its slots leaves souls idle:
+neither working nor incarnating. That is what makes the granularity upgrades
+worth buying — a 25% detent cannot land on the slot count, so the coarse lever is
+paid for in wasted souls, and each rung down `splitSteps` buys some back. The
+asides name `idle` for exactly this reason. The ladder is
+`[0.25, 0.15, 0.1, 0.05, 0.025]`; it must stay monotonically finer, since a
+`step` upgrade that coarsened the lever would be a downgrade sold as a reward.
+
+**The anchoring share only bites while a world is going down.** Off-phase it
+releases and those souls incarnate, so a lever left set between worlds costs
+nothing. The gate lives on `Cohort`, which already imports `harness` — putting it
+on `Reserve` would close a cycle back through `BuildingManager`.
+
+One consequence worth keeping: progression reads `countHeldBySplit()`, the
+*ungated* sum, not `countReserved()`. The `refining` beat asks whether the player
+has ever held a soul back, and a gated count falls back to zero the moment the
+world it was anchoring finishes — which would un-fire the beat and strand the
+refinery.
+
 **`Cohort extends Building`** — the one place inheritance beat composition, which
 is worth reconciling with Producers above rather than reading as drift. `Planet`
 was refused a `Building` base because it wants none of Building's economy and
@@ -2955,6 +2988,246 @@ The emitter no longer holds a duration. It takes a getter, the same way it takes
 its payout, because it re-queues itself and must ask for the current figure at an
 arbitrary later moment.
 
+## The economy curve
+
+Balance rationale for the cohort ladder — why a purchase decision exists at all,
+and which authored numbers decide it. Nothing here is built yet; it is the frame
+the balance pass is missing.
+
+### One number, and it is a duration
+
+**`payback = cost / marginal per-second`** — seconds of a purchase's own income to
+repay it. Every buy decision in the genre reduces to *take the smallest one on the
+shelf*, which is what `POLICIES.payback` already does. `paybackOf` is the whole of
+it and `LadderRow` already carries the column.
+
+### A crossing is structural, not tuned
+
+Two things can be bought and they slope in opposite directions:
+
+- **A copy.** Price of the k-th is `C·r^k`; the yield it adds is a constant `P`.
+  Payback is `(C/P)·r^k` — rising exponentially in the count. Copies rot.
+- **Something that multiplies the stack.** Fixed cost, marginal `k·P·(m−1)`.
+  Payback falls as `1/k`. It ripens.
+
+One rises and one falls, so they cross exactly once, and the design question is
+never *whether* but *where*. Cookie Clicker places it by refusing to sell the
+upgrade until 1 / 5 / 25 / 50 are owned — the ownership gate **is** the placement.
+
+Two cohorts do the same thing with the falling line held flat: a cohort you own
+none of has a fixed opening payback while the one you are buying climbs past it.
+They meet at
+
+```
+k* = ln ρ / ln r        ρ = ratio of opening paybacks, r = cost_multiplier
+```
+
+Cookie Clicker runs `r = 1.15` with each tier opening about twice as dear per unit
+of yield, so `ln2/ln1.15 ≈ 5`: five purchases, then a hop. **At `ρ = 1` there is no
+decision** — a new tier is better the instant it is affordable and nothing is ever
+revisited. At `ρ ≈ 10` it is `k* ≈ 16`, and the new tier is a wall rather than a
+choice. Five is the figure to aim near, because it recurs often enough to be felt
+as a rhythm.
+
+### Ours is a sawtooth, because the multiplier is free
+
+There are no purchased upgrades here. `upgrade_threshold` fires a level on the
+count, and `(1 + yield_multipliers)^(L−1)` with `(1 − duration_reduction)^(L−1)`
+multiplies the whole stack at once — so the two curves above are braided into one
+rather than drawn side by side. Payback climbs `r^k` between thresholds and falls
+off a cliff at each one.
+
+```
+seconds
+  │                              ╱│
+  │                        ╱│   ╱ │
+  │              ╱│      ╱  │  ╱  │
+  │      ╱│    ╱  │    ╱    │╱    │
+  │  ╱│ ╱ │  ╱    │  ╱      │
+  │╱  │╱  │╱      │╱
+  └───┴───┴───────┴──────────────── count
+      5  15      25             50
+```
+
+### The tooth ratio is the number that should be authored
+
+Whether a cohort decays, holds or runs away is the height of a climb against the
+depth of its drop:
+
+```
+tooth = r^gap / M        M = (1 + yield_multiplier) · 1/(1 − duration_reduction)
+```
+
+Above 1 the cohort is dying; below 1 it is getting stronger with every level; at 1
+it holds station. Today it is implicit in three unrelated fields and nobody has
+compared them. Measured on `buildings.ts` as authored, in each cohort's own cost
+resource:
+
+| cohort | M | gap 5 | gap 10 | gap 25 |
+|---|---|---|---|---|
+| `basic` | 2.38 | 0.85 | 1.70 | 13.8 |
+| `steady` | 2.50 | 12.8 | 410 | — |
+| `chaos` | 9.52 | 0.32 | **0.98** | 27.8 |
+| `red_basic` | 3.75 | 0.54 | 1.08 | 8.8 |
+
+Three readings fall straight out. **`steady` is a five-purchase cohort by
+construction** — `cost_multiplier: 2` doubles its payback on every single copy, so
+it opens at 0.4s, is behind `basic` by the sixth, and is unbuyable by the
+fifteenth. **`chaos` never decays**: 0.98 across the gap-10 thresholds is dead
+flat, so it holds sub-second payback from 0 to 50 and no other cohort can be the
+right buy while it is on the shelf. **`basic` is the only one shaped like a
+curve**, improving to 15, decaying gently to 25, then falling off at the 25-wide
+gaps.
+
+**`zealot` has `ρ = ∞`.** It is priced in experience and yields none, so its
+payback in its own cost resource is undefined and `POLICIES.payback` can never
+choose it. Either that is a deliberate karma-only luxury bought against a
+different reading, or it is a slip; it is outside this system either way.
+
+### The ladder cannot see the cliff
+
+`marginalPerSecond` reads `#production` and `#duration`, which derive from the
+level the *current* count has earned — so it prices one more unit at today's
+multiplier and never at the one the purchase would trigger. The teeth are in
+`buildLadder`; the drops are not.
+
+That is not a rounding error. The buy that crosses a threshold is reliably the
+best on the board by an order of magnitude, and it reads as the worst:
+
+| | ladder says | actually |
+|---|---|---|
+| 5th `basic` | 26.2s | **3.3s** |
+| 15th `basic` | 44.6s | **2.1s** |
+| 25th `chaos` | 1.9s | **~0s** |
+
+So both policies systematically refuse the one purchase a player reaches for, and
+a run's shape is not the shape of a played game. The fix is a second column —
+marginal measured as stack-rate at `k+1` minus stack-rate at `k`, which crosses the
+level — not a change to either policy.
+
+The UI is already ahead of the sim here: **`NEXT` on the cost head is exactly this
+purchase**, the run to the threshold where the stack multiplier lands. That is the
+genre's upgrade decision, spelled as a quantity mode.
+
+### Levels become purchases
+
+Decided, not yet built. The tooth-ratio table above diagnoses the system as it
+stands; it is not the target.
+
+`upgrade_threshold` does two jobs at once — it marks a milestone *and* hands over
+the multiplier, free and automatic. That single conflation is why there is no
+decision at a threshold (only one of the two curves is purchasable), why the
+multiplier cannot ratchet across a merge (a reading of the count has to fall with
+it), and why the ladder is blind to the cliff. Splitting the two jobs is the whole
+change:
+
+> **A count unlocks an upgrade. Buying the upgrade grants the multiplier.**
+
+Four decisions on top of it.
+
+**The level-replacements are priced in experience**, because the cohorts are. The
+trade *upgrade or another copy* only exists when both come out of the same pocket;
+in two currencies it stops being a trade and becomes two shopping lists. Higher
+tiers may be priced in karma or in tokens, and are then rewards rather than
+decisions — which is a fine job for them as long as it is the intended one.
+
+**A merge takes them.** Cohort upgrades are the genre's *regular* upgrades and burn
+on departure; the ratchet lives in the layer that already exists for it — harvest
+income, refinery grades, tokens. See the cost this carries, below.
+
+**They gate on the current count, not the lifetime total.** `count_total` never
+falls, so gating there would leave every upgrade a merge just burned sitting
+unlocked and unowned — and the play that follows is to ignore souls and grind
+experience for the shopping list, which is the opposite of a rebuild. Gated on
+`count`, they re-lock on the merge and re-unlock one at a time as the ladder comes
+back. `UnlockType` gains `'count'` beside `'count_total'`; the latter stays for
+anything meant to stay earned. Note `isLocked` reads `<=` on the count branch and
+`<` on the resource branch, so `count_total: 25` unlocks at 26 — fix with it.
+
+**The price is one product, and it is the pacing knob:**
+
+> **how many you own at the gate** × **how much better it makes each one** ×
+> **what one more copy costs there**
+
+That lands the upgrade at exactly the count where it overtakes another copy, so it
+is worth buying the moment it unlocks. Under that price it is a treat; over it, a
+goal to grow into. One authored number per upgrade, replacing a pace that
+currently falls out of three unrelated fields in two files.
+
+### What burning the upgrades actually costs
+
+An upgrade multiplies everything owned at once, so at 50 copies a ×2.38 upgrade is
+worth **69 more copies** and should cost about what 69 copies cost. That makes
+upgrades the largest purchases on the board by a wide margin, and it is why the
+merge decision changes character rather than degree.
+
+For `basic`: all 50 copies from scratch is ~36k experience; the four upgrades
+replacing levels 2–5 come to ~380k. **Rebuilding costs about eleven times what
+rebuying the souls alone costs today**, where levels return free. The harvest
+payout is anchored at ~30% of income at departure (see *What a finished world
+pays*) and will not repay that. Either the payout grows with this, or the price is
+shaded under break-even, or the early upgrades are exempted from the burn. Not yet
+chosen.
+
+### Worked: `basic`
+
+At `cost: 5`, `cost_multiplier: 1.15`, and a level worth ×1.57 experience ×3.35
+karma ×1/0.66 duration — so each upgrade makes a copy **1.38× better** in the
+resource it is priced in.
+
+| gate | next copy costs | upgrade costs |
+|---|---|---|
+| 5 | 10 | **70** |
+| 15 | 41 | **840** |
+| 25 | 165 | **5_700** |
+| 50 | 5_418 | **374_000** |
+| 75 | 178_355 | **18_400_000** |
+
+```ts
+'cohort:basic': [
+  // ...`first` unchanged.
+  {
+    id: 'level_1',
+    effect: [
+      { op: 'mult', value: 1.57, target: 'experience' },
+      { op: 'mult', value: 3.35, target: 'karma' },
+      { op: 'mult', value: 0.66, stat: 'duration' },
+    ],
+    unlocks_at: { count: 5 },
+    costs: { experience: 70 },
+  },
+  // level_2 { count: 15 } 840 · level_3 { count: 25 } 5_700
+  // level_4 { count: 50 } 374_000 · level_5 { count: 75 } 18_400_000
+]
+```
+
+Three things fall out of writing it down.
+
+**The gates past 75 are decoration.** At `cost_multiplier: 1.15` the 100th copy
+costs 5.9M and the 200th costs 6.9 *trillion* — the cohort is unbuyable long
+before its own threshold list ends. The list should stop where the cohort dies and
+let a later cohort carry the game, which is what the tooth ratios already said
+about `basic` falling off at the 25-wide gaps.
+
+**Every entry repeats one row of numbers**, because a level is one multiplier
+applied five times. Authoring them separately is what buys the ability to price
+each one differently — which is the point — but the effect arrays should be
+generated from the cohort's own figures rather than retyped, or the fifth will
+drift from the first.
+
+**`basic/str_1` now overlaps its own 25 gate**, priced at 10k `karma_positive`
+against the new experience-priced `level_3` at the same count. It reads as a
+higher-tier reward under the split above, so it works — but the collision is
+authored, not intended, and one of the two should move.
+
+Nothing here is landed. Adding the entries while `yield_multipliers` and
+`duration_reduction` remain on the cohort applies the multiplier twice, so the
+data change and the removal of `Building`'s level machinery are one commit:
+`#level`, `#levelFor`, `#syncLevel`, `#calcLevelProgress`, `isMaxLevel` and
+`currentThreshold` all go, `levelProgress` and `nextUntilThreshold` stay as a
+reading of progress toward the next gate, and `NEXT` on the cost head keeps its
+meaning — the run to the count that unlocks the next purchase.
+
 ## Known gaps
 
 Things that are simply unbuilt, and what they cost today.
@@ -2987,6 +3260,16 @@ Things that are simply unbuilt, and what they cost today.
   question is always live. `detail.status` is still a `RevealStub` noted as *the
   per-second rate line*, and the Overview's Behind band already draws `/s` from
   `sumHarvestRates`, so the register exists and the header does not use it.
+- **Levels are still free and automatic.** The decision to make them purchases is
+  taken and worked through in *The economy curve* above; none of it is built. It
+  is one commit — the `upgrades.ts` entries, `UnlockType` gaining `'count'`, and
+  `Building`'s level machinery coming out — because doing half of it multiplies
+  the same figure twice.
+- **The ladder prices no level crossing.** `marginalPerSecond` reads the level the
+  current count has earned, so the threshold buy reads as the worst on the board
+  and is reliably the best. One column. Until it lands, a swept run buys nothing
+  like a played game — and it stays wanted after levels become purchases, since
+  an upgrade is a marginal the ladder must price too.
 - **No 'next phase in mm:ss'.** A phase closes at an experience threshold and
   nothing estimates when. `formatClock` is the format and `PlanetSection` is the
   place; `#experienceAfter` already knows where the phase closes.

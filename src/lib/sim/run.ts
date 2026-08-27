@@ -41,6 +41,7 @@ export const DEFAULT_CONFIG: SimConfig = {
   hours: 6,
   clicksPerSecond: 4,
   reserveFraction: 0.25,
+  anchorFraction: 0.25,
   detent: 0,
   sampleSeconds: 30,
   generousMargin: 0.15,
@@ -264,8 +265,10 @@ export async function run(
       aimSet = true;
     }
 
+    /* Both levers, or the harness never staffs and every world past the first stalls. */
     if (!reserveSet && progression.isLive('details.split')) {
-      reserve.set(config.reserveFraction);
+      reserve.set('anchoring', config.anchorFraction);
+      reserve.set('refining', config.reserveFraction);
       reserveSet = true;
     }
 

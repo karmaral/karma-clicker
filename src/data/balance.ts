@@ -43,7 +43,8 @@ export default {
     riders: 0,
     perWorker: 0.2,
     clickMs: 250,
-    splitSteps: [0.25, 0.15, 0.5, 0.1, 0.05],
+    /** Finer every rung — a `step` upgrade that coarsened the lever would be a downgrade. */
+    splitSteps: [0.25, 0.15, 0.1, 0.05, 0.025],
   },
 
   aim: {
