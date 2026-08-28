@@ -4,19 +4,23 @@
   import { fromStore } from 'svelte/store';
   import * as THREE from 'three';
   import Anchors from './Anchors.svelte';
+  import Bolt from './Bolt.svelte';
   import Halo from './Halo.svelte';
   import Harness from './Harness.svelte';
   import PlanetBody from './PlanetBody.svelte';
   import SoulSwarm from './SoulSwarm.svelte';
   import Sparks from './Sparks.svelte';
-  import { placeAnchors, type AnchorVisual } from './anchor';
+  import { placeAnchors, type AnchorPlacement, type AnchorVisual } from './anchor';
   import { advanceClock, getClock } from './clock';
   import { createSurfaceField } from './field';
   import { buildLoops, trimLoopCache, type HarnessVisual } from './harness';
   import { readToken } from './ink';
-  import type { SwarmVisual } from './orbit';
-  import { createPulses, PULSE_CAPACITY, sparkWorldPosition, type PulseVisual } from './pulse';
-  import type { PlanetVisual } from './visual';
+  import { ridersOf, type SwarmVisual } from './orbit';
+  import {
+    createPulses, PULSE_CAPACITY, sparkWorldPosition,
+    type PulseVisual, type Spot,
+  } from './pulse';
+  import { coreFillOf, type PlanetVisual } from './visual';
 
   interface Props {
     visual: PlanetVisual;
@@ -87,6 +91,13 @@
      */
     onplacing?: (point: { x: number; y: number } | undefined) => void;
     /**
+     * The cursor's last known spot, in the same px `onspark` reports in —
+     * whether that was a press or a move since. Read at the yield to decide
+     * whether a strike has anywhere to start from, and read again every frame
+     * the bolt is alive so its strike-end keeps following the cursor.
+     */
+    getPoint?: () => { x: number; y: number } | undefined;
+    /**
      * Drawn, but not looked at. A screen that has been left keeps its canvas so
      * it can come back drawn, and a world nobody sees should not be asking for
      * frames — see `watched.ts`. Its clock stops with it, which `advanceClock`
@@ -114,6 +125,7 @@
     yields = 0,
     onspark,
     onplacing,
+    getPoint,
     isPaused = false,
   }: Props = $props();
 
@@ -156,6 +168,18 @@
    * `PlanetVisual` to find out how far in the world goes.
    */
   const core = $derived(alignment !== undefined ? Math.max(0, visual.core) : 0);
+
+  /**
+   * And how much of it is there yet. The split's own share and not the swarm's
+   * lagged one: the berths a soul crosses to are packed against the full radius,
+   * so the drawn sphere has to reach a berth before the soul does — it leads the
+   * arrival by `mergeLag` rather than trailing it, which is the side of that
+   * quarter-second a soul may not be caught outside its own core on.
+   *
+   * A view with no split to show draws the core whole, which is every caller
+   * that predates this.
+   */
+  const filled = $derived(core * coreFillOf(merge ?? 1, visual.coreSeed));
 
   /**
    * The anchors as this world wears them. Adjusted here rather than inside
@@ -285,6 +309,63 @@
     };
   }
 
+  /** The inverse of `projectToScreen` — screen px back to world (x, y). */
+  function unprojectFromScreen(point: { x: number; y: number }) {
+    return {
+      x: (point.x - size.current.width / 2) / zoom,
+      y: (size.current.height / 2 - point.y) / zoom + offsetY,
+    };
+  }
+
+  /**
+   * The cursor, in world xy, read fresh — the bolt's own live end. `undefined`
+   * off the canvas or before there is a zoom to unproject through, which the
+   * mark's own frozen spawn point stands in for.
+   */
+  function getCursorWorld() {
+    const point = getPoint?.();
+
+    return point && zoom > 0 ? unprojectFromScreen(point) : undefined;
+  }
+
+  /**
+   * How much of the swarm the harness is carrying — and by the same number, how
+   * often a strike lands on a pole instead of on open ground. A yield paid by
+   * souls riding the lines should be seen to arrive there.
+   *
+   * `ridersOf` is the count `SoulSwarm` actually draws riding, so the two can't
+   * disagree; a world with nothing strung carries nobody and takes no strikes.
+   */
+  const ridden = $derived.by(() => {
+    if (!swarm || !cohorts?.length || !loops || !strung.length) return 0;
+
+    const souls = cohorts.reduce((sum, count) => sum + count, 0);
+
+    return souls > 0 ? ridersOf(swarm, souls, riders) / souls : 0;
+  });
+
+  /**
+   * One roll, and the pole it picked — **any** placed one, front or back. It
+   * loses at `1 - share` and at nothing else.
+   *
+   * `sparkFace` does not reach this. That cutoff is where a *random* mark may
+   * land, and its argument is that the ground turns edge-on at the limb, so a
+   * flat dot lying in it foreshortens into the outline. A pole is not a place
+   * the roll found: it is a named thing on the world, and one behind it is still
+   * that thing. `sparkBack` already says how loud the far side is, and the
+   * strike crossing the body is the world being wrapped rather than a mark
+   * misplaced.
+   */
+  function spotOnAnchor(standing: AnchorPlacement[], share: number): Spot | undefined {
+    if (!standing.length || Math.random() >= share) return undefined;
+
+    // The tip, which `chamfer` leaves as a small flat cap — the one place on the
+    // solid the harness's own lines already meet.
+    const at = standing[Math.floor(Math.random() * standing.length)];
+
+    return { x: at.x, y: at.y, z: at.z, r: at.peak };
+  }
+
   /** Same cursor discipline as `flashes`, kept apart because a yield is not a click. */
   let sparked: number | undefined;
 
@@ -299,21 +380,42 @@
     for (let i = Math.max(sparked, at - PULSE_CAPACITY); i < at; i++) {
       // Untracked for the same reason `flashes` used to read it this way: where
       // the world is held is read *at* the yield, not answered to on every
-      // frame the spin advances.
-      const held = untrack(() => ({
-        lean: visual.lean,
-        tilt: visual.tilt,
-        turn: visual.turn,
-        spin: spinAngle,
+      // frame the spin advances. The poles and the share are taken at the same
+      // moment and for the same reason — a strike answers to the world it was
+      // paid out on.
+      const { held, share, standing } = untrack(() => ({
+        held: { lean: visual.lean, tilt: visual.tilt, turn: visual.turn, spin: spinAngle },
+        share: ridden,
+        standing: strung,
       }));
 
-      const written = pulses.spark(Math.round(pulse.sparks), field, pulse.sparkFace, held);
+      const written = pulses.spark(
+        Math.round(pulse.sparks),
+        field,
+        pulse.sparkFace,
+        held,
+        () => spotOnAnchor(standing, share),
+      );
 
       // No spark to land on (the count slider at 0) reads as the planet's own
       // centre — rotating the origin leaves it the origin.
       const world = written.length > 0 ? sparkWorldPosition(written[0], held) : { x: 0, y: 0 };
 
       onspark?.(projectToScreen(world.x, world.y));
+
+      // The strike, from the cursor to each spark it just paid for — one bolt
+      // per spark, so a yield that landed three still reads as three. Only the
+      // spawn point is set here and the spark itself is handed over rather
+      // than its position: `Bolt` reads both ends fresh every frame it is
+      // alive, cursor and spark alike, so neither end freezes while the other
+      // — the world's own spin — carries on.
+      const from = getCursorWorld();
+
+      if (from && pulse.boltWidth > 0) {
+        for (const mark of written) {
+          pulses.bolt(from, mark);
+        }
+      }
     }
 
     sparked = at;
@@ -357,7 +459,7 @@
 
     pulses.advance(delta);
 
-    if (pulses.isLive(Math.max(pulse.burstLife, pulse.haloLife, pulse.sparkLife))) {
+    if (pulses.isLive(Math.max(pulse.burstLife, pulse.haloLife, pulse.sparkLife, pulse.boltLife))) {
       invalidate();
     }
   });
@@ -372,7 +474,7 @@
 
 <T.OrthographicCamera makeDefault position={[0, offsetY, 5]} {zoom} />
 
-<PlanetBody {visual} {zoom} {spinAngle} {veilAngle} {alignment} {pulse} {pulses}>
+<PlanetBody {visual} {zoom} {spinAngle} {veilAngle} {alignment} core={filled} {pulse} {pulses}>
   {#snippet standing()}
     {#if harness && loops}
       <Harness visual={harness} {loops} {zoom} {rim} size={worldSize} />
@@ -400,6 +502,7 @@
       {bleed}
       {merge}
       {core}
+      {filled}
       lean={alignment ?? 0}
       size={worldSize}
     />
@@ -410,4 +513,14 @@
      neither how it is held nor the spin may reach it. -->
 {#if pulse}
   <Halo visual={pulse} {pulses} />
+  <Bolt
+    visual={pulse}
+    {pulses}
+    {zoom}
+    getCursor={getCursorWorld}
+    lean={visual.lean}
+    tilt={visual.tilt}
+    turn={visual.turn}
+    {spinAngle}
+  />
 {/if}

@@ -22,9 +22,10 @@ export {
 } from './harness';
 export { keyLight } from './light.svelte';
 export {
-  DEFAULT_SWARM, SOUL_CAPACITY, SWARM_GROUPS, SWARM_PARAMS,
-  berthOf, berthRoom, cloneSwarm, printSwarm, rankOf, riderCount, settleScale, shareOf, travelOf,
-  type Soul, type SwarmGroup, type SwarmParam, type SwarmVisual,
+  DEFAULT_SWARM, SOUL_CAPACITY, SPAWN_CAPACITY, SWARM_GROUPS, SWARM_PARAMS,
+  berthOf, berthRoom, cloneSwarm, createSpawns, printSwarm,
+  rankOf, riderCount, settleScale, shareOf, travelOf,
+  type Soul, type SpawnMark, type Spawns, type SwarmGroup, type SwarmParam, type SwarmVisual,
 } from './orbit';
 export {
   DEFAULT_PULSE, PULSE_CAPACITY, PULSE_GROUPS, PULSE_PARAMS,

@@ -1,4 +1,5 @@
 import type { ItemTextData } from '$types';
+import { levelTexts } from './cohort-levels';
 
 const data: Record<string, Record<string, ItemTextData>> = {
   'global': {
@@ -42,7 +43,7 @@ const data: Record<string, Record<string, ItemTextData>> = {
     },
     'riders_1': {
       title: 'Something to hold',
-      description: 'Forty souls can ride the finished harness and take what it pays.',
+      description: 'Two hundred souls can ride the finished harness and take what it pays.',
     },
     'slots_2': {
       title: 'The whole crew',
@@ -54,7 +55,7 @@ const data: Record<string, Record<string, ItemTextData>> = {
     },
     'riders_2': {
       title: 'Room for the rest',
-      description: 'Four hundred souls ride instead of forty.',
+      description: 'Two thousand souls ride instead of two hundred.',
     },
     'split_3': {
       title: 'To the soul',
@@ -103,8 +104,14 @@ const data: Record<string, Record<string, ItemTextData>> = {
       description: 'Incarnation XP yield squared',
       effect: 'incarnation yield squared',
     },
+    'carry_1': {
+      title: 'What the lines carry back',
+      description: 'Placeholder. Every soul riding the harness lends you a little of what it is doing up there. Incarnating by hand gains 0.2% for each of them.',
+      effect: '+0.2% a soul riding',
+    },
   },
   'cohort:basic': {
+    ...levelTexts('basic'),
     'first': {
       title: 'Self Discovery',
       description: 'Unlock souls that can generate karma.',
@@ -116,6 +123,7 @@ const data: Record<string, Record<string, ItemTextData>> = {
     },
   },
   'cohort:steady': {
+    ...levelTexts('steady'),
     'first': {
       title: 'Steady',
       description: 'Unlock slow souls but very yielding.',
@@ -126,18 +134,21 @@ const data: Record<string, Record<string, ItemTextData>> = {
     }
   },
   'cohort:chaos': {
+    ...levelTexts('chaos'),
     'first': {
       title: 'Free Wilderness',
       description: 'A soul that explores the full polarity spectrum at random.',
     },
   },
   'cohort:zealot': {
+    ...levelTexts('zealot'),
     'first': {
       title: 'MAX_VALUE',
       description: 'A zealot soul willing to go all in.\n Zealotry can backfire!',
     },
   },
   'cohort:red_basic': {
+    ...levelTexts('red_basic'),
     'first': {
       title: 'Auto Refinery',
       description: 'A refiner soul that can produce tokens without consuming karma. Just like magic.',

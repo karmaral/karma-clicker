@@ -13,12 +13,15 @@ export const numberFormat = Intl.NumberFormat('en-US', {
 const BASE = 1000;
 
 /**
- * A decimal earns its place only under ten, at whatever scale — there it is the
- * difference between nothing and something, and between 1k and 1.9k. Past ten
- * the integer has already said it and the tail is noise you cannot act on.
+ * Three significant digits, at whatever scale: 1.23k, 12.3k, 123k. A decimal
+ * earns its place under a hundred — past that the integer has already said it
+ * and the tail is noise you cannot act on.
  */
 function decimalsFor(val: number) {
-  return Math.abs(val) < 10 ? 2 : 0;
+  const abs = Math.abs(val);
+  if (abs < 10) return 2;
+  if (abs < 100) return 1;
+  return 0;
 }
 
 // p r o o m p t
@@ -72,7 +75,7 @@ export function formatCost(val: number) {
   if (!isFinite(val) || val <= 0) return f(val);
 
   const scale = BASE ** Math.max(0, Math.floor(Math.log10(val) / 3));
-  const step = decimalsFor(val / scale) ? scale / 100 : scale;
+  const step = scale / 10 ** decimalsFor(val / scale);
 
   return f(Math.ceil(val / step) * step);
 }
@@ -107,6 +110,30 @@ export function formatSpan(ms: number) {
   const rest = minutes % 60;
 
   return rest ? `${hours}h ${rest}m` : `${hours}h`;
+}
+
+const NUMERALS: [number, string][] = [
+  [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
+];
+
+/**
+ * A rung, not a quantity. Upgrade titles number themselves this way — `Shorter
+ * Lives I` — so anything sharing that shelf has to. Falls back to the digits
+ * past X, where a numeral stops being read and starts being decoded.
+ */
+export function roman(value: number) {
+  if (!Number.isFinite(value) || value < 1 || value > 10) return String(value);
+
+  let left = Math.trunc(value);
+
+  return NUMERALS.reduce((out, [figure, numeral]) => {
+    while (left >= figure) {
+      left -= figure;
+      out += numeral;
+    }
+
+    return out;
+  }, '');
 }
 
 export function withinRange(val: number, min: number, max: number) {

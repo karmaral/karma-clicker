@@ -18,6 +18,10 @@
  * 7  flare          the same spark standing up off it
  * 8  spark outline  both again, grown, on the plane behind — so the depth test
  * 9  flare outline  rejects the ink under the mark and leaves its border
+ * 10 spawn          a soul's own arrival, riding the dot it marks
+ * 11 bolt           the click, a strike from the press to the spark it paid
+ *                   for — inverting, like the halo, and drawn last of all:
+ *                   it is the newest thing on screen for as long as it lasts
  * ```
  *
  * The two outlines come *after* what they outline rather than before it. On the
@@ -92,4 +96,6 @@ export const RENDER_ORDER = {
   flare: 7,
   sparkOutline: 8,
   flareOutline: 9,
+  spawn: 10,
+  bolt: 11,
 };

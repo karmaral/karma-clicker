@@ -2,7 +2,8 @@
   import { Badge, Label } from '$ui';
   import { formatCost } from '$lib/utils';
   import { badgeFor } from '$features/details/badge';
-  import { getEffectLabel, getScopeLabel } from '$lib/labels';
+  import { getUpgradeReading } from '$lib/labels';
+  import { spotlight } from '$lib/spotlight.svelte';
   import type { ResourceType } from '$types';
   import type { Upgrade } from './upgrades.svelte';
 
@@ -14,8 +15,10 @@
 
   let { upgrade, onclick }: Props = $props();
 
-  const scope = $derived(getScopeLabel(upgrade.target));
-  const effect = $derived(getEffectLabel(upgrade.effect, upgrade.effectTarget));
+  // No authored line passed: the window has the width for the figures themselves.
+  const reading = $derived(getUpgradeReading(upgrade.target, upgrade.effect, upgrade.effectTarget));
+  const scope = $derived(reading.scope);
+  const effect = $derived(reading.effect);
   const costEntry = $derived(
     upgrade.costs ? Object.entries(upgrade.costs)[0] as [ResourceType, number] : undefined,
   );
@@ -49,6 +52,8 @@
     class={['row', upgrade.status]}
     disabled={upgrade.status === 'approaching' || upgrade.status === 'arriving'}
     {onclick}
+    onmouseenter={() => spotlight.point(upgrade.target)}
+    onmouseleave={() => spotlight.clear()}
   >
     {@render body()}
   </button>

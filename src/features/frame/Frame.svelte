@@ -8,7 +8,7 @@
    * is bigger; the meter beside them says how far that difference has carried
    * you and where the door is. Nothing is drawn twice.
    */
-  import { Badge, Cell, ExcessMeter, Figure, HeaderBand, Label, PolarityBars, Rail, Value } from '$ui';
+  import { Badge, Cell, ExcessMeter, Figure, HeaderBand, Label, Pip, PolarityBars, Rail, Value } from '$ui';
   import { BuildingManager, PlanetManager, ResourceManager } from '$lib/managers';
   import { getExcess } from '$lib/excess';
   import { progression } from '$lib/progression';
@@ -29,6 +29,7 @@
   import NavSection from './NavSection.svelte';
   import ScoreCell from './ScoreCell.svelte';
   import UpgradeRail from './UpgradeRail.svelte';
+  import { catalogue } from './upgrades.svelte';
 
   /**
    * The score block, then the tabs in header order. The third cell's `1fr` slot
@@ -175,6 +176,16 @@
           : undefined}
         banded
       >
+        <!-- The other half of the rail's cut: the rail shows this screen's
+             upgrades only, so what it stops showing you has to be counted here.
+             Buyable now rather than merely unlocked — a tab that is always
+             marked is not a mark. Drawn on the active tab too, since a section
+             is a live reading and one that went blank on arrival would read as
+             the count having changed. -->
+        {#snippet mark()}
+          <Pip count={catalogue.affordable[screen]} label="upgrades to buy" />
+        {/snippet}
+
         {#if screen === 'details'}
           <Label text="Karma" size="sm" />
           {#if progression.isRevealed('reading.negKarma')}

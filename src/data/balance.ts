@@ -7,9 +7,11 @@
  */
 
 export default {
-  /** Excess reads unpaired karma as a share of this much income. */
+  /**
+   * Excess is unpaired karma over held karma — a share, with no figure to set.
+   * All that is left to author is how close to paired counts as paired.
+   */
   excess: {
-    wallSeconds: 600,
     /** Inside this, a first harvest locks as even rather than tilted. */
     evenBand: 0.02,
   },

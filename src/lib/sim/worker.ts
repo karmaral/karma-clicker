@@ -2,8 +2,9 @@
  * One run per worker. The managers are module singletons, so a fresh module
  * graph is the reset — and it is what lets several policies run at once.
  *
- * Import order is the contract: `UpgradeManager` builds its map at module load
- * and `BuildingManager` reads the data at unlock, so overrides must land before
+ * Import order is the contract: `UpgradeManager` builds its map at module load,
+ * `cohort-levels` prices the level upgrades off `buildings` at the same moment,
+ * and `BuildingManager` reads the data at unlock — so overrides must land before
  * `run` is pulled in. Hence the dynamic import.
  *
  * The other contract is that nothing reachable from here may statically import a

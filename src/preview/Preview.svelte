@@ -1,6 +1,6 @@
 <script lang="ts">
   import {
-    Badge, Button, Card, Cell, Chip, ChipQueue, Figure,
+    AnchorGlyph, Badge, Button, Card, Cell, Chip, ChipQueue, Figure,
     HeaderBand, Label, Meter, Tabs, Rail, Value,
   } from '$ui';
   import type { BadgeKind, ChipStatus, FigureSize, LabelSize, MeterTick } from '$ui';
@@ -201,6 +201,22 @@
         <span class="row-key">height="2px"</span>
         <Meter value={64} height="2px" />
         <span class="spec">cycle bar</span>
+      </div>
+      <div class="row">
+        <span class="row-key">anchor: pending</span>
+        <div class="anchor-bar">
+          <Meter value={0.4} max={1} height="10px" theme="dark" />
+          <span class="anchor-glyph"><AnchorGlyph state="pending" /></span>
+        </div>
+        <span class="spec">still placing</span>
+      </div>
+      <div class="row">
+        <span class="row-key">anchor: placed</span>
+        <div class="anchor-bar">
+          <Meter value={1} max={1} height="10px" theme="dark" />
+          <span class="anchor-glyph"><AnchorGlyph state="placed" /></span>
+        </div>
+        <span class="spec">down</span>
       </div>
     </div>
   </section>
@@ -482,6 +498,19 @@
     font-size: var(--fs-xs);
     color: var(--ink-300);
     font-variant-numeric: tabular-nums;
+  }
+
+  .anchor-bar {
+    position: relative;
+    min-width: 0;
+  }
+
+  .anchor-glyph {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    translate: 25% -50%;
+    line-height: 0;
   }
 
   .band {

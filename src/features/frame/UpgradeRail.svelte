@@ -2,14 +2,31 @@
   import { Badge, Chip, ChipQueue, Label } from '$ui';
   import { formatCost } from '$lib/utils';
   import { badgeFor } from '$features/details/badge';
-  import { getEffectLabel, getScopeLabel } from '$lib/labels';
+  import { getUpgradeReading } from '$lib/labels';
+  import { nav } from '$lib/nav.svelte';
+  import { spotlight } from '$lib/spotlight.svelte';
   import type { YieldType } from '$types';
   import { catalogue, type Upgrade } from './upgrades.svelte';
 
   const VISIBLE = 5;
 
-  const shown = $derived(catalogue.available.slice(0, VISIBLE));
-  const overflow = $derived(catalogue.available.length - shown.length);
+  /** The chip's own line — short, and the authored one where there is one. */
+  const readingOf = (upgrade: Upgrade) =>
+    getUpgradeReading(upgrade.target, upgrade.effect, upgrade.effectTarget, upgrade.textData.effect);
+
+  /**
+   * This screen's, and the global ones. A chip is about the thing under it: the
+   * rail's hover lights its target on the screen below, and a chip pointing two
+   * tabs away was lighting nothing. What is cut out is not lost — the header's
+   * tabs carry the count of what is buyable behind each of them.
+   */
+  const here = $derived(catalogue.onScreen(nav.active));
+
+  const shown = $derived(here.slice(0, VISIBLE));
+  const overflow = $derived(here.length - shown.length);
+
+  /** The window is every bucket, so its own count is the one on the way out. */
+  const total = $derived(catalogue.available.length);
 
   function buy(upgrade: Upgrade) {
     catalogue.buy(upgrade);
@@ -19,20 +36,23 @@
 <div class="rail-upgrades">
   <div class="head">
     <Label text="Upgrades" />
-    <span class="caption">{overflow} more coming</span>
+    <span class="caption">{nav.label(nav.active).toLowerCase()} · {overflow} more coming</span>
   </div>
-  <ChipQueue escape="all {catalogue.available.length} →" onescape={catalogue.open}>
+  <ChipQueue escape="all {total} →" onescape={catalogue.open}>
     {#each shown as upgrade (upgrade.target + upgrade.id)}
       <Chip
         label={upgrade.label}
         costs={upgrade.costs}
         status={upgrade.status}
         onclick={() => buy(upgrade)}
+        onmouseenter={() => spotlight.point(upgrade.target)}
+        onmouseleave={() => spotlight.clear()}
       >
         {#snippet caption()}
-          <span class="scope">{getScopeLabel(upgrade.target)}</span>
+          {@const reading = readingOf(upgrade)}
+          <span class="scope">{reading.scope}</span>
           ·
-          <span class="effect">{getEffectLabel(upgrade.effect, upgrade.effectTarget)}</span>
+          <span class="effect">{reading.effect}</span>
         {/snippet}
 
         {#snippet tooltipContent()}

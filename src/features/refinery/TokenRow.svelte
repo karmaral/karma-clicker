@@ -155,6 +155,10 @@
     justify-content: flex-end;
     gap: var(--sp-2);
     min-width: 0;
+    align-self: stretch;
+    /* Reclaims the row's own block padding, short 4px — same inset CohortRow
+       gives its purchase cell, so the two row families read as one system. */
+    margin-block: calc((var(--sp-3) - 4px) * -1);
   }
 
   /* Information, not a control: what the refinery pays for the same thing. */

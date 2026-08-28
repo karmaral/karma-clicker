@@ -7,14 +7,16 @@
     title?: string;
     /** What the section's own control currently says. */
     reading?: string;
+    /** Lit while an upgrade that would change this whole panel is hovered. */
+    highlighted?: boolean;
     aside?: Snippet;
     children?: Snippet;
   }
 
-  let { label, title, reading, aside, children }: Props = $props();
+  let { label, title, reading, highlighted = false, aside, children }: Props = $props();
 </script>
 
-<section class="section">
+<section class={['section', { lit: highlighted }]}>
   <div class="head">
     <div class="titles">
       {#if label}
@@ -41,6 +43,12 @@
     gap: var(--sp-3);
     padding: var(--sp-4);
     min-width: 0;
+  }
+
+  /* Same tint the rows use — hovering an upgrade that changes the whole panel
+     says so the way one that changes a single row does. */
+  .section.lit {
+    background-color: var(--surface-alt);
   }
 
   .head {

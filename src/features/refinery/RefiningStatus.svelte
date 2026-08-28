@@ -10,6 +10,7 @@
   import { Badge, Figure, Meter, Section, SweepBar } from '$ui';
   import type { Listener } from '$lib/emission';
   import { refinery } from '$lib/refinery.svelte';
+  import { spotlight } from '$lib/spotlight.svelte';
   import { f } from '$lib/utils';
 
   /** The countdown wants a clock of its own — `nextAt` alone never re-reads. */
@@ -39,7 +40,7 @@
   };
 </script>
 
-<Section label="Refining">
+<Section label="Refining" highlighted={spotlight.isLit('refinery')}>
   {#snippet aside()}
     <span class="level">level {f(refinery.level)}</span>
   {/snippet}

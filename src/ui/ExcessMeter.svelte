@@ -7,7 +7,7 @@
   import Label from './Label.svelte';
 
   interface Props {
-    /** Signed excess, 1 = a whole wall's worth. Negative is Burden. */
+    /** Signed excess, 1 = nothing held pairs. Negative is Burden. */
     value: number;
     /** The first-harvest gate, a magnitude — the planet asks for |excess| under it. */
     gate?: number;
@@ -17,7 +17,7 @@
 
   let { value, gate, side }: Props = $props();
 
-  /** Both ends are a full wall out. Past that the reading is pinned, not lost. */
+  /** The reading is a share, so the ends are its own: a pile at zero, both ways. */
   const SPAN = 1;
 
   const at = (x: number) => `${((Math.max(-SPAN, Math.min(SPAN, x)) + SPAN) / (SPAN * 2)) * 100}%`;

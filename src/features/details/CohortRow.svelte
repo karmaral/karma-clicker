@@ -5,7 +5,8 @@
   import type { Listener } from '$lib/emission';
   import { aim } from '$lib/aim';
   import { progression } from '$lib/progression';
-  import { f, formatCost } from '$lib/utils';
+  import { spotlight } from '$lib/spotlight.svelte';
+  import { f, formatCost, roman } from '$lib/utils';
   import type Building from '$lib/buildings/base.svelte';
   import type { YieldType } from '$types';
   import type { PurchaseMode } from './types';
@@ -86,6 +87,9 @@
 
   const rates = $derived(ratesAt(cohort.count));
 
+  /** Lit while an upgrade that would change this cohort is being hovered. */
+  const isLit = $derived(spotlight.isLit('cohort', cohort.id));
+
   let isPreviewing: boolean = $state(false);
 
   /** The same lines at the count this purchase would leave, by type not by index. */
@@ -121,7 +125,7 @@
   };
 </script>
 
-<div class={["row", { compact }]}
+<div class={["row", { compact, lit: isLit }]}
   role="group"
 >
   <div class="count num">{f(cohort.count)}</div>
@@ -137,15 +141,18 @@
         {texts[cohort.id]?.title ?? cohort.id}
       </span>
 
+      <!-- Tier is what has been bought; the second half is the run to the count
+           that puts the next one on sale. Two different things, so neither one
+           may be called `next` alone. Roman, to match the upgrade it names. -->
       {#if cohort.data.upgrade_threshold}
         <div class="level">
-          <span>level {cohort.level}</span>
+          <span class="tier">{cohort.tier ? `${roman(cohort.tier)}` : '-'}</span>
           ·
           <span>
             {#if cohort.isMaxLevel}
               max
             {:else}
-              next in {f(cohort.nextUntilThreshold)}
+              next unlock in {f(cohort.nextUntilThreshold)}
             {/if}
           </span>
         </div>
@@ -234,6 +241,23 @@
     background-color: var(--surface-alt);
   }
 
+  /* The same tint, lit from outside — hovering an upgrade in the rail or the
+     catalogue says which row it would change. */
+  .row.lit {
+    background-color: var(--surface-alt);
+  }
+
+  /* The button fills the cell height, then reclaims the row's own padding on
+     top of that — short 4px, so it reads as the row's one control without
+     crowding the rule above it or the duration line below. */
+  .purchase-container {
+    align-self: stretch;
+    margin-block: calc((var(--sp-3) - 4px) * -1) -22px;
+  }
+  .row.compact .purchase-container {
+    margin-block: -7px -13px;
+  }
+
   .ident {
     display: flex;
     flex-direction: column;
@@ -285,6 +309,17 @@
     color: var(--ink-300);
     gap: var(--sp-1);
     text-wrap: nowrap;
+  }
+  .tier {
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--line-200);
+    line-height: 1;
+    font-weight: 500;
+    font-size: 8px;
+    height: 1.5em;
+    width: 1.5em;
+    text-align: center;
   }
 
   .count {

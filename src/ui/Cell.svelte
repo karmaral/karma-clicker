@@ -12,6 +12,12 @@
     caption?: string;
     gap?: string;
     banded?: boolean;
+    /**
+     * A mark on the label itself, tight against it — for something the section
+     * is carrying rather than something it reads. Beside the label and not out
+     * at the end of the row, where `labelNote` already lives.
+     */
+    mark?: Snippet;
     header?: Snippet;
     children?: Snippet;
     /** Drawn directly under the figures it is a picture of. */
@@ -28,6 +34,7 @@
     caption,
     gap = 'var(--sp-3)',
     banded = false,
+    mark,
     header,
     children,
     graphic,
@@ -39,6 +46,9 @@
   <div class="labelrow">
     <span class="labels">
       <Label text={label} size={labelSize} tone={labelTone} />
+      {#if mark}
+        <span class="mark">{@render mark()}</span>
+      {/if}
       {#if labelNote}
         <span class="divider" aria-hidden="true"></span>
         <Label 
@@ -99,6 +109,21 @@
     align-items: baseline;
     gap: var(--sp-3);
     min-width: 0;
+  }
+
+  /* Pulled back off the label's own gap: the mark belongs *to* the label, and at
+     the row's spacing it read as a third item in the line. */
+  .mark {
+    display: flex;
+    align-items: center;
+    flex: none;
+    margin-left: calc(var(--sp-3) * -1 + var(--sp-2));
+  }
+
+  /* A mark with nothing to say gives its pull back — a `mark` snippet that
+     renders nothing must not still be tightening the row it is not in. */
+  .mark:empty {
+    display: none;
   }
 
   .divider {

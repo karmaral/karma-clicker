@@ -64,6 +64,15 @@ class BuildingManager {
       .filter((building): building is Cohort => building instanceof Cohort);
   }
 
+  /**
+   * Which of the buildings are cohorts, by id. Named in by class the way `KINDS`
+   * names roles in, so the click is out of it without anyone excluding it — which
+   * is what lets an `All cohorts` upgrade mean exactly that.
+   */
+  get cohorts() {
+    return this.#cohorts().map((cohort) => cohort.id);
+  }
+
   countSouls() {
     return this.#cohorts().reduce((sum, cohort) => sum + cohort.count, 0);
   }

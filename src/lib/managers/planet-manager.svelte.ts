@@ -1,6 +1,7 @@
 import Planet from '$lib/planets/base.svelte';
 import { getFirstHarvestAlignment } from '$lib/excess';
-import { BuildingManager } from '.';
+import { BuildingManager, UpgradeManager } from '.';
+import { clock } from '$lib/clock';
 import data from '$data/planets';
 
 class PlanetManager {
@@ -8,6 +9,29 @@ class PlanetManager {
   #planets: Record<string, Planet> = $state({});
   /** Discovery order, kept apart from `#planets` — object key order is not a contract. */
   #order: string[] = $state([]);
+  /** Whose deltas the wave is made of. Undefined between worlds, so a gap is free. */
+  #lastAt: number | undefined;
+
+  /**
+   * Ages the world you are standing on, and only that one. Driven by the loop
+   * off `clock`, like the harness, so a simulated run fast-forwards the wave
+   * with everything else. Leaving a world drops the mark rather than banking it:
+   * the next world's first phase starts when you arrive on it.
+   */
+  tick() {
+    const now = clock.now();
+    const planet = this.getActive();
+
+    if (!planet) {
+      this.#lastAt = undefined;
+      return;
+    }
+
+    const elapsed = now - (this.#lastAt ?? now);
+    this.#lastAt = now;
+
+    planet.advance(elapsed);
+  }
 
   unlock(target: string) {
     if (!Boolean(target in data)) return;
@@ -41,8 +65,19 @@ class PlanetManager {
     if (!planet?.isFirstHarvestReady) return 0;
     if (!planet.isMergeSufficient(BuildingManager.countMergeable(mergeFraction))) return 0;
 
+    // Read first, and nowhere else — §3.9, and it is the reading the screen showed.
+    // The order used to be load-bearing: against an income-shaped wall the two
+    // lines below cut income twice and an Even screen could lock as a side. Excess
+    // is a share of the held piles now, and merging souls does not touch them.
+    const alignment = getFirstHarvestAlignment();
+
     const merged = BuildingManager.mergeSouls(mergeFraction);
-    planet.completeFirstHarvest(merged, getFirstHarvestAlignment());
+
+    // After the souls go, so the levels the merge drops you below go with them —
+    // and only those. What the rebuild costs is the other half of what the slider
+    // weighs; see *Levels become purchases*.
+    UpgradeManager.releaseUnheld();
+    planet.completeFirstHarvest(merged, alignment);
     this.#grantBoons(planet);
     this.#selected = '';
 

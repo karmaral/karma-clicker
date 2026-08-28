@@ -103,15 +103,28 @@ const BOON_TARGET_LABELS: Record<string, string> = {
   main: 'incarnation',
 };
 
+/**
+ * Stats whose value is a share per unit rather than a count of anything. A `flat`
+ * on one of these adds a rate, so it reads as a percent — `carry` is 1% a soul
+ * riding, never one soul.
+ */
+const RATE_STATS: ModifierStat[] = ['carry'];
+
 /** The change itself, in the shortest form that stays true to the operator. */
-export function getModifierFigure({ op, value }: HarvestBoon['effect']) {
+export function getModifierFigure({ op, value, stat }: HarvestBoon['effect']) {
+  if (op === 'flat' && stat && RATE_STATS.includes(stat)) {
+    return `${value < 0 ? '−' : '+'}${Math.abs(Math.round(value * 1000) / 10)}%`;
+  }
+
   switch (op) {
     case 'boost':
       return `${value < 0 ? '−' : '+'}${Math.abs(Math.round(value * 1000) / 10)}%`;
+    // Two decimals, trailing zeros dropped: a factor is authored as `1 + 0.57`
+    // somewhere, and binary leaves that 1.5699999999999998.
     case 'mult':
-      return `×${value}`;
+      return `×${Math.round(value * 100) / 100}`;
     case 'pow':
-      return `^${value}`;
+      return `^${Math.round(value * 100) / 100}`;
     default:
       return `${value < 0 ? '−' : '+'}${Math.abs(value)}`;
   }
@@ -155,6 +168,7 @@ export function getScopeLabel(bucket: string): string {
 const STAT_NOUNS: Partial<Record<ModifierStat, string>> = {
   duration: 'return time',
   step: 'allocation steps',
+  carry: 'per soul riding',
 };
 
 /** `karma_positive` → `positive karma` — the order every other reading already takes. */
@@ -202,6 +216,42 @@ export function getEffectLabel(
       return [`${getModifierFigure(entry)} ${noun}`];
     })
     .join(' · ');
+}
+
+/** A kind's own word, for the row whose entity is not a thing you know yet. */
+const KIND_LABELS: Record<string, string> = {
+  cohort: 'Cohort',
+  planet: 'World',
+};
+
+/**
+ * Scope and effect as one reading, because for an arrival they trade places.
+ * `Impulse · unlocked` puts a proper noun in the column that says *where*, for
+ * something that is nowhere yet, and then spends the effect column saying what
+ * the chip's being there already said. `Cohort · Impulse` names the kind you are
+ * buying into and spends the effect on the one thing you do not know: which.
+ *
+ * Everything else keeps its entity as the scope, and takes `authored` — the
+ * short line from `upgrades-texts` — over the figures whenever one is written.
+ * The rail passes it and the catalogue does not: a chip has one line, a row has
+ * the width to say what actually moved.
+ */
+export function getUpgradeReading(
+  target: string,
+  effect: Effect | Effect[] | undefined,
+  effectTarget?: YieldType | 'all',
+  authored?: string,
+) {
+  const list = Array.isArray(effect) ? effect : effect ? [effect] : [];
+  const named = getScopeLabel(target);
+
+  if (list.some((entry) => entry === 'unlock' || entry === 'discover')) {
+    const { kind } = parseScope(target);
+
+    return { scope: KIND_LABELS[kind] ?? named, effect: named };
+  }
+
+  return { scope: named, effect: authored || getEffectLabel(effect, effectTarget) };
 }
 
 /**

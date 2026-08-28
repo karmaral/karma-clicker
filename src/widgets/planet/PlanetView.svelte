@@ -51,6 +51,13 @@
     onclickaction?: () => void;
     /** A running count of landed yields. See `PlanetScene`. */
     yields?: number;
+    /**
+     * No economy is driving `yields` here, so every press counts as its own
+     * landed yield — what a standalone preview wants and no real screen does,
+     * since there a press only queues one. Ignores `yields` entirely rather
+     * than adding to it, so a caller cannot half-wire the two.
+     */
+    demo?: boolean;
     /** What the next spark's popup should read. Read fresh, not captured at the click. */
     yieldValue?: number;
     /**
@@ -84,6 +91,7 @@
     disabled = false,
     onclickaction,
     yields = 0,
+    demo = false,
     yieldValue = 0,
     pressValue,
     pressFormat = (value: number) => `+${f(value)}`,
@@ -124,10 +132,39 @@
     placingPoint = point;
   }
 
+  /**
+   * The cursor's last known spot over the canvas, in the same px — a press, or
+   * a move since. The bolt reads it fresh every frame it is alive, so its
+   * strike-end follows the cursor rather than freezing where the yield landed.
+   * Not a rune, for `placingPoint`'s reason: the scene reads it once a frame,
+   * not once a render.
+   */
+  let lastPoint: { x: number; y: number } | undefined;
+
+  function getPoint() {
+    return lastPoint;
+  }
+
+  /** Tracks the cursor whenever it is over the canvas, press or no press. */
+  function onmove(e: PointerEvent) {
+    const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
+
+    lastPoint = { x: e.clientX - box.left, y: e.clientY - box.top };
+  }
+
   /** At the anchor it pays into, or at the pointer when there is no anchor. */
   function onpress(e: MouseEvent) {
     flashes++;
+    if (demo) demoYields++;
     onclickaction?.();
+
+    // A keyboard press carries no coordinates, so it strikes from the middle.
+    const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const isPointed = e.clientX !== 0 || e.clientY !== 0;
+    const x = isPointed ? e.clientX - box.left : box.width / 2;
+    const y = isPointed ? e.clientY - box.top : box.height / 2;
+
+    lastPoint = { x, y };
 
     if (pressValue === undefined) return;
 
@@ -135,12 +172,6 @@
       pop(placingPoint.x, placingPoint.y, pressFormat(pressValue));
       return;
     }
-
-    // A keyboard press carries no coordinates, so it pops from the middle.
-    const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const isPointed = e.clientX !== 0 || e.clientY !== 0;
-    const x = isPointed ? e.clientX - box.left : box.width / 2;
-    const y = isPointed ? e.clientY - box.top : box.height / 2;
 
     pop(x, y, pressFormat(pressValue));
   }
@@ -159,6 +190,10 @@
    * view's event — the scene is only where it is drawn.
    */
   let flashes = $state(0);
+
+  /** `demo`'s own landed-yield count — see the prop. */
+  let demoYields = $state(0);
+  const shownYields = $derived(demo ? demoYields : yields);
 
   /**
    * Each view is its own WebGL context and browsers cap those near sixteen —
@@ -205,9 +240,10 @@
         {pulse}
         {clockKey}
         {flashes}
-        {yields}
+        yields={shownYields}
         {onspark}
         {onplacing}
+        {getPoint}
       />
     </Canvas>
   {/if}
@@ -219,6 +255,7 @@
       class="press"
       {disabled}
       onclick={onpress}
+      onpointermove={onmove}
       aria-label={clickActionVerb}
     ></button>
   {/if}

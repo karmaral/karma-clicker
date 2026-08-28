@@ -5,9 +5,10 @@
    * the press. Every figure here is a time or a count of anchors; nothing on this
    * panel is bought.
    */
-  import { Label, Meter, Section } from '$ui';
+  import { AnchorGlyph, Label, Meter, Section } from '$ui';
   import { BuildingManager } from '$lib/managers';
   import { harness } from '$lib/harness.svelte';
+  import { spotlight } from '$lib/spotlight.svelte';
   import { f, formatSpan } from '$lib/utils';
   import type Planet from '$lib/planets/base.svelte';
 
@@ -56,7 +57,7 @@
   );
 </script>
 
-<Section label="Anchoring">
+<Section label="Anchoring" highlighted={spotlight.isLit('harness')}>
   {#snippet aside()}
     {f(harness.workers)} of {f(harness.slots)} slots
   {/snippet}
@@ -72,12 +73,17 @@
     {#each rows as row (row.index)}
       <div class="row">
         <span class="index num">{row.index + 1}</span>
-        <Meter
-          value={row.fill}
-          max={1}
-          height="10px"
-          theme="dark"
-        />
+        <div class="bar">
+          <Meter
+            value={row.fill}
+            max={1}
+            height="10px"
+            theme="dark"
+          />
+          <span class="glyph">
+            <AnchorGlyph state={row.isPlaced ? 'placed' : 'pending'} />
+          </span>
+        </div>
         <span class="state">{row.isPlaced ? 'down' : row.fill > 0 ? 'placing' : 'waiting'}</span>
         <span class={['bonus', 'num', { placed: row.isPlaced }]}>{bonus}</span>
       </div>
@@ -143,6 +149,20 @@
   .index {
     font-size: var(--fs-sm);
     color: var(--ink-300);
+  }
+
+  .bar {
+    position: relative;
+    min-width: 0;
+  }
+
+  /* The anchor waiting at the run's end, driven in as its bar fills. */
+  .glyph {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    translate: 25% -50%;
+    line-height: 0;
   }
 
   .state {

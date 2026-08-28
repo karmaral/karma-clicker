@@ -51,10 +51,14 @@ export const beats: Beat[] = [
   },
 
   // The figures fly up into the header; the disc stays where it was.
+  // Five, not ten: five is the first cohort gate, so the rail lands on the beat
+  // that gives it something worth buying rather than a beat later. The click's
+  // ladder is spaced to match — see `building:main` — so it arrives holding
+  // three chips and not the whole catalogue.
   {
     id: 'rows_and_rail',
-    when: (ctx) => ctx.totalSouls >= 10,
-    floor: 8_400,
+    when: (ctx) => ctx.totalSouls >= 5,
+    floor: 4_200,
     reveals: {
       'frame.header': 'live',
       'frame.rail': 'live',

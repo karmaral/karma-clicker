@@ -23,9 +23,18 @@
     visual: PlanetVisual;
     /** The harvest's alignment: −1, 0 or +1. 0 draws the ground tone alone. */
     lean: number;
+    /**
+     * How big, in body radii — the authored radius grown by the merge, worked
+     * out one layer up where the split is known. The ruling does not come with
+     * it: `coreHatchDensity` is strokes per *body* radius and the vertex reads
+     * its offset in the same, so a core half drawn carries half the strokes at
+     * the spacing every other world rules at, rather than the same picture
+     * shrunk.
+     */
+    radius?: number;
   }
 
-  let { visual, lean }: Props = $props();
+  let { visual, lean, radius }: Props = $props();
 
   const { invalidate } = useThrelte();
   const material = createCoreMaterial();
@@ -56,6 +65,6 @@
 <T.Mesh
   {geometry}
   {material}
-  scale={Math.max(0, visual.core)}
+  scale={Math.max(0, radius ?? visual.core)}
   renderOrder={RENDER_ORDER.core}
 />

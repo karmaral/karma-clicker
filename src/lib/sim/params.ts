@@ -46,15 +46,20 @@ function fixed(min: number, max: number, step: number) {
 
 const COHORT_FIELDS: FieldSpec[] = [
   { field: 'cost', label: 'cost', range: scaled(20) },
-  { field: 'cost_multiplier', label: 'cost ramp', range: fixed(1, 3, 0.01) },
+  // Finer and shorter than it was: the ramps now live between 1.01 and 1.06, and
+  // a 0.01 notch there is a doubling of the army. The count is 1/ln(ramp).
+  { field: 'cost_multiplier', label: 'cost ramp', range: fixed(1.005, 1.5, 0.001) },
   { field: 'duration', label: 'duration ms', range: fixed(0, 20_000, 100) },
-  { field: 'duration_reduction', label: 'speed / level', range: fixed(0, 0.9, 0.01) },
+  // The three multipliers author the level upgrades rather than applying to a
+  // count, so moving one moves both what a level is worth and what it is priced
+  // at — see `cohort-levels.ts`.
+  { field: 'duration_reduction', label: 'speed / tier', range: fixed(0, 0.9, 0.01) },
   { field: 'yields.karma', label: 'karma', range: scaled(20) },
   { field: 'yields.experience', label: 'experience', range: scaled(20) },
   { field: 'yields.red_positive', label: 'red', range: scaled(20) },
-  { field: 'yield_multipliers.karma', label: 'karma / level', range: fixed(0, 10, 0.01) },
-  { field: 'yield_multipliers.experience', label: 'xp / level', range: fixed(0, 10, 0.01) },
-  { field: 'yield_multipliers.red_positive', label: 'red / level', range: fixed(0, 10, 0.01) },
+  { field: 'yield_multipliers.karma', label: 'karma / tier', range: fixed(0, 10, 0.01) },
+  { field: 'yield_multipliers.experience', label: 'xp / tier', range: fixed(0, 10, 0.01) },
+  { field: 'yield_multipliers.red_positive', label: 'red / tier', range: fixed(0, 10, 0.01) },
   { field: 'polarity_bias', label: 'bias', range: fixed(-2, 2, 1) },
   { field: 'polarity_multiplier', label: 'extremity pay', range: fixed(1, 10, 0.1) },
   { field: 'resistance', label: 'resistance', range: fixed(0, 1, 0.01) },
@@ -63,8 +68,7 @@ const COHORT_FIELDS: FieldSpec[] = [
 const PLANET_FIELDS: FieldSpec[] = [
   { field: 'ages', label: 'ages', range: fixed(1, 12, 1) },
   { field: 'cycles_per_age', label: 'cycles / age', range: fixed(1, 32, 1) },
-  { field: 'phase_multiplier', label: 'phase ramp', range: fixed(1, 5, 0.01) },
-  { field: 'initial_phase_amount', label: 'first phase xp', range: scaled(20) },
+  { field: 'phase_duration', label: 'phase ms', range: fixed(1000, 600_000, 1000) },
   { field: 'firstHarvest.excessGate', label: 'excess gate', range: fixed(0, 1, 0.01) },
   { field: 'firstHarvest.agesLived', label: 'ages lived', range: fixed(0, 12, 1) },
   { field: 'firstHarvest.mergeMinimum', label: 'merge toll', range: scaled(10) },
@@ -76,7 +80,6 @@ const PLANET_FIELDS: FieldSpec[] = [
 ];
 
 const GLOBAL_FIELDS: FieldSpec[] = [
-  { field: 'excess.wallSeconds', label: 'wall window s', range: fixed(60, 3600, 10) },
   { field: 'excess.evenBand', label: 'even band', range: fixed(0, 0.5, 0.005) },
   { field: 'refinery.batchPerWorker', label: 'batch / worker', range: scaled(20) },
   { field: 'refinery.interval', label: 'interval ms', range: fixed(100, 30_000, 100) },

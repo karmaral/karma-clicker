@@ -7,7 +7,7 @@
   import { getExcess } from '$lib/excess';
   import { reserve, type SplitJob } from '$lib/reserve.svelte';
   import { refinery } from '$lib/refinery.svelte';
-  import { f } from '$lib/utils';
+  import { f, formatSpan } from '$lib/utils';
   import buildingData from '$data/buildings';
   import planetData from '$data/planets';
 
@@ -28,14 +28,17 @@
     progression.jumpTo(progression.beat + delta);
   }
 
-  /** Experience also walks the active world's phases — nothing else by hand does. */
   function grant(type: 'experience' | 'karma_positive' | 'karma_negative', amount: number) {
     ResourceManager.add(type, amount);
+    pulse();
+  }
 
-    if (type === 'experience') {
-      PlanetManager.getActive()?.addExperience(amount);
-    }
+  /** The wave is a clock now, so nothing you can grant walks it. This does. */
+  function skipPhases(count: number) {
+    const active = PlanetManager.getActive();
+    if (!active) return;
 
+    active.advance(active.phaseDuration * count);
     pulse();
   }
 
@@ -82,6 +85,19 @@
         <button onclick={() => grant('experience', 1e3)}>+1k</button>
         <button onclick={() => grant('experience', 1e5)}>+100k</button>
         <button onclick={() => grant('experience', 1e6)}>+1M</button>
+      </div>
+
+      <div class="row">
+        <span class="id">
+          {#if planet}
+            wave {formatSpan(planet.lived)} of {formatSpan(planet.length)}
+            · {planet.agesLived} ages · phase {planet.phase + 1}/{planet.phasesPerAge}
+          {:else}
+            wave — no active world
+          {/if}
+        </span>
+        <button onclick={() => skipPhases(1)}>+1 phase</button>
+        <button onclick={() => skipPhases(planet?.phasesPerAge ?? 0)}>+1 age</button>
       </div>
 
       <div class="row">

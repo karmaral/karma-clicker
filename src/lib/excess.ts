@@ -1,10 +1,14 @@
 /**
- * Excess is karma you are still holding and have not paired off, read against
- * everything you have ever earned. Global, per CONTEXT v3 §3.2 — only the gate
- * that lets you leave a planet is per-planet.
+ * Excess is the share of the karma you are holding that has nothing to pair
+ * with. Global, per CONTEXT v3 §3.2 — only the gate that lets you leave a planet
+ * is per-planet.
+ *
+ * A share of the piles themselves, so there is no clock in it and no income
+ * term: growing the economy cannot wash it out, and the phase flip cannot swing
+ * it while the piles sit still. It moves when the piles move, and nothing else.
  */
 
-import { BuildingManager, ResourceManager } from '$lib/managers';
+import { ResourceManager } from '$lib/managers';
 import balance from '$data/balance';
 import type { Polarity } from '$types';
 
@@ -13,25 +17,26 @@ export function getUnpairedKarma() {
   return ResourceManager.getAmount('karma_positive') - ResourceManager.getAmount('karma_negative');
 }
 
-/**
- * The stuck threshold, in raw karma. Read off income rather than off anything
- * cumulative: a lifetime total only grows, which would decay excess to nothing,
- * and the two piles shrink as the refinery works, which would inflate it. The
- * window is `excess.wallSeconds` — §4's "around ten minutes in" is its calibration.
- */
-export function getWall() {
-  return BuildingManager.countKarmaPerSecond() * balance.excess.wallSeconds;
+/** Everything still on hand, paired or not — what the unpaired part is a share of. */
+export function getHeldKarma() {
+  return ResourceManager.getAmount('karma_positive') + ResourceManager.getAmount('karma_negative');
 }
 
 /**
- * Unpaired karma against the wall. `undefined` while nothing earns karma — a
- * zero there would read as "clean enough" and open beat 9 on nothing.
+ * Unpaired karma as a share of held, so ±1 is a pile at zero and the refinery
+ * stalled — the reading's ceiling and the machine stopping are the same event.
+ *
+ * `undefined` until both piles have ever existed: before the choice that makes
+ * negative karma there is only one pole, and a lone pile is not an imbalance.
  */
 export function getExcess() {
-  const wall = getWall();
-  if (wall <= 0) return undefined;
+  if (ResourceManager.getTotal('karma_positive') <= 0) return undefined;
+  if (ResourceManager.getTotal('karma_negative') <= 0) return undefined;
 
-  return getUnpairedKarma() / wall;
+  const held = getHeldKarma();
+  if (held <= 0) return 0;
+
+  return getUnpairedKarma() / held;
 }
 
 /**

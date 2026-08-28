@@ -1,3 +1,4 @@
+import AnchorGlyph from './AnchorGlyph.svelte';
 import Badge from './Badge.svelte';
 import Button from './Button.svelte';
 import Card from './Card.svelte';
@@ -9,6 +10,7 @@ import Figure from './Figure.svelte';
 import HeaderBand from './HeaderBand.svelte';
 import Label from './Label.svelte';
 import Meter from './Meter.svelte';
+import Pip from './Pip.svelte';
 import PolarityBars from './PolarityBars.svelte';
 import PurchaseButton from './PurchaseButton.svelte';
 import Rail from './Rail.svelte';
@@ -21,6 +23,7 @@ import Tooltip from './Tooltip.svelte';
 import Value from './Value.svelte';
 
 export {
+  AnchorGlyph,
   Badge,
   Button,
   Card,
@@ -32,6 +35,7 @@ export {
   HeaderBand,
   Label,
   Meter,
+  Pip,
   PolarityBars,
   PurchaseButton,
   Rail,

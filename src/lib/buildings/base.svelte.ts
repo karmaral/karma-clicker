@@ -1,4 +1,4 @@
-import type { BuildingData, Modifier, ResourceType, YieldType } from '$types';
+import type { BuildingData, Modifier, ModifierStat, ResourceType, YieldType } from '$types';
 import { ResourceManager, PlanetManager } from '$lib/managers';
 import { ResourceEmitter, EMITTER_EVENTS } from '$lib/emission';
 import { ModifierSet } from '$lib/modifiers';
@@ -9,37 +9,32 @@ type Listener = (detail?: Record<string, unknown>) => void;
 export default class Building {
   #id: string;
   #data: BuildingData;
-  #level = $state(1);
-  #levelProgress = $state(0);
   #count = $state(0);
   #total = $state(0);
   #emitter: ResourceEmitter;
   #modifiers = new ModifierSet();
   #baseProduction: Partial<Record<YieldType, number>> = {};
 
+  /**
+   * Base and modifiers, and nothing else. A level is a purchase now, so its
+   * multiplier arrives here as a `mult` modifier like any other — see
+   * `cohort-levels.ts`. Nothing about production reads the count.
+   */
   #production = $derived.by(() => {
-    const { yield_multipliers = {} } = this.#data;
     const production: Partial<Record<YieldType, number>> = {};
 
     Object.keys(this.#baseProduction).forEach((type: YieldType) => {
-      const multiplier = yield_multipliers[type] ?? 0;
-      const leveled = Math.pow(1 + multiplier, this.#level - 1);
-      const base = this.#baseProduction[type] * leveled;
-      production[type] = this.#modifiers.apply(base, 'yield', type);
+      production[type] = this.#modifiers.apply(this.#baseProduction[type], 'yield', type);
     });
 
     return production;
   });
 
-  #duration = $derived.by(() => {
-    const { duration = 0, duration_reduction = 0 } = this.#data;
-    const base = duration * Math.pow(1 - duration_reduction, this.#level - 1);
-
-    return this.#modifiers.apply(base, 'duration');
-  });
+  // `.by`, not the expression form: a field initializer runs before the
+  // constructor, and `#data` is not assigned until it does.
+  #duration = $derived.by(() => this.#modifiers.apply(this.#data.duration ?? 0, 'duration'));
 
   #listeners: Record<string, Listener[]> = {
-    level: [],
     count: [],
     total: [],
     add: [],
@@ -56,7 +51,6 @@ export default class Building {
     );
 
     this.#baseProduction = { ...initData.yields };
-    this.#syncLevel();
   }
 
   add(n: number = 1) {
@@ -70,8 +64,6 @@ export default class Building {
     this.#runCallbacks('count', { count: this.#count });
     this.#runCallbacks('total', { total: this.#total });
     this.#runCallbacks('add', { added: amt });
-
-    this.#syncLevel();
   }
 
   remove(n: number) {
@@ -80,29 +72,6 @@ export default class Building {
 
     this.#runCallbacks('count', { count: this.#count });
     this.#runCallbacks('remove', { removed: amt });
-
-    this.#syncLevel();
-  }
-
-  /** The level a count has earned. Thresholds ascend, so crossings are the level. */
-  #levelFor(count: number) {
-    const { upgrade_threshold } = this.#data;
-    if (!upgrade_threshold) return this.#level;
-
-    return upgrade_threshold.filter((threshold) => count >= threshold).length + 1;
-  }
-
-  /** Both ways — merged souls take their level with them, so a cohort can fall. */
-  #syncLevel() {
-    const level = this.#levelFor(this.#count);
-    const changed = level !== this.#level;
-
-    this.#level = level;
-    this.#levelProgress = this.#calcLevelProgress();
-
-    if (changed) {
-      this.#runCallbacks('level', { level });
-    }
   }
 
   queueAction() {
@@ -120,10 +89,6 @@ export default class Building {
       if (type === 'karma') {
         this.#payKarma(value);
         return;
-      }
-
-      if (type === 'experience') {
-        PlanetManager.getActive()?.addExperience(value);
       }
 
       ResourceManager.add(type as ResourceType, value);
@@ -176,6 +141,15 @@ export default class Building {
     this.#modifiers.add(modifier);
   }
 
+  /**
+   * A stat of this building's own that is neither its yields nor its clock —
+   * those two are already derived. For a subclass holding an axis the base has
+   * no opinion about; `#modifiers` stays private either way.
+   */
+  modify(base: number, stat: ModifierStat) {
+    return this.#modifiers.apply(base, stat);
+  }
+
   removeModifier(id: string) {
     this.#modifiers.remove(id);
   }
@@ -198,23 +172,10 @@ export default class Building {
     return sum;
   }
 
-  #calcLevelProgress() {
-    const lvl = this.#level;
-    const q = this.#count;
-    const threshold = this.#data.upgrade_threshold;
-    if (!threshold) return 100;
-
-    const from = lvl > 1 ? threshold[lvl - 2] : 0;
-    const next = threshold[lvl - 1];
-    if (!next) return 100;
-
-    return (q - from) / (next - from) * 100;
-  }
+  get #gates() { return this.#data.upgrade_threshold ?? []; }
 
   get id() { return this.#id; }
   get data() { return this.#data; }
-  get level() { return this.#level; }
-  get levelProgress() { return this.#levelProgress; }
   get count() { return this.#count; }
   get total() { return this.#total; }
   get production() { return this.#production; }
@@ -238,6 +199,16 @@ export default class Building {
    */
   get yieldScale() { return 1; }
 
+  /**
+   * What one emission actually pays out — the same expression `#generateResources`
+   * spends, so a readout cannot drift from the ledger. `production` is the base
+   * and its modifiers and stops short of `yieldScale`, which is the half that
+   * moves under the harness; anything printing a payout wants this instead.
+   */
+  payout(type: YieldType, count = this.#count) {
+    return (this.#production[type] ?? 0) * this.activeAt(count) * this.yieldScale;
+  }
+
   perSecond(type: YieldType, count = this.#count) {
     const yielded = this.#production[type] ?? 0;
     return yielded * this.activeAt(count) * this.yieldScale / ((this.duration || 1000) / 1000);
@@ -248,29 +219,34 @@ export default class Building {
   get isAutonomous() { return this.#emitter.isAutonomous; }
   get isInProgress() { return this.#emitter.isInProgress; }
 
-  get isMaxLevel() {
-    const threshold = this.#data.upgrade_threshold;
-    if (!threshold) return true;
+  /**
+   * Gates the count has passed — which level upgrades are *unlocked*, not which
+   * are owned. It falls with a merge, and what it gates re-locks with it. Every
+   * question about the run to the next gate is asked of this; nothing prints it.
+   */
+  get #gatesPassed() { return this.#gates.filter((gate) => this.#count >= gate).length; }
 
-    return this.#level > threshold.length;
+  /**
+   * Levels bought — you are the tier you paid for, not the tier you walked past.
+   * Counted off the modifiers rather than asked of `UpgradeManager`, which
+   * imports us: an id is `level_N:index`, so the distinct `level_N` are the rungs
+   * held. A release takes its modifiers, so a merge takes the tier with them.
+   */
+  get tier() {
+    const held = this.#modifiers.modifiers
+      .map((modifier) => modifier.id.split(':')[0])
+      .filter((id) => id.startsWith('level_'));
+
+    return new Set(held).size;
   }
 
-  get currentThreshold() {
-    const lvl = this.#level;
-    const threshold = this.#data.upgrade_threshold;
-    if (!threshold) return 1;
+  get isMaxLevel() { return this.#gatesPassed >= this.#gates.length; }
 
-    return lvl <= threshold.length ? threshold[lvl - 1] : 1;
-  }
+  /** The count the next gate wants. 1 past the last, so `Next` still buys one. */
+  get currentThreshold() { return this.#gates[this.#gatesPassed] ?? 1; }
 
   get nextUntilThreshold() {
-    const lvl = this.#level;
-    const threshold = this.#data.upgrade_threshold;
-    if (!threshold) return 1;
-
-    return lvl <= threshold.length
-      ? threshold[lvl - 1] - this.#count
-      : 1;
+    return this.isMaxLevel ? 1 : this.#gates[this.#gatesPassed] - this.#count;
   }
 
   addListener(identifier: string, fn: Listener) {

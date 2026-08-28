@@ -297,8 +297,13 @@ export interface PlanetVisual {
    * the stroke weight in px, and it is a **line** rather than a floor — so
    * `scaleInk` brings it up on a push-in, where `veilHatchWidth` is deliberately
    * left alone.
+   *
+   * `coreSeed` is how much of that radius is drawn before a single soul has
+   * arrived, as a share of it — the rest is grown by the merge. See
+   * `coreFillOf`, which is where the growth actually is.
    */
   core: number;
+  coreSeed: number;
   coreFeather: number;
   coreHatchDensity: number;
   coreHatchWidth: number;
@@ -589,6 +594,8 @@ export const VISUAL_PARAMS: VisualParam[] = [
   { key: 'clarityGamma', label: 'Clarity falloff', group: 'Core', min: 0.25, max: 8, step: 0.05 },
   { key: 'claritySteps', label: 'Clarity bands', group: 'Core', min: 2, max: 12, step: 1 },
   { key: 'core', label: 'Core', group: 'Core', min: 0, max: 0.8, step: 0.005 },
+  // 1 is the core it was: full from the first frame, whatever has merged.
+  { key: 'coreSeed', label: 'Core seed', group: 'Core', min: 0, max: 1, step: 0.01 },
   { key: 'coreFeather', label: 'Core feather', group: 'Core', min: 0, max: 8, step: 0.05 },
   { key: 'coreHatchDensity', label: 'Core hatch density', group: 'Core', min: 2, max: 40, step: 0.5 },
   { key: 'coreHatchWidth', label: 'Core hatch px', group: 'Core', min: 0, max: 6, step: 0.25 },
@@ -702,6 +709,7 @@ export const DEFAULT_VISUAL: PlanetVisual = {
   clarityGamma: 1.6,
   claritySteps: 4,
   core: 0.8,
+  coreSeed: 0.18,
   coreFeather: 0.2,
   coreHatchDensity: 18,
   coreHatchWidth: 2.25,
@@ -759,6 +767,32 @@ export function keyShape(visual: PlanetVisual) {
 
 export function cloneVisual(visual: PlanetVisual): PlanetVisual {
   return { ...visual };
+}
+
+/**
+ * How much of its radius the core is drawn at, given the share of the swarm
+ * given to it. The mark is built out of what has arrived, so it has a size only
+ * once something has.
+ *
+ * **The cube root is not a curve chosen for its shape.** The berths fill from
+ * the middle outward by volume and the outermost occupied one sits at exactly
+ * `cbrt(share)` of the radius — see `berthOf` — so this is the sphere that
+ * wraps what has landed. A radius growing linearly would spend most of the drag
+ * *inside* its own souls, which is not a slower version of this but a wrong one.
+ *
+ * Which also means the growth is front-loaded, and truthfully so: a fifth of
+ * the swarm is more than half the ball. `seed` is only a floor under it — a core
+ * at nothing is a reading nobody can take, and the lean is the whole of what
+ * this mark says.
+ *
+ * The berths themselves are packed against the **full** radius and never move.
+ * This grows over them.
+ */
+export function coreFillOf(share: number, seed: number) {
+  const at = Math.max(0, Math.min(1, share));
+  const floor = Math.max(0, Math.min(1, seed));
+
+  return floor + (1 - floor) * Math.cbrt(at);
 }
 
 /**

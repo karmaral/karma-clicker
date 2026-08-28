@@ -1,4 +1,5 @@
 import type { UpgradeData, UpgradeScope } from '$types';
+import { levelUpgrades } from './cohort-levels';
 
 const ENTITY_KINDS = ['cohort', 'building', 'planet'] as const;
 
@@ -74,6 +75,18 @@ const data: Record<string, UpgradeData[]> = {
       unlocks_at: { red_positive: 8000 },
       costs: { red_positive: 6000 },
     },
+    {
+      id: 'efficiency_2',
+      effect: { op: 'mult', value: 2 },
+      unlocks_at: { yellow: 500 },
+      costs: { yellow: 1500 },
+    },
+    {
+      id: 'speed_2',
+      effect: { op: 'mult', value: 0.5, stat: 'duration' },
+      unlocks_at: { yellow: 1000 },
+      costs: { yellow: 5000 },
+    },
   ],
   /**
    * Two capacities and a precision. Work slots decide how many reserved souls
@@ -96,8 +109,10 @@ const data: Record<string, UpgradeData[]> = {
       costs: { experience: 500_000 },
     },
     {
+      // Both rider caps are soul counts, so they take the army's ×5 with it —
+      // 40 out of a thousand incarnating would carry nobody worth counting.
       id: 'riders_1',
-      effect: { op: 'flat', value: 40, stat: 'riders' },
+      effect: { op: 'flat', value: 200, stat: 'riders' },
       unlocks_at: { karma_negative: 50_000 },
       costs: { karma_positive: 150_000 },
     },
@@ -115,7 +130,7 @@ const data: Record<string, UpgradeData[]> = {
     },
     {
       id: 'riders_2',
-      effect: { op: 'flat', value: 400, stat: 'riders' },
+      effect: { op: 'flat', value: 2000, stat: 'riders' },
       unlocks_at: { red_positive: 10_000 },
       costs: { red_positive: 12_000 },
     },
@@ -147,6 +162,14 @@ const data: Record<string, UpgradeData[]> = {
       unlocks_at: { karma_positive: 750_000 },
     },
   ],
+  /**
+   * The rail's opening act, and the only bucket that has to be *paced* rather
+   * than priced. Every one of these is unlocked long before five souls, so left
+   * bunched they arrive as a wall on the beat that reveals the rail and bury the
+   * first cohort tier behind it. Two land early — one per axis, which is the
+   * whole tutorial — and the rest are spaced to interleave with the cohort
+   * ladder and the two global upgrades. Read the gates in order, not the ids.
+   */
   'building:main': [
     // Ramps the click's duration back toward instant. mult 0 on speed_3 lands
     // on the same zero-duration path the emitter already treats as synchronous.
@@ -159,14 +182,16 @@ const data: Record<string, UpgradeData[]> = {
     {
       id: 'speed_2',
       effect: { op: 'mult', value: 0.5, stat: 'duration' },
-      unlocks_at: { experience: 400 },
-      costs: { experience: 300 },
+      unlocks_at: { experience: 6000 },
+      costs: { experience: 4500 },
     },
     {
+      // Last of the ladder, and past `read_the_wave` on purpose: the press is
+      // still worth timing while the wave is the thing being learned.
       id: 'speed_3',
       effect: { op: 'mult', value: 0, stat: 'duration' },
-      unlocks_at: { experience: 900 },
-      costs: { experience: 700 },
+      unlocks_at: { experience: 20_000 },
+      costs: { experience: 15_000 },
     },
     {
       id: 'str_1',
@@ -179,23 +204,34 @@ const data: Record<string, UpgradeData[]> = {
       id: 'str_2',
       effect: { op: 'mult', value: 2 },
       effect_target: 'experience',
-      unlocks_at: { experience: 200 },
-      costs: { experience: 200 }
+      unlocks_at: { experience: 2500 },
+      costs: { experience: 1800 }
     },
     {
       id: 'str_3',
       effect: { op: 'mult', value: 3 },
       effect_target: 'experience',
-      unlocks_at: { karma_positive: 10 },
-      costs: { karma_positive: 15 }
+      unlocks_at: { karma_positive: 400 },
+      costs: { karma_positive: 300 }
     },
     {
       id: 'str_4',
       // Squares the ladder above it once: 1 × 1.5 × 2 × 3 × 9 = 81. Retune with str_1–3.
       effect: { op: 'mult', value: 9 },
       effect_target: 'experience',
-      unlocks_at: { karma_positive: 25 },
-      costs: { karma_positive: 25 }
+      unlocks_at: { karma_positive: 2000 },
+      costs: { karma_positive: 1500 }
+    },
+    {
+      // Not a `mult` like the rest of the ladder — it multiplies by something the
+      // world is doing, which is what makes the press keep up instead of being
+      // outgrown. Gated past `riders_1`: with nobody up there it buys nothing.
+      // Priced per rider, so it moved down as the rider caps moved up: 0.2% a
+      // soul lands on the same +40% / +400% the 1% figure bought before.
+      id: 'carry_1',
+      effect: { op: 'flat', value: 0.002, stat: 'carry' },
+      unlocks_at: { karma_negative: 60_000 },
+      costs: { karma_positive: 200_000 },
     },
   ],
   /**
@@ -204,19 +240,28 @@ const data: Record<string, UpgradeData[]> = {
    * beat 4 and the cohort table beat 3, so a priced first cohort has no buyer
    * before the beat that needs it.
    */
+  /**
+   * `first` opens the bucket, then the levels — priced in what the cohort itself
+   * is bought with, so *another copy or the upgrade* is one comparison out of one
+   * pocket. Anything priced in karma or tokens sits past them and is a reward
+   * rather than a decision; `str_1` is the worked example.
+   */
   'cohort:basic': [
     {
       id: 'first',
       effect: ['unlock', 'acquire'],
       unlocks_at: { karma_positive: 15 },
     },
+    ...levelUpgrades('basic'),
     {
+      // Past the level_4 gate at 50, so the karma reward does not land on the
+      // same count as an experience-priced level.
       id: 'str_1',
       effect: [
         { op: 'mult', value: 1.6, target: 'experience' },
         { op: 'mult', value: 6.6, target: 'karma' },
       ],
-      unlocks_at: { count_total: 25 },
+      unlocks_at: { count_total: 60 },
       costs: { karma_positive: 10_000 },
     },
   ],
@@ -227,8 +272,10 @@ const data: Record<string, UpgradeData[]> = {
       unlocks_at: { karma_positive: 100 },
       costs: { karma_positive: 100 },
     },
+    ...levelUpgrades('steady'),
     {
-      // `duration_reduction: 0` — steady is the one cohort count never speeds up.
+      // `duration_reduction: 0` — steady is the one cohort whose levels carry no
+      // speed, so this is the only thing that shortens it.
       id: 'speed_1',
       effect: { op: 'mult', value: 0.75, stat: 'duration' },
       unlocks_at: { count_total: 25 },
@@ -242,6 +289,7 @@ const data: Record<string, UpgradeData[]> = {
       unlocks_at: { karma_positive: 50 },
       costs: { karma_positive: 50 },
     },
+    ...levelUpgrades('chaos'),
   ],
   'cohort:zealot': [
     {
@@ -250,6 +298,7 @@ const data: Record<string, UpgradeData[]> = {
       unlocks_at: { karma_positive: 10_000 },
       costs: { karma_positive: 10_000 },
     },
+    ...levelUpgrades('zealot'),
   ],
   'cohort:red_basic': [
     {
@@ -258,26 +307,36 @@ const data: Record<string, UpgradeData[]> = {
       unlocks_at: { red_positive: 5000 },
       costs: { red_positive: 5000 },
     },
+    ...levelUpgrades('red_basic'),
   ],
   /**
-   * Every cohort at once. Placeholder and deliberately unreachable —
-   * `UpgradeManager#processEffect` has nowhere to route a scope naming no
-   * entity, so a bought one would be inert. `unlocks_at` is set past anything
-   * the game currently reaches on purpose, so these sit under the catalogue's
-   * locked fold rather than being buyable no-ops. Comes down with the routing.
+   * Every cohort at once, and only cohorts — the fan-out reads
+   * `BuildingManager.cohorts`, which names its members by class, so the click is
+   * out of it without anyone excluding it. Re-applied off the loop, so a cohort
+   * unlocked after one of these was bought still gets it.
+   *
+   * `boost` and not `mult`, so the two of them sum to −18% rather than
+   * compounding to −17%: these are a global shortening of every life, and a
+   * global thing should add up the way the player expects it to.
+   *
+   * Placeholder figures. Both used to sit behind a billion karma purely to keep
+   * them unreachable while nothing routed them; those parking values are gone.
    */
   'cohorts': [
     {
       id: 'shorter_lives_1',
       effect: { op: 'boost', value: -0.06, stat: 'duration' },
-      unlocks_at: { karma_positive: 1_000_000_000 },
+      unlocks_at: { karma_positive: 250_000 },
       costs: { karma_positive: 310_000 },
     },
     {
+      // Twice the effect of `shorter_lives_1`, so it is priced past it. It used
+      // to cost 2400 against that one's 310k, which was the parking value hiding
+      // a straight inversion rather than a decision.
       id: 'hard_season',
       effect: { op: 'boost', value: -0.12, stat: 'duration' },
-      unlocks_at: { karma_positive: 1_000_000_000 },
-      costs: { karma_positive: 2400 },
+      unlocks_at: { karma_positive: 900_000 },
+      costs: { karma_positive: 1_200_000 },
     },
   ],
 };

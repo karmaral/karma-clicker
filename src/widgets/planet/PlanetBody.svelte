@@ -48,6 +48,12 @@
      */
     alignment?: number;
     /**
+     * How big to draw it, in body radii — the authored radius with the merge's
+     * growth already spent on it, which is the scene's to work out because the
+     * split is. Absent draws the full authored one.
+     */
+    core?: number;
+    /**
      * Drawn inside the body's hold but outside its spin — orbits and markers
      * share the world's axis without being dragged round by its surface.
      */
@@ -60,11 +66,17 @@
   }
 
   let {
-    visual, zoom, spinAngle = 0, veilAngle = 0, alignment, pulse, pulses, children, standing,
+    visual, zoom, spinAngle = 0, veilAngle = 0, alignment, core, pulse, pulses, children, standing,
   }: Props = $props();
 
-  /** One mark, two halves — see `alignment`. Neither is drawn without it. */
+  /**
+   * One mark, two halves — see `alignment`. Neither is drawn without it, and the
+   * switch is the *authored* radius rather than the drawn one: a core that has
+   * nothing in it yet is still a core, and the window over it stays open.
+   */
   const hasCore = $derived(alignment !== undefined && visual.core > 0);
+
+  const radius = $derived(Math.max(0, core ?? visual.core));
 
   const { invalidate } = useThrelte();
   const ramp = readInkRamp();
@@ -195,7 +207,7 @@
            and under the hull both, which is `stack.ts`'s bottom entry — so the
            front blends over it and its own feathered rim fades onto ink. -->
       {#if hasCore}
-        <PlanetCore {visual} lean={alignment ?? 0} />
+        <PlanetCore {visual} {radius} lean={alignment ?? 0} />
       {/if}
 
       {@render children?.()}

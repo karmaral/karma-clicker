@@ -1,4 +1,3 @@
-import { Experience } from '$lib/resources/experience';
 import { BuildingManager, ResourceManager } from '$lib/managers';
 import { ResourceEmitter } from '$lib/emission';
 import { getExcess } from '$lib/excess';
@@ -7,10 +6,14 @@ import balance from '$data/balance';
 import { resolveHarvestDuration, resolveHarvestYields } from './harvest';
 import type { FirstHarvestCondition, PlanetData, Polarity, ResourceType } from '$types';
 
+/** The wave's marker steps once per this many ms of world time — a second hand. */
+const POSITION_STEP_MS = 1000;
+
 export default class Planet {
   #id: string;
   #data: PlanetData;
-  #experience = new Experience();
+  /** Time spent standing on this world, in ms. The wave is nothing but this. */
+  #livedMs = $state(0);
   #isHarvested = $state(false);
   #merged = $state(0);
   #alignment = $state<Polarity>(0);
@@ -27,8 +30,16 @@ export default class Planet {
     this.#data = initData;
   }
 
-  addExperience(amount: number) {
-    this.#experience.add(amount);
+  /**
+   * Real elapsed ms, only while this is the world you are on. A harvested world
+   * stops ageing: its wave froze where you left it, which is what the Overview
+   * should read. Unclamped, like the harness — a backgrounded tab still spent
+   * the time, and the wave is the one clock nothing can be bought to hurry.
+   */
+  advance(ms: number) {
+    if (ms <= 0 || this.#isHarvested) return;
+
+    this.#livedMs += ms;
   }
 
   /** Every condition the planet imposes that is not met yet. Empty means go. */
@@ -145,44 +156,45 @@ export default class Planet {
   #phasesPerAge = $derived.by(() => this.#data.cycles_per_age * 2);
 
   /**
-   * Phase cost grows to keep pace with yields, so phases stay about as long as
-   * each other however fast experience comes in. Placeholder ramp.
+   * Every phase is the same length, so the wave is a clock and not a second
+   * reading of your income. It used to be priced in experience on a geometric
+   * ramp, which made phases logarithmic in a stock the player multiplies: a
+   * tenfold income bought a fixed number of phases outright, and a world's
+   * length depended on how good the run before it had been. See
+   * progression.md, *The wave is a clock*.
    */
-  #experienceAfter(phases: number) {
-    const { phase_multiplier: rate, initial_phase_amount: first } = this.#data;
-    if (rate === 1) return first * phases;
+  #phaseMs = $derived.by(() => Math.max(1, this.#data.phase_duration));
 
-    return (first * (rate ** phases - 1)) / (rate - 1);
-  }
-
-  #phasesElapsed = $derived.by(() => {
-    const { phase_multiplier: rate, initial_phase_amount: first } = this.#data;
-    const lived = this.#experience.amount;
-    if (rate === 1) return Math.floor(lived / first);
-
-    return Math.floor(Math.log(1 + (lived * (rate - 1)) / first) / Math.log(rate));
-  });
+  #phasesElapsed = $derived.by(() => Math.floor(this.#livedMs / this.#phaseMs));
 
   #currentPhases = $derived.by(() => {
     const opened = this.agesLived * this.#phasesPerAge;
 
     return Array.from({ length: this.#phasesPerAge }, (_, i) => ({
       dense: i % 2 === 1,
-      at: this.#experienceAfter(opened + i + 1),
+      /** When it closes, as ms lived on this world. */
+      at: (opened + i + 1) * this.#phaseMs,
     }));
   });
 
-  #throughPhase = $derived.by(() => {
-    const opens = this.#experienceAfter(this.#phasesElapsed);
-    const closes = this.#experienceAfter(this.#phasesElapsed + 1);
-    const raw = (this.#experience.amount - opens) / (closes - opens);
+  #throughPhase = $derived.by(() => (this.#livedMs % this.#phaseMs) / this.#phaseMs);
 
-    return Math.min(1, Math.max(0, raw));
+  /**
+   * `#throughPhase`, stepped to whole seconds. The wave is a clock, so its
+   * marker should read as one — a second hand, not a glide — but the payout
+   * `#throughPhase` feeds (through `progress`) stays continuous, so a stepped
+   * marker never puts a visible stair in the re-aim penalty. See
+   * progression.md, *The wave is a clock*.
+   */
+  #displayThroughPhase = $derived.by(() => {
+    const steppedMs = Math.floor((this.#livedMs % this.#phaseMs) / POSITION_STEP_MS) * POSITION_STEP_MS;
+
+    return steppedMs / this.#phaseMs;
   });
 
   /** Phases are drawn evenly wide, so the axis is counted in phases, not experience. */
   #positionInAge = $derived.by(() => {
-    return (this.phase + this.#throughPhase) / this.#phasesPerAge;
+    return (this.phase + this.#displayThroughPhase) / this.#phasesPerAge;
   });
 
   bias(positive: boolean) {
@@ -191,7 +203,6 @@ export default class Planet {
 
   get id() { return this.#id; }
   get data() { return this.#data; }
-  get experience() { return this.#experience.amount; }
   get isHarvested() { return this.#isHarvested; }
   get merged() { return this.#merged; }
   get alignment() { return this.#alignment; }
@@ -234,6 +245,11 @@ export default class Planet {
   get mergeMinimum() { return this.#data.firstHarvest.mergeMinimum ?? 0; }
 
   isMergeSufficient(merged: number) { return merged >= this.mergeMinimum; }
+
+  /** What the world is worth in wall-clock, and how far in you are. Both in ms. */
+  get lived() { return this.#livedMs; }
+  get phaseDuration() { return this.#phaseMs; }
+  get length() { return this.#data.ages * this.#phasesPerAge * this.#phaseMs; }
 
   get phases() { return this.#currentPhases; }
   get phasesPerAge() { return this.#phasesPerAge; }

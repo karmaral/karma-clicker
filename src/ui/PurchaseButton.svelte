@@ -58,13 +58,16 @@
     justify-content: end;
     gap: var(--badge-gap);
     min-width: 0;
+    height: 100%;
     padding: var(--sp-1) var(--sp-2);
-    /* margin-block: calc(var(--sp-1) * -1); */
     margin-left: auto;
     margin-right: calc(var(--sp-2) * -1);
     border: 1px solid;
     background: transparent;
-    border-color: currentColor;
+    /* Quiet frame until there's something to press — a full-height box in
+       --ink-300 would compete with the row's own rule; only an affordable
+       button earns the loud border. */
+    border-color: var(--line-300);
     color: var(--ink-300);
     white-space: nowrap;
   }
@@ -81,6 +84,7 @@
   }
 
   .purchase.affordable {
+    border-color: currentColor;
     color: var(--ink-900);
 
     &:hover {

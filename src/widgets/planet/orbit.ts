@@ -166,6 +166,38 @@ export interface SwarmVisual {
    */
   outTone: number;
   frontTone: number;
+
+  /**
+   * The spawn-in flare: a small 4-pointed star standing on a soul the instant
+   * it joins the swarm, so a purchase reads as souls *arriving* rather than
+   * the count simply having changed. 0 is off.
+   *
+   * In body radii, like `dot` — it stands on one soul and has to scale with it.
+   */
+  spawnSize: number;
+  /**
+   * How far the flanks cave in between the four points, 0…1: 0 is a
+   * straight-sided diamond and 1 a needle cross, with the cusped star of the
+   * reference around the middle. The shape's only knob — the count is fixed at
+   * four by the axes it is drawn on. See `spawnFragment`.
+   */
+  spawnPinch: number;
+  /**
+   * The whole arrival, and the only clock in it: the flare opens and closes over
+   * it (`swellOf`) and the soul comes up under it (`hatchOf`). Neither carries an
+   * alpha — see `swellOf`.
+   */
+  spawnLife: number;
+  /**
+   * Where in that life the star is widest, as a share of it — everything after
+   * is the fall. Low is a strike with a long wake; 0.5 is the even swell this
+   * started as. It is what lets `spawnLife` be long, since the seconds it adds
+   * are spent on the dissolve rather than on the drawing.
+   */
+  spawnRise: number;
+  spawnTone: number;
+  /** Radians per second it turns over its life, so it isn't a static sticker. */
+  spawnSpin: number;
 }
 
 /**
@@ -261,6 +293,87 @@ function dealPlaces(souls: Soul[], random: () => number) {
   }
 
   order.forEach((soul, place) => (souls[soul].place = place));
+}
+
+/**
+ * Slots for the spawn-in flare — a ring buffer, oldest overwritten, the same
+ * shape `createPulses` keeps for the click's own marks. A soul carries no
+ * identity across a recount (see `createSouls`), so a mark holds the *index*
+ * it lit at rather than the soul: within its short life that is the same dot,
+ * and nothing draws it long enough for a second recount to catch it out.
+ */
+export const SPAWN_CAPACITY = 16;
+
+export interface SpawnMark {
+  /** The world clock's `elapsed` when it lit. `-Infinity` is a slot never used. */
+  born: number;
+  index: number;
+}
+
+export function createSpawns() {
+  const marks: SpawnMark[] = Array.from({ length: SPAWN_CAPACITY }, () => ({
+    born: -Infinity, index: -1,
+  }));
+
+  let next = 0;
+
+  function spawn(index: number, now: number) {
+    const mark = marks[next];
+
+    mark.born = now;
+    mark.index = index;
+    next = (next + 1) % SPAWN_CAPACITY;
+  }
+
+  return { marks, spawn };
+}
+
+export type Spawns = ReturnType<typeof createSpawns>;
+
+/** The crest, held off both ends so neither half of the curve becomes a step. */
+const peakAt = (rise: number) => Math.min(0.9, Math.max(0.02, rise));
+
+/**
+ * The flare's size over its life: out of nothing to full at `spawnRise`, then
+ * the long way back down. It is the whole of the mark's coming and going —
+ * there is no fade under it, because a shape thinning in place reads as a
+ * sticker being rubbed out where one closing reads as a thing that happened and
+ * finished.
+ *
+ * Lopsided on purpose, and that is what lets the life be long. A star given as
+ * long to open as to close reads as a thing being *drawn*, however many seconds
+ * it gets; struck instead and left to dissolve, the same seconds read as an
+ * arrival with a wake. Both halves flatten at the crest, so there is no corner
+ * where they meet.
+ */
+export function swellOf(t: number, rise: number) {
+  const at = Math.min(1, Math.max(0, t));
+  const peak = peakAt(rise);
+
+  if (at <= peak) {
+    const up = 1 - at / peak;
+
+    return 1 - up * up;
+  }
+
+  const down = (at - peak) / (1 - peak);
+
+  return 1 - down * down * (3 - 2 * down);
+}
+
+/**
+ * And the soul under it, over the flare's whole descent: nothing while the star
+ * is opening, full a little before it is gone. One event rather than two — the
+ * dot is what the flare leaves behind, not a thing lit beside it.
+ *
+ * Keyed to the same crest, so moving where the star peaks carries the dot with
+ * it instead of letting the two drift apart.
+ */
+export function hatchOf(t: number, rise: number) {
+  const peak = peakAt(rise);
+  const at = Math.min(1, Math.max(0, (t - peak) / ((1 - peak) * 0.75)));
+
+  return at * at * (3 - 2 * at);
 }
 
 /** One soul per unit of `counts[i]`, while the counts are small enough to mean it. */
@@ -473,7 +586,7 @@ export function phaseOf(soul: Soul, elapsed: number) {
   return turns - Math.floor(turns);
 }
 
-export type SwarmGroup = 'Orbits' | 'Scatter' | 'Souls';
+export type SwarmGroup = 'Orbits' | 'Scatter' | 'Souls' | 'Spawn';
 
 export interface SwarmParam {
   key: keyof SwarmVisual;
@@ -484,7 +597,7 @@ export interface SwarmParam {
   step: number;
 }
 
-export const SWARM_GROUPS: SwarmGroup[] = ['Orbits', 'Scatter', 'Souls'];
+export const SWARM_GROUPS: SwarmGroup[] = ['Orbits', 'Scatter', 'Souls', 'Spawn'];
 
 /** Shaped like `VISUAL_PARAMS`, so wiring a panel onto it is mechanical. */
 export const SWARM_PARAMS: SwarmParam[] = [
@@ -514,6 +627,17 @@ export const SWARM_PARAMS: SwarmParam[] = [
   { key: 'ring', label: 'Ring', group: 'Souls', min: 0, max: 0.8, step: 0.02 },
   { key: 'outTone', label: 'Tone outside', group: 'Souls', min: 0, max: 6, step: 1 },
   { key: 'frontTone', label: 'Tone in front', group: 'Souls', min: 0, max: 6, step: 1 },
+
+  // 0 is the flare off.
+  { key: 'spawnSize', label: 'Size', group: 'Spawn', min: 0, max: 0.2, step: 0.002 },
+  // Its whole travel is a shape: diamond at 0, star in the middle, needle at 1.
+  { key: 'spawnPinch', label: 'Pinch', group: 'Spawn', min: 0, max: 1, step: 0.02 },
+  { key: 'spawnLife', label: 'Life', group: 'Spawn', min: 0.05, max: 2, step: 0.05 },
+  // Where the star crests, as a share of that life. Under it the mark is struck
+  // and left to dissolve; at 0.5 it opens and closes evenly.
+  { key: 'spawnRise', label: 'Rise', group: 'Spawn', min: 0.02, max: 0.9, step: 0.02 },
+  { key: 'spawnTone', label: 'Tone', group: 'Spawn', min: 0, max: 6, step: 1 },
+  { key: 'spawnSpin', label: 'Spin', group: 'Spawn', min: 0, max: 12, step: 0.1 },
 ];
 
 export const DEFAULT_SWARM: SwarmVisual = {
@@ -542,6 +666,12 @@ export const DEFAULT_SWARM: SwarmVisual = {
   ring: 0.3,
   outTone: 6,
   frontTone: 0,
+  spawnSize: 0.2,
+  spawnPinch: 0.5,
+  spawnLife: 0.5,
+  spawnRise: 0.12,
+  spawnTone: 0,
+  spawnSpin: 0,
 };
 
 export function cloneSwarm(visual: SwarmVisual): SwarmVisual {

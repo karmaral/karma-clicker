@@ -25,8 +25,11 @@ export type ModifierOp = 'flat' | 'boost' | 'mult' | 'pow' | 'final';
  * `slots` is how many souls a singleton can put to work — the refinery's third
  * axis and the harness's first. `riders` is what the finished harness carries;
  * `step` counts rungs down the split ladder, so it is an index, not a fraction.
+ * `carry` is what one soul riding the harness is worth to *you* — it is held by
+ * the hand and only reads the harness for the count. A share per soul, so its
+ * `flat` value is a rate and prints as a percent.
  */
-export type ModifierStat = 'yield' | 'duration' | 'slots' | 'riders' | 'step';
+export type ModifierStat = 'yield' | 'duration' | 'slots' | 'riders' | 'step' | 'carry';
 
 export interface Modifier {
   id: string;
@@ -44,8 +47,9 @@ export type EffectVerb = 'unlock' | 'acquire' | 'autonomy' | 'discover';
  * `BuildingManager` — the split exists so a non-soul building has somewhere to
  * go that does not call itself a cohort. `refinery` names no entity because
  * there is exactly one of it — as with `harness`; `global` names none because it
- * owns nothing yet. `cohorts` (plural) is every cohort at once — authored, not
- * yet routable, see `upgrades.ts`'s `cohorts` bucket.
+ * owns nothing yet. `cohorts` (plural) names no entity because it names every
+ * one of them: `#fanOut` puts the modifier on each, and `syncFanOut` keeps it
+ * true for cohorts unlocked later.
  */
 export type UpgradeScope =
   | { kind: 'global' | 'refinery' | 'harness' | 'cohorts'; entity?: undefined }
@@ -54,7 +58,12 @@ export type UpgradeScope =
 /** `target` overrides the upgrade's `effect_target`, so one array can hit two yields. */
 export type Effect = EffectVerb | Omit<Modifier, 'id'>;
 
-export type UnlockType = ResourceType | 'count_total';
+/**
+ * `count` is what is held now and falls with a merge, so what it gates re-locks
+ * and comes back one gate at a time as the ladder is rebuilt. `count_total` is
+ * the lifetime tally and never falls — for anything meant to stay earned.
+ */
+export type UnlockType = ResourceType | 'count' | 'count_total';
 
 export interface UpgradeData {
   id: string;
@@ -72,6 +81,12 @@ export interface UpgradeData {
  */
 export type BuildingRole = 'click' | 'soul';
 
+/**
+ * `upgrade_threshold`, `yield_multipliers` and `duration_reduction` author the
+ * cohort's level upgrades — the counts that unlock them and what each one is
+ * worth. `Building` reads none of the three: a level is bought, not earned, so
+ * the multiplier arrives as a modifier. See `cohort-levels.ts`.
+ */
 export interface BuildingData {
   role?: BuildingRole;
   upgrade_threshold?: number[];
@@ -149,8 +164,13 @@ export interface PlanetAnchoring {
 export interface PlanetData {
   ages: number;
   cycles_per_age: number;
-  phase_multiplier: number;
-  initial_phase_amount: number;
+  /**
+   * How long one phase lasts, in ms of time spent on this world. The wave is a
+   * clock: nothing you own makes it turn faster, so a world's length is authored
+   * here — `ages × cycles_per_age × 2 × phase_duration` — and not a consequence
+   * of how good the run before it was.
+   */
+  phase_duration: number;
   densities: number;
   max_initial_density: number;
   firstHarvest: PlanetFirstHarvest;

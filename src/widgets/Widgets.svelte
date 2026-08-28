@@ -552,6 +552,7 @@
           widthPx={420}
           frame={pulseFrame}
           pulse={pulseLab.current}
+          demo
         />
         <span class="spec">the body alone</span>
       </div>
@@ -566,6 +567,7 @@
           anchors={anchorLab.current}
           {anchored}
           harness={harnessLab.current}
+          demo
         />
         <span class="spec">over everything</span>
       </div>
@@ -579,6 +581,7 @@
             frame={pulseFrame}
             backgroundToken="--surface"
             pulse={pulseLab.current}
+            demo
           />
           <span class="spec">{px}px</span>
         </div>

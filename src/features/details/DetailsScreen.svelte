@@ -1,7 +1,7 @@
 <script lang="ts">
   import { BuildingManager, PlanetManager } from '$lib/managers';
   import { progression } from '$lib/progression';
-  import { f } from '$lib/utils';
+  import { f, formatSpan } from '$lib/utils';
   import { pulse } from '$lib/loop';
   import type { Listener } from '$lib/emission';
   import type Building from '$lib/buildings/base.svelte';
@@ -23,7 +23,13 @@
   const CLICK = 'main';
 
   const click = $derived(BuildingManager.getBuilding(CLICK));
-  const clickYield = $derived(click?.production.experience ?? 0);
+
+  /**
+   * The payout, not the production: what the harness carries multiplies the press
+   * and the button has to say the figure the press will actually pay. `payout`
+   * already reads 0 while anchoring, which is what `isAnchoring` overrides below.
+   */
+  const clickYield = $derived(click?.payout('experience') ?? 0);
 
   const cohorts = $derived.by(() => {
     const rows: Building[] = [];
@@ -55,7 +61,7 @@
   const phases = $derived<Phase[]>(
     planet?.phases.map((phase) => ({
       kind: phase.dense ? 'dense' : 'light',
-      at: `${f(phase.at)} xp`,
+      at: `closes at ${formatSpan(phase.at)}`,
     })) ?? [],
   );
 
@@ -176,7 +182,10 @@
       {/if}
     {/if}
 
-    {#if progression.isRevealed('details.split')}
+    <!-- Only while there is a job to split against. Off-phase the reserved
+         souls have nowhere to go from here — the refinery keeps its own — so a
+         lever left on screen would be one you can move and cannot spend. -->
+    {#if progression.isRevealed('details.split') && isAnchoring}
       <SplitControl job="anchoring" />
     {/if}
   </div>

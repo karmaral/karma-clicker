@@ -275,11 +275,10 @@ cadence is easier to judge downward than a trickle is to discover was never
 readable.
 
 Every figure is a placeholder anchored at roughly 30% of income at the point you
-leave. `first` is the only one that can be felt today — **`third` cannot be
-reached at all**: its gate is `agesLived: 4` at `cycles_per_age: 16`, and
-`phase_multiplier: 3` from `initial_phase_amount: 1000` puts 128 phases past
-10^60 experience. `second` needs ~1.5M, which is hours but playable. The curve is
-a separate balance item; the harvest is authored anyway.
+leave. All three worlds are now reachable, and their lengths are authored rather
+than inferred — see *The wave is a clock*: 4 minutes, 24 minutes, 96 minutes of
+time on the world. The curve is a separate balance item; the harvest is authored
+anyway.
 
 ## Souls
 
@@ -411,8 +410,9 @@ beat number.
 
 ### The bars divide by the larger pile
 
-Not by the wall. `getWall()` is provisional (§*Excess*) and dividing by it would
-make both bars shrink as income grew, which is not what either bar is about. The
+Not by the excess reading. That one is a share of the two piles together
+(§*Excess*), so dividing by it would say the same thing the meter already says
+and would not draw how big either pile is — which is what these bars are for. The
 larger pile fills its track, the smaller reads as its share of it, and the
 hairline where the shorter one ends is matched. Pure comparison, no constant.
 
@@ -3111,8 +3111,8 @@ genre's upgrade decision, spelled as a quantity mode.
 
 ### Levels become purchases
 
-Decided, not yet built. The tooth-ratio table above diagnoses the system as it
-stands; it is not the target.
+Built. The tooth-ratio table above diagnoses the system it replaced; it is not the
+target.
 
 `upgrade_threshold` does two jobs at once — it marks a milestone *and* hands over
 the multiplier, free and automatic. That single conflation is why there is no
@@ -3131,18 +3131,33 @@ in two currencies it stops being a trade and becomes two shopping lists. Higher
 tiers may be priced in karma or in tokens, and are then rewards rather than
 decisions — which is a fine job for them as long as it is the intended one.
 
-**A merge takes them.** Cohort upgrades are the genre's *regular* upgrades and burn
-on departure; the ratchet lives in the layer that already exists for it — harvest
-income, refinery grades, tokens. See the cost this carries, below.
-
 **They gate on the current count, not the lifetime total.** `count_total` never
 falls, so gating there would leave every upgrade a merge just burned sitting
 unlocked and unowned — and the play that follows is to ignore souls and grind
 experience for the shopping list, which is the opposite of a rebuild. Gated on
 `count`, they re-lock on the merge and re-unlock one at a time as the ladder comes
-back. `UnlockType` gains `'count'` beside `'count_total'`; the latter stays for
-anything meant to stay earned. Note `isLocked` reads `<=` on the count branch and
-`<` on the resource branch, so `count_total: 25` unlocks at 26 — fix with it.
+back. `UnlockType` gained `'count'` beside `'count_total'`; the latter stays for
+anything meant to stay earned. `isLocked` also read `<=` on the count branch
+against `<` on the resource branch, so `count_total: 25` unlocked at 26; fixed
+with it, along with a missing building reading as *unlocked* rather than locked.
+
+**A merge takes them — but only the ones it drops you below.** That falls out of
+the gate rather than being a second rule, and it is the whole of what makes the
+slider weigh:
+
+> **A `count`-gated upgrade is held only while its count is held.**
+
+`UpgradeManager.releaseUnheld()` is that sentence, called from
+`completeFirstHarvest` after `mergeSouls`, and it is the first thing in the game
+that takes an upgrade away — `Building.removeModifier` finally has a caller. A
+shallow merge costs a level or two; merging everything costs the ladder. Nothing
+gated on a resource total or on `count_total` is touched, so the ratchet stays
+where it was put: harvest income, refinery grades, tokens.
+
+An earlier draft of this section had the merge burn *every* cohort level. That is
+a worse rule for a plain reason — it makes the merge fraction and the upgrade loss
+independent, so the slider stops carrying the cost and the decision flattens back
+into the thing it was meant to replace.
 
 **The price is one product, and it is the pacing knob:**
 
@@ -3154,96 +3169,394 @@ is worth buying the moment it unlocks. Under that price it is a treat; over it, 
 goal to grow into. One authored number per upgrade, replacing a pace that
 currently falls out of three unrelated fields in two files.
 
-### What burning the upgrades actually costs
+### Generated, not retyped
+
+A level is one multiplier applied five times, so authoring five near-identical
+entries by hand is how the fifth drifts from the first.
+[`cohort-levels.ts`](../src/data/cohort-levels.ts) generates them from the
+cohort's own figures, and `buildings.ts` keeps `upgrade_threshold`,
+`yield_multipliers` and `duration_reduction` as **the authoring for that
+generator**. `Building` reads none of the three now. The sim's balance params
+still sweep them and still mean what they meant.
+
+Per cohort it authors three placeholders — `through`, `priceFactor`, and
+`pricedOn` where a cohort yields none of its own cost currency. `through` is the
+last gate worth writing: at `cost_multiplier: 1.15` `basic`'s 200th copy costs 6.9
+*trillion*, so the tail of every threshold list was decoration, and the lists now
+stop where the cohort dies and let a later one carry the game — which is what the
+tooth ratios already said.
+
+`zealot` is the `pricedOn` case: bought with experience, yields only karma, so its
+improvement is measured on karma while its price stays in experience. The units
+work out because *how many copies is this worth* is a ratio — but it is also the
+same `ρ = ∞` hole as before, wearing a price tag.
+
+| | levels | gates | prices |
+|---|---|---|---|
+| `basic` | 5 | 5 → 75 | 69 → 18M experience |
+| `steady` | 2 | 5 → 15 | 4_800 → 15M experience |
+| `chaos` | 4 | 5 → 50 | 2_600 → 600M experience |
+| `zealot` | 2 | 5 → 15 | 1.5M → 260M experience |
+| `red_basic` | 3 | 5 → 25 | 1_400 → 110k red |
+
+**Every one of those prices is the rule applied honestly to placeholder cohort
+data, so the odd ones are diagnoses rather than mistakes.** `steady`'s first level
+costs eight times its own ladder underneath it, because `cost_multiplier: 2` makes
+the fifth copy cost thirty-two times the first. `zealot` opens at 1.5M. Both were
+already true; the price tags are the first thing in the game that says so out loud.
+
+`basic/str_1` moved from `count_total: 25` to 60, off `level_3`'s gate — a
+karma-priced reward should not land on the same count as an experience-priced
+level.
+
+The texts are generated too, and are placeholders that read their own effect list
+so a description cannot claim a figure it does not carry. They want real copy.
+
+### What burning the upgrades costs
 
 An upgrade multiplies everything owned at once, so at 50 copies a ×2.38 upgrade is
-worth **69 more copies** and should cost about what 69 copies cost. That makes
-upgrades the largest purchases on the board by a wide margin, and it is why the
-merge decision changes character rather than degree.
+worth **69 more copies** and costs about what 69 copies cost. That makes upgrades
+the largest purchases on the board by a wide margin. For `basic`: all 50 copies
+from scratch is ~36k experience, and the four levels through that count come to
+~376k.
 
-For `basic`: all 50 copies from scratch is ~36k experience; the four upgrades
-replacing levels 2–5 come to ~380k. **Rebuilding costs about eleven times what
-rebuying the souls alone costs today**, where levels return free. The harvest
-payout is anchored at ~30% of income at departure (see *What a finished world
-pays*) and will not repay that. Either the payout grows with this, or the price is
-shaded under break-even, or the early upgrades are exempted from the burn. Not yet
-chosen.
+The proportional burn is what keeps that from being a wall. A merge that drops you
+from 50 to 40 releases nothing — no gate is crossed. One that drops you to 20
+releases two levels and asks ~6k to rebuild them; one that takes everything asks
+the ~376k. **The slider now prices its own consequence**, which is what it was
+missing.
 
-### Worked: `basic`
+What is still open is the other side of it: the harvest payout is anchored at
+roughly 30% of income at departure (see *What a finished world pays*), and whether
+that repays a deep merge has never been measured. It cannot be settled by
+argument — it wants a sim run, which this unblocks.
 
-At `cost: 5`, `cost_multiplier: 1.15`, and a level worth ×1.57 experience ×3.35
-karma ×1/0.66 duration — so each upgrade makes a copy **1.38× better** in the
-resource it is priced in.
+### The reading a row gives
 
-| gate | next copy costs | upgrade costs |
-|---|---|---|
-| 5 | 10 | **70** |
-| 15 | 41 | **840** |
-| 25 | 165 | **5_700** |
-| 50 | 5_418 | **374_000** |
-| 75 | 178_355 | **18_400_000** |
+`Building`'s level state is gone: `#level`, `#levelProgress`, `#levelFor`,
+`#syncLevel`, `#calcLevelProgress` and the `level` listener bucket with them, and
+`#production` is now base-and-modifiers with nothing reading the count. The merge
+bug those were written to fix — a level that climbed but never fell — stops having
+anything to be wrong about.
 
-```ts
-'cohort:basic': [
-  // ...`first` unchanged.
-  {
-    id: 'level_1',
-    effect: [
-      { op: 'mult', value: 1.57, target: 'experience' },
-      { op: 'mult', value: 3.35, target: 'karma' },
-      { op: 'mult', value: 0.66, stat: 'duration' },
-    ],
-    unlocks_at: { count: 5 },
-    costs: { experience: 70 },
-  },
-  // level_2 { count: 15 } 840 · level_3 { count: 25 } 5_700
-  // level_4 { count: 50 } 374_000 · level_5 { count: 75 } 18_400_000
-]
-```
+What replaces them is two readings, and the first draft collapsed them into one.
+`tier` was written as *gates the count has passed* — what is unlocked — which is
+the wrong half to print. Buying **Tier IV** and watching the row already say
+tier 4 makes the purchase look like it did nothing; the number has to be the one
+the purchase moves.
 
-Three things fall out of writing it down.
+So they are split:
 
-**The gates past 75 are decoration.** At `cost_multiplier: 1.15` the 100th copy
-costs 5.9M and the 200th costs 6.9 *trillion* — the cohort is unbuyable long
-before its own threshold list ends. The list should stop where the cohort dies and
-let a later cohort carry the game, which is what the tooth ratios already said
-about `basic` falling off at the 25-wide gaps.
+- **`#gatesPassed`** — gates the count is above. Private, and printed nowhere.
+  `isMaxLevel`, `currentThreshold` and `nextUntilThreshold` read off it, so `NEXT`
+  on the cost head still buys the run to the gate.
+- **`tier`** — levels *owned*, counted off the modifier ids the level upgrades
+  add (`level_N:index`, distinct `level_N`). Not asked of `UpgradeManager`, which
+  imports `BuildingManager` and would close a cycle. A release takes its
+  modifiers with it, so a merge takes the tier down for free.
 
-**Every entry repeats one row of numbers**, because a level is one multiplier
-applied five times. Authoring them separately is what buys the ability to price
-each one differently — which is the point — but the effect arrays should be
-generated from the cohort's own figures rather than retyped, or the fifth will
-drift from the first.
+The row prints both and may not call either one `next` alone: `tier III · next
+unlock in 10`. Roman, because it names `Tier III`, and an upgrade title numbers
+itself the way `Shorter Lives I` does.
 
-**`basic/str_1` now overlaps its own 25 gate**, priced at 10k `karma_positive`
-against the new experience-priced `level_3` at the same count. It reads as a
-higher-tier reward under the split above, so it works — but the collision is
-authored, not intended, and one of the two should move.
+`levelProgress` had no consumer and is not replaced. The word `tier` is still a
+placeholder; `level` was retired because nothing levels any more.
 
-Nothing here is landed. Adding the entries while `yield_multipliers` and
-`duration_reduction` remain on the cohort applies the multiplier twice, so the
-data change and the removal of `Building`'s level machinery are one commit:
-`#level`, `#levelFor`, `#syncLevel`, `#calcLevelProgress`, `isMaxLevel` and
-`currentThreshold` all go, `levelProgress` and `nextUntilThreshold` stay as a
-reading of progress toward the next gate, and `NEXT` on the cost head keeps its
-meaning — the run to the count that unlocks the next purchase.
+### A rail wants one chip, not a catalogue
+
+The rail was revealed at ten souls and the click's seven upgrades all unlock
+between 40 and 900 experience — so it arrived holding five click chips, `3 more`,
+and the first cohort tier sorted in behind them. Two changes, and the second is
+the one that matters:
+
+- The beat moved to **five souls**, which is the first cohort gate. A rail that
+  appears a beat after the thing worth buying is a rail that teaches nothing.
+- `building:main`'s ladder is now **paced, not priced**. Two land early — one per
+  axis, which is the whole tutorial — and the other five are spaced to interleave
+  with the cohort ladder and the two `global` upgrades. Their gates are the
+  authored figure; their ids are not the order they arrive in.
+
+The general rule this is the first instance of: **an upgrade bucket whose
+`unlocks_at` are all cleared before the rail exists is not a ladder, it is a
+backlog.** Nothing enforces it — a sim run that priced upgrades would catch it,
+which is the *ladder prices no upgrade* gap below.
+
+### The rail belongs to the screen under it
+
+The rail showed every bucket at once, which made it a second catalogue with a
+five-chip window rather than a place to act. It now shows **the active screen's
+upgrades and the `global` ones**, filed by scope with no new authoring:
+`building` / `cohort` / `cohorts` / `harness` → Details, `planet` → Overview,
+`refinery` → Refinery. `global` owns no entity and so is filed under nothing,
+which is exactly what makes it show everywhere.
+
+The argument is `spotlight`'s, read forwards. A rail chip lights its target on
+the screen below it; a chip whose target lives two tabs away could only ever
+light nothing. Scoping the rail to the screen makes every chip in it point at
+something you can see.
+
+What the rail stops showing, the header has to say — so each tab carries a
+**count of what is buyable behind it right now**. Affordable and not merely
+available: an upgrade you have unlocked and cannot yet pay for is a standing
+fact, and a tab marked at all times is not a mark. It lights when your wallet
+reaches something on a screen you are not on and clears when you spend, needing
+no seen-set in the save.
+
+Two deliberate omissions. `global` is counted under no tab, being in the rail on
+every screen already. And the count is drawn on the **active** tab too — a
+section is a live reading and one that blanked on arrival would read as the
+count having changed rather than as you having gone there.
+
+The catalogue window is untouched: it is the complete list, which is its job.
+
+**Globals are pinned in the rail.** Scoping created one hole: `global` is the
+only bucket filed under no tab, so it is the one thing no pip counts — and sorted
+on distance alone a cheap global could be pushed out of the five slots by a
+screen upgrade you happen to be further past, disappearing with nothing in the
+header to say so. The rail's order is now *affordable first, then global, then
+nearest*. Affordability outranks the pin because the top slot is the one worth
+acting on, and a global still half a fortune away has no claim on it; inside each
+group the catalogue's own "nearest to affordable first" is untouched.
+
+**The order is a placement, not a ranking.** Sorting on `cost − held` meant the
+rail re-ranked on every tick that moved a resource, and worst while spending: an
+upgrade you are close to crosses the affordable line and recrosses it repeatedly
+as income lifts you and a purchase drops you back, so the chips reshuffled under
+the cursor at the one moment you were reading them. This predated the pin — the
+affordability key only made it visible, since crossing the line is a jump to the
+front and spending it is a fall back.
+
+The rail now settles its order on the **set** of available upgrades and holds it
+until that set changes — an upgrade bought, or one newly unlocked. Between those
+nothing moves. The rows stay live; it is where they sit that is held still.
+
+Nothing is lost, because position was saying what the chip already says:
+affordability is `ChipStatus`, drawn in the chip's own ink. A reading carried in
+the border does not need the running order to carry it a second time. The general
+rule: **a continuous quantity may colour a thing in place, but it may not decide
+where the thing sits.**
+
+Considered and rejected: a global pip on the score cell. A pip means *there is
+something buyable you cannot see from here*, and a global upgrade is in the rail
+on every screen — the mark would light while the chip it names sat inches below
+it. The score cell is also not a tab, so it has nothing to act on, and it reads
+experience while both globals are priced in positive karma. Worth revisiting only
+if `global` grows past its two entries into a bucket with a ladder of its own.
+
+### An army is a ramp, not a yield
+
+How many of a thing you end up owning is set by `cost_multiplier` and almost
+nothing else. The price of the next copy curves upward geometrically while income
+climbs roughly straight; where they meet is the count, and that meeting point
+moves with the *ramp*. Yield sits inside a logarithm.
+
+The figure worth remembering: **for `basic` at 1.15, doubling every soul's output
+buys about five more souls.** Not twice as many — five. For `steady` at 2.0 it
+buys *one*. Which is why "make them weaker so there can be more of them" has the
+causation backwards: potency is not what is holding the count down.
+
+**To multiply the army by k, take the k-th root of the ramp.** That is the whole
+rule. Equivalently, to author it forwards: pick the count a cohort should top out
+at and what its last copy should cost, and the ramp is `(budget ÷ base cost)`
+raised to `1 ÷ count`.
+
+#### The retune
+
+Every cohort now tops out around 200, holding each one's *final copy price*
+within a few percent of where it already was — so the ceiling moved and the
+budget did not.
+
+| cohort | ramp was | now | capped near | now caps at | 200th copy |
+|---|---|---|---|---|---|
+| basic | 1.15 | 1.054 | 75 | 200 | 185k xp |
+| steady | 2.0 | 1.053 | 15 | 200 | 612k xp |
+| chaos | 1.25 | 1.057 | 50 | 200 | 1.31M xp |
+| zealot | 1.5 | 1.031 | 15 | 200 | 4.48M xp |
+| red_basic | 1.15 | 1.018 | 25 | 200 | 1,772 red |
+
+Yields were deliberately **not** touched — the game stalls, so the extra income
+from a bigger army is the point rather than a side effect to cancel.
+
+Three consequences, and the third is the one that set the shape:
+
+- **The gate list stops being fiction.** `[5, 15, 25, 50, 75, 100, 125, 150, 175,
+  200]` ran to 200 for four cohorts that never passed 50. Now every cohort
+  reaches the top of the same list, so `through` in `cohort-levels.ts` is one
+  figure for all five instead of five guesses.
+- **The teeth get shallower.** Tooth ratio is `ramp^gap ÷ level multiplier`, and
+  the gaps widened by roughly what the ramp flattened by. `basic`'s worst tooth
+  falls from **13.8 to 4.5** — the ladder decays noticeably less between gates,
+  which is a real improvement and not something that was aimed for.
+- **Six rungs, not ten.** `duration_reduction` compounds per tier, and ten of
+  them take `basic` from 3s to 47ms and `chaos` to 20ms — fifty emissions a
+  second, each one a reactive write, with no floor anywhere in `ResourceEmitter`
+  to stop it. Six leaves `basic` at 248ms and `chaos` at 125ms. **The count was
+  never the constraint on the gate list; the clock was.**
+
+#### The gate ladder
+
+`[5, 35, 70, 110, 155, 200]`. Gaps of 30/35/40/45/45, and the widening is the
+whole point.
+
+Two things pull against each other. **Even gaps pace evenly** — because the cost
+curve is exponential, evenly spaced gates make each leg cost a constant multiple
+more than the last, which is the incremental-game standard. But **even gaps give
+a flat tooth**, and the last one then dips: the final rung comes out *easier*
+than the four before it, which is the wrong direction to end on.
+
+Widening gaps buy a monotonic tooth at the cost of some pacing evenness. Three
+ladders, measured on `basic`:
+
+| ladder | gaps | teeth | last leg | monotonic |
+|---|---|---|---|---|
+| `5, 25, 60, 100, 150, 200` | 20/35/40/50/50 | 1.20 → 2.65 → 3.45 → 5.83 → 5.83 | 92.8% | yes |
+| **`5, 35, 70, 110, 155, 200`** | 30/35/40/45/45 | 2.04 → 2.65 → 3.45 → 4.48 → 4.48 | 90.6% | **yes** |
+| `5, 45, 85, 125, 165, 200` | 40/40/40/40/35 | 3.45 ×4 → 2.65 | 84.1% | no |
+
+The middle row sits between the other two on every column and is the only one
+that is both monotonic and unpeaked — its worst tooth is 4.48 against 5.83 and
+its legs run 6.7×/8.6×/11.0×/10.7× against a perfectly flat 8.2×.
+
+**The figure that reframes all of this:** reaching gate 70 costs about 3,600
+experience; reaching 200 costs 3.4 million. **The final leg is ~90% of the entire
+climb** whichever ladder you pick, and every gate below 110 happens inside the
+first 1% of it. So the early gates are nearly free to move and are really about
+teaching the mechanic; the only positions that touch pacing in any felt way are
+the last two. That is worth knowing before anyone spends time tuning gate three.
+
+#### What had to move with it
+
+Anything denominated in raw souls goes slack when the army grows and has to take
+the same ×5:
+
+- `mergeMinimum` — 10/70/200 → 50/350/1000. Left alone the merge floor would sit
+  near 1% and the toll would stop being one.
+- `riders` — 40/400 → 200/2000, and `carry_1` down from 1% to 0.2% a soul so it
+  lands on the same +40%/+400% it was designed for.
+- The cost-ramp slider in `params.ts`, which had a 0.01 step. At these values one
+  notch is a doubling of the army.
+
+#### The one to watch
+
+**`steady`.** Its 2.0 ramp was the only thing holding 250 experience and 500
+karma a soul in check, and flattening it to 1.053 takes that brake off entirely —
+a 13× bigger army on the game's richest per-soul figures. It is the cohort most
+likely to need a yield cut despite the standing "don't touch the yield", and the
+first thing a sim run should be pointed at.
+
+### An upgrade for all of them needs a poll, not a callback
+
+The `cohorts` bucket was authored and inert: `#processEffect` handled `refinery`
+and `harness` — the scopes with one singleton behind them — and then bailed on
+anything else naming no entity, so `All cohorts · −6% return time` bought you a
+line in the log and nothing else. It was parked behind a billion karma to keep it
+out of reach while that was true.
+
+Routing it is four lines. The interesting part is the bug every fan-out has:
+**it lands on the members that exist when you buy it.** Unlock `zealot`
+afterwards and it never gets the modifier — and the natural fix, having
+`BuildingManager.unlock` tell `UpgradeManager` about the new building, closes an
+import cycle, because `UpgradeManager` already reaches the other way.
+
+So it is reconciled rather than notified. `ModifierSet.add` drops a repeat id, so
+re-applying every held fan-out is free, and `syncFanOut` does exactly that beside
+`acquireUnpriced` on the loop. **A poll where a callback would need a cycle** —
+the same trade `acquireUnpriced` already made, for the same reason.
+
+Two smaller things worth keeping:
+
+- **Who counts as a cohort is answered by class, not by exclusion.**
+  `BuildingManager.cohorts` filters on `instanceof Cohort`, so the click is out
+  of `All cohorts` without anyone writing a rule that says so.
+- **`boost`, not `mult`.** The two entries sum to −18% rather than compounding to
+  −17%. A global shortening of every life should add up the way a player reading
+  two percentages expects it to; `ModifierSet` gives that for free by summing the
+  `boost` bucket.
+
+`hard_season` had twice `shorter_lives_1`'s effect at under a hundredth of its
+price. That inversion was invisible while both sat behind an unreachable gate,
+which is the argument against parking an entry instead of finishing it.
+
+### The hand rides with the crowd
+
+The press is the one producer that cannot be bought more of, so it is the one
+that falls behind by default: every other line scales with a count and the hand
+scales with nothing. `carry` is the first upgrade axis that fixes that, and it
+borrows the population rather than inventing a number — **the click gains a
+share for every soul riding the harness**.
+
+**It belongs to `building:main`, not to `harness`** — the first draft put it in
+the harness bucket because that is where the count comes from, which is the wrong
+question. A bucket answers *what does this change*, and the answer is you: the
+harness is unaffected by it, and the scope column would have said `HARNESS` for a
+row that moves the press. It reads the harness; it is not one of its axes.
+
+So the modifier is held by `Click`, and `Building.modify()` is what lets a
+subclass ask its own set about a stat the base has no opinion on — `#modifiers`
+stays private. Three figures, and each one is somebody's job:
+
+- **`riders`** — the harness's cap, bought. Already existed.
+- **`riding`** — `min(riders, incarnating)`, and 0 until an anchor is down. Souls
+  held on the split are out: a soul *placing* the harness is not riding it. The
+  harness owns this because it is a fact about the harness, and it is a count and
+  nothing else.
+- **`carry`** — what one of them is worth to you. Held by the hand. The new axis.
+
+The shape is deliberately linear and deliberately capped. On one entity that is
+a straight line in riders; the same modifier on a cohort would be quadratic in
+souls, because a cohort's yield is already multiplied by its count — that is the
+reason this lives on the click and should stay there. The ceiling is then a
+purchase (`riders_1`, `riders_2`) rather than an accident, which is the coupling
+worth having: buying riders now pays twice.
+
+Two things fell out of building it.
+
+- **A payout is not a production.** `production` stops short of `yieldScale`, and
+  the Details button was printing it — so the press would have said `+5` and paid
+  `+25`. `Building.payout()` is the same expression `#generateResources` spends,
+  for the reason the `yieldScale` comment already gives: a readout that
+  recomputes is a readout that drifts.
+- **A `flat` is not always a count.** `carry`'s value is a share per soul, so
+  `+0.01` was the wrong reading of a true figure. `RATE_STATS` in `labels.ts`
+  names the stats whose `flat` prints as a percent. It is a list of one, and the
+  next rate-valued stat joins it rather than special-casing itself.
+
+### An alignment is read before the merge, not after
+
+`PlanetManager.completeFirstHarvest` read `getFirstHarvestAlignment()` on the
+line that hands it to the planet — after `mergeSouls` and after `releaseUnheld`.
+Excess is unpaired karma over a wall, and **the wall is karma income**, so both
+of those lines shrink the denominator: the souls go, then the levels the merge
+dropped you below go. A screen reading Even locked as a side, every time, with a
+numerator that never moved.
+
+The fix is to read it first and pass it down. The general shape is worth keeping:
+*a reading taken at an event must be taken before the event's own destruction,
+not somewhere inside it* — and the tell is that the screen and the outcome
+disagreed while both called the same function.
+
+This also means the `evenBand`-vs-`excessGate` mismatch (2% band inside a 12%
+doorway on `first`, inside 5% on `third`) is a **separate, still-open** balance
+question, and not what was causing the karma. Parked, not fixed.
 
 ## Known gaps
 
 Things that are simply unbuilt, and what they cost today.
 
-- **The soul split has a control, on one screen of two.** The Refinery's Split
-  module writes `reserve` — see *The refinery screen* — so beat 11 is playable
-  now. `detail.split` is still a `RevealStub` and wants the same lever, which is
-  a `SliderBar` and an aside.
+- ~~**The soul split has a control, on one screen of two.**~~ Closed — Details
+  carries the same `SplitControl`, on `job="anchoring"`. It is drawn **only while
+  `harness.isPlacing`**, not from the beat on: off-phase there is no anchoring job
+  to feed and the Refinery keeps its own lever, so a split left on Details would
+  be one you can drag and cannot spend.
 - ~~**The recurring harvest has structure, no numbers.**~~ Closed — all three
   worlds declare a `harvest`, and both banked fields are consumed: `alignment`
   picks what it pays, `merged` picks how fast. See *What a finished world pays*.
   The figures themselves are placeholders and `third`'s experience curve puts it
   out of reach; both are balance, not structure.
-- **The `harness` bucket in `data/upgrades.ts` is empty.** `global` and
-  `refinery` are now authored; `harness` exists so there is somewhere for its
-  upgrades to live, and nothing names one yet.
+- ~~**The `harness` bucket in `data/upgrades.ts` is empty.**~~ Closed — seven
+  entries across its three axes: `slots`, `riders` and `step`. All placeholder
+  figures. `carry` reads the harness but is not one of them; it is a
+  `building:main` upgrade, and *The hand rides with the crowd* says why.
 - ~~**The refinery runs behind six stubs.**~~ Closed — the screen is drawn. See
   *The refinery screen* below. What is left on it is balance, not structure.
 - ~~**Red has no sink.**~~ Closed — the three purchases exist and the grade table
@@ -3252,32 +3565,34 @@ Things that are simply unbuilt, and what they cost today.
   decision.
 - ~~**Nothing travels.**~~ Closed — `PlanetManager.reach` is the verb and the
   Ahead band is where it is taken. See Overview below.
-- **Nothing expires anything yet.** The modifier layer exists (see above) and
-  `Building.removeModifier` works, but no system calls it. The re-aim penalty is
-  deliberately **not** a modifier — see Aim above.
 - **The header reads amounts, never rates.** Every `Value` in `Frame.svelte` is a
   pile, so nothing on screen says how fast a pile is filling — the one place the
   question is always live. `detail.status` is still a `RevealStub` noted as *the
   per-second rate line*, and the Overview's Behind band already draws `/s` from
   `sumHarvestRates`, so the register exists and the header does not use it.
-- **Levels are still free and automatic.** The decision to make them purchases is
-  taken and worked through in *The economy curve* above; none of it is built. It
-  is one commit — the `upgrades.ts` entries, `UnlockType` gaining `'count'`, and
-  `Building`'s level machinery coming out — because doing half of it multiplies
-  the same figure twice.
-- **The ladder prices no level crossing.** `marginalPerSecond` reads the level the
-  current count has earned, so the threshold buy reads as the worst on the board
-  and is reliably the best. One column. Until it lands, a swept run buys nothing
-  like a played game — and it stays wanted after levels become purchases, since
-  an upgrade is a marginal the ladder must price too.
-- **No 'next phase in mm:ss'.** A phase closes at an experience threshold and
-  nothing estimates when. `formatClock` is the format and `PlanetSection` is the
-  place; `#experienceAfter` already knows where the phase closes.
+- ~~**Levels are still free and automatic.**~~ Closed — see *Levels become
+  purchases*. What is left on it is balance: `through`, `priceFactor` and the
+  harvest payout that has to repay a deep merge, none of which is measured.
+- ~~**Nothing expires anything yet.**~~ Half closed — `releaseUnheld` is
+  `removeModifier`'s first caller. The re-aim penalty is still deliberately not a
+  modifier; see Aim.
+- **The ladder prices no upgrade.** The level cliff is gone from
+  `marginalPerSecond` — with the multiplier bought rather than earned, a copy's
+  marginal is genuinely flat between upgrades and the column is now honest. What
+  replaced the gap is that the upgrade *itself* is a purchase neither `buildLadder`
+  nor either policy prices: `run.ts` takes every affordable upgrade the moment it
+  can, so a swept run never weighs *upgrade or copy* — the one decision this
+  whole rework exists to create.
+- **No 'next phase in mm:ss'.** Now trivial and worth doing: a phase closes at a
+  fixed duration, so the countdown is `phaseDuration × (1 − throughPhase)` with
+  nothing to estimate. `formatClock` is the format and `PlanetSection` is the
+  place. This was a real research problem against the old experience ramp and
+  stopped being one the moment the wave became a clock.
 
-Both of those want one thing that does not exist: **a summed per-second reading**.
-`Building.perSecond(type)` is per cohort and no manager totals it, so a header
-rate and a phase estimate would each sum the cohorts themselves. Build the total
-once, on `BuildingManager`, before either.
+The first of those wants one thing that does not exist: **a summed per-second
+reading**. `Building.perSecond(type)` is per cohort and no manager totals it, so
+a header rate would sum the cohorts itself. Build the total once, on
+`BuildingManager`, before it.
 
 ## Roadmap
 
@@ -3380,16 +3695,34 @@ runs lean.
 
 ### Refinery — engine built, screen not
 
-**Matching does not happen inside the refinery.** Polarized karma always becomes
-polarized Crimson; the refinery never pairs anything off. Ochre is *bought* with
-equal parts Crimson, and the opposite Crimson is bought at a steeply scaling
-price. CONTEXT v3 §3.5, which puts matched pairs inside the refinery emitting
-Ochre, is **superseded** — amend §3.5 or annotate it, but do not re-derive the
-question here.
+**Matching happens inside the refinery, and it is the only thing that does.** One
+draw serves both lanes and the **shorter pile caps it**, so a matched pair of
+karma becomes a matched pair of Crimson. Polarity still survives the step; what no
+longer survives it is the *imbalance*. Ochre is still bought above, with equal
+parts Crimson, and the opposite Crimson is still bought at a steeply scaling
+price. CONTEXT v3 §3.5 was right that pairing belongs in the refinery and wrong
+about what pairing emits — polarized Crimson, not Ochre. Amend or annotate §3.5;
+do not re-derive the question here.
 
-What that makes the refinery is a **throughput** problem rather than a mix
-problem: X karma every Y seconds, whatever the labels read as. Three axes, all
-upgradable, and the `refinery` bucket now holds one upgrade for each:
+This replaced two independent lanes, each drawing from its own pile as fast as it
+could. The old shape was neutral on excess by construction — take the same amount
+off both piles and their difference is untouched — and then *worse* than neutral,
+because once the shorter pile emptied the surviving lane ground the surplus away
+on its own. **The refinery was quietly cleaning up after the player**, which is
+the whole reason excess never read as dangerous. Sharing one draw traps the
+unpaired remainder in karma, where the aim dial is the only thing that can reach
+it, and stalls the machine outright when a pile hits zero. The stall compounds:
+a stalled refinery moves no karma, so it earns no levels either. That is
+deliberate, and `invert` is the paid way out.
+
+What that makes the refinery is a **mix** problem sitting on a throughput one.
+Three axes still buy the ceiling — X karma every Y seconds — but the ceiling is
+now reachable only as far as the weaker karma stream allows, which is why
+`RateCeiling` draws bought-but-idle capacity as its own span rather than folding
+it into the backlog. The two are different problems: the ceiling answers to
+slots and levels, the mix answers to nothing but the dial.
+
+The `refinery` bucket holds one upgrade for each axis:
 
 | axis | moves | how |
 |---|---|---|
@@ -3981,6 +4314,58 @@ anchored — the click happened, and the world should answer it — but not its
 anything in the scene. `yields` is already the *payout* count and not the press
 count, which is what makes suppressing it exact.
 
+### The poles take the share they carry
+
+A yield lands as a spark on open ground, wherever the visible cap put it. Once a
+harness is up that is no longer the whole truth: some of the souls being paid for
+are on the lines, and their arrival should be seen to land where they are.
+
+So a spark rolls, per spark, against `min(riders, souls) / souls` — the same
+covered share `harness.multiplierFor` already prices the bonus by, read through
+`ridersOf` so it is the count `SoulSwarm` actually draws riding and not a second
+opinion. Win, and the flash is planted on a placed anchor's tip rather than on
+the ground; the bolt follows for free, since a strike is aimed at the spark it
+paid for and not at a point.
+
+**The share is the chance, and it is not authored.** There is no slider for it,
+because there is nothing to tune: a world carrying a tenth of its swarm on the
+lines should be hit there a tenth of the time, and a number in between would be
+saying something the game does not mean. It also arrives on its own — `riders_1`
+buys the first rider and the poles start taking strikes in the same purchase.
+
+**A won roll may take any placed anchor, front or back**, and `sparkFace` does
+not reach it. That cutoff governs where a *random* mark may land, and its
+argument is about the ground: at the limb the surface turns edge-on, so a flat
+dot lying in it foreshortens into the outline. A pole is not somewhere the roll
+found — it is a named thing on the world, and one behind it is still that thing.
+`sparkBack` already says how loud the far side is, and a bolt crossing the body
+to reach it reads as the world being wrapped rather than as a mark misplaced.
+
+The two rules are not in tension because they answer different questions: a lost
+roll falls back to open ground and takes `sparkFace` with it, exactly as before.
+
+`pulse.ts` learns none of this. `spark()` gained a `findSpot` callback asked once
+per mark, and the scene owns both the roll and the anchors — the module still
+does not know there is anything standing on the ground, which is the separation
+`orbit.ts` and `anchor.ts` keep for their own reasons.
+
+### The arrival is struck, not drawn
+
+`swellOf` was `sin(πt)`: up and down at the same rate, widest at the middle. That
+curve caps how long a spawn can last — given more seconds it reads as a star
+being *drawn on screen*, and the flare's whole job is to say a soul appeared.
+
+It is now lopsided, on one authored crest (`spawnRise`, default 0.12): a fast
+quadratic to full, then a smoothstep the long way back. Both halves flatten where
+they meet, so there is no corner at the peak. That is what pays for the longer
+life — `spawnLife` went 0.1 → 0.45, and the added time is spent entirely on the
+dissolve, which is the part worth watching.
+
+`hatchOf` is keyed to the same crest instead of to its old fixed 0.35–0.8 window,
+so the dot comes up over the flare's descent whatever the crest is set to. One
+event, two curves, one number: the star is struck, and the soul is what it leaves
+behind.
+
 ### Between worlds, souls earn nothing
 
 `completeFirstHarvest` clears `#selected`, so from the last harvest until the
@@ -3996,67 +4381,154 @@ figures fall back to `sumHarvestRates` over the worlds behind you with no change
 in `Frame.svelte` at all. Zero rather than a stopped emitter: the cohorts are
 still there, still bought, still the thing the next world will run on.
 
-## Excess — provisional, revisit before balancing
+## The wave is a clock
 
-> **Open with this next session.** CONTEXT v3 §3.2 defines excess but never says
-> what the wall *is*. What follows is a code-side decision taken to unblock beats
-> 7 and 9, not something §3.2 sanctions. Either §3.2 gets amended to match, or
-> this gets replaced. Do not treat the figures as settled.
+**A phase is a fixed span of time spent on the world.** `phase_duration` per
+planet, `Planet.advance(ms)` fed by `PlanetManager.tick()` off `clock`, and
+`phasesElapsed = floor(lived / phaseDuration)`. `phase_multiplier` and
+`initial_phase_amount` are gone, and so is the planet's private experience
+ledger — nothing read it once the phases stopped.
 
-§3.2 gives the numerator without argument: excess is the signed difference
-between the two held piles, negative is Burden, positive is Comfort. The wall it
-is read against is the part with no definition anywhere, and every obvious
-candidate breaks something specific:
+It used to be priced in experience on a geometric ramp, which put phases at
+`log_r(experience)`. That is worth writing down because the failure was not a bad
+number, it was the shape:
 
-- **A lifetime total** (`karma ever earned`) only ever grows while the numerator
-  is a stock, so excess decays toward zero on its own. The gate becomes free
-  late, and the debuff quietly stops existing.
-- **The two current piles** (`(P − N) / (P + N)`) invert under the refinery.
-  Matched-pair refining takes equal amounts from both, so the numerator holds
-  while the denominator shrinks — refining would *raise* your excess, against
-  §3.2's "the refinery is the main way excess leaves you".
-- **An authored figure per planet** matches the phrasing this doc used to carry,
-  but §3.2 is explicit that excess is global and only the *gate* is per-planet.
-  It also makes the reading jump on arrival somewhere new while the raw
-  difference did not move.
+- **Income and time entered identically**, as multipliers on one stock. A tenfold
+  income bought `log_r(10)` phases outright — 2.5 at `r = 2.5`. Since income in an
+  incremental multiplies while time only adds, **buying always beat waiting** at
+  advancing the wave, so the wave was an income readout wearing a clock's face.
+  You could buy past an unfavourable phase, which quietly deleted it as a
+  decision.
+- **The ramp was a race between two exponentials with nothing tying them
+  together.** The old comment claimed phases "stay about as long as each other
+  however fast experience comes in", which only holds if income also multiplies
+  by exactly `r` per phase. Early it beat that and phases flew; once the cost
+  ladders bit it fell under and they crawled. Any fixed `r` is right at one
+  moment of the run.
+- **The crawl and income-resistance were the same knob pulled opposite ways.**
+  `1/ln(r)` is how much wave a tenfold income buys, so raising `r` to blunt
+  income also made the gate unreachable. `third` at `r = 2.5` wanted 10^41
+  experience for its `agesLived: 4`.
+- **World length depended on the run before it.** A strong player reached `third`
+  faster than `second`, so the pacing curve inverted under exactly the players it
+  should have stretched.
 
-What is in the code instead is **income rate**: the wall is karma per second
-across every cohort, times an `excess.wallSeconds` window authored in
-`data/balance.ts` and read by `lib/excess.ts`. Excess
-then reads as the share of that window you are holding unpaired. It survives all
-three tests — it scales with progression so it cannot be outgrown, it does not
-decay, and the refinery does not touch the denominator.
+There is no middle. A self-normalising output clock — phase *n* costs a multiple
+of what phase *n−1* delivered — makes a tenfold income buy tenfold wave speed
+*permanently*, worse than the log. The only pricing that holds a phase steady is
+`income × seconds`, which is a seconds clock in a costume. Either income buys
+wave speed or it does not; this is the version where it does not.
 
-The window is set to **600s**, chosen so §4's "beat 7 lands around ten minutes in"
-is the literal calibration rather than a coincidence. That is a guess with a
-rationale, not a tuned number, and it is the single knob for how hard excess
-bites.
+What that buys, beyond the fix:
 
-Consequences worth naming before anyone balances against this:
+- **`agesLived` is a promise you can read.** 4 minutes, 24 minutes, 96 minutes
+  for the three worlds, authored in `planets.ts` and printable in the UI.
+- **`reaimPhases: 2` means something fixed.** The re-aim penalty is priced in
+  `progress`, so on the old third world it was a permanent debuff with no figure
+  in `balance.ts` that could have changed that. Anything else phase-priced is
+  fixed with it.
+- **The sim gets it free.** `tick()` reads `clock` deltas like the harness, so a
+  simulated run fast-forwards the wave with everything else.
 
-- **Spending karma lowers excess**, because excess is a stock of unspent karma.
-  §3.2's "exactly two ways down" is about deliberate tools; this is an incidental
-  third. It has not been closed.
-- **The wall is zero until something earns karma automatically**, so `getExcess()`
-  returns `undefined` rather than `0` — a zero would read as clean enough and
-  open beat 9 on nothing.
-- **Reserving souls raises excess before the refinery lowers it.** Reserved souls
-  do not earn, so staffing the refinery shrinks the denominator and the karma you
-  are holding reads as a larger share of a smaller window. This follows from the
-  wall being income-shaped and was not designed; it may be the right tension — you
-  pay to clean up — or it may be a spiral. Untested either way, and it is one more
-  thing that moves if the wall does.
-- **Aim and the phase now move the wall.** `countKarmaPerSecond()` reads the same
-  split the rows show — see "What the row shows" under Aim — so it carries
-  `karmaYieldFactor` and `Planet.bias()`. Aiming into a high-`polarity_multiplier`
-  cohort widens the wall several-fold and the excess reading falls; the phase flip
-  swings it by up to 2.3× on its own. This was taken deliberately, to avoid two
-  disagreeing definitions of karma per second, and it is the change most worth
-  reverting first if excess starts reading strangely.
+Two rules the clock needs, both matching the harness:
 
-The per-planet part went where §3.2 does put it: `PlanetData.firstHarvest` carries
-the conditions the planet imposes, and `Planet` checks them. Beat 9 asks the
-planet whether they hold rather than spelling any figure out itself.
+- **Only the world you are standing on ages**, and a harvested one stops — its
+  wave froze where you left it, which is what the Overview should read.
+  `#lastAt` is dropped when there is no active world, so the gap between worlds
+  is free and the next world's first phase starts when you arrive.
+- **Unclamped.** A backgrounded tab still spent the time. The wave is the one
+  clock nothing can be bought to hurry, so it should not be the one clock that
+  quietly stops when you look away.
+
+The cost, taken knowingly: the wave is no longer connected to the thing the game
+is about. Amaral liked "experience as time" as a concept and let it go on the
+pacing argument — if it comes back, it comes back as an explicit, priced upgrade
+axis on phase speed, not as the pricing of the clock itself.
+
+## Excess — there is no wall
+
+**Excess is the share of the karma you are holding that has nothing to pair
+with.** Unpaired over held, `(P − N) / (P + N)`, signed: negative is Burden,
+positive is Comfort. There is no denominator to author, no window, and no
+`wallSeconds` — the reading is a proportion of the piles themselves.
+
+§3.2 gives the numerator without argument and never says what it is read
+against, which is why this sat provisional for so long. The version that shipped
+first was **income rate** — karma per second times a 600s window — and it was
+wrong for a reason worth keeping written down, because it is not obvious.
+
+**The income wall could not spiral, arithmetically.** Unpaired karma is roughly
+tilt × the integral of income; the wall is income × 600. Income appears on both
+sides and cancels, leaving *tilt × minutes ÷ 10*. So the reading never depended
+on how big your economy was, only on how long you had been tilted — and every
+new cohort widened the wall the instant it was bought, so **growth cleaned you**.
+The thing that was supposed to be a debt was being paid off by playing well.
+
+It was also the source of the slipperiness. `countKarmaPerSecond()` carries
+`karmaYieldFactor` and `Planet.bias()`, so the phase flip swung the denominator
+by up to 2.3× and the meter jumped with it while the piles had not moved at all.
+A stock read against a rate that oscillates is a reading you cannot act on.
+
+The share fixes both by having nothing in it but stocks. It also disposes of the
+other two candidates on the old list: a **lifetime total** decays to zero because
+it only grows, and an **authored per-planet figure** contradicts §3.2's "excess
+is global, only the gate is per-planet" and would make the reading jump on
+arrival somewhere new.
+
+**The objection that killed this candidate originally is now the feature.** It
+was rejected because matched-pair refining takes equal amounts from both piles —
+numerator holds, denominator shrinks — so refining would *raise* your excess,
+against §3.2's "the refinery is the main way excess leaves you". Both halves
+moved. The refinery pairs now (see *Refinery*), so it cannot reach the unpaired
+remainder at all; §3.2's premise is simply false in the code. And a reading that
+climbs as the refinery eats your matched stock is exactly right: what is left
+when the pairs are gone *is* your imbalance, undisguised.
+
+Which gives the reading a hard, legible ceiling. **±1 means a pile is at zero,
+which is the same event as the refinery stalling.** The meter's end and the
+machine stopping are one thing, so full scale means something specific rather
+than "very bad". `ExcessMeter` already drew on `SPAN = 1` and clamped to it;
+that clamp is now the real range. And it is the same number `IntakeBar` draws —
+the tail's share of the bar — so the meter and the intake agree by construction
+instead of by maintenance.
+
+Consequences worth naming:
+
+- **The gates are now honest percentages.** `excessGate` at 0.12 / 0.08 / 0.05
+  reads as *at most 12% of what you hold is unpaired*, tightening per world. On
+  the old scale those figures had no stable meaning; the `evenBand` mismatch
+  flagged earlier resolves itself, since 0.02 is strictly tighter than the
+  tightest gate, so locking Even is harder than passing any door.
+- **`undefined` until both piles have ever existed.** Not until income exists —
+  the guard moved. Before the choice that creates negative karma there is one
+  pole and no imbalance to read, and without the guard `deep_excess` would fire
+  in the opening on a reading pinned at 1.0. Beats are strictly sequential so
+  beat 7 was safe either way; milestones are not.
+- **Spending karma is a third way down, and it is one-sided.** Roughly fifteen
+  upgrades cost `karma_positive`; **nothing costs `karma_negative`**. So a
+  Comfort tilt is partly self-correcting — your own purchases eat the surplus —
+  while a Burden tilt has no sink but the dial. That asymmetry mirrors the one
+  already in the red layer, where upgrades and `red_basic` cost red positive and
+  nothing costs red negative. It was not designed; it may be the right shape,
+  since Burden is the side you chose deliberately and should be the harder one
+  to carry. Worth a decision rather than an inheritance.
+- **Reserving souls raises the reading**, because refining shrinks held karma
+  while leaving the unpaired part alone. That is correct and it is the pressure:
+  staffing the refinery does not clean you, it strips the pairs away and leaves
+  the tilt showing. The only thing that lowers excess is aiming into the pile
+  you are short of.
+- **Merging souls no longer moves the reading**, so the read-order hazard in
+  `completeFirstHarvest` is gone. It is still read first, because §3.9 says the
+  lock is the reading the screen showed.
+- **It is flat while you pay a deep tilt off.** With one pile pinned near zero by
+  a refinery that eats it on arrival, the ratio sits near ±1 until the big pile
+  actually drains. The debt is the meter; the *rate* you are paying it at is
+  `RateCeiling`. Worth watching in play — if it reads as dead rather than as
+  ominous, the answer is a second readout, not a different denominator.
+
+The per-planet part is where §3.2 puts it: `PlanetData.firstHarvest` carries the
+conditions the planet imposes, and `Planet` checks them. Beat 9 asks the planet
+whether they hold rather than spelling any figure out itself.
 
 ## Scopes
 

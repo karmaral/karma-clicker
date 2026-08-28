@@ -4,6 +4,7 @@
   import { SweepBar } from '$ui';
   import { f } from '$lib/utils';
   import type { Listener } from '$lib/emission';
+  import { spotlight } from '$lib/spotlight.svelte';
   import planetVisuals from '$data/planet-visuals';
   import { STAGE_WIDTH } from './planet-viewport';
 
@@ -93,7 +94,7 @@
   {/if}
 
   <div class="caption">
-    <span class="verb">{clickActionVerb}</span>
+    <span class={['verb', { lit: spotlight.isLit('building', 'main') }]}>{clickActionVerb}</span>
     {#if clickActionSub}
       <span class="sub num">{clickActionSub}</span>
     {/if}
@@ -117,6 +118,7 @@
   .caption {
     position: absolute;
     bottom: 0;
+    translate: 0% 25%;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -127,6 +129,14 @@
   .verb {
     font-size: var(--fs-base);
     font-weight: 600;
+  }
+
+  /* The press has no row to tint, so the same surface-alt reading is drawn as
+     a chip around the one word standing in for it. */
+  .verb.lit {
+    background-color: var(--surface-alt);
+    margin-inline: -4px;
+    padding-inline: 4px;
   }
 
   .cooldown {

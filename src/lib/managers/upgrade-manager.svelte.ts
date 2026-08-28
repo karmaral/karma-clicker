@@ -35,14 +35,17 @@ class UpgradeManager {
 
     const [unlock_type, unlocks_at] = Object.entries(item.unlocks_at)[0] as [UnlockType, number];
 
-    if (unlock_type === 'count_total') {
+    if (unlock_type === 'count' || unlock_type === 'count_total') {
       // The building the count is asked of, not the upgrade's own bucket key —
-      // 'cohort:basic' has no building, 'basic' does.
+      // 'cohort:basic' has no building, 'basic' does. Locked while there is no
+      // building at all: a cohort you have not unlocked holds nothing.
       const { entity } = parseScope(target);
       const tgt = entity && BuildingManager.getBuilding(entity);
-      if (!tgt) return;
+      if (!tgt) return true;
 
-      return tgt.total <= unlocks_at;
+      const held = unlock_type === 'count' ? tgt.count : tgt.total;
+
+      return held < unlocks_at;
     }
     return ResourceManager.getTotal(unlock_type as ResourceType) < unlocks_at;
   }
@@ -100,6 +103,51 @@ class UpgradeManager {
     }
   }
 
+  /**
+   * Gives an upgrade back — the first thing in the game that takes one away. The
+   * modifiers go with it, by the same `id:index` the effects were added under, so
+   * a released upgrade lands exactly where it would have had it never applied.
+   */
+  release(target: string, id: string) {
+    if (!Boolean(target in this.#upgrades)) return;
+    if (!this.#upgrades[target].includes(id)) return;
+
+    const item = upgradeMap[target][id];
+    if (!item) return;
+
+    const { kind, entity } = parseScope(target);
+    const effects = Array.isArray(item.effect) ? item.effect : [item.effect];
+
+    // Symmetric with `#processEffect`: whatever held it gives it back. A fan-out
+    // was added to every cohort, so it comes off every cohort.
+    const holders = kind === 'cohorts' ? BuildingManager.cohorts : entity ? [entity] : [];
+
+    holders.forEach((held) => {
+      const building = BuildingManager.getBuilding(held);
+      effects.forEach((_, index) => building?.removeModifier(`${item.id}:${index}`));
+    });
+
+    this.#upgrades[target] = this.#upgrades[target].filter((held) => held !== id);
+    this.#acquiredLog = this.#acquiredLog.filter((held) => held !== `${target}/${id}`);
+  }
+
+  /**
+   * One rule, and the merge is only its first caller: **a `count`-gated upgrade
+   * is held only while its count is held.** So a merge burns exactly the levels
+   * it drops you below and no others — the deeper the merge, the more of the
+   * ladder is bought again, which is the whole of what the slider weighs.
+   *
+   * Nothing gated on a resource total or on `count_total` is touched; those are
+   * the layer meant to stay earned.
+   */
+  releaseUnheld() {
+    Object.keys(this.#upgrades).forEach((target) => {
+      [...this.#upgrades[target]]
+        .filter((id) => this.isLocked(target, id))
+        .forEach((id) => this.release(target, id));
+    });
+  }
+
   async #handleEffect(target: string, item: UpgradeData) {
     const effects = Array.isArray(item.effect) ? item.effect : [item.effect];
 
@@ -124,6 +172,14 @@ class UpgradeManager {
       return target.addModifier(this.#toModifier(item, effect, index));
     }
 
+    // Names no entity because it names all of them. Same reasoning as above: a
+    // fan-out has no one thing to act on, so it is always a modifier.
+    if (kind === 'cohorts') {
+      if (typeof effect === 'string') return;
+
+      return this.#fanOut(item, effect, index);
+    }
+
     // A global-scoped bucket names no entity, so nothing here can act for it yet.
     if (!entity) return;
 
@@ -142,6 +198,38 @@ class UpgradeManager {
     }
 
     BuildingManager.getBuilding(entity)?.addModifier(this.#toModifier(item, effect, index));
+  }
+
+  /**
+   * One modifier onto every cohort there is. `ModifierSet.add` drops a repeat id,
+   * so this is idempotent — which is what lets `syncFanOut` simply run it again.
+   */
+  #fanOut(item: UpgradeData, effect: Omit<Modifier, 'id'>, index: number) {
+    BuildingManager.cohorts.forEach((id) => {
+      BuildingManager.getBuilding(id)?.addModifier(this.#toModifier(item, effect, index));
+    });
+  }
+
+  /**
+   * A fan-out lands on the cohorts that exist when it is bought, so one unlocked
+   * afterwards would miss it — the bug every "all of them" effect has. Rather
+   * than have `BuildingManager.unlock` call back here and close a cycle, the held
+   * ones are re-applied off the loop beside `acquireUnpriced`. Idempotent, and
+   * small: a couple of upgrades across a handful of cohorts.
+   */
+  syncFanOut() {
+    this.#upgrades['cohorts']?.forEach((id) => {
+      const item = upgradeMap['cohorts'][id];
+      if (!item?.effect) return;
+
+      const effects = Array.isArray(item.effect) ? item.effect : [item.effect];
+
+      effects.forEach((effect, index) => {
+        if (typeof effect === 'string') return;
+
+        this.#fanOut(item, effect, index);
+      });
+    });
   }
 
   /**

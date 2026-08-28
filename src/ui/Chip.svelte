@@ -15,6 +15,8 @@
     status?: ChipStatus;
     disabled?: boolean;
     onclick?: () => void;
+    onmouseenter?: () => void;
+    onmouseleave?: () => void;
     caption?: Snippet;
     tooltipContent?: Snippet;
   }
@@ -25,6 +27,8 @@
     status = 'affordable',
     disabled = false,
     onclick,
+    onmouseenter,
+    onmouseleave,
     caption,
     tooltipContent,
   }: Props = $props();
@@ -44,6 +48,8 @@
     class={['chip', status]}
     {disabled}
     {onclick}
+    {onmouseenter}
+    {onmouseleave}
     {@attach tooltip({content: tooltipElem, options: tooltipOptions })}
   >
     <span class="header">

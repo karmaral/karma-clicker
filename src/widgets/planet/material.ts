@@ -652,6 +652,97 @@ const soulFragment = /* glsl */ `
 `;
 
 /**
+ * The spawn-in flare — a soul's own arrival, and nothing else. It carries no
+ * position of its own to work out: the instance matrix it is drawn with is a
+ * copy of the soul it marks, taken the same frame that soul is placed, so a
+ * berthing or riding soul carries its flare wherever its own path goes without
+ * either mark ever asking the other where it stands.
+ *
+ * That is also why sizing does not read the instance matrix's own scale, the
+ * way the soul's dot does — that scale is the *dot's*, and the flare wants its
+ * own, independent of it.
+ */
+const spawnVertex = /* glsl */ `
+  attribute float sSize;
+  attribute float sSpin;
+
+  varying vec2 vUv;
+  varying float vSpin;
+
+  void main() {
+    vUv = uv;
+    vSpin = sSpin;
+
+    vec4 centre = modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+    vec4 viewPos = centre + vec4(position.xy * sSize, 0.0, 0.0);
+
+    gl_Position = projectionMatrix * viewPos;
+  }
+`;
+
+/**
+ * The sparkle itself: full reach on the axes, nothing on the diagonals — a
+ * silhouette rather than a stroke on a circle, the way the spark's own dot is a
+ * fill and not a ring. Four points, fixed: they are the axes of the quad it is
+ * drawn on, so the shape never depends on a count that could land it off a whole
+ * one the way the halo's echo has to guard for.
+ *
+ * A **superellipse**, and not the four-petal rose this started as. `uPinch` is
+ * its exponent: 2 is a circle, 1 a straight-sided diamond, and below 1 the
+ * flanks cave in and the points draw out into cusps — the star. The rose could
+ * only sharpen by thinning, so its points came at the cost of the body between
+ * them; here the core stays wide however fine the points get, which is the whole
+ * of the difference and the reason the shape was changed rather than tuned.
+ *
+ * Read radially — the star's own radius at this angle, against the fragment's —
+ * rather than as the implicit |x|^k + |y|^k − 1, whose gradient blows up at the
+ * cusps and takes `fwidth` with it. The same radius is what the rim divides by.
+ */
+const spawnFragment = /* glsl */ `
+  uniform vec3 uRamp[${RAMP_SLOTS}];
+  uniform float uTone;
+  uniform float uRing;
+  uniform float uPinch;
+
+  varying vec2 vUv;
+  varying float vSpin;
+
+  ${rampRead}
+
+  void main() {
+    vec2 uv = (vUv - 0.5) * 2.0;
+
+    float c = cos(vSpin), s = sin(vSpin);
+    vec2 p = vec2(uv.x * c - uv.y * s, uv.x * s + uv.y * c);
+
+    float angle = atan(p.y, p.x);
+    float r = length(p);
+
+    float k = max(uPinch, 0.05);
+    float lobe = pow(pow(abs(cos(angle)), k) + pow(abs(sin(angle)), k), -1.0 / k);
+    float d = r - lobe;
+    float aa = fwidth(d);
+    // The edge only. The mark's whole life is in its size — see swellOf.
+    float alpha = 1.0 - smoothstep(-aa, aa, d);
+
+    if (alpha <= 0.0) discard;
+
+    // A contrasting rim near the flare's own edge, on the soul's own argument —
+    // uRing is visual.ring, the same fraction the dot's own ring is drawn at, so
+    // the flare reads as the same mark rather than a second authored shape.
+    float t = r / max(lobe, 1e-4);
+    float core = 1.0 / (1.0 + uRing);
+    float aaT = fwidth(t);
+    float ring = smoothstep(core - aaT, core, t) * step(0.001, uRing);
+    float tone = mix(uTone, float(${RAMP_SIZE - 1}) - uTone, ring);
+
+    gl_FragColor = vec4(readRamp(tone), alpha);
+
+    #include <colorspace_fragment>
+  }
+`;
+
+/**
  * The core: what the window is a window onto. A solid at the middle of the
  * world, carrying the harvest's alignment as a ruling that leans one way on the
  * negative and the other on the positive, and is simply absent on even.
@@ -1123,6 +1214,109 @@ const haloFragment = /* glsl */ `
     if (invert <= 0.0) discard;
 
     gl_FragColor = vec4(vec3(invert), 1.0);
+  }
+`;
+
+/**
+ * The strike. One quad per bolt, axis-aligned and sized on the CPU to bound
+ * the segment plus the room its warp and stroke need — the shape itself is
+ * worked out per fragment in world xy, not by bending the mesh, the way the
+ * halo's ring is a warped circle drawn on a plain quad rather than a many-gon.
+ *
+ * The camera stands unrotated on the world's own axes (see `PlanetScene`'s
+ * `projectToScreen`), so a world-space direction *is* a screen direction and
+ * nothing here needs a view-space projection to find one.
+ */
+const boltVertex = /* glsl */ `
+  attribute vec2 bFrom;
+  attribute vec2 bTo;
+  attribute float bSeed;
+  attribute float bFade;
+  attribute float bReach;
+
+  varying vec2 vFrom;
+  varying vec2 vTo;
+  varying float vSeed;
+  varying float vFade;
+  varying float vReach;
+  varying vec2 vWorldXY;
+
+  void main() {
+    vFrom = bFrom;
+    vTo = bTo;
+    vSeed = bSeed;
+    vFade = bFade;
+    vReach = bReach;
+
+    vec4 world = modelMatrix * instanceMatrix * vec4(position, 1.0);
+    vWorldXY = world.xy;
+
+    gl_Position = projectionMatrix * viewMatrix * world;
+  }
+`;
+
+/**
+ * The spark's own two tones: a fill (`uTone`, white by default) and an
+ * outline grown `uOutline` px past it in the fill's flip — the single-pass
+ * version of `sparkFragment`'s trick, since a bolt is one quad and needs no
+ * second depth plane to keep an outline from crossing itself.
+ *
+ * `t` is the fragment's own progress from the press to the spark, and `perp`
+ * its signed distance off the straight line between them — both worked out in
+ * world xy, which is exact here for the reason the vertex shader is. The warp
+ * is `sin` against `t`, damped to zero at both ends by `t * (1 - t)`, so a
+ * bolt never comes loose from either end whatever the warp or the bend count.
+ *
+ * Draws in rather than appearing whole — `vReach` is `growOf` the mark's own
+ * life, the same curve the halo travels on — so the strike sweeps from the
+ * cursor to the spark instead of standing whole from its first frame.
+ */
+const boltFragment = /* glsl */ `
+  uniform vec3 uRamp[${RAMP_SLOTS}];
+  uniform float uWidth;
+  uniform float uWarp;
+  uniform float uBends;
+  uniform float uTone;
+  uniform float uOutline;
+
+  varying vec2 vFrom;
+  varying vec2 vTo;
+  varying float vSeed;
+  varying float vFade;
+  varying float vReach;
+  varying vec2 vWorldXY;
+
+  ${rampRead}
+  ${strokeAt}
+
+  void main() {
+    vec2 span = vTo - vFrom;
+    float len = length(span);
+    if (len < 1e-5) discard;
+
+    vec2 dir = span / len;
+    vec2 rel = vWorldXY - vFrom;
+    float t = dot(rel, dir) / len;
+    if (t < 0.0 || t > vReach) discard;
+
+    float perp = dot(rel, vec2(-dir.y, dir.x));
+    float target = sin(t * 3.14159265 * max(1.0, uBends) + vSeed)
+      * uWarp * len * 4.0 * t * (1.0 - t);
+
+    float dist = abs(perp - target);
+    float perPixel = fwidth(dist);
+
+    // The outline decides how far the mark reaches; the core, inside that,
+    // decides which of the two tones a fragment gets.
+    float outer = strokeAt(dist, 0.0, uWidth + uOutline * 2.0, perPixel) * vFade;
+    if (outer <= 0.0) discard;
+
+    float inner = strokeAt(dist, 0.0, uWidth, perPixel);
+    float tone = mix(float(${RAMP_SIZE - 1}) - uTone, uTone, inner);
+
+    gl_FragColor = vec4(readRamp(tone), outer);
+
+    #include <colorspace_fragment>
   }
 `;
 
@@ -2235,6 +2429,24 @@ export function createSoulMaterial() {
   });
 }
 
+/** The spawn flare's own material — undepth-tested, like the halo and the bolt. */
+export function createSpawnMaterial() {
+  return new THREE.ShaderMaterial({
+    vertexShader: spawnVertex,
+    fragmentShader: spawnFragment,
+    side: THREE.DoubleSide,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    uniforms: {
+      uRamp: { value: readInkRamp() },
+      uTone: { value: 0 },
+      uRing: { value: 0 },
+      uPinch: { value: 1 },
+    },
+  });
+}
+
 export function createHarnessMaterial() {
   return new THREE.ShaderMaterial({
     vertexShader: harnessVertex,
@@ -2467,6 +2679,41 @@ export function createFlareOutlineMaterial() {
   return material;
 }
 
+/** The strike's own material — inverting, and undepth-tested, the halo's reasons. */
+export function createBoltMaterial() {
+  return new THREE.ShaderMaterial({
+    vertexShader: boltVertex,
+    fragmentShader: boltFragment,
+    side: THREE.DoubleSide,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    uniforms: {
+      uRamp: { value: readInkRamp() },
+      uWidth: { value: 1.5 },
+      uWarp: { value: 0.08 },
+      uBends: { value: 2 },
+      uTone: { value: 0 },
+      uOutline: { value: 1 },
+    },
+  });
+}
+
+/**
+ * `uWidth` stays in raw px, unlike the harness's — `strokeAt`'s own
+ * `fwidth`-normalised comparison turns any unit into a pixel distance before
+ * it is measured, so a width divided by `zoom` first would be halved twice.
+ */
+export function syncBoltUniforms(material: THREE.ShaderMaterial, visual: PulseVisual) {
+  const u = material.uniforms;
+
+  u.uWidth.value = Math.max(0, visual.boltWidth);
+  u.uWarp.value = Math.max(0, visual.boltWarp);
+  u.uBends.value = Math.max(1, visual.boltBends);
+  u.uTone.value = Math.round(visual.boltTone);
+  u.uOutline.value = Math.max(0, visual.boltOutline);
+}
+
 export function syncHaloUniforms(material: THREE.ShaderMaterial, visual: PulseVisual) {
   const u = material.uniforms;
 
@@ -2634,6 +2881,20 @@ export function syncSoulUniforms(
   u.uCore.value = Math.max(0, reach);
   u.uCoreTone.value = coreOf(lean).soul;
   u.uCoreRing.value = coreOf(lean).ring;
+}
+
+export function syncSpawnUniforms(material: THREE.ShaderMaterial, visual: SwarmVisual) {
+  material.uniforms.uTone.value = Math.round(visual.spawnTone);
+  material.uniforms.uRing.value = Math.max(0, visual.ring);
+
+  // The authored 0…1 onto the superellipse's own exponent, which runs the other
+  // way: 1 is the straight-sided diamond it starts from and 0.12 is as fine as
+  // the points go before the body between them stops reading as one shape.
+  // Inverted here rather than in the authoring, where the only sane reading of a
+  // slider called Pinch is that more of it is more pinched.
+  const pinch = Math.min(1, Math.max(0, visual.spawnPinch));
+
+  material.uniforms.uPinch.value = 1 - 0.88 * pinch;
 }
 
 /** Which of the three readings a lean is. `syncCoreUniforms` and the swarm must agree. */

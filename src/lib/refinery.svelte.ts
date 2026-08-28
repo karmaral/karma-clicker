@@ -1,10 +1,16 @@
 /**
- * Throughput, not matching. X karma a batch every Y seconds, drawn at the same
- * rate from both piles — so the difference between them, which is the excess,
- * carries through into the token layer untouched. Polarity survives the step.
+ * Matching, not throughput. One draw serves both lanes and the shorter pile caps
+ * it, so a matched pair of karma becomes a matched pair of red and the *unpaired*
+ * remainder — the excess — can never leave the karma layer. Polarity still
+ * survives the step; what no longer survives it is the imbalance.
  *
- * It also levels on the karma it moved, so throughput keeps climbing after the
- * upgrade table runs dry. Level scales the batch base only — never the interval.
+ * An empty pile stalls the whole machine rather than letting the other lane run
+ * on alone. That stall is the point: it is the only pressure in the game that the
+ * aim dial answers, and it compounds, because a stalled refinery moves no karma
+ * and so earns no levels either.
+ *
+ * It levels on the karma it moved, so throughput keeps climbing after the upgrade
+ * table runs dry. Level scales the batch base only — never the interval.
  */
 
 import { ResourceEmitter, type Listener } from '$lib/emission';
@@ -68,23 +74,24 @@ class Refinery {
     this.#emitter.queue();
   }
 
-  /** An empty pile does not stall the other: each is capped on its own. */
+  /**
+   * One draw for every lane, capped by the shortest pile — so the surplus in the
+   * longest is untouchable by construction, and an empty pile stops the machine
+   * instead of letting the others run on alone.
+   */
   #refine() {
     const batch = this.#batch;
     if (batch <= 0) return;
 
-    let moved = 0;
+    const paired = Math.min(batch, ...PILES.map(([karma]) => ResourceManager.getAmount(karma)));
+    if (paired <= 0) return;
 
     PILES.forEach(([karma, red]) => {
-      const taken = Math.min(batch, ResourceManager.getAmount(karma));
-      if (taken <= 0) return;
-
-      ResourceManager.remove(karma, taken);
-      ResourceManager.add(red, taken);
-      moved += taken;
+      ResourceManager.remove(karma, paired);
+      ResourceManager.add(red, paired);
     });
 
-    this.#gainExp(moved);
+    this.#gainExp(paired * PILES.length);
   }
 
   /** What the next rung costs. Ascends, so a fat batch can cross more than one. */

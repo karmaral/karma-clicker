@@ -3,36 +3,57 @@
    * Backlog, read as pressure rather than as a quantity: what arrives against
    * what the refinery can clear. Over the ceiling and the piles grow — the bar
    * is the only place that difference is visible before it shows up as excess.
+   *
+   * Two things can cap it now, and they are different problems. The ceiling is
+   * bought and answers to slots and levels; the mix is aimed and answers to
+   * nothing but the dial. A tilted fleet starves a refinery that has capacity to
+   * spare, so the idle span is drawn rather than folded into the overflow.
    */
   import { Section } from '$ui';
   import { BuildingManager } from '$lib/managers';
   import { refinery } from '$lib/refinery.svelte';
+  import { spotlight } from '$lib/spotlight.svelte';
   import { f } from '$lib/utils';
 
-  const cleared = $derived(refinery.clearedPerSecond);
-  const arriving = $derived(BuildingManager.countKarmaPerSecond());
+  const ceiling = $derived(refinery.clearedPerSecond);
 
+  const income = $derived(BuildingManager.countKarmaPerSecondByPolarity());
+  const arriving = $derived(income.positive + income.negative);
+
+  /** It only ever moves pairs, so the weaker stream decides what it can reach. */
+  const pairable = $derived(Math.min(income.positive, income.negative) * 2);
+
+  const cleared = $derived(Math.min(ceiling, pairable));
+  const idle = $derived(Math.max(0, ceiling - cleared));
   const overflow = $derived(Math.max(0, arriving - cleared));
 
+  const isStarved = $derived(idle > 0);
+
   /** The bar is scaled to whichever rate is greater, so neither can run off it. */
-  const scale = $derived(Math.max(cleared, arriving));
+  const scale = $derived(Math.max(ceiling, arriving));
 
   const share = (amount: number) => (scale > 0 ? `${(amount / scale) * 100}%` : '0%');
 </script>
 
-<Section label="Rate against ceiling">
+<Section label="Rate against ceiling" highlighted={spotlight.isLit('refinery')}>
   {#snippet aside()}
     {f(refinery.workers)} souls staffing it · {f(refinery.slots)} slots
   {/snippet}
 
   <div class="bar">
     <span class="cleared" style:width={share(cleared)}></span>
+    <span class="idle" style:width={share(idle)}></span>
     <span class="overflow" style:width={share(overflow)}></span>
   </div>
 
   <div class="captions">
     <span class="caption">
-      <strong>{f(cleared)} karma/s cleared</strong> — the ceiling
+      <strong>{f(cleared)} karma/s paired</strong>
+      {#if isStarved}
+        — your mix caps it, {f(idle)}/s of the ceiling idle
+      {:else}
+        — the ceiling
+      {/if}
     </span>
     <span class="caption right">
       <strong>{f(arriving)} karma/s arriving</strong>
@@ -55,6 +76,12 @@
 
   .cleared {
     background: var(--ink-900);
+    border-right: var(--rule-strong);
+  }
+
+  /* Capacity the mix will not let it use — bought, and going to waste. */
+  .idle {
+    background: var(--ink-300);
     border-right: var(--rule-strong);
   }
 

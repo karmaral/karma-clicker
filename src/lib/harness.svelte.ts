@@ -30,6 +30,23 @@ class Harness {
   #precision = $derived(this.#modifiers.apply(0, 'step'));
 
   /**
+   * Souls actually on the lines. The cap is bought and what fills it is whoever
+   * is incarnating, so this is the smaller of the two — and nothing at all until
+   * an anchor is down, because an unbuilt harness carries no one. Held souls are
+   * out: a soul placing the harness is not riding it.
+   *
+   * A count and nothing more. What a rider is *worth* is held by whoever the
+   * bonus belongs to — see `Click`.
+   */
+  #riding = $derived.by(() => {
+    if (!PlanetManager.getActive()?.anchorsPlaced) return 0;
+
+    const incarnating = BuildingManager.countSouls() - BuildingManager.countReserved();
+
+    return Math.max(0, Math.min(this.#riders, incarnating));
+  });
+
+  /**
    * Running *and* with a world that still wants anchors. The one condition
    * anything asking "is the phase on" should read — the press pays into the job
    * under it, the hand's yields are suspended under it, and the souls are held
@@ -106,6 +123,7 @@ class Harness {
 
   get slots() { return this.#slots; }
   get riders() { return this.#riders; }
+  get riding() { return this.#riding; }
   get workers() { return this.#workers; }
   get speed() { return this.#speed; }
   get isRunning() { return this.#isRunning; }

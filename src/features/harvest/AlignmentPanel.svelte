@@ -22,7 +22,7 @@
 
   let { yields }: Props = $props();
 
-  /** Both ends are a full wall out, the same span the header's meter reads on. */
+  /** A pile at zero, both ways — the same span the header's meter reads on. */
   const SPAN = 1;
 
   const SIDES: Polarity[] = [-1, 0, 1];

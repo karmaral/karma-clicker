@@ -1,8 +1,9 @@
 <script lang="ts">
   /**
-   * What is paired and what is not. A reading of the two piles only — the
-   * refinery pairs nothing off and the leftover is refined like the rest of it,
-   * carrying its polarity through. The tail is the excess, drawn where it falls.
+   * What is paired and what is not — and now literally what the refinery can and
+   * cannot eat, since it draws both lanes together and the shorter pile caps it.
+   * The matched span is its next meal; the tail is the excess, drawn where it
+   * falls, and nothing downstream will ever reach it.
    */
   import { Label, Section } from '$ui';
   import { ResourceManager } from '$lib/managers';

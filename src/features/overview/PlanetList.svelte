@@ -3,6 +3,7 @@
   import type { Snippet } from 'svelte';
   import { Section } from '$ui';
   import { DEFAULT_VISUAL, PlanetStill } from '$widgets/planet';
+  import { spotlight } from '$lib/spotlight.svelte';
   import planetVisuals from '$data/planet-visuals';
   import planetTexts from '$data/planets-texts';
 
@@ -35,7 +36,7 @@
         <li>
           <button
             type="button"
-            class={['planet', { selected: id === selected }]}
+            class={['planet', { selected: id === selected, lit: spotlight.isLit('planet', id) }]}
             onclick={() => onpick(id)}
             {ondblclick}
           >
@@ -81,7 +82,8 @@
     text-align: left;
   }
 
-  .planet.selected {
+  .planet.selected,
+  .planet.lit {
     background: var(--surface-alt);
   }
 
