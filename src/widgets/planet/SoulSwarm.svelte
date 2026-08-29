@@ -123,9 +123,12 @@
   const spawnGeometry = new THREE.PlaneGeometry(1, 1);
   const spawnSizes = new THREE.InstancedBufferAttribute(new Float32Array(SPAWN_CAPACITY), 1);
   const spawnSpins = new THREE.InstancedBufferAttribute(new Float32Array(SPAWN_CAPACITY), 1);
+  /** The soul's own `stay`, copied alongside its matrix — see the fill loop. */
+  const spawnStays = new THREE.InstancedBufferAttribute(new Float32Array(SPAWN_CAPACITY), 1);
 
   spawnGeometry.setAttribute('sSize', spawnSizes);
   spawnGeometry.setAttribute('sSpin', spawnSpins);
+  spawnGeometry.setAttribute('sStay', spawnStays);
 
   const spawns = createSpawns();
 
@@ -211,7 +214,7 @@
   });
 
   $effect(() => {
-    syncSpawnUniforms(spawnMaterial, visual);
+    syncSpawnUniforms(spawnMaterial, visual, bleed, reach, lean);
     invalidate();
   });
 
@@ -372,6 +375,7 @@
 
         spawnSizes.setX(drawnSpawn, spawnSize * swellOf(t, visual.spawnRise));
         spawnSpins.setX(drawnSpawn, (elapsed - mark.born) * visual.spawnSpin);
+        spawnStays.setX(drawnSpawn, stays.array[mark.index]);
 
         drawnSpawn++;
       });
@@ -380,6 +384,7 @@
       spawnMesh.instanceMatrix.needsUpdate = true;
       spawnSizes.needsUpdate = true;
       spawnSpins.needsUpdate = true;
+      spawnStays.needsUpdate = true;
     }
 
     invalidate();

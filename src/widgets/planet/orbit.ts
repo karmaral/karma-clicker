@@ -163,6 +163,9 @@ export interface SwarmVisual {
    * it. The far half is hidden. A pale third ink was tried for it and cut —
    * motion already says the path closes, and a dot that is neither in front nor
    * gone is only asking to be read as a nearer dot.
+   *
+   * The spawn flare reads these too, rather than an ink of its own — it is the
+   * same mark as the dot it stands on, not a sticker laid over it.
    */
   outTone: number;
   frontTone: number;
@@ -195,7 +198,14 @@ export interface SwarmVisual {
    * are spent on the dissolve rather than on the drawing.
    */
   spawnRise: number;
-  spawnTone: number;
+  /**
+   * The floor on a behind star's alpha, 0…1 — the flare's own answer to the
+   * hide `behind` spends on the dot. 1 keeps it shining through the world it
+   * marks; 0 matches the dot and hides it exactly as far. A fraction rather
+   * than a full hide because the mark is already short-lived, and a soul
+   * spawning on the far side is still an arrival worth a trace of.
+   */
+  spawnDim: number;
   /** Radians per second it turns over its life, so it isn't a static sticker. */
   spawnSpin: number;
 }
@@ -335,10 +345,12 @@ const peakAt = (rise: number) => Math.min(0.9, Math.max(0.02, rise));
 
 /**
  * The flare's size over its life: out of nothing to full at `spawnRise`, then
- * the long way back down. It is the whole of the mark's coming and going —
- * there is no fade under it, because a shape thinning in place reads as a
- * sticker being rubbed out where one closing reads as a thing that happened and
- * finished.
+ * the long way back down. It is the whole of the mark's coming and going — no
+ * fade rides its *life*, because a shape thinning in place reads as a sticker
+ * being rubbed out where one closing reads as a thing that happened and
+ * finished. (`spawnDim` fades it for its *place* instead — behind the world
+ * rather than through time — which is a different question and asked in the
+ * shader, not here.)
  *
  * Lopsided on purpose, and that is what lets the life be long. A star given as
  * long to open as to close reads as a thing being *drawn*, however many seconds
@@ -636,7 +648,7 @@ export const SWARM_PARAMS: SwarmParam[] = [
   // Where the star crests, as a share of that life. Under it the mark is struck
   // and left to dissolve; at 0.5 it opens and closes evenly.
   { key: 'spawnRise', label: 'Rise', group: 'Spawn', min: 0.02, max: 0.9, step: 0.02 },
-  { key: 'spawnTone', label: 'Tone', group: 'Spawn', min: 0, max: 6, step: 1 },
+  { key: 'spawnDim', label: 'Dim', group: 'Spawn', min: 0, max: 1, step: 0.05 },
   { key: 'spawnSpin', label: 'Spin', group: 'Spawn', min: 0, max: 12, step: 0.1 },
 ];
 
@@ -670,7 +682,7 @@ export const DEFAULT_SWARM: SwarmVisual = {
   spawnPinch: 0.5,
   spawnLife: 0.5,
   spawnRise: 0.12,
-  spawnTone: 0,
+  spawnDim: 0.3,
   spawnSpin: 0,
 };
 

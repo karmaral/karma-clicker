@@ -661,20 +661,39 @@ const soulFragment = /* glsl */ `
  * That is also why sizing does not read the instance matrix's own scale, the
  * way the soul's dot does — that scale is the *dot's*, and the flare wants its
  * own, independent of it.
+ *
+ * `vRel`/`vAt`/`vSpan` are the soul's own — see `soulVertex` — so the flare can
+ * be read against the body's silhouette exactly as the dot under it is. `span`
+ * is taken from the instance matrix rather than from `sSize`, deliberately: the
+ * flare's own size is the star's, but what it is tested against is where the
+ * *soul* stands, or a flare far outside the core would test as inside it.
  */
 const spawnVertex = /* glsl */ `
+  uniform float uRing;
+
   attribute float sSize;
   attribute float sSpin;
+  attribute float sStay;
 
   varying vec2 vUv;
   varying float vSpin;
+  varying float vStay;
+  varying vec3 vRel;
+  varying vec3 vAt;
+  varying float vSpan;
 
   void main() {
     vUv = uv;
     vSpin = sSpin;
+    vStay = sStay;
 
+    vec4 origin = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
     vec4 centre = modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
     vec4 viewPos = centre + vec4(position.xy * sSize, 0.0, 0.0);
+
+    vRel = viewPos.xyz - origin.xyz;
+    vAt = centre.xyz - origin.xyz;
+    vSpan = length(instanceMatrix[0].xyz) * (1.0 + uRing) * 0.5;
 
     gl_Position = projectionMatrix * viewPos;
   }
@@ -700,12 +719,22 @@ const spawnVertex = /* glsl */ `
  */
 const spawnFragment = /* glsl */ `
   uniform vec3 uRamp[${RAMP_SLOTS}];
-  uniform float uTone;
   uniform float uRing;
   uniform float uPinch;
+  uniform float uRim;
+  uniform float uOutTone;
+  uniform float uFrontTone;
+  uniform float uCore;
+  uniform float uCoreTone;
+  uniform float uCoreRing;
+  uniform float uDim;
 
   varying vec2 vUv;
   varying float vSpin;
+  varying float vStay;
+  varying vec3 vRel;
+  varying vec3 vAt;
+  varying float vSpan;
 
   ${rampRead}
 
@@ -727,14 +756,38 @@ const spawnFragment = /* glsl */ `
 
     if (alpha <= 0.0) discard;
 
+    // The same silhouette test the dot it stands on is read against — see
+    // soulFragment. The flare is the soul's own mark, not a second one with its
+    // own rule for where it is seen.
+    float reach = dot(vRel.xy, vRel.xy);
+    float edge = uRim * uRim;
+    float surface = sqrt(max(edge - reach, 0.0));
+    float over = step(reach, edge);
+    float front = step(surface, vRel.z);
+
+    float span = uCore + vSpan;
+    float inCore = step(dot(vAt.xy, vAt.xy), span * span) * step(0.001, uCore);
+
+    // Behind is dimmed rather than hidden: the star is short-lived enough that
+    // losing it outright loses the arrival it marks. uDim is the floor it never
+    // falls under.
+    float behind = over * (1.0 - front) * (1.0 - inCore);
+    alpha *= 1.0 - behind * clamp(vStay, 0.0, 1.0) * (1.0 - clamp(uDim, 0.0, 1.0));
+    if (alpha <= 0.0) discard;
+
+    float tone = mix(mix(uOutTone, uFrontTone, over), uCoreTone, inCore);
+
     // A contrasting rim near the flare's own edge, on the soul's own argument —
     // uRing is visual.ring, the same fraction the dot's own ring is drawn at, so
-    // the flare reads as the same mark rather than a second authored shape.
+    // the flare reads as the same mark rather than a second authored shape. The
+    // rim takes the far end of the ramp from whatever the fill landed on, the
+    // same idiom the dot's own ring reads by.
     float t = r / max(lobe, 1e-4);
     float core = 1.0 / (1.0 + uRing);
     float aaT = fwidth(t);
     float ring = smoothstep(core - aaT, core, t) * step(0.001, uRing);
-    float tone = mix(uTone, float(${RAMP_SIZE - 1}) - uTone, ring);
+    float ringTone = mix(mix(6.0, 0.0, step(3.5, tone)), uCoreRing, inCore);
+    tone = mix(tone, ringTone, ring);
 
     gl_FragColor = vec4(readRamp(tone), alpha);
 
@@ -2446,9 +2499,15 @@ export function createSpawnMaterial() {
     depthWrite: false,
     uniforms: {
       uRamp: { value: readInkRamp() },
-      uTone: { value: 0 },
       uRing: { value: 0 },
       uPinch: { value: 1 },
+      uRim: { value: 1 },
+      uOutTone: { value: 6 },
+      uFrontTone: { value: 0 },
+      uCore: { value: 0 },
+      uCoreTone: { value: 6 },
+      uCoreRing: { value: 0 },
+      uDim: { value: 0.3 },
     },
   });
 }
@@ -2900,9 +2959,28 @@ export function syncSoulUniforms(
   u.uCoreRing.value = coreOf(lean).ring;
 }
 
-export function syncSpawnUniforms(material: THREE.ShaderMaterial, visual: SwarmVisual) {
-  material.uniforms.uTone.value = Math.round(visual.spawnTone);
-  material.uniforms.uRing.value = Math.max(0, visual.ring);
+/**
+ * Same signature as `syncSoulUniforms`, and for the same reason: the flare is
+ * read against the body's silhouette exactly as the dot it stands on is, so it
+ * takes the same `bleed`, `reach` and `lean` that call is already passing.
+ */
+export function syncSpawnUniforms(
+  material: THREE.ShaderMaterial,
+  visual: SwarmVisual,
+  bleed: number,
+  reach: number,
+  lean: number,
+) {
+  const u = material.uniforms;
+
+  u.uRing.value = Math.max(0, visual.ring);
+  u.uRim.value = visual.rim + bleed;
+  u.uOutTone.value = Math.round(visual.outTone);
+  u.uFrontTone.value = Math.round(visual.frontTone);
+  u.uCore.value = Math.max(0, reach);
+  u.uCoreTone.value = coreOf(lean).soul;
+  u.uCoreRing.value = coreOf(lean).ring;
+  u.uDim.value = Math.min(1, Math.max(0, visual.spawnDim));
 
   // The authored 0…1 onto the superellipse's own exponent, which runs the other
   // way: 1 is the straight-sided diamond it starts from and 0.12 is as fine as
@@ -2911,7 +2989,7 @@ export function syncSpawnUniforms(material: THREE.ShaderMaterial, visual: SwarmV
   // slider called Pinch is that more of it is more pinched.
   const pinch = Math.min(1, Math.max(0, visual.spawnPinch));
 
-  material.uniforms.uPinch.value = 1 - 0.88 * pinch;
+  u.uPinch.value = 1 - 0.88 * pinch;
 }
 
 /** Which of the three readings a lean is. `syncCoreUniforms` and the swarm must agree. */

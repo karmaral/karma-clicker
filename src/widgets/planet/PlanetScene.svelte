@@ -467,11 +467,12 @@
   function spotOnAnchor(standing: AnchorPlacement[], share: number): Spot | undefined {
     if (!standing.length || Math.random() >= share) return undefined;
 
-    // The tip, which `chamfer` leaves as a small flat cap — the one place on the
-    // solid the harness's own lines already meet.
+    // The base, where the solid meets the ground — a spark is a mark on the
+    // surface a strike hit. The tip is where the harness ties instead, and up
+    // there the mark was lost in the cap, the lines and the bolt's own terminus.
     const at = standing[Math.floor(Math.random() * standing.length)];
 
-    return { x: at.x, y: at.y, z: at.z, r: at.peak };
+    return { x: at.x, y: at.y, z: at.z, r: at.base };
   }
 
   /** Same cursor discipline as `flashes`, kept apart because a yield is not a click. */
