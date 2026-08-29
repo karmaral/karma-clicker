@@ -16,7 +16,7 @@ export type RevealKey =
   | 'nav.refinery'
 
   // `reading.*`, not `header.*` — these predate the header and the frame
-  // relocates them at beat 4 rather than re-revealing them.
+  // relocates them at beat 5 rather than re-revealing them.
   | 'reading.experience'
   | 'reading.posKarma'
   | 'reading.negKarma'

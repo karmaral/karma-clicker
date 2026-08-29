@@ -9,8 +9,9 @@ const data = {
   beats: {
     'click': 'Something has to turn the wheel. For now that is you.',
     'karma': 'The lives leave a residue behind them. It has a name.',
+    'rail': 'You have done this enough to do it better. What you learn stays learned.',
     'first_soul': 'One of them stayed. It turns the wheel without being asked.',
-    'rows_and_rail': 'There are enough of them to count now. The figures rise into view.',
+    'rows': 'There are enough of them to count now. The figures rise into view.',
     'wave': 'The unevenness has a shape. It was always there.',
     'negative_karma': 'There is another way to earn. The lives can be turned to serve themselves.',
     'excess': 'The books do not balance. What you took has started taking back.',

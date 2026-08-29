@@ -54,6 +54,7 @@
   .value {
     font-size: var(--fs-sm);
     font-weight: 600;
+    font-stretch: var(--wd-figure);
     line-height: 1;
     color: var(--ink-900);
     position: relative;

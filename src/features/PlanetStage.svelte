@@ -78,6 +78,7 @@
       swarm={DEFAULT_SWARM}
       {cohorts}
       pulse={DEFAULT_PULSE}
+      clickMs={duration}
       clockKey={id}
       {clickActionVerb}
       disabled={isInProgress}

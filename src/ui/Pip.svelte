@@ -3,8 +3,10 @@
    * A count standing next to a label, for something buyable behind it that you
    * cannot currently see. The one **filled** mark in a system that otherwise
    * says everything in rules and borders, and that is deliberate: it has to
-   * carry across the header from a tab you are not on, and an outline at this
-   * size reads as another figure rather than as a signal.
+   * carry across the header from a place you are not looking at.
+   *
+   * `outlined` is for where it no longer has that carrying to do — the section
+   * you are already on. Same box, same count, one weight quieter.
    *
    * Nothing is drawn at 0 — an empty pip is a badge saying there is no news,
    * which is worse than the absence it is trying to report.
@@ -13,13 +15,14 @@
     count: number;
     /** What the count is of, for anyone reading the tab rather than seeing it. */
     label: string;
+    outlined?: boolean;
   }
 
-  let { count, label }: Props = $props();
+  let { count, label, outlined = false }: Props = $props();
 </script>
 
 {#if count > 0}
-  <span class="pip" aria-label="{count} {label}">{count}</span>
+  <span class={['pip', { outlined }]} aria-label="{count} {label}">{count}</span>
 {/if}
 
 <style>
@@ -37,5 +40,12 @@
     font-weight: 700;
     line-height: 1;
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Inset rather than a border so the box keeps its metrics either way. */
+  .pip.outlined {
+    background: none;
+    box-shadow: inset 0 0 0 1px var(--ink-900);
+    color: var(--ink-900);
   }
 </style>

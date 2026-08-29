@@ -2,6 +2,7 @@ import { BuildingManager, PlanetManager, ResourceManager } from '$lib/managers';
 import { beats, createTriggerContext, milestones, progression } from '$lib/progression';
 import { refinery } from '$lib/refinery.svelte';
 import { harness } from '$lib/harness.svelte';
+import { sound } from '$lib/sound.svelte';
 import { pulse } from '$lib/loop';
 import { log } from '$lib/log.svelte';
 import texts from '$data/log-texts';
@@ -31,7 +32,7 @@ function watchExperience() {
   });
 }
 
-/** The wave is felt here long before beat 5 draws it. */
+/** The wave is felt here long before beat 6 draws it. */
 function watchWave() {
   let previous = PlanetManager.getActive()?.isDense;
 
@@ -105,6 +106,31 @@ function watchHarness() {
   });
 }
 
+const sounded = new Set<string>();
+
+/**
+ * The click sounds on the accepted press, not the raw button or the payout.
+ * Souls sound on `'add'`, cohort by cohort as each unlocks — it carries how
+ * many arrived in that one purchase, so a x10 buy bursts instead of clicking
+ * once. Fires on a free grant too (an upgrade's `acquire`), which is correct:
+ * this is souls arriving, not money spent.
+ */
+function watchSound() {
+  sound.warm();
+  BuildingManager.addListener('main', 'queue', () => sound.play('planet.click'));
+
+  $effect(() => {
+    for (const id of BuildingManager.cohorts) {
+      if (sounded.has(id)) continue;
+
+      BuildingManager.addListener(id, 'add', (detail) => {
+        sound.play('soul.purchase', Number(detail?.added ?? 1));
+      });
+      sounded.add(id);
+    }
+  });
+}
+
 export function wire() {
   watchExperience();
   watchWave();
@@ -113,4 +139,5 @@ export function wire() {
   watchBuildings();
   watchRefinery();
   watchHarness();
+  watchSound();
 }

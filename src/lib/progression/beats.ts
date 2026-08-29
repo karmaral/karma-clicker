@@ -18,12 +18,18 @@ export interface Beat {
 /** Both upgrades named below are priced triggers with no effect of their own. */
 const GLOBAL = 'global';
 
+/**
+ * `building:main/str_1`'s own gate. The rail opens on the figure that puts the
+ * first chip in it, so it is never revealed empty — keep the two together.
+ */
+const FIRST_CHIP = 40;
+
 export const beats: Beat[] = [
   // One button, one number. The log carries the reward.
   {
     id: 'click',
     when: () => true,
-    // The wave runs from the start so beat 5 explains noise already felt.
+    // The wave runs from the start so beat 6 explains noise already felt.
     runs: ['incarnation', 'wave'],
     reveals: {
       'details.disc': 'live',
@@ -41,6 +47,17 @@ export const beats: Beat[] = [
     reveals: { 'reading.posKarma': 'live' },
   },
 
+  // Somewhere to spend. Gated on experience and not on souls: what the rail
+  // holds here is the click's own ladder, which souls have nothing to do with —
+  // and on a soul count the two chips unlocked before it arrived together as a
+  // wall. `when` is the floor, because this beat *is* a threshold.
+  {
+    id: 'rail',
+    when: (ctx) => ctx.total('experience') >= FIRST_CHIP,
+    floor: FIRST_CHIP,
+    reveals: { 'frame.rail': 'live' },
+  },
+
   // Automatic from the first one — the wheel starting to turn.
   {
     id: 'first_soul',
@@ -50,18 +67,16 @@ export const beats: Beat[] = [
     reveals: { 'details.cohortTable': 'live' },
   },
 
-  // The figures fly up into the header; the disc stays where it was.
-  // Five, not ten: five is the first cohort gate, so the rail lands on the beat
-  // that gives it something worth buying rather than a beat later. The click's
-  // ladder is spaced to match — see `building:main` — so it arrives holding
-  // three chips and not the whole catalogue.
+  // The figures fly up into the header; the disc stays where it was. Five, not
+  // ten: five is the first cohort gate, so the rows land on the beat that gives
+  // them something to count. The rail is no longer here — it opens at beat 3 on
+  // the click's own ladder, which is what it holds until this beat.
   {
-    id: 'rows_and_rail',
+    id: 'rows',
     when: (ctx) => ctx.totalSouls >= 5,
     floor: 4_200,
     reveals: {
       'frame.header': 'live',
-      'frame.rail': 'live',
       'details.status': 'live',
       'nav.details': 'live',
     },

@@ -17,6 +17,7 @@
   .fig {
     color: var(--ink-900);
     font-weight: 600;
+    font-stretch: var(--wd-figure);
     line-height: 1;
   }
 

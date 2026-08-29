@@ -25,12 +25,12 @@ save is just re-running `evaluate()` — no replay, no bespoke state.
 **Reveals never regress.** `absent` → `inert` → `live` is one-way. `inert` means
 drawn but unclickable — a promise, not a disabled control. It is distinct from
 *availability*, which is live game state and freely reversible: `nav.detail` is
-`live` from beat 4, but the Detail screen is only reachable while a planet is
+`live` from beat 5, but the Detail screen is only reachable while a planet is
 active.
 
 **Systems run before their panels appear.** `runs` is deliberately decoupled
 from `reveals` — nothing is added that wasn't already running invisibly. The
-wave ticks from beat 1 so that beat 5 *explains noise the player has already
+wave ticks from beat 1 so that beat 6 *explains noise the player has already
 felt* rather than introducing a new mechanic. `SYSTEM_SURFACES` exists so
 `validate()` can enforce this.
 
@@ -39,6 +39,36 @@ fallback trigger, so a player who takes an unanticipated route still advances.
 The exception is `eventOnly` beats, where no experience figure honestly stands
 in for the event — those four have no floor *by design*, and must not be given
 one. See the stubs below for why that matters right now.
+
+### The rail opens on what it holds
+
+Beat 3 is `rail`, and it reveals `frame.rail` alone. It used to ship inside beat
+5 — then `rows_and_rail` — gated on `totalSouls >= 5`, which was the wrong
+quantity twice over. What the rail holds at that point in the run is the *click's*
+own ladder, and souls have nothing to do with it; and `building:main`'s first two
+chips unlock at 40 and 100 experience, both long before a fifth soul, so they
+unlocked into no rail at all and then landed together the moment one was finally
+drawn. The bucket's own comment had been warning about that wall without naming
+its cause.
+
+So the beat gates on `FIRST_CHIP` — `building:main/str_1`'s own gate, 40, held in
+one const beside the beat so the two cannot drift. The rail is never revealed
+empty, and it opens holding exactly one chip. `when` and `floor` are the same
+figure here, which is not redundancy worth removing: this beat *is* an experience
+threshold, and `validate()` requires a floor or an `eventOnly` mark from every
+beat that is not the first.
+
+That left beat 5 revealing the header, the status row and `nav.details` — the
+"figures fly up into the frame" moment, which is genuinely about there being
+enough souls to count. It is now `rows`.
+
+**The rail is rendered from `App.svelte`, not `Frame.svelte`.** It was nested
+inside `Frame`, which mounts only behind `frame.header`, so a rail revealed
+before the header could not draw however early its own beat fired. `Rail` is a
+plain flow element with a bottom rule and no positioning of its own, so lifting
+it a level costs nothing. `UpgradeRail` reads `nav.active`, which defaults to
+`details` and does not depend on `nav.details` being revealed — the pre-header
+opening is a live Detail screen with no tabs over it.
 
 ## Verification
 
@@ -4307,12 +4337,14 @@ rather than as a bug.
 
 ### A spark is where a soul landed
 
-The press keeps its mark on the ground and its halo while a world is being
-anchored — the click happened, and the world should answer it — but not its
-**spark**: a spark is a soul arriving, and during the phase nobody arrives. So
-`DetailScreen` stops advancing `yields` under `isAnchoring` rather than gating
-anything in the scene. `yields` is already the *payout* count and not the press
-count, which is what makes suppressing it exact.
+The press keeps its mark on the ground, its halo and now its **bolt** while a
+world is being anchored — the click happened, and the world should answer it —
+but not its **spark**: a spark is a soul arriving, and during the phase nobody
+arrives. So `DetailScreen` stops advancing `yields` under `isAnchoring` rather
+than gating anything in the scene. `yields` is already the *payout* count and
+not the press count, which is what makes suppressing it exact. The bolt struck
+during the phase aims at the anchor going down instead — see *The bolt leaves
+at the press* below for why it no longer waits for a spark to exist at all.
 
 ### The poles take the share they carry
 
@@ -4324,8 +4356,9 @@ So a spark rolls, per spark, against `min(riders, souls) / souls` — the same
 covered share `harness.multiplierFor` already prices the bonus by, read through
 `ridersOf` so it is the count `SoulSwarm` actually draws riding and not a second
 opinion. Win, and the flash is planted on a placed anchor's tip rather than on
-the ground; the bolt follows for free, since a strike is aimed at the spark it
-paid for and not at a point.
+the ground; the bolt leads it there, not the other way — a strike is aimed at
+the spot the flash will land on the moment it is struck, which is now the
+press, well before the spark that lands there exists.
 
 **The share is the chance, and it is not authored.** There is no slider for it,
 because there is nothing to tune: a world carrying a tenth of its swarm on the
@@ -4344,10 +4377,79 @@ to reach it reads as the world being wrapped rather than as a mark misplaced.
 The two rules are not in tension because they answer different questions: a lost
 roll falls back to open ground and takes `sparkFace` with it, exactly as before.
 
-`pulse.ts` learns none of this. `spark()` gained a `findSpot` callback asked once
-per mark, and the scene owns both the roll and the anchors — the module still
+`pulse.ts` learns none of this. `aim()` — the roll, now taken at the press — gained
+the `findSpot` callback, and the scene owns both it and the anchors; `spark()`
+only ever turns an already-chosen spot into a ring-buffer mark. The module still
 does not know there is anything standing on the ground, which is the separation
 `orbit.ts` and `anchor.ts` keep for their own reasons.
+
+### The bolt leaves at the press
+
+A queued click used to answer with nothing until its payout landed, and then
+the whole strike appeared at once — the one mark with a direction, arriving
+with no flight. At `main`'s starting 1000 ms that read as the press doing
+nothing for a second and then a bolt out of nowhere.
+
+The fix moves the strike to the press it belongs to and lets the wait *be* the
+flight. `Bolt.to` is a frozen `Spot` rather than a live `Spark`: the target is
+chosen — `pulses.aim()` — the moment the bolt leaves, before the spark it is
+aimed at exists, and stashed for the matching payout to `spark()` onto the
+ground. `PlanetScene`'s `flashes` effect does the aiming and the striking now;
+its `yields` effect only shifts a stashed batch off and plants it. A `Spot` is
+frozen rather than resolved for the same reason the mark's own doc always
+argued for the opposite of freezing its *position*: a `Spark` is a ring-buffer
+slot, and a bolt still in flight when its target's slot is reused would
+silently follow whatever click landed there next.
+
+The bolt's life is `max(boltLife, clickMs / 1000)` — the authored floor, or the
+click's own duration whenever that is longer, worked out in the scene since
+only it knows the click. A lab has no `clickMs` and keeps the authored 0.15 s;
+`speed_3`'s zeroed duration falls back to it too, so an instant click still
+gets its tracer in one frame rather than losing the mark. Nothing here is a
+second FX authored for the pre-`speed_3` stretch — the wait was always going
+to need *something*, and now the something it needs is the mark that already
+existed, doing the one job it was missing.
+
+A strike that can now live a full second cannot fade the way the others do:
+`fadeOf` is cubic, and a bolt on that curve is a ghost by its own halfway
+point. `holdOf` is its own alpha — full weight for the whole flight — and
+`boltTrail` is what keeps a long strike reading as travel instead of a rod
+snapping into place: the fragment shader lights only the share of the drawn
+length nearest the head and fades the rest behind it. A floor under that
+fade was tried and dropped — it read worse, not better, so the spent trail
+still fades to nothing.
+
+**The near end stands still unless the click is instant.** `Bolt` used to read
+`getCursor` every frame regardless, so a strike already a second into its
+flight would slide to wherever the pointer had since wandered — unmoored from
+the press that threw it. `isInstant` (`(clickMs ?? 0) <= 0`, worked out in the
+scene) gates that read: a click with a wait of its own keeps its strike
+planted at the cursor's position when it struck, and only `speed_3`'s zeroed
+duration — or a lab with no building — gets the live tracking back, which is
+also the one case short enough that a moving cursor was never the problem.
+
+**The trail itself eases out rather than switching off.** A head with a lit
+trail earns its keep on a real flight, but on an instant click it did the
+opposite of what it was for: with nothing to travel, a comet with a dark tail
+only made the zero duration more visible, not less. `PlanetScene` scales
+`boltTrail` toward a full line — `mix(authored, 1, floor / life)` — as the
+bolt's actual life sits closer to its own authored floor, so a click ramping
+down through `speed_1`/`speed_2` eases into the comet rather than snapping
+into it, and one at exactly 0 flashes its whole length the way the strike
+always used to. `clickMs === undefined` (a lab with no click at all, not the
+same as an instant one) is the one case exempted — it plays `boltTrail`
+exactly as authored, or the slider would have nothing left to preview.
+
+The alpha needed the same easing, not just the trail. `holdOf` — a constant
+1 — was right for a real flight, where the old cubic `fadeOf` would have
+ghosted the strike out by the halfway point, but held flat across an instant
+click's whole life it read as too bright against the fade that mark always
+had. `PlanetScene` derives one `nearFloor` (1 at the floor or in the lab,
+easing to 0 as the wait grows real) and drives both scalings from it —
+`boltTrail` toward a full line, and a new `boltHold` toward 0, blending
+`Bolt`'s alpha from `fadeOf(t)` (`hold: 0`, the old decay) to `holdOf(t)`
+(`hold: 1`) rather than switching between the two. An instant click ends up
+back at its original fading flash; a real flight keeps its full-weight hold.
 
 ### The arrival is struck, not drawn
 
@@ -4572,12 +4674,43 @@ rather than a thing, on an index no bucket ever reached `_1` of honestly. The
 autonomy on at the first non-click acquire, so authoring it is redundant, and its
 case in `#processEffect` stays commented out.
 
-`cohort:basic/first` is unpriced for a reason that is not balance: the rail
-arrives at beat 4 and the cohort table at beat 3, so a *priced* first cohort has
-no buyer until after the beat it is supposed to cause. It was `['unlock',
-'autonomy']`, which builds the cohort at count 0 and grants nothing, so beats 3
-and 4 could only ever reach on their floors. Don't re-price it without giving the
-opening another buyer first.
+### A cohort gates in karma and pays in experience
+
+Every `first` **gates in karma and pays in experience**, and those are not one
+job. `unlocks_at` reads a lifetime total that can never be spent, so it is a
+clock: *when does this kind of soul become available*. `costs` reads the
+spendable pile, so it is the trade. `chaos`, `steady` and `zealot` used to gate
+and charge in karma at the identical figure — one currency doing both, and
+neither reading.
+
+The price is experience because **the cohorts already are**: copies and level
+upgrades alike, `cost_type: 'experience'` throughout `buildings.ts`. It is *The
+level-replacements are priced in experience* applied one level up — the trade
+only exists when both sides come out of the same pocket. Priced in karma, the
+opening ran two clocks side by side: the click's ladder spent experience while
+the first cohort accrued on an unspendable karma total, and an unspent pile
+always wins that race. Priced in experience, a cohort costs you a rung of the
+click's ladder and the two order themselves.
+
+The gate stays karma for a reason that is specific to the click: it pays a flat 1
+karma untouched by `str_*`, so **a karma gate is a press count**. 30 karma is 30
+presses whether that takes thirty seconds or eighteen — which makes `speed_1`
+visibly pull the next cohort forward in wall-clock time, a speed chip buying
+access rather than only throughput. An experience gate would be pulled forward by
+`str_*` instead, and there are already four of those.
+
+`cohort:basic/first` stays unpriced, and the reason is no longer that it has no
+buyer — beat 3 now opens the rail, ahead of the cohort table at beat 4. It stays
+unpriced because it is the `first_soul` beat: the first soul is something that
+happens to you, not a chip you find. `acquireUnpriced()` grants it the moment
+`unlocks_at` holds. It was `['unlock', 'autonomy']`, which builds the cohort at
+count 0 and grants nothing, so those two beats could only ever reach on their
+floors.
+
+Its gate moved 15 → 30. At 1 karma a press it used to land at press 15, ahead of
+both opening click chips — the first cohort arrived before the click had a ladder
+to be enjoyed. 30 puts it behind them. It is the knob to turn if the opening
+still reads as crowded; nothing else depends on the figure.
 
 `cohort:steady/speed_1` was `core_1`, the one second entry upgrade, and its
 `autonomy` effect bought nothing. It keeps its price and its title and now moves
@@ -4586,23 +4719,23 @@ that never speeds up with count. Placeholder figure.
 
 `global` holds two priced triggers and nothing else, so `effect` is now optional
 on `UpgradeData` — an upgrade whose whole content is the purchase. That is what
-made `wider_wave` the wrong word: the scope cannot widen anything, and beat 5
+made `wider_wave` the wrong word: the scope cannot widen anything, and beat 6
 calls the wave *a clock you read, not a lever*. It is `read_the_wave`. Both are
-priced rather than granted, because beat 6 is *how dirty do you want to run* and
+priced rather than granted, because beat 7 is *how dirty do you want to run* and
 a choice you are handed is not one.
 
-Beat 6 lost its `total('karma_negative') > 0` fallback in the same edit. `aim`
-returns `positiveShare: 1` until beat 6 runs `negKarma`, so that pile could not
+Beat 7 lost its `total('karma_negative') > 0` fallback in the same edit. `aim`
+returns `positiveShare: 1` until beat 7 runs `negKarma`, so that pile could not
 exist before the beat that tested for it — a second route on paper only.
 
 Figures on `planet:second` and `planet:third` are placeholders. They put
-discovery near beat 8 and nothing more; nothing is balanced against them.
+discovery near beat 9 and nothing more; nothing is balanced against them.
 
 ## Naming
 
 `detail` (the design docs' "close-up") shows the planet's proper noun, so code
 and label can never match there. `reading.*` rather than `header.*`, because
-those figures predate the header: beat 4 relocates them into the frame instead of
+those figures predate the header: beat 5 relocates them into the frame instead of
 revealing them again. None of this is drift; don't "fix" it.
 
 Retired with CONTEXT v3: *clearing* (→ refining, and the screen is labelled

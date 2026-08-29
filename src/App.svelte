@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { SvelteToast, toast } from '@zerodevx/svelte-toast';
-  import { Card, Label, Value } from '$ui';
+  import { Card, Label, Rail, Value } from '$ui';
   import {
     PlanetManager, BuildingManager, NotificationManager, ResourceManager,
   } from '$lib/managers';
@@ -12,7 +12,7 @@
   import { wire } from '$lib/wiring.svelte';
   import { f } from '$lib/utils';
   import * as loop from '$lib/loop';
-  import { AllUpgrades, Frame, Screen } from '$features/frame';
+  import { AllUpgrades, Frame, Screen, UpgradeRail } from '$features/frame';
   import { catalogue } from '$features/frame/upgrades.svelte';
   import { DetailsScreen } from '$features/details';
   import { OverviewScreen } from '$features/overview';
@@ -58,7 +58,7 @@
 <svelte:head>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
-  <link href="https://fonts.googleapis.com/css2?family=Encode+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Encode+Sans:wdth,wght@75..125,300..700&display=swap" rel="stylesheet">
 </svelte:head>
 
 <main inert={catalogue.isOpen}>
@@ -88,9 +88,12 @@
       </div>
     {/if}
 
-    <!-- All three at once, and only one of them looked at. A screen left is
-         hidden rather than destroyed, so its planet keeps the context it was
-         drawn in and comes back turning instead of blank. -->
+    {#if progression.isRevealed('frame.rail')}
+      <Rail>
+        <UpgradeRail />
+      </Rail>
+    {/if}
+
     <div class="screens">
       <Screen active={nav.active === 'details'}>
         <DetailsScreen />

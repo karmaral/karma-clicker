@@ -12,10 +12,16 @@ export const numberFormat = Intl.NumberFormat('en-US', {
 
 const BASE = 1000;
 
+/** Digits carry themselves this far; commas already group them. */
+const SUFFIX_FLOOR = BASE ** 2;
+/** Padded, so a figure holds its width as it ticks: 1.06M, not 1.1M. Two, not
+ *  three — the header has no room for a third and the tail says little. */
+const SCALED_DECIMALS = 2;
+
 /**
- * Three significant digits, at whatever scale: 1.23k, 12.3k, 123k. A decimal
- * earns its place under a hundred — past that the integer has already said it
- * and the tail is noise you cannot act on.
+ * Below the suffix floor, where the integer is the figure: 1.23, 12.3, 123. A
+ * decimal earns its place under a hundred — past that the integer has already
+ * said it and the tail is noise you cannot act on.
  */
 function decimalsFor(val: number) {
   const abs = Math.abs(val);
@@ -40,26 +46,33 @@ export function f(val: number, floats?: number, useLongForm = false) {
   }
 
   let baseIndex = 0;
-  if (val >= BASE) {
-    baseIndex = 1;
+  if (val >= SUFFIX_FLOOR) {
+    baseIndex = 2;
     while (val >= BASE ** (baseIndex + 1)) {
       baseIndex++;
     }
     val /= BASE ** baseIndex;
   }
 
-  const decimals = floats ?? decimalsFor(val);
+  const decimals = floats ?? (baseIndex ? SCALED_DECIMALS : decimalsFor(val));
   let rounded = Math.round(val * 10 ** decimals) / 10 ** decimals;
 
-  // Rounding can carry past the suffix: 999.99k with its decimals dropped is
-  // 1,000k, which is a scale nobody writes. Step the suffix instead.
-  if (rounded >= BASE && baseIndex + 1 < suffixes.length) {
+  // Rounding can carry past the scale it was measured at: 999.9999M is
+  // 1000.000M once its decimals land, a figure nobody writes. Step the suffix.
+  if (baseIndex === 0 && rounded >= SUFFIX_FLOOR) {
+    rounded /= SUFFIX_FLOOR;
+    baseIndex = 2;
+  } else if (baseIndex && rounded >= BASE && baseIndex + 1 < suffixes.length) {
     rounded /= BASE;
     baseIndex++;
   }
 
+  const digits = baseIndex
+    ? rounded.toFixed(floats ?? SCALED_DECIMALS)
+    : rounded.toString();
+
   return (
-    rounded.toString().replace(
+    digits.replace(
       /\B(?=(\d{3})+(?!\d))/g,
       ','
     ) + suffixes[baseIndex]
@@ -73,9 +86,15 @@ export function f(val: number, floats?: number, useLongForm = false) {
  */
 export function formatCost(val: number) {
   if (!isFinite(val) || val <= 0) return f(val);
+  if (val < BASE) {
+    const step = 10 ** -decimalsFor(val);
 
-  const scale = BASE ** Math.max(0, Math.floor(Math.log10(val) / 3));
-  const step = scale / 10 ** decimalsFor(val / scale);
+    return f(Math.ceil(val / step) * step);
+  }
+  if (val < SUFFIX_FLOOR) return f(Math.ceil(val));
+
+  const scale = BASE ** Math.floor(Math.log10(val) / 3);
+  const step = scale / 10 ** SCALED_DECIMALS;
 
   return f(Math.ceil(val / step) * step);
 }

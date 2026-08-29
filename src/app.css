@@ -52,6 +52,10 @@
   --glyph-size:16px;
 
   --font:"Encode Sans", system-ui, sans-serif;
+  /* Encode Sans carries a real width axis, so a figure narrows without changing
+     typeface. Figures and the rates that stand beside them — not counts set
+     inside a sentence, where condensing reads as a different font. */
+  --wd-figure:87.5%;
   --fs-display:30px;
   --fs-hero:76px;
   --fs-xxl:62px;

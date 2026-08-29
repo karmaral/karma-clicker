@@ -1,8 +1,11 @@
 /**
- * The click. One **flash** is one click, and it leaves two kinds of mark, born
- * together and dying apart: a **halo** — a pair of rings around the whole world,
- * facing the camera and *inverting* whatever they cross — and **sparks**,
- * landing at random points on the surface and lying in the terrain there.
+ * The click. One **flash** is one click, and it leaves marks in two waves: a
+ * **halo** and a **bolt**, both born with the press — and a **spark**, born
+ * with the payout the bolt was flying toward. A halo is a pair of rings around
+ * the whole world, facing the camera and *inverting* whatever they cross; a
+ * bolt is a warped line struck at a spot chosen the moment it leaves, so the
+ * wait between press and payout is the flight and not a mystery; a spark lands
+ * on that same spot once the wait is over.
  *
  * Nothing here is game state. The scene is told a click landed and never learns
  * what it bought, the same separation `orbit.ts` and `anchor.ts` keep.
@@ -64,21 +67,23 @@ export interface Spark extends Mark {
 export type Spot = Pick<Spark, 'x' | 'y' | 'z' | 'r'>;
 
 /**
- * The strike: a warped line from the cursor to the spark it paid for, in the
+ * The strike: a warped line from the cursor to the spot it is aimed at, in the
  * scene's own frame — the one `Halo` already draws in, outside the body's
  * spin. `Bolt` reads both ends live every frame the mark is alive, and both
  * fall back once there is nowhere live left to read: `fx`/`fy` to where the
- * cursor started, `toSpark` to the world's own centre.
+ * cursor started, `to` to the world's own centre.
  *
- * The far end is the *spark itself* rather than a world point taken from it
- * once — a spark is drawn inside the body's spin and drifts with it, and a
- * bolt struck outside that spin has to chase it every frame or the two visibly
- * part ways over a bolt's life. `undefined` only while a slot has never held a
- * strike; every live bolt was given one at `bolt()`.
+ * `to` is a frozen `Spot` chosen at the press — before the spark it is aimed at
+ * exists — rather than a `Spark` read live: a ring-buffer slot can be reused
+ * by a later click while this bolt is still in flight, which would silently
+ * retarget it. `sparkWorldPosition` is re-run on it every frame regardless, so
+ * the far end still chases the body's own spin exactly as a live spark would.
+ * `undefined` only while a slot has never held a strike; every live bolt was
+ * given one at `bolt()`.
  */
 export interface Bolt extends Mark {
   fx: number; fy: number;
-  toSpark: Spark | undefined;
+  to: Spot | undefined;
   /** Its own draw against the warp, so two strikes in a row are not one shape twice. */
   seed: number;
 }
@@ -250,14 +255,18 @@ export interface PulseVisual {
   sparkOutline: number;
 
   /**
-   * The strike: a bolt from the press to the spark it paid for, drawn with the
-   * flash rather than at the press — it answers to the yield, so a queued click
-   * strikes when the incarnation actually lands, not when it was bought.
+   * The strike: a bolt from the press toward the spot it is aimed at, drawn
+   * with the press rather than the payout — the wait between the two is the
+   * flight, so a queued click reads as travelling rather than as nothing
+   * happening.
    *
    * Its own two tones, on the spark's own argument: a fill and an outline grown
    * past it in the fill's flip, so it reads whatever it crosses.
    */
   boltWidth: number;
+  /** Seconds from the press to landing, at the floor — see `PlanetScene`, which
+   * lifts this to the click's own duration whenever that is longer. The whole
+   * of it once a click has ramped to instant. */
   boltLife: number;
   /** How far the warp pushes it off the straight line, as a share of its own length. */
   boltWarp: number;
@@ -266,6 +275,12 @@ export interface PulseVisual {
   boltTone: number;
   /** In pixels, grown past the fill in the fill's flip. 0 is the outline off. */
   boltOutline: number;
+  /**
+   * How much of the drawn length is lit behind the head, as a share of it —
+   * the rest reads as spent trail rather than an unlit gap, so a long flight is
+   * a line advancing rather than a rod materialising whole.
+   */
+  boltTrail: number;
 }
 
 /**
@@ -339,6 +354,16 @@ export function fadeOf(t: number) {
 }
 
 /**
+ * The bolt's own alpha, not `fadeOf`: a strike can live as long as the click's
+ * own duration, and fading it out over that whole flight would leave it a
+ * ghost by the halfway point. A bolt holds its full weight until it lands, and
+ * `boltTrail` is what makes it read as travelling rather than as a static rod.
+ */
+export function holdOf(_t: number) {
+  return 1;
+}
+
+/**
  * The scene's marks and the clock they are timed by, together — two components
  * draw them and a clock either of them owned would be a second one.
  */
@@ -352,7 +377,7 @@ export function createPulses() {
   }));
 
   const bolts: Bolt[] = Array.from({ length: BOLT_CAPACITY }, () => ({
-    born: -Infinity, fx: 0, fy: 0, toSpark: undefined, seed: 0,
+    born: -Infinity, fx: 0, fy: 0, to: undefined, seed: 0,
   }));
 
   /**
@@ -394,70 +419,90 @@ export function createPulses() {
   }
 
   /**
-   * Where a click landed. The directions are `Math.random` and not the seeded
-   * stream the swarm and the caps use: a spark is an *event*, so two landing
-   * in the same place is the failure, not the unreproducibility.
+   * One random spot on the cap the camera can see, in the body's own frame —
+   * `spark()`'s own fallback, pulled out so `aim()` can pick the same way
+   * before there is a ring-buffer slot to write it into.
    *
-   * Returns what it wrote — the ring buffer has no other way to say which
-   * slots are new.
-   *
-   * `findSpot` is asked once per mark, and is the one thing about a flash a
-   * caller may decide: a spot puts it there, `undefined` leaves it on the cap.
-   * The roll lives out there too — what a strike might prefer to hit is the
-   * world's business, and this module is not allowed to know there is anything
-   * standing on the ground.
+   * The directions are `Math.random` and not the seeded stream the swarm and
+   * the caps use: a spark is an *event*, so two landing in the same place is
+   * the failure, not the unreproducibility.
    */
-  function spark(
+  function pickSpot(field: SurfaceField, face: number, held: Facing): Spot {
+    const lean = Math.cos(held.lean), leanS = Math.sin(held.lean);
+    const tilt = Math.cos(held.tilt), tiltS = Math.sin(held.tilt);
+    const round = -(held.turn + held.spin);
+    const spun = Math.cos(round), spunS = Math.sin(round);
+
+    // Uniform on the cap the camera can see: the view axis first, then a
+    // point on the ring of the radius that leaves.
+    const az = face + Math.random() * (1 - face);
+    const around = Math.random() * Math.PI * 2;
+    const ring = Math.sqrt(Math.max(0, 1 - az * az));
+    const ax = Math.cos(around) * ring;
+    const ay = Math.sin(around) * ring;
+
+    // And back into the body's frame. `PlanetBody` nests Rz(−lean), Rx(tilt)
+    // and Ry(turn + spin) in that order, so this is the same chain read
+    // backwards — written out rather than taken from three, because nothing
+    // here may import it and stay probeable.
+    const bx = ax * lean - ay * leanS;
+    const by = ax * leanS + ay * lean;
+    const cy = by * tilt + az * tiltS;
+    const cz = az * tilt - by * tiltS;
+
+    const x = bx * spun + cz * spunS;
+    const y = cy;
+    const z = cz * spun - bx * spunS;
+
+    return { x, y, z, r: field.sampleRadius(x, y, z) };
+  }
+
+  /**
+   * Where a flash will land, chosen before there is a payout to land it —
+   * the bolt needs a target the moment it leaves. Returns spots rather than
+   * writing them anywhere; `spark()` below is what turns a spot into a mark.
+   *
+   * `findSpot` is asked once per spot, and is the one thing about a flash a
+   * caller may decide: a spot puts it there, `undefined` rolls the cap. The
+   * roll lives out there too — what a strike might prefer to hit is the
+   * world's business, and this module is not allowed to know there is
+   * anything standing on the ground.
+   */
+  function aim(
     count: number,
     field: SurfaceField,
     face: number,
     held: Facing,
     findSpot?: () => Spot | undefined,
   ) {
-    const written: Spark[] = [];
-
-    const lean = Math.cos(held.lean), leanS = Math.sin(held.lean);
-    const tilt = Math.cos(held.tilt), tiltS = Math.sin(held.tilt);
-    const round = -(held.turn + held.spin);
-    const spun = Math.cos(round), spunS = Math.sin(round);
+    const spots: Spot[] = [];
 
     for (let i = 0; i < count; i++) {
+      spots.push(findSpot?.() ?? pickSpot(field, face, held));
+    }
+
+    return spots;
+  }
+
+  /**
+   * Where a click landed. Writes the spots already `aim`ed into ring-buffer
+   * slots, one per spot — a spark is the mark, `aim` is the choice.
+   *
+   * Returns what it wrote — the ring buffer has no other way to say which
+   * slots are new.
+   */
+  function spark(spots: Spot[]) {
+    const written: Spark[] = [];
+
+    for (const spot of spots) {
       const mark = sparks[nextSpark];
-      const chosen = findSpot?.();
 
-      if (chosen) {
-        // Already in the body's frame, and already carrying its own reach — a
-        // spot is a place on the world, not a direction to sample the ground
-        // along, so nothing here re-reads the terrain under it.
-        mark.x = chosen.x;
-        mark.y = chosen.y;
-        mark.z = chosen.z;
-        mark.r = chosen.r;
-      } else {
-        // Uniform on the cap the camera can see: the view axis first, then a
-        // point on the ring of the radius that leaves.
-        const az = face + Math.random() * (1 - face);
-        const around = Math.random() * Math.PI * 2;
-        const ring = Math.sqrt(Math.max(0, 1 - az * az));
-        const ax = Math.cos(around) * ring;
-        const ay = Math.sin(around) * ring;
-
-        // And back into the body's frame. `PlanetBody` nests Rz(−lean), Rx(tilt)
-        // and Ry(turn + spin) in that order, so this is the same chain read
-        // backwards — written out rather than taken from three, because nothing
-        // here may import it and stay probeable.
-        const bx = ax * lean - ay * leanS;
-        const by = ax * leanS + ay * lean;
-        const cy = by * tilt + az * tiltS;
-        const cz = az * tilt - by * tiltS;
-
-        mark.x = bx * spun + cz * spunS;
-        mark.y = cy;
-        mark.z = cz * spun - bx * spunS;
-        mark.r = field.sampleRadius(mark.x, mark.y, mark.z);
-      }
-
+      mark.x = spot.x;
+      mark.y = spot.y;
+      mark.z = spot.z;
+      mark.r = spot.r;
       mark.born = now;
+
       written.push(mark);
       nextSpark = (nextSpark + 1) % PULSE_CAPACITY;
     }
@@ -467,16 +512,16 @@ export function createPulses() {
 
   /**
    * The strike. The press is already a world point, unprojected by the caller;
-   * the far end is the spark itself, kept rather than resolved, so `Bolt` can
-   * read where it has actually got to instead of where it landed.
+   * the far end is a frozen `Spot` — see `Bolt`'s own doc for why it is not
+   * the live spark.
    */
-  function bolt(from: { x: number; y: number }, toSpark: Spark) {
+  function bolt(from: { x: number; y: number }, to: Spot) {
     const mark = bolts[nextBolt];
 
     mark.born = now;
     mark.fx = from.x;
     mark.fy = from.y;
-    mark.toSpark = toSpark;
+    mark.to = to;
     mark.seed = Math.random() * Math.PI * 2;
 
     nextBolt = (nextBolt + 1) % BOLT_CAPACITY;
@@ -498,6 +543,7 @@ export function createPulses() {
     get now() { return now; },
     advance,
     echo,
+    aim,
     spark,
     bolt,
     isLive,
@@ -573,6 +619,7 @@ export const PULSE_PARAMS: PulseParam[] = [
   { key: 'boltBends', label: 'Bends', group: 'Bolt', min: 1, max: 6, step: 0.5 },
   { key: 'boltTone', label: 'Ink', group: 'Bolt', min: 0, max: 6, step: 1 },
   { key: 'boltOutline', label: 'Outline px', group: 'Bolt', min: 0, max: 6, step: 0.25 },
+  { key: 'boltTrail', label: 'Trail', group: 'Bolt', min: 0.05, max: 1, step: 0.05 },
 ];
 
 export const DEFAULT_PULSE: PulseVisual = {
@@ -610,6 +657,7 @@ export const DEFAULT_PULSE: PulseVisual = {
   boltBends: 2,
   boltTone: 0,
   boltOutline: 1,
+  boltTrail: 0.35,
 };
 
 export function clonePulse(visual: PulseVisual): PulseVisual {

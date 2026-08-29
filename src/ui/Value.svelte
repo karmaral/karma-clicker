@@ -36,6 +36,7 @@
   .rate {
     font-size: var(--fs-sm);
     font-weight: 600;
+    font-stretch: var(--wd-figure);
     color: var(--ink-500);
     margin-left: var(--sp-1);
   }

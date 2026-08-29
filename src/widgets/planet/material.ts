@@ -1278,6 +1278,7 @@ const boltFragment = /* glsl */ `
   uniform float uBends;
   uniform float uTone;
   uniform float uOutline;
+  uniform float uTrail;
 
   varying vec2 vFrom;
   varying vec2 vTo;
@@ -1306,9 +1307,14 @@ const boltFragment = /* glsl */ `
     float dist = abs(perp - target);
     float perPixel = fwidth(dist);
 
+    // The head is lit; behind it the trail fades out over its own share of
+    // the drawn length, so a bolt in flight reads as advancing rather than as
+    // a rod materialising whole.
+    float lit = clamp((t - (vReach - uTrail)) / max(uTrail, 1e-4), 0.0, 1.0);
+
     // The outline decides how far the mark reaches; the core, inside that,
     // decides which of the two tones a fragment gets.
-    float outer = strokeAt(dist, 0.0, uWidth + uOutline * 2.0, perPixel) * vFade;
+    float outer = strokeAt(dist, 0.0, uWidth + uOutline * 2.0, perPixel) * vFade * lit;
     if (outer <= 0.0) discard;
 
     float inner = strokeAt(dist, 0.0, uWidth, perPixel);
@@ -2695,6 +2701,7 @@ export function createBoltMaterial() {
       uBends: { value: 2 },
       uTone: { value: 0 },
       uOutline: { value: 1 },
+      uTrail: { value: 0.35 },
     },
   });
 }
@@ -2703,8 +2710,17 @@ export function createBoltMaterial() {
  * `uWidth` stays in raw px, unlike the harness's — `strokeAt`'s own
  * `fwidth`-normalised comparison turns any unit into a pixel distance before
  * it is measured, so a width divided by `zoom` first would be halved twice.
+ *
+ * `trail` defaults to the authored `visual.boltTrail` rather than always
+ * reading it, so a caller that works out its own — `PlanetScene`, scaling it
+ * toward a full line for an instant click — can override it without this
+ * function needing to know why.
  */
-export function syncBoltUniforms(material: THREE.ShaderMaterial, visual: PulseVisual) {
+export function syncBoltUniforms(
+  material: THREE.ShaderMaterial,
+  visual: PulseVisual,
+  trail: number = visual.boltTrail,
+) {
   const u = material.uniforms;
 
   u.uWidth.value = Math.max(0, visual.boltWidth);
@@ -2712,6 +2728,7 @@ export function syncBoltUniforms(material: THREE.ShaderMaterial, visual: PulseVi
   u.uBends.value = Math.max(1, visual.boltBends);
   u.uTone.value = Math.round(visual.boltTone);
   u.uOutline.value = Math.max(0, visual.boltOutline);
+  u.uTrail.value = Math.max(0.001, trail);
 }
 
 export function syncHaloUniforms(material: THREE.ShaderMaterial, visual: PulseVisual) {

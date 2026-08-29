@@ -40,6 +40,13 @@
     /** How many souls the harness carries. See `SoulSwarm`. */
     riders?: number;
     pulse?: PulseVisual;
+    /**
+     * The click's own duration, in ms — left `undefined` rather than defaulted
+     * here, and forwarded as-is. See `PlanetScene`: whether this is absent (a
+     * lab with no click) or merely 0 (an instant one) changes how the bolt
+     * draws.
+     */
+    clickMs?: number;
     disabled?: boolean;
     /**
      * Who this world is, for keeping time. Two views of one world pass the same
@@ -86,6 +93,7 @@
     harness,
     riders,
     pulse,
+    clickMs,
     clockKey,
     clickActionVerb = 'Incarnate',
     disabled = false,
@@ -238,6 +246,7 @@
         {harness}
         {riders}
         {pulse}
+        {clickMs}
         {clockKey}
         {flashes}
         yields={shownYields}

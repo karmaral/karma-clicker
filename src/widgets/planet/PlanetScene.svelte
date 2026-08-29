@@ -76,6 +76,18 @@
      */
     flashes?: number;
     /**
+     * The click's own duration, in ms — 0 once a click has ramped to instant,
+     * `undefined` in a lab with no building at all. The two are kept apart on
+     * purpose: an instant *click* should flash the way it always did, but a
+     * lab previewing the bolt's own sliders has no click to answer to and
+     * should show them exactly as authored. Lifts the bolt's life to match a
+     * real click's wait — a strike struck at the press and landing with the
+     * payout has to fly for exactly as long as the wait between them, or it
+     * either lands early and idles or is still travelling when the spark it
+     * was aimed at already fell.
+     */
+    clickMs?: number;
+    /**
      * A running count of landed yields — not clicks. Every rise sparks the
      * ground once, so the mark answers to the payout rather than to the press
      * that queued it.
@@ -122,6 +134,7 @@
     pulse,
     clockKey,
     flashes = 0,
+    clickMs,
     yields = 0,
     onspark,
     onplacing,
@@ -196,6 +209,52 @@
    * measure alone.
    */
   const field = $derived(hasAnchors || pulse ? createSurfaceField(visual) : undefined);
+
+  /**
+   * The bolt's actual life: the authored floor, or the click's own duration
+   * whenever that is longer. A lab has no `clickMs` and keeps the floor; a
+   * click still ramping up gets a flight as long as its own wait.
+   */
+  const boltLife = $derived(Math.max(pulse?.boltLife ?? 0, (clickMs ?? 0) / 1000));
+
+  /**
+   * How close the life sits to its own authored floor — 1 at an instant
+   * click or in the lab, easing to 0 as the wait grows real. `boltTrail` and
+   * `boltHold` both key off it, so the whole strike relaxes back to its old,
+   * pre-flight look together rather than one half changing without the other.
+   *
+   * `clickMs === undefined` is a lab with no click to answer to at all, not
+   * an instant one — pinned at 1 so both sliders preview exactly as authored.
+   */
+  const nearFloor = $derived.by(() => {
+    const floor = pulse?.boltLife ?? 0;
+
+    if (clickMs === undefined || floor <= 0) return 1;
+
+    return Math.min(1, floor / boltLife);
+  });
+
+  /**
+   * How much of the authored trail actually plays — full length near the
+   * floor, easing toward the authored share once the wait is real. The head
+   * effect earns its keep on a flight long enough to *be* a flight; on an
+   * instant click it only made the zero duration more visible, not less, by
+   * turning a flash into a comet with somewhere to travel.
+   */
+  const boltTrail = $derived.by(() => {
+    const authored = pulse?.boltTrail ?? 1;
+
+    return authored + nearFloor * (1 - authored);
+  });
+
+  /**
+   * How much of the strike's alpha holds at full weight through its own life,
+   * rather than fading the way `fadeOf` decays a halo or a spark — 0 near the
+   * floor, where a hold reads as too bright against a mark that used to fade
+   * across its whole 0.15 s, up to 1 once the flight is long enough that a
+   * cubic decay would ghost it out by the halfway point. See `Bolt`.
+   */
+  const boltHold = $derived(1 - nearFloor);
 
   /**
    * Every anchor, placed or ghost — and the placements rather than the bare
@@ -279,6 +338,15 @@
    */
   let answered: number | undefined;
 
+  /**
+   * Spots aimed at the press, one batch per flash, waiting for the payout
+   * that sparks them — a queue and not a single slot, since a queued click
+   * can flash again before its first payout lands. Bounded the same as the
+   * ring buffers it feeds: an unanswered flash falls off the front rather
+   * than growing this forever.
+   */
+  let waiting: Spot[][] = [];
+
   $effect(() => {
     const at = flashes;
 
@@ -291,6 +359,46 @@
     // oldest marks.
     for (let i = Math.max(answered, at - PULSE_CAPACITY); i < at; i++) {
       pulses.echo();
+
+      if (!field) continue;
+
+      // Untracked for the reason the payout side already reads this way: the
+      // hold and the roll answer to the world at the moment of the press, not
+      // to whatever frame the effect happens to flush on.
+      const { held, share, standing, anchoring } = untrack(() => ({
+        held: { lean: visual.lean, tilt: visual.tilt, turn: visual.turn, spin: spinAngle },
+        share: ridden,
+        standing: strung,
+        anchoring: placements[placing],
+      }));
+
+      const from = getCursorWorld();
+      if (!from || !pulse.boltWidth) continue;
+
+      if (anchoring) {
+        // The press pays the harness here, not a soul — the strike goes where
+        // the press pays, and nothing is queued for a payout that never comes.
+        pulses.bolt(from, { x: anchoring.x, y: anchoring.y, z: anchoring.z, r: anchoring.peak });
+        continue;
+      }
+
+      // Aimed now, before the spark it is aimed at exists — see `Bolt`'s own
+      // doc for why the target has to be frozen at the press. One bolt per
+      // spot, so a flash that will land three sparks reads as three strikes.
+      const spots = pulses.aim(
+        Math.round(pulse.sparks),
+        field,
+        pulse.sparkFace,
+        held,
+        () => spotOnAnchor(standing, share),
+      );
+
+      for (const spot of spots) {
+        pulses.bolt(from, spot);
+      }
+
+      waiting.push(spots);
+      if (waiting.length > PULSE_CAPACITY) waiting.shift();
     }
 
     answered = at;
@@ -378,18 +486,20 @@
     }
 
     for (let i = Math.max(sparked, at - PULSE_CAPACITY); i < at; i++) {
-      // Untracked for the same reason `flashes` used to read it this way: where
+      // Untracked for the same reason the press side reads it this way: where
       // the world is held is read *at* the yield, not answered to on every
-      // frame the spin advances. The poles and the share are taken at the same
-      // moment and for the same reason — a strike answers to the world it was
-      // paid out on.
+      // frame the spin advances.
       const { held, share, standing } = untrack(() => ({
         held: { lean: visual.lean, tilt: visual.tilt, turn: visual.turn, spin: spinAngle },
         share: ridden,
         standing: strung,
       }));
 
-      const written = pulses.spark(
+      // The spots the matching flash already aimed the bolt at — the payout
+      // lands exactly where the strike was struck toward. Falls back to a
+      // fresh aim for a payout with nothing queued (a free grant, or a lab
+      // driving `yields` on its own), so that path still lands somewhere.
+      const spots = waiting.shift() ?? pulses.aim(
         Math.round(pulse.sparks),
         field,
         pulse.sparkFace,
@@ -397,25 +507,13 @@
         () => spotOnAnchor(standing, share),
       );
 
+      const written = pulses.spark(spots);
+
       // No spark to land on (the count slider at 0) reads as the planet's own
       // centre — rotating the origin leaves it the origin.
       const world = written.length > 0 ? sparkWorldPosition(written[0], held) : { x: 0, y: 0 };
 
       onspark?.(projectToScreen(world.x, world.y));
-
-      // The strike, from the cursor to each spark it just paid for — one bolt
-      // per spark, so a yield that landed three still reads as three. Only the
-      // spawn point is set here and the spark itself is handed over rather
-      // than its position: `Bolt` reads both ends fresh every frame it is
-      // alive, cursor and spark alike, so neither end freezes while the other
-      // — the world's own spin — carries on.
-      const from = getCursorWorld();
-
-      if (from && pulse.boltWidth > 0) {
-        for (const mark of written) {
-          pulses.bolt(from, mark);
-        }
-      }
     }
 
     sparked = at;
@@ -459,7 +557,7 @@
 
     pulses.advance(delta);
 
-    if (pulses.isLive(Math.max(pulse.burstLife, pulse.haloLife, pulse.sparkLife, pulse.boltLife))) {
+    if (pulses.isLive(Math.max(pulse.burstLife, pulse.haloLife, pulse.sparkLife, boltLife))) {
       invalidate();
     }
   });
@@ -517,6 +615,10 @@
     visual={pulse}
     {pulses}
     {zoom}
+    life={boltLife}
+    trail={boltTrail}
+    hold={boltHold}
+    isInstant={(clickMs ?? 0) <= 0}
     getCursor={getCursorWorld}
     lean={visual.lean}
     tilt={visual.tilt}

@@ -164,11 +164,12 @@ const data: Record<string, UpgradeData[]> = {
   ],
   /**
    * The rail's opening act, and the only bucket that has to be *paced* rather
-   * than priced. Every one of these is unlocked long before five souls, so left
-   * bunched they arrive as a wall on the beat that reveals the rail and bury the
-   * first cohort tier behind it. Two land early — one per axis, which is the
-   * whole tutorial — and the rest are spaced to interleave with the cohort
-   * ladder and the two global upgrades. Read the gates in order, not the ids.
+   * than priced. `str_1`'s gate is the one the `rail` beat opens on, so the rail
+   * arrives holding exactly this chip and the ladder is walked a rung at a time
+   * — it used to unlock into no rail at all and then land as a wall on the beat
+   * that finally drew one. Two come early, one per axis, which is the whole
+   * tutorial; the rest interleave with the cohort ladder and the two globals.
+   * Read the gates in order, not the ids.
    */
   'building:main': [
     // Ramps the click's duration back toward instant. mult 0 on speed_3 lands
@@ -235,22 +236,31 @@ const data: Record<string, UpgradeData[]> = {
     },
   ],
   /**
-   * `first` opens the bucket and hands you one — `acquire` carries autonomy, so
-   * the verb is never authored beside it. Unpriced here on purpose: the rail is
-   * beat 4 and the cohort table beat 3, so a priced first cohort has no buyer
-   * before the beat that needs it.
-   */
-  /**
-   * `first` opens the bucket, then the levels — priced in what the cohort itself
-   * is bought with, so *another copy or the upgrade* is one comparison out of one
-   * pocket. Anything priced in karma or tokens sits past them and is a reward
-   * rather than a decision; `str_1` is the worked example.
+   * Every `first` below **gates in karma and pays in experience**, and the two
+   * jobs are not the same job: `unlocks_at` reads a lifetime total that can
+   * never be spent, so it is a clock saying *when a kind of soul becomes
+   * available*; `costs` reads the spendable pile, so it is the trade. Priced in
+   * karma at the same figure they gated on, they were one currency doing both
+   * and neither read.
+   *
+   * Experience because the cohorts already are — copies and level upgrades
+   * alike, see *The level-replacements are priced in experience*. It is the same
+   * rule one level up: a cohort now costs you a rung of the click's ladder, so
+   * the two are ordered by price instead of by two clocks running side by side.
+   *
+   * Karma for the gate because the click pays a flat 1 of it untouched by
+   * `str_*`, which makes a karma gate a **press count** — so `speed_1` visibly
+   * pulls the next cohort forward in wall-clock time. Placeholder figures.
    */
   'cohort:basic': [
     {
+      // The one that stays costless, so `#autoAcquire` still grants it: this is
+      // the `first_soul` beat, and the first soul is something that happens to
+      // you, not a chip you find. 30 puts it past both opening click chips —
+      // it used to land at 15, before either of them was buyable.
       id: 'first',
       effect: ['unlock', 'acquire'],
-      unlocks_at: { karma_positive: 15 },
+      unlocks_at: { karma_positive: 30 },
     },
     ...levelUpgrades('basic'),
     {
@@ -269,8 +279,8 @@ const data: Record<string, UpgradeData[]> = {
     {
       id: 'first',
       effect: ['unlock', 'acquire'],
-      unlocks_at: { karma_positive: 100 },
-      costs: { karma_positive: 100 },
+      unlocks_at: { karma_positive: 140 },
+      costs: { experience: 800 },
     },
     ...levelUpgrades('steady'),
     {
@@ -286,17 +296,19 @@ const data: Record<string, UpgradeData[]> = {
     {
       id: 'first',
       effect: ['unlock', 'acquire'],
-      unlocks_at: { karma_positive: 50 },
-      costs: { karma_positive: 50 },
+      unlocks_at: { karma_positive: 70 },
+      costs: { experience: 400 },
     },
     ...levelUpgrades('chaos'),
   ],
   'cohort:zealot': [
     {
+      // Its own copies cost 10k experience each, so the entry is one copy's
+      // worth. The gate stays where it was — this one is late by design.
       id: 'first',
       effect: ['unlock', 'acquire'],
       unlocks_at: { karma_positive: 10_000 },
-      costs: { karma_positive: 10_000 },
+      costs: { experience: 10_000 },
     },
     ...levelUpgrades('zealot'),
   ],

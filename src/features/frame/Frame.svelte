@@ -8,7 +8,7 @@
    * is bigger; the meter beside them says how far that difference has carried
    * you and where the door is. Nothing is drawn twice.
    */
-  import { Badge, Cell, ExcessMeter, Figure, HeaderBand, Label, Pip, PolarityBars, Rail, Value } from '$ui';
+  import { Badge, Cell, ExcessMeter, Figure, HeaderBand, Label, Pip, PolarityBars, Value } from '$ui';
   import { BuildingManager, PlanetManager, ResourceManager } from '$lib/managers';
   import { getExcess } from '$lib/excess';
   import { progression } from '$lib/progression';
@@ -28,7 +28,6 @@
   import type { ResourceType } from '$types';
   import NavSection from './NavSection.svelte';
   import ScoreCell from './ScoreCell.svelte';
-  import UpgradeRail from './UpgradeRail.svelte';
   import { catalogue } from './upgrades.svelte';
 
   /**
@@ -36,11 +35,11 @@
    * is held open from the first beat, so Overview inserting at beat 8 moves the
    * columns beside it and nothing else.
    */
-  const SCORE_WIDTH = '214px';
+  const SCORE_WIDTH = '230px';
 
   const WIDTHS: Record<ScreenName, string> = {
-    details: '600px',
-    overview: '236px',
+    details: '640px',
+    overview: '230px',
     refinery: 'minmax(0, 1fr)',
   };
 
@@ -181,9 +180,15 @@
              Buyable now rather than merely unlocked — a tab that is always
              marked is not a mark. Drawn on the active tab too, since a section
              is a live reading and one that went blank on arrival would read as
-             the count having changed. -->
+             the count having changed. It drops to an outline there instead: the
+             rail below is already showing you those upgrades, so the mark stops
+             calling and just keeps count. -->
         {#snippet mark()}
-          <Pip count={catalogue.affordable[screen]} label="upgrades to buy" />
+          <Pip
+            count={catalogue.affordable[screen]}
+            label="upgrades to buy"
+            outlined={nav.active === screen}
+          />
         {/snippet}
 
         {#if screen === 'details'}
@@ -232,12 +237,6 @@
     </NavSection>
   {/each}
 </HeaderBand>
-
-{#if progression.isRevealed('frame.rail')}
-  <Rail>
-    <UpgradeRail />
-  </Rail>
-{/if}
 
 <style>
   /* Tighter than the badge's usual gap: the badge is holding two figures apart

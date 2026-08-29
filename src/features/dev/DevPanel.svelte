@@ -20,7 +20,7 @@
 
   const current = $derived(progression.current?.id ?? 'none');
 
-  /** The two figures beat 9 turns on, so a stuck run is diagnosable on sight. */
+  /** The two figures beat 10 turns on, so a stuck run is diagnosable on sight. */
   const excess = $derived(getExcess());
   const planet = $derived(PlanetManager.getActive());
 

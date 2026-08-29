@@ -12,7 +12,7 @@ export interface Milestone {
 }
 
 export const milestones: Milestone[] = [
-  // Beat 6 reaches on its floor, so the frame can arrive before any harm does.
+  // Beat 7 reaches on its floor, so the frame can arrive before any harm does.
   {
     id: 'first_negative_karma',
     when: (ctx) => ctx.total('karma_negative') > 0,
