@@ -1,7 +1,6 @@
 /**
  * Seeded 3D gradient noise. Sampled on the direction vector rather than a UV,
- * so a sphere has no seam and no pole to pinch. `$lib/aim/noise` is 1D and for
- * drift — unrelated.
+ * so a sphere has no seam and no pole to pinch.
  */
 
 const GRADIENTS = [

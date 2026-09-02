@@ -4,15 +4,13 @@
   import { BuildingManager } from '$lib/managers';
   import type { Listener } from '$lib/emission';
   import { aim } from '$lib/aim';
-  import { progression } from '$lib/progression';
   import { spotlight } from '$lib/spotlight.svelte';
   import { f, formatCost, roman } from '$lib/utils';
   import type Building from '$lib/buildings/base.svelte';
-  import type { YieldType } from '$types';
   import type { PurchaseMode } from './types';
   import LeanMeter from './LeanMeter.svelte';
-  import RateFigure from './RateFigure.svelte';
-  import { badgeFor, byRateOrder } from './badge';
+  import CohortTooltip from './CohortTooltip.svelte';
+  import { badgeFor } from './badge';
   import { resolvePurchasable, resolveQuantity } from './purchase';
   import texts from '$data/buildings-texts';
 
@@ -42,68 +40,16 @@
   const quantity = $derived(resolvePurchasable(cohort, purchaseMode));
   const cost = $derived(cohort.getCost(quantity) ?? 0);
   const affordable = $derived(resolvedQuantity > 0 && BuildingManager.canAfford(cohort.id, resolvedQuantity));
-  const aimed = $derived(aim.resolve(cohort.id, cohort.data));
-
-  const TREND_DEADBAND = 0.005;
-
-  /** Against Even — what your aim is doing to this rate, not what the wave is. */
-  function trendOf(value: number, atEven: number) {
-    const delta = value - atEven;
-    if (Math.abs(delta) <= atEven * TREND_DEADBAND) return 0;
-
-    return Math.sign(delta);
-  }
-
-  /**
-   * One line per figure, at a count that need not be the one you have. Karma reads
-   * as two once beat 6 has split the pile.
-   */
-  function ratesAt(count: number) {
-    return Object.keys(cohort.production)
-      .flatMap((key) => {
-        const type = key as YieldType;
-        if (type !== 'karma') return [{ type, value: cohort.perSecond(type, count), trend: 0 }];
-
-        const now = cohort.karmaPerSecond(undefined, count);
-        if (!progression.runs('negKarma')) return [{ type, value: now.positive, trend: 0 }];
-
-        const even = cohort.karmaPerSecond(0, count);
-
-        return [
-          {
-            type: 'karma_negative' as YieldType,
-            value: now.negative,
-            trend: trendOf(now.negative, even.negative),
-          },
-          {
-            type: 'karma_positive' as YieldType,
-            value: now.positive,
-            trend: trendOf(now.positive, even.positive),
-          },
-        ];
-      })
-      .sort((a, b) => byRateOrder(a.type, b.type));
-  }
-
-  const rates = $derived(ratesAt(cohort.count));
+  const aimed = $derived(aim.resolve(cohort.data));
 
   /** Lit while an upgrade that would change this cohort is being hovered. */
   const isLit = $derived(spotlight.isLit('cohort', cohort.id));
 
-  let isPreviewing: boolean = $state(false);
-
-  /** The same lines at the count this purchase would leave, by type not by index. */
-  const preview = $derived(
-    new Map(isPreviewing ? ratesAt(cohort.count + quantity).map((r) => [r.type, r.value]) : []),
-  );
-
   function startPreview() {
-    isPreviewing = true;
     onpreview?.(cohort.id);
   }
 
   function endPreview() {
-    isPreviewing = false;
     onpreview?.(undefined);
   }
 
@@ -118,10 +64,16 @@
   }
 
   const tooltipOptions: Partial<TippyProps> = {
-    placement: 'top-start',
-    delay: [650, 0],
+    // Anchored to the button's own edge, so the panel opens back over the table
+    // it describes rather than off the right of the window.
+    placement: 'top-end',
+    delay: [300, 0],
     offset: [0, 16],
     interactive: false,
+    // The reference is a buy button: a click must not dismiss the panel that
+    // says what the click just did. Without this the row goes quiet mid-buy and
+    // stays quiet until the pointer leaves the cell and comes back.
+    hideOnClick: false,
   };
 </script>
 
@@ -132,11 +84,7 @@
 
   <div class="ident">
 
-    <!-- The whole name row is the tooltip's target. The ··· is the hint, not the
-         hit area — it is 14px wide and hidden until you are already hovering. -->
-    <div class="header"
-      {@attach tooltip({ content: tooltipElem, options: tooltipOptions })}
-    >
+    <div class="header">
       <span class="name">
         {texts[cohort.id]?.title ?? cohort.id}
       </span>
@@ -158,16 +106,6 @@
         </div>
       {/if}
 
-      <span class="tooltip-hint">···</span>
-
-      <div class="tooltip-wrapper" bind:this={tooltipElem}>
-        <Tooltip
-          title={texts[cohort.id]?.title}
-          description={texts[cohort.id]?.description}
-        >
-          name, lore, rates, +each and all that
-        </Tooltip>
-      </div>
     </div>
 
     <span class="description">{texts[cohort.id]?.description ?? ''}</span>
@@ -189,22 +127,12 @@
     />
   {/if}
 
-  <!-- Quiet until you point at the row. The head carries the total; this is the
-       row's share of it, and answering that is what a hover is for. -->
-  <span class="output">
-    {#each rates as rate (rate.type)}
-      <RateFigure
-        type={rate.type}
-        value={preview.get(rate.type) ?? rate.value}
-        delta={(preview.get(rate.type) ?? rate.value) - rate.value}
-        trend={rate.trend}
-      />
-    {/each}
-  </span>
-
-
-  <!-- The button fills this cell, so hovering the cell is hovering the button. -->
-  <div class="purchase-container" role="group">
+  <!-- The button fills this cell, so hovering the cell is hovering the button —
+       and the cell, not the name, is what the panel hangs off: you read the
+       derivation where you decide to pay for it. -->
+  <div class="purchase-container" role="group"
+    {@attach tooltip({ content: tooltipElem, options: tooltipOptions })}
+  >
     <PurchaseButton
       kind={badgeFor(cohort.data.cost_type!)}
       amount={formatCost(cost)}
@@ -215,6 +143,12 @@
       oncycle={oncyclemode}
       {quantity}
     />
+
+    <div class="tooltip-wrapper" bind:this={tooltipElem} style:--tooltip-max="380px">
+      <Tooltip>
+        <CohortTooltip {cohort} {purchaseMode} />
+      </Tooltip>
+    </div>
   </div>
 
 
@@ -283,16 +217,6 @@
     gap: var(--sp-2);
 
   }
-  .tooltip-hint {
-    visibility: hidden;
-    color: var(--ink-300);
-    font-weight: 500;
-    line-height: 1;
-    translate: 0% -1px;
-    align-self: center;
-  }
-  .row:hover .tooltip-hint { visibility: visible; }
-
   .tooltip-wrapper { pointer-events: none; }
   .row :global(.tippy-box) { pointer-events: none !important; }
 
@@ -337,22 +261,6 @@
     color: var(--ink-500);
     gap: var(--sp-2);
     font-weight: 500;
-  }
-
-  /* Karma is two figures here, so the 170px column is tight — watch it wrap. */
-  .output {
-    display: flex;
-    flex-direction: row;
-    align-items: flex-end;
-    justify-content: end;
-    gap: var(--sp-2);
-    min-width: 0;
-    position: relative;
-    visibility: hidden;
-  }
-  .row:hover .output,
-  .row:focus-within .output {
-    visibility: visible;
   }
 
   .row.compact {

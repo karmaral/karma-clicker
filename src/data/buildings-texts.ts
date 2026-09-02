@@ -11,7 +11,9 @@ const data: Record<string, ItemTextData> = {
   },
   'chaos': {
     title: 'Chaos',
-    description: 'Explores polarity at random. Can grow out of control quickly.',
+    // Was "Explores polarity at random" — drift is gone, and at resistance 1 this
+    // cohort is wholly given to the phase instead. Flagging for a copy pass.
+    description: 'Wholly given to the world’s density. Swings a full side each phase.',
   },
   'zealot': {
     title: 'Zealot',

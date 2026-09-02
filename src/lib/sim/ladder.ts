@@ -21,8 +21,8 @@ export function marginalPerSecond(building: Building, type: ResourceType) {
   if (type === 'karma_positive' || type === 'karma_negative') {
     const side = type === 'karma_positive' ? 'positive' : 'negative';
 
-    return building.karmaPerSecond(undefined, count + 1)[side]
-      - building.karmaPerSecond(undefined, count)[side];
+    return building.karmaPerSecond(count + 1)[side]
+      - building.karmaPerSecond(count)[side];
   }
 
   return building.perSecond(type as YieldType, count + 1) - building.perSecond(type, count);

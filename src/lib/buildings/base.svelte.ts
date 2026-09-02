@@ -2,7 +2,7 @@ import type { BuildingData, Modifier, ModifierStat, ResourceType, YieldType } fr
 import { ResourceManager, PlanetManager } from '$lib/managers';
 import { ResourceEmitter, EMITTER_EVENTS } from '$lib/emission';
 import { ModifierSet } from '$lib/modifiers';
-import { aim, type Detent, type ResolvedAim } from '$lib/aim';
+import { aim, type ResolvedAim } from '$lib/aim';
 
 type Listener = (detail?: Record<string, unknown>) => void;
 
@@ -107,7 +107,7 @@ export default class Building {
   }
 
   #payKarma(value: number) {
-    const { positive, negative } = this.#splitKarma(value, aim.resolve(this.#id, this.#data));
+    const { positive, negative } = this.#splitKarma(value, aim.resolve(this.#data));
 
     if (positive > 0) {
       ResourceManager.add('karma_positive', positive);
@@ -118,15 +118,9 @@ export default class Building {
     }
   }
 
-  /**
-   * Both piles per second, off the settled aim so the figure does not churn with
-   * drift. `detent` prices an aim you have not set — the row's arrow reads Even;
-   * `count` prices a purchase you have not made.
-   */
-  karmaPerSecond(detent?: Detent, count?: number) {
-    const resolved = aim.resolveSettled(this.#id, this.#data, detent);
-
-    return this.#splitKarma(this.perSecond('karma', count), resolved);
+  /** Both piles per second. `count` prices a purchase you have not made. */
+  karmaPerSecond(count?: number) {
+    return this.#splitKarma(this.perSecond('karma', count), aim.resolve(this.#data));
   }
 
   toggleAutonomy(toggle?: boolean) {

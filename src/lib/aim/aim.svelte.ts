@@ -1,9 +1,7 @@
 import type { BuildingData } from '$types';
 import { PlanetManager } from '$lib/managers';
 import { progression } from '$lib/progression';
-import { clock } from '$lib/clock';
 import balance from '$data/balance';
-import { noise } from './noise';
 
 export const DETENTS = [-2, -1, 0, 1, 2] as const;
 export type Detent = (typeof DETENTS)[number];
@@ -39,7 +37,6 @@ function toDetent(aim: number) {
 
 class Aim {
   #detent = $state<Detent>(0);
-  #driftClock = $state(0);
   #reaimedAtPhase = $state<number | undefined>(undefined);
 
   set(detent: Detent) {
@@ -47,11 +44,6 @@ class Aim {
 
     this.#detent = detent;
     this.#reaimedAtPhase = PlanetManager.getActive()?.progress ?? 0;
-  }
-
-  /** Driven by the loop, so drift is one clock the UI and the payout share. */
-  tick() {
-    this.#driftClock = clock.now();
   }
 
   /**
@@ -72,46 +64,32 @@ class Aim {
     return reaimPenalty * (1 - lived / reaimPhases);
   });
 
-  #driftFor(id: string, biasPull: number) {
-    if (!biasPull) return 0;
+  /** Which polarity this phase pays. 0 between worlds, so nothing is pulled. */
+  #waveSign() {
+    const planet = PlanetManager.getActive();
+    if (!planet) return 0;
 
-    const t = this.#driftClock / balance.aim.driftMsPerLatticeUnit;
-
-    return noise(id, t) * balance.aim.driftDetents * biasPull;
+    return planet.isDense ? -1 : 1;
   }
 
-  /** What the aim pays right now, drift and all. The payout reads this. */
-  resolve(id: string, data: BuildingData): ResolvedAim {
-    return this.#resolve(id, data, this.#detent, true);
-  }
-
-  /**
-   * The same without drift, so a figure on screen does not churn every tick —
-   * the meter beside it already carries the wander as a band. `detent` prices an
-   * aim you have not set, which is how the row reads itself against Even.
-   */
-  resolveSettled(id: string, data: BuildingData, detent: Detent = this.#detent): ResolvedAim {
-    return this.#resolve(id, data, detent, false);
-  }
-
-  #resolve(id: string, data: BuildingData, detent: number, drifting: boolean): ResolvedAim {
+  /** What the aim pays — the wave and the cohort's own bias, and nothing more. */
+  resolve(data: BuildingData, detent: Detent = this.#detent): ResolvedAim {
     const { polarity_bias = 0, polarity_multiplier = 1, resistance = 0 } = data;
     const biasPull = clamp(resistance, 0, 1);
-    const settledAim = detent * (1 - biasPull) + polarity_bias * biasPull;
-    const drifted = drifting ? settledAim + this.#driftFor(id, biasPull) : settledAim;
-    const realizedAim = clamp(drifted, HARDEST_NEGATIVE, HARDEST_POSITIVE);
+    const centre = detent * (1 - biasPull) + polarity_bias * biasPull;
+    const sway = balance.aim.wavePull * biasPull;
+    const realizedAim = clamp(centre + sway * this.#waveSign(), HARDEST_NEGATIVE, HARDEST_POSITIVE);
     const unaimable = biasPull >= 1;
-    const wander = balance.aim.driftDetents * biasPull;
 
     const reach = {
-      negativeReach: -clamp(settledAim - wander, HARDEST_NEGATIVE, 0) / HARDEST_POSITIVE,
-      positiveReach: clamp(settledAim + wander, 0, HARDEST_POSITIVE) / HARDEST_POSITIVE,
+      negativeReach: -clamp(centre - sway, HARDEST_NEGATIVE, 0) / HARDEST_POSITIVE,
+      positiveReach: clamp(centre + sway, 0, HARDEST_POSITIVE) / HARDEST_POSITIVE,
     };
 
     // Beat 6 splits the pile. Before it, there is nothing to aim at.
     if (!progression.runs('negKarma')) {
       return {
-        realizedAim: settledAim,
+        realizedAim: centre,
         positiveShare: 1,
         karmaYieldFactor: 1,
         unaimable,
@@ -147,8 +125,8 @@ class Aim {
 
   /** The row's word. Character, not position — position is the meter beside it. */
   leanFor({ realizedAim, unaimable, negativeReach, positiveReach }: ResolvedAim) {
-    if (unaimable) return 'unpredictable';
-    if (negativeReach > 0 && positiveReach > 0) return 'risky';
+    if (unaimable) return 'tidal';
+    if (negativeReach > 0 && positiveReach > 0) return 'turns';
     if (!negativeReach && !positiveReach) return 'even';
 
     return DETENT_LABELS[toDetent(realizedAim)].toLowerCase();

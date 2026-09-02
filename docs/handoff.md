@@ -198,10 +198,11 @@ screen — see §*The harvest screen*. `git status` and `git log` for the list.
     in this order: **even** (needle up, no wedge — if it reads *empty* rather than
     *centred*, the plate is too faint at `--line-200`); **a plain aim** at
     `resistance: 0` (one wedge, needle still and on its outer edge; hard negative
-    lays it flat left); **risky** (a wedge each side, needle creeping — the lattice
-    is 9s, so it must creep and not jitter); **unpredictable** (wide band, grey
-    needle). Then check the light wedge against a hovered row — its `.edge`
-    hairline is the only thing terminating it. §*Lean is a dial*.
+    lays it flat left); **turns** (a wedge each side, needle sitting on one edge
+    for a whole phase, then stepping to the other on the flip — it must hold, not
+    creep, now that the wave replaced drift); **tidal** (wide band, grey needle,
+    stepping the same way). Then check the light wedge against a hovered row —
+    its `.edge` hairline is the only thing terminating it. §*Lean is a dial*.
 
 42. **The whole anchoring phase.** Nothing here has been rendered.
     §*Anchoring — primitives built, design provisional*. Walk it in this order:
@@ -251,13 +252,10 @@ screen — see §*The harvest screen*. `git status` and `git log` for the list.
 - The halo, the echo and the flare — all off **by value**, everything standing.
 - `span` is a ratio wearing a length word. A rename in four files.
 - The planet lab's id row scrolls at nine worlds.
-- **A hint tooltip, so nothing rides the native `title`.** Two call sites do now —
-  the lean dial's word and `TokenRow`'s price note — and native means ~1s, unstyled,
-  unplaceable, invisible on touch. `Tooltip` exists but is a *panel*: bordered card,
-  title and description, 650ms, 320px. This wants its small sibling — one line, no
-  chrome, short delay. Do it **with** the cohort row's tooltip, whose body is still
-  the placeholder `name, lore, rates, +each and all that`; one pass should settle
-  what a tooltip is here before three call sites each answer it.
+- ~~A hint tooltip, so nothing rides the native `title`.~~ Done, alongside the
+  cohort row's own tooltip: `Tooltip` takes a `hint` variant now — one line, no
+  chrome, short delay — and the lean dial uses it. `TokenRow`'s price note is the
+  one call site left on native `title`.
 - The token layer, the Harvest layout, per-cohort aiming — `progression.md` §*Parked*.
 
 ## Does not exist
@@ -277,13 +275,21 @@ screen — see §*The harvest screen*. `git status` and `git log` for the list.
 ## Next
 
 **The course table is closed.** 7b is done — §*The harvest screen* — and with it
-the last row. What is left is outside it: `log-texts.ts` (sixteen placeholders),
-re-authoring `ridged`, the type→parameter table, and authoring
-`PlanetData.boons` for the three worlds that now have somewhere to put them.
+the last row. What is left is outside it: re-authoring `ridged`, the
+type→parameter table, and authoring `PlanetData.boons` for the three worlds that
+now have somewhere to put them.
 
-Owed, and compounding: the **doc pass** (§*The context files are themselves an
-open task* — CONTEXT v3 §3.2 and §3.5 are superseded and unamended at source)
-and the **comment sweep** (§*The comments want the same pass*).
+`log-texts.ts` is **written**, not sixteen placeholders — every beat, milestone
+and ambient line is authored, and it is the strongest statement of tone the
+project has. What is unwritten is `planets-texts.ts`: three worlds called
+*Planet 1 / Simple*. §*Premise and fiction* in `design.md`.
+
+The **doc pass** is done: [`design.md`](./design.md) is the design's source of
+truth and retires CONTEXT v3; `progression.md` keeps the arguments and the build.
+It surfaced four live-vs-argued figures — `design.md` §18 — and the `perWorker`
+one is a real defect: the anchoring phase runs ~10× faster than designed.
+
+Still owed: the **comment sweep** (§*The comments want the same pass*).
 
 ---
 

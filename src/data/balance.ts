@@ -50,9 +50,8 @@ export default {
   },
 
   aim: {
-    /** How far a resisted cohort wanders, in detents. */
-    driftDetents: 0.55,
-    driftMsPerLatticeUnit: 9000,
+    /** How far the wave drags a resisted cohort, in detents. */
+    wavePull: 0.55,
     /** What re-aiming costs, and how many phases it takes to pay off. */
     reaimPenalty: 0.65,
     reaimPhases: 2,

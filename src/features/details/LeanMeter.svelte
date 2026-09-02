@@ -7,6 +7,9 @@
    * Zero wants no mark: the wedges meet at it, and the one state with no wedge at
    * all is the one where the needle already points straight up.
    */
+  import type { Props as TippyProps } from 'tippy.js';
+  import { Tooltip, tooltip } from '$ui';
+
   interface Props {
     /** How far into each polarity this cohort reaches, 0…1 of a hard detent. */
     negativeReach: number;
@@ -27,9 +30,20 @@
   const negative = $derived(negativeReach * QUADRANT);
   const positive = $derived(positiveReach * QUADRANT);
   const angle = $derived(needle * QUADRANT);
+
+  let hintElem: HTMLElement | undefined = $state();
+  const hintOptions: Partial<TippyProps> = { placement: 'top', delay: [120, 0], interactive: false };
 </script>
 
-<div class="lean" title={lean} role="img" aria-label="Lean: {lean}">
+<div
+  class="lean"
+  role="img"
+  aria-label="Lean: {lean}"
+  {@attach tooltip({ content: hintElem, options: hintOptions })}
+>
+  <div class="hint-wrapper" bind:this={hintElem}>
+    <Tooltip hint>{lean}</Tooltip>
+  </div>
   {#if negative > 0}
     <span class="wedge neg" style:--sweep="{negative}deg" style:--from="-{negative}deg"></span>
   {/if}
@@ -104,4 +118,6 @@
   }
 
   .needle.unaimable { background: var(--ink-300); }
+
+  .hint-wrapper { pointer-events: none; }
 </style>

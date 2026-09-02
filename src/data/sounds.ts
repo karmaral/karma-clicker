@@ -31,4 +31,40 @@ export default {
       taper: 0.96,
     },
   },
+
+  /**
+   * The bed under the machine. Held rather than fired, and crossfaded to itself
+   * every cycle, so the tempo is carried by the hit over it and never by the
+   * drone starting again.
+   */
+  'refinery.drone': {
+    /** The base take, and the one a tier with nothing recorded yet falls back to. */
+    folder: 'refinery/drone-slow',
+    /** A bed, not an event — it sits well under the click. */
+    volume: 0.45,
+    sustain: { fadeMs: 700 },
+    /** Read against the refining cycle: 4000 slow, 3000 mid, 1500 fast. */
+    tiers: [
+      { belowMs: 2000, folder: 'refinery/drone-fast' },
+      { belowMs: 3500, folder: 'refinery/drone-mid' },
+    ],
+  },
+
+  /** The pull landing. Sounds on the payout, so it means refined, not started. */
+  'refinery.hit': {
+    folder: 'refinery/hit',
+    volume: 0.7,
+    rate: [0.97, 1.03],
+  },
+
+  /** Staffing crossing zero. Silent until takes land in these folders. */
+  'refinery.spinup': {
+    folder: 'refinery/spinup',
+    volume: 0.7,
+  },
+
+  'refinery.spindown': {
+    folder: 'refinery/spindown',
+    volume: 0.7,
+  },
 } satisfies Record<string, SoundData>;

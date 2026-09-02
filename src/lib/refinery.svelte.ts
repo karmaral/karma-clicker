@@ -78,13 +78,16 @@ class Refinery {
    * One draw for every lane, capped by the shortest pile — so the surplus in the
    * longest is untouchable by construction, and an empty pile stops the machine
    * instead of letting the others run on alone.
+   *
+   * Reports what it moved, so a listener on `action` can tell a pull from a
+   * stall. The clock pulses either way; only this says which one it was.
    */
   #refine() {
     const batch = this.#batch;
-    if (batch <= 0) return;
+    if (batch <= 0) return { paired: 0 };
 
     const paired = Math.min(batch, ...PILES.map(([karma]) => ResourceManager.getAmount(karma)));
-    if (paired <= 0) return;
+    if (paired <= 0) return { paired: 0 };
 
     PILES.forEach(([karma, red]) => {
       ResourceManager.remove(karma, paired);
@@ -92,6 +95,8 @@ class Refinery {
     });
 
     this.#gainExp(paired * PILES.length);
+
+    return { paired };
   }
 
   /** What the next rung costs. Ascends, so a fat batch can cross more than one. */

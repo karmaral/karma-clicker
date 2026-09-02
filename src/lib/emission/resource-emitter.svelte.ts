@@ -7,7 +7,8 @@ export const EMITTER_EVENTS = ['queue', 'action'];
 
 /** The clock half of a producer. The payout is injected. */
 export default class ResourceEmitter {
-  #payout: () => void;
+  /** What it returns rides out on `action` — a payout with nothing to say returns nothing. */
+  #payout: () => Record<string, unknown> | void;
   #getDuration: () => number;
   #duration = $derived.by(() => this.#getDuration());
   #isAutonomous = $state(false);
@@ -19,7 +20,7 @@ export default class ResourceEmitter {
     action: [],
   };
 
-  constructor(payout: () => void, duration: number | (() => number) = 0) {
+  constructor(payout: () => Record<string, unknown> | void, duration: number | (() => number) = 0) {
     this.#payout = payout;
     this.#getDuration = typeof duration === 'function' ? duration : () => duration;
   }
@@ -41,8 +42,10 @@ export default class ResourceEmitter {
   }
 
   emit() {
-    this.#payout();
-    this.#runCallbacks('action');
+    // The clock fires whether or not the payout found anything to pay, so what
+    // it did is the only way a listener can tell a real pull from an empty one.
+    const detail = this.#payout() as Record<string, unknown> | undefined;
+    this.#runCallbacks('action', detail);
 
     this.#isInProgress = false;
 

@@ -112,10 +112,21 @@
   }
 
   /* Pulled back off the label's own gap: the mark belongs *to* the label, and at
-     the row's spacing it read as a third item in the line. */
+     the row's spacing it read as a third item in the line.
+
+     Centred rather than baseline-aligned: the pip is a box twice the label's
+     height, so on the baseline it dragged the whole row's baseline down with it
+     and the label jumped by a pixel or two whenever the pip was absent. Out of
+     the baseline group, the label sits where it sits either way.
+
+     Centred on the label's own box rather than on the row: the row reserves the
+     pip's full height whether or not there is a pip, so centring on it would
+     hang the pip below a label that only fills the top of it. */
   .mark {
     display: flex;
     align-items: center;
+    align-self: start;
+    margin-top: calc((var(--fs-label) - 15px) / 2);
     flex: none;
     margin-left: calc(var(--sp-3) * -1 + var(--sp-2));
   }

@@ -10,6 +10,8 @@
    * same height regardless of how many phases a planet has.
    */
   import { Tooltip, tooltip } from '$ui';
+  import { f } from '$lib/utils';
+  import balance from '$data/balance';
   import { buildWavePath, H as WAVE_H, markerY as markerYAt } from './wave-math';
   import type { Phase } from './types';
 
@@ -31,9 +33,9 @@
   const markerY = $derived(markerYAt(phases.length, position, 1) * scaleY);
 
   const MULTIPLIER = {
-    light: 'positive ×1.4, negative ×0.6',
-    dense: 'negative ×1.4, positive ×0.6',
-  } as const;
+    light: `positive ×${f(balance.wave.biasWith, 2)}, negative ×${f(balance.wave.biasAgainst, 2)}`,
+    dense: `negative ×${f(balance.wave.biasWith, 2)}, positive ×${f(balance.wave.biasAgainst, 2)}`,
+  };
 
   const currentPhase = $derived(phases[current]);
 

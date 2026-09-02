@@ -41,8 +41,8 @@
 
   const columns = $derived(
     showAim
-      ? '20px minmax(0, 1fr) 50px 200px 150px'
-      : '20px minmax(0, 1fr) 200px 150px',
+      ? '20px minmax(0, 1fr) 50px 150px'
+      : '20px minmax(0, 1fr) 150px',
   );
 
   /** Which row is hovering its purchase button, if any. */
@@ -69,7 +69,7 @@
         const type = key as YieldType;
         if (type !== 'karma') return add(type, cohort.perSecond(type, count));
 
-        const karma = cohort.karmaPerSecond(undefined, count);
+        const karma = cohort.karmaPerSecond(count);
         if (!isSplit) return add('karma', karma.positive);
 
         add('karma_negative', karma.negative);
@@ -114,8 +114,6 @@
       {#if showAim}
         <span class="lean"><Label text="Lean" size="sm" /></span>
       {/if}
-
-      <span class="output rate"><Label text="Rate" size="sm" /></span>
 
       <!-- The head cell is the switcher: the words are a read-out of where the
            cycle is, and clicking anywhere in the cell advances it. -->

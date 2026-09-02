@@ -1,5 +1,4 @@
 import { progression } from '$lib/progression';
-import { aim } from '$lib/aim';
 import { harness } from '$lib/harness.svelte';
 import { PlanetManager, UpgradeManager } from '$lib/managers';
 
@@ -27,12 +26,11 @@ export function stop() {
 
 /** Call directly after a discrete event rather than waiting for the tick. */
 export function pulse() {
-  // Before aim, which prices its re-aim penalty in phases and should read the
-  // wave this tick rather than the last one.
+  // Aim reads the planet directly now — both the wave pull and the re-aim
+  // penalty want this tick's phase, not the last one.
   PlanetManager.tick();
-  aim.tick();
-  // All three read `clock` deltas rather than the interval, so the direct calls
-  // after a discrete event cost nothing and a simulated run fast-forwards them.
+  // Reads `clock` deltas rather than the interval, so a direct call after a
+  // discrete event costs nothing and a simulated run fast-forwards it.
   harness.tick();
   // Before the triggers, so a beat gated on what it unlocked sees it this tick.
   UpgradeManager.acquireUnpriced();

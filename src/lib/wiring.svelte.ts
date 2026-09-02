@@ -1,6 +1,8 @@
+import { untrack } from 'svelte';
 import { BuildingManager, PlanetManager, ResourceManager } from '$lib/managers';
 import { beats, createTriggerContext, milestones, progression } from '$lib/progression';
 import { refinery } from '$lib/refinery.svelte';
+import { nav } from '$lib/nav.svelte';
 import { harness } from '$lib/harness.svelte';
 import { sound } from '$lib/sound.svelte';
 import { pulse } from '$lib/loop';
@@ -131,6 +133,63 @@ function watchSound() {
   });
 }
 
+/** Walking in and out of the room. Just long enough to not click — the tab is
+ *  switched, not eased into. */
+const ENTER_FADE_MS = 50;
+
+/**
+ * The refinery is somewhere you go and look at, so all of it — bed, hit and the
+ * staffing stingers — lives and dies with the tab. Off it the machine is silent.
+ *
+ * The drone is held and crossfaded to itself on every cycle, drawing from the
+ * tier the interval names at that moment, so the machine tightening is heard as
+ * the bed changing and needs no code of its own. The hit rides `action` and only
+ * sounds on a pull that paired — the stall is deliberately a gap.
+ */
+function watchRefinerySound() {
+  const crossfade = () => sound.sustain('refinery.drone', { spanMs: refinery.interval });
+  const strike = (detail?: Record<string, unknown>) => {
+    if (Number(detail?.paired ?? 0) > 0) sound.play('refinery.hit');
+  };
+
+  let wasOpen = false;
+  let wasStaffed = false;
+
+  $effect(() => {
+    const isOpen = nav.active === 'refinery' && progression.runs('refining');
+    const isStaffed = refinery.workers > 0;
+
+    // Staffing that flips while you are away is just how the room sounds when
+    // you walk in. The stingers report a change you were there for.
+    if (wasOpen && isOpen && isStaffed !== wasStaffed) {
+      sound.play(isStaffed ? 'refinery.spinup' : 'refinery.spindown');
+    }
+
+    wasOpen = isOpen;
+    wasStaffed = isStaffed;
+
+    if (!isOpen || !isStaffed) {
+      sound.release('refinery.drone', ENTER_FADE_MS);
+      return;
+    }
+
+    // Walking in sounds now rather than next cycle. Untracked because reading
+    // the interval here would re-run this on every tier change and churn the
+    // listeners — the crossfade is what watches it.
+    untrack(() => {
+      sound.sustain('refinery.drone', { spanMs: refinery.interval, fadeMs: ENTER_FADE_MS });
+    });
+
+    refinery.addListener('queue', crossfade);
+    refinery.addListener('action', strike);
+
+    return () => {
+      refinery.removeListener('queue', crossfade);
+      refinery.removeListener('action', strike);
+    };
+  });
+}
+
 export function wire() {
   watchExperience();
   watchWave();
@@ -140,4 +199,5 @@ export function wire() {
   watchRefinery();
   watchHarness();
   watchSound();
+  watchRefinerySound();
 }

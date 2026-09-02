@@ -2,8 +2,12 @@
 
 Rationale and open decisions for `$lib/progression`. The ladder itself lives in
 [`beats.ts`](../src/lib/progression/beats.ts) and the vocabulary in
-[`keys.ts`](../src/lib/progression/keys.ts) — this file does not restate either,
-nor CONTEXT v3.
+[`keys.ts`](../src/lib/progression/keys.ts) — this file does not restate either.
+
+**The design itself lives in [`design.md`](./design.md)**, which supersedes
+CONTEXT v3. This file is *how it got there and how it is built*: the arguments
+behind each conclusion, the visual and widget rationale, and what is open in the
+implementation. For what the game **is**, read `design.md` first.
 
 ## Why it is shaped this way
 
@@ -2858,10 +2862,13 @@ precisely so that `add('karma', n)` cannot typecheck against a pile that does no
 exist. `aim.resolve()` turns a family into two credits at emission.
 
 A cohort answers the global detent through `resistance`: 0 does as it is told, 1
-is unaimable and wanders around its own `polarity_bias`. The wander is value
-noise (`$lib/aim/noise`) rather than `Math.random`, because a per-emission coin
-flip reads as a bug where a slow wander reads as personality. One clock drives
-it — `aim.tick()` off the loop — so the row meters and the payout never disagree.
+is unaimable and sits fully on its own `polarity_bias`, pulled by the wave. What
+was a continuous noise-driven drift is now `balance.aim.wavePull`, signed by
+`Planet.isDense` — dense pulls negative, light pulls positive — so a resisted
+cohort's lean is fixed for the whole phase and steps once, with the flip. Nothing
+about it needs a clock of its own any more: `aim.resolve()` reads `PlanetManager`
+directly, on the same tick the payout does, so the dial and the payout never
+disagree without a `tick()` to keep them in sync.
 
 **The re-aim penalty is not a `Modifier`.** Two reasons: it decays continuously
 rather than expiring, which the bucket list has no shape for; and it is priced in
@@ -2875,35 +2882,26 @@ The row used to print `perSecond('karma')` — production over duration and noth
 else — while the payout multiplied that by `karmaYieldFactor` and by the planet's
 bias. So the cohort with `polarity_multiplier: 7` displayed the same figure at
 Even as at Hard negative while really paying several times more, and extremity —
-the entire reward for committing — was invisible. The row now shows **both piles
-separately**, which is the only presentation that can carry the mix, the payoff
-and the bias at once, and `badge.ts` already had `pos`/`neg` waiting for it.
+the entire reward for committing — was invisible.
 
-Three rules hold it together:
+That figure is gone from the row now, along with every other rate: `CohortRow`
+carries identity and the lean dial and nothing else, Cookie Clicker's own
+arrangement — you hover the name to decide, and the row otherwise stays quiet.
+`CohortTooltip` is where the full chain lives: one base line per yield, then —
+for karma, once beat 6 has split the pile — the aim, the extremity payoff, the
+wave, and the re-aim penalty while it is owed, each named, ending in the two paid
+figures. It can afford to show the *paid* number rather than a settled stand-in,
+because there is no drift term left to churn it: the wave pull is fixed for a
+whole phase, so the figure a hover shows is the figure being paid until the next
+flip.
 
-- **Settled, not realized.** `aim.resolveSettled()` drops the drift term. Drift is
-  redrawn every tick, and it lands hardest on exactly the cohorts where extremity
-  pays — every one with `polarity_multiplier > 1` also has `resistance > 0` — so a
-  live figure would churn by ~20% forever. The `LeanMeter` beside it already
-  carries the wander, as a band. Drift is a span here, never a number.
-- **The re-aim penalty stays out of the rows.** `AimSection` reports it once, as
-  "karma down 65%". It is global and decaying; inside every row it would read as a
-  per-cohort property and make the whole panel sag together.
-- **One definition of income.** `countKarmaPerSecond()` sums the same split the
-  rows display, so the excess wall and the screen cannot disagree. The cost is
-  that the wall now moves with aim and with the phase — see Excess below.
+**One definition of income.** `countKarmaPerSecond()` sums the same split the
+tooltip displays, so the excess wall and the screen cannot disagree. The wall
+still moves with aim and with the phase — see Excess below.
 
-**The arrow is the aim, not the wave.** It compares each rate against the same
-rate at Even, so it says what *your* slider is doing to *this* cohort. That is
-information only a row has: an unaimable cohort (`resistance: 1`) shows no marks
-at all, which reads correctly as "your slider does nothing here". The tempting
-alternative — an arrow for the coming phase flip — was refused as a row element
-because phase is global, so every row would print the same bit. That belongs on
-the wave display, once.
-
-Note that nothing here *breathes*. `Planet.bias()` is a square wave, `1.4` or
-`0.6` on `isDense`, so a rate sits flat for a whole phase and then jumps by a
-factor of about 2.3. Making bias continuous over `position` is a real option, but
+Note that nothing here *breathes*. `Planet.bias()` is a square wave, `1.5` or
+`0.5` on `isDense`, so a rate sits flat for a whole phase and then jumps by a
+factor of 3. Making bias continuous over `position` is a real option, but
 it changes the average bias across a phase and the wall reads income, so it is a
 balance change and not a display one.
 
@@ -2923,19 +2921,23 @@ resistance — is the one where the needle already points straight up. The flat
 track had to spend an element saying where zero was.
 
 The needle is the one thing the track could not draw. It reads `realizedAim`,
-**drift and all** — which does not break the settled-figures rule above, because
-that rule is about *numbers*: drift is a span here, never a figure. A position is
-what a dial is for. And `#driftFor` returns 0 at `resistance: 0`, so the reading
-falls out of the geometry for free: a cohort you can aim has a needle that **does
-not move**, sitting exactly on its wedge's outer edge, and one you cannot has a
-needle visibly creeping between two wedges. That is the whole of what `risky` and
-`unpredictable` meant, without the words. It costs no new render either — the row
-already reacts to the drift clock, because `leanFor` reads `realizedAim` too.
+**wave and all** — the wave pull that replaced drift (see *Aim*, above) still
+belongs on the needle rather than in a figure, because it is a position: the
+band a resisted cohort visits across one cycle, not a number that would have to
+churn. It no longer creeps, though — it **steps once**, on the phase flip, and
+holds. `#waveSign` returns 0 at `resistance: 0`, so the reading still falls out
+of the geometry for free: a cohort you can aim has a needle that does not move at
+all, sitting exactly on its wedge's outer edge, and one you cannot has a needle
+that sits on one edge for a whole phase and then the other. That is what `tidal`
+and `turns` name now — a schedule, not a temperament, because the wave strip
+tells you which one it is doing next.
 
 `unaimable` is the one state the geometry cannot separate, since `resistance: 0.9`
 draws nearly the same band as `1`. The needle greys to `--ink-300` to say the line
-is not yours to set. The word itself survives as the container's native `title` —
-interim, and the argument for a proper hint tooltip is in `handoff.md` §*Parked*.
+is not yours to set. The word itself is now its own hint tooltip — `Tooltip`'s
+`hint` variant, one line and no chrome — rather than the container's native
+`title`; see `CohortTooltip` and the row redesign that cashed in `handoff.md`
+§*Parked*'s hint-tooltip item.
 
 A sector at an arbitrary angle has no primitive in this codebase. `Badge`'s `both`
 cuts a hatched circle with `clip-path: polygon`, but a polygon is fixed and this
@@ -3696,20 +3698,24 @@ lit no beat; it put a system under a beat that was already reaching. That is the
 shape the gauge cannot see, and the reason to read it next to the course rather
 than instead of it.
 
-### The context files are themselves an open task
+### The design lives in `design.md` now
 
-Not a step in the table, because it moves no number in the gauge — but it is work
-that is owed. CONTEXT v3 has been superseded in at least two places by decisions
-recorded here (§3.5 by Refinery, §3.2 by Excess) and neither has been amended at
-the source, so the design docs and this file now disagree and only this file knows
-it. `handoff.md` and `progression.md` have also grown by accretion across fifteen
-sessions: the widget rationale is most of the length and sits under a heading about
-progression, and the same facts are stated in both files at different lengths.
+**Done.** [`design.md`](./design.md) is the current statement of the design and
+**supersedes CONTEXT v3**, which is retired — the two places it had been overridden
+without amendment (§3.5 by Refinery, §3.2 by Excess) are stated correctly there
+along with everything else.
 
-What is wanted is a pass over the whole set — which document owns what, what gets
-amended at the source rather than overridden downstream, and what the per-session
-workflow between them is. Cheap to defer and it compounds: every session that ends
-without it writes into a shape nobody has decided.
+The division from here: `design.md` says **what the game is**, `progression.md`
+says **how it got there and how it is built**. Nothing in this file is deleted —
+the arguments are the record, and `design.md` carries only their conclusions. When
+a design decision changes, amend `design.md` first; a section here becomes the
+account of why it moved.
+
+Writing it turned up four figures this file argues from that `balance.ts` and
+`planets.ts` have since moved past — `evenExperienceBonus`, `clickMs`, `perWorker`
+and the third world's anchor durations. They are tabled in `design.md` §18 and the
+`perWorker` one is not cosmetic: the anchoring phase currently runs about ten times
+faster than the argument in *Progress is a time* was written against.
 
 ### The comments want the same pass
 

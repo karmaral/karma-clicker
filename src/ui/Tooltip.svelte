@@ -4,19 +4,22 @@
   interface Props {
     title?: string;
     description?: string;
-    contentElem?: HTMLElement; 
+    contentElem?: HTMLElement;
     children?: Snippet;
+    /** One line, no chrome, no title/description — the dial's word, not a panel. */
+    hint?: boolean;
   }
 
-  let { 
+  let {
     title,
     description,
     contentElem = $bindable(),
     children,
+    hint = false,
   }: Props = $props();
 </script>
 
-<div class="tooltip" bind:this={contentElem}>
+<div class={['tooltip', { hint }]} bind:this={contentElem}>
   {#if children}
     {@render children()}
   {:else}
@@ -36,9 +39,18 @@
     background: var(--surface);
     border: 1px solid var(--ink-900);
     border-radius: var(--radius);
-    max-width: 320px;
+    max-width: var(--tooltip-max, 320px);
     /* box-shadow: 0 4px 4px rgba(0, 0, 0, 0.15); */
     box-shadow: 0 8px 24px rgba(0,0,0,.10);
+  }
+
+  .tooltip.hint {
+    padding: var(--sp-1) var(--sp-2);
+    max-width: none;
+    white-space: nowrap;
+    box-shadow: none;
+    font-size: var(--fs-sm);
+    color: var(--ink-900);
   }
 
   :global(.tippy-content) .tooltip {
