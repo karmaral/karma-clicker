@@ -8,6 +8,7 @@
   import Halo from './Halo.svelte';
   import Harness from './Harness.svelte';
   import PlanetBody from './PlanetBody.svelte';
+  import SoulBolt from './SoulBolt.svelte';
   import SoulSwarm from './SoulSwarm.svelte';
   import Sparks from './Sparks.svelte';
   import { placeAnchors, type AnchorPlacement, type AnchorVisual } from './anchor';
@@ -20,6 +21,7 @@
     createPulses, PULSE_CAPACITY, sparkWorldPosition,
     type PulseVisual, type Spot,
   } from './pulse';
+  import { createSoulBolts } from './soul-bolt';
   import { coreFillOf, type PlanetVisual } from './visual';
 
   interface Props {
@@ -46,6 +48,21 @@
      * caller is unchanged — and a world with no cohorts is bare, not broken.
      */
     cohorts?: number[];
+    /**
+     * A running count of payouts per cohort, in the same rows as `cohorts` — the
+     * swarm's strikes answer to it, so a band lights when that cohort actually
+     * pays rather than on a rhythm that resembles it. `yields` is the click's
+     * one figure and this is the world's; they are separate for that reason.
+     *
+     * Absent leaves the swarm on its authored doubling, which is the lab.
+     */
+    paid?: number[];
+    /**
+     * Which of those cohorts have collapsed into a rate, same rows again. A
+     * streaming band's `paid` rises on the economy's tick rather than on its own
+     * lives, so it is struck on a fixed rhythm instead — see `SoulSwarm`.
+     */
+    streaming?: boolean[];
     /** The share of the swarm staying with the world. See `SoulSwarm`. */
     merge?: number;
     /**
@@ -125,6 +142,8 @@
     backgroundToken = '--canvas',
     swarm,
     cohorts,
+    paid,
+    streaming,
     merge,
     alignment,
     anchors,
@@ -330,6 +349,14 @@
    * once per mark per frame.
    */
   const pulses = createPulses();
+
+  /**
+   * And the swarm's own, which is not a clock and holds nothing between frames:
+   * `SoulSwarm` empties and refills it as it places the souls, `SoulBolts` draws
+   * what it finds. It lives here because those two are on opposite sides of the
+   * body's hold and neither may own what the other reads.
+   */
+  const soulBolts = createSoulBolts();
 
   /**
    * `undefined` until the first read, so a view coming back into the observer's
@@ -604,9 +631,27 @@
       {filled}
       lean={alignment ?? 0}
       size={worldSize}
+      bolts={soulBolts}
+      yields={paid}
+      {streaming}
     />
   {/if}
 </PlanetBody>
+
+<!-- Out here for a plainer reason than the halo's: `SoulSwarm` writes its marks
+     in the body's own frame, and this puts them back into the scene's. Inside
+     the body they would have the hold applied twice. -->
+{#if swarm && cohorts?.length && swarm.boltEvery > 0 && swarm.boltWidth > 0}
+  <SoulBolt
+    visual={swarm}
+    bolts={soulBolts}
+    {zoom}
+    lean={visual.lean}
+    tilt={visual.tilt}
+    turn={visual.turn}
+    {rim}
+  />
+{/if}
 
 <!-- Outside the body altogether: the halo is about the world, not on it, so
      neither how it is held nor the spin may reach it. -->

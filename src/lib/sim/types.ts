@@ -26,7 +26,7 @@ export interface SimConfig {
   maxBuysPerTick: number;
   /** Kept running after the last beat, so the tail of the curve is drawn. */
   tailSeconds: number;
-  /** Dotted paths into the data files: `basic.cost`, `balance.aim.reaimPenalty`. */
+  /** Dotted paths into the data files: `cohort_1.cost`, `balance.aim.reaimPenalty`. */
   overrides: Record<string, number>;
 }
 
@@ -113,6 +113,19 @@ export interface MergeCurveRow {
   karmaPerSecond: number;
 }
 
+/**
+ * Wall-clock to one cohort's own two moments: when its row became buyable, and
+ * when its first copy actually landed. The gap between them is what a retune
+ * session opens with instead of a stopwatch — see `docs/handoff.md`.
+ */
+export interface ArrivalRecord {
+  cohort: string;
+  index: number;
+  revealedAtMs: number | undefined;
+  firstCopyAtMs: number | undefined;
+  experienceAtFirstCopy: number | undefined;
+}
+
 /** Why a run stopped short. A beat with no floor can hold forever, silently. */
 export interface Stall {
   beat: string;
@@ -126,6 +139,7 @@ export interface SimResult {
   label: string;
   beats: BeatRecord[];
   samples: Sample[];
+  arrivals: ArrivalRecord[];
   harvests: HarvestRecord[];
   ladder: LadderRow[];
   endedAtMs: number;

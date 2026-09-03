@@ -22,7 +22,7 @@ unplayed.
 (worlds) and §18 (the larger wheel) are new; §3, §10, §16 and §20 changed to
 follow them. The move was from **authored figures per thing** to **one formula and
 an index**, on the Cookie Clicker / AdventureCapitalist model: every cohort, every
-milestone and every world is now generated, and the game can be extended by
+level and every world is now generated, and the game can be extended by
 incrementing a number rather than by inventing a row. Nothing that is generated
 has been played.
 
@@ -161,7 +161,7 @@ index up.
 
 | Resource | Polarised | Created by | Spent on |
 |---|---|---|---|
-| `experience` | no | press, cohorts, harvest income | cohort copies, milestone upgrades, clerks, some click and harness upgrades, **knowledge** |
+| `experience` | no | press, cohorts, harvest income | cohort copies, level upgrades, clerks, some click and harness upgrades, **knowledge** |
 | `karma_positive` | yes | press, cohorts aimed positive, harvest income | ~15 upgrades across click / harness / refinery / cohorts / planets |
 | `karma_negative` | yes | cohorts aimed negative, harvest income | **nothing yet — see commerce, §18** |
 | `red_positive` (Crimson) | yes | the refinery | three refinery upgrades, three harness upgrades, Ochre |
@@ -304,7 +304,7 @@ Two consequences fall straight out of that and both are worth memorising:
 
 Later cohorts are deliberately *worse purchases* at base. That is the shape, not a
 flaw in it: they are bought for the ceiling they raise, and they only become good
-through their milestones and through time.
+through their levels and through time.
 
 | # | Base cost | Yield | Life | Rate/s | Payback |
 |---|---|---|---|---|---|
@@ -333,18 +333,20 @@ is the same moment at every rung, forever**:
 Your **34th** copy of cohort *n* costs exactly what the *first* copy of cohort
 *n+1* costs, and that first copy produces five times as much. Below 34 you are
 buying width; above it you are buying depth, and depth is only worth it once the
-milestones are paying. There is no per-cohort crossover to tune, because there is
+levels are paying. There is no per-cohort crossover to tune, because there is
 only one crossover.
 
-### Milestones — why anyone owns four hundred of anything
+### Levels — why anyone owns four hundred of anything
 
-Ten rungs, gated on **current count**, each granting **×2** to that cohort:
+Ten rungs, gated on **current count**, each granting **×2** to that cohort. Kept
+as `level`, not renamed to `milestone` — §16 already uses that word for a
+different thing, and §20 corrects the earlier call to rename this to it.
 
 **`[10, 25, 50, 100, 150, 200, 250, 300, 350, 400]`**
 
 A cohort at 400 with its ladder complete is `400 × 1,024` = **409,600×** its base
 rate, against 400× without. **That is the entire reason to go deep on a cohort you
-have already out-scaled** — a fully-milestoned cohort 1 still earns while you are
+have already out-scaled** — a fully-levelled cohort 1 still earns while you are
 buying cohort 8, and nothing else in the economy does that.
 
 The old six-rung ceiling was set by a real constraint — ten rungs of compounding
@@ -393,12 +395,25 @@ first cohort last**, which is the AdCap shape and the correct one.
 
 ### Clerks — the game is clicking several things before it is clicking one
 
-**A cohort starts manual.** You click its row to send one batch of souls out. A
-**clerk** costs `250 × cost(n)` and thereafter the cohort runs itself, forever.
+**Every cohort starts manual, cohort 1 included, and every cohort has a clerk to
+buy.** You click its row to send one batch of souls out. A **clerk** costs
+`250 × cost(n)` and thereafter the cohort runs itself, forever.
 
-**Cohort 1 has no clerk to buy** — it is the first-soul beat and it was never
-asked. There is a placeholder log line near this idea (§1) and it should not be
-taken as the copy; the beat needs writing.
+⚠ **`clerk` is a placeholder — the word is unsettled.** It reads as an office the
+retired word `manager` already ruled out, and nothing tried in its place (ledger
+words, mechanical ones, managerial ones, continuous-process ones) has landed. See
+§19.
+
+**Cohort 1 is not exempt.** An earlier draft of this section gave it no clerk to
+buy, on the reasoning that the first soul is something that happens to you and
+should stay that way. That reasoning does not survive contact with §5's own arc —
+*many hands, then fewer, then none* — since a row that can never be automated is
+a row the arc cannot reach. What the first-soul beat actually wants is that the
+row has to have been sent by hand **at least once** before the option exists,
+which the uniform rule already gives it: cohort 1's first copy is free and
+manual, same as every cohort's first copy is manual, and its clerk is bought like
+any other's. There is a placeholder log line near the first-soul idea (§1) and it
+should not be taken as the copy; the beat needs writing.
 
 This restores the dropped `autonomous` flag, which was coded and then pinned open,
 and it earns three things:
@@ -428,9 +443,15 @@ the log itself is placeholder and no line of it is load-bearing.
   That preserves §4's press-count argument, which is load-bearing exactly once —
   on the first cohort — and the first-soul beat, which is something that happens
   to you rather than a chip you find.
-- **Every cohort past the first is revealed at `0.5 × cost(n)` experience** and has
+- **Every cohort past the first is revealed at `5 × cost(n)` experience** and has
   no separate entry price. The first copy *is* the entry. One reveal rule, no
   table.
+  - **Corrected from `0.5×` this session**: at `0.5×cost(2)` cohort 2 unlocked
+    before cohort 1 did — the 30 clicks the karma+ gate demands already pay
+    more lifetime xp than that (5 xp a click, flat). `5×` sits past what
+    reaching that gate by clicking alone earns, so the second cohort's row
+    takes actually running the first one, not just pressing the same button
+    thirty more times.
 
 ### What this deletes
 
@@ -445,7 +466,7 @@ payback is defined everywhere and a buy-policy can rank the whole board.
 
 ### What survives untouched
 
-**The merge rule.** A milestone is gated on current count, so:
+**The merge rule.** A level is gated on current count, so:
 
 > **A count-gated upgrade is held only while its count is held.**
 
@@ -469,12 +490,15 @@ never stall, and the cap that the retune installed is not needed and is gone.
 - **Nothing above is tuned against a clock.** The ladder is internally consistent;
   whether cohort 5 arrives at the right minute of the run has not been measured.
 - **`priceFactor` is unauthored** and is now the single pacing knob on every
-  milestone in the game.
+  level in the game.
 - **The clerk multiplier of 250×** is lifted straight from AdCap's manager ratio
   and has not been checked against this economy.
-- **Cohorts have no names past the four inherited ones**, and those four —
-  Impulse, Steady, Chaos, Zealot — were named for yield shapes that no longer
-  exist. Naming is now an indexed authoring surface like everything else.
+- **Cohorts are `cohort_1`…`cohort_8` in code and `Cohort n` in the UI —
+  placeholders, not names.** The four inherited names — Impulse, Steady, Chaos,
+  Zealot — were named for yield shapes that no longer exist and are gone from
+  the data entirely. Naming is now an indexed authoring surface like everything
+  else, the same shape as `Planet 1 / Simple` in §1.
+- **`clerk`'s own name is unsettled** — see §19.
 
 ### All-cohorts upgrades
 
@@ -489,7 +513,7 @@ without anyone writing a rule that says so.
 They **sum** to −18% rather than compounding to −17%. A global shortening of every
 life should add up the way a player reading two percentages expects.
 
-⚠ Both are now much smaller than a single milestone rung and want re-siting
+⚠ Both are now much smaller than a single level rung and want re-siting
 against the generated ladder.
 ## 6. Aim and polarity
 
@@ -1187,7 +1211,7 @@ you lose.**
 - **The floor falls as the population grows**, so the slider's position is
   `max(chosen, floor)` — held up to the toll rather than clamped down to it, so a
   handle dragged high stays where it was put.
-- **What merging costs is the upgrade ladder.** Count-gated milestones release
+- **What merging costs is the upgrade ladder.** Count-gated levels release
   as the count falls below their gates (§5). A shallow merge costs a level or
   two; merging everything costs the ladder. **The slider prices its own
   consequence**, which is what makes it weigh.
@@ -1605,7 +1629,7 @@ an income curve to price against and §5's is generated but unplayed.
 | Survives | Resets |
 |---|---|
 | **wisdom** — held or spent | souls, and every cohort count |
-| **the permanent knowledge shelf** | every milestone rung and every clerk |
+| **the permanent knowledge shelf** | every level rung and every clerk |
 | **collapsed systems**, still emitting | the worlds of the current system |
 | **the inversion counter** (§10 already never resets) | tokens, and unspent knowledge |
 | **boons** | the click ladder |
@@ -1656,7 +1680,8 @@ authored well enough to run that test against — see §1.
 | **A karma-to-red ratio** | §9 — the obvious next refinery knob, deliberately absent |
 | **Continuous vs square-wave phase bias** | §6 — now also the thing that keeps the two ends of the cohort ladder distinct |
 | **How many worlds a system has** | §13 — 3 is authored, not derived |
-| **Per-cohort aiming** | §6 — parked, and further away now that cohorts have no aim figures |
+| **Per-cohort aiming** | §6 — parked, and further away now that cohorts have no aim figures. `LeanMeter` is kept in the tree, unwired, against this coming back |
+| **`clerk`'s own name** | §5, §20 — the mechanic shipped, the word did not; ledger, mechanical and managerial candidates all tried and set aside |
 | **Whether the anchor count should be an upgrade axis** | §12 — deferred as speculative |
 | **The worlds' identity, and the cohorts'** | §1 — the largest fiction hole, now with an index to hang on |
 | **The entire log** | §1 — placeholder throughout; the register is settled and no line is |
@@ -1700,7 +1725,7 @@ the slot counts together** — no one of them is meaningful alone.
   per-level yield, and all six upgrades.
 - **All four token prices** — Ochre, Indigo, inversion base and growth. Not tuned
   against the refinery's placeholders either.
-- **`priceFactor`**, now a single number and the pacing knob on every milestone in
+- **`priceFactor`**, now a single number and the pacing knob on every level in
   the game.
 - **The clerk multiplier**, 250× a cohort's base cost, lifted from AdCap and never
   checked against this economy.
@@ -1714,7 +1739,7 @@ the slot counts together** — no one of them is meaningful alone.
   nothing more.
 - **The whole click ladder**, whose gates were set against the old cohort costs.
 - **`shorter_lives_1` and `hard_season`**, now much smaller than a single
-  milestone rung.
+  level rung.
 
 ### Unplayed — no one has watched these run
 
@@ -1754,8 +1779,8 @@ be "fixed".
 | `alignment` (on a world) | the polarity locked at its harvest |
 | `polarity` (elsewhere) | the two sides of karma |
 | `cohort` | a row of the ladder — one index, one kind of soul |
-| `milestone` | a count-gated ×2 on one cohort |
-| `clerk` | what makes a cohort send its own souls |
+| `level` | a count-gated ×2 on one cohort |
+| `clerk` | what makes a cohort send its own souls (placeholder — see §19) |
 
 ### Retired words — do not reintroduce
 
@@ -1763,9 +1788,14 @@ be "fixed".
 (a seat is furniture and implies a room; a slot is a capacity, which is all the
 number ever was). **reversal** → inversion.
 
-**tier** and **level** → **milestone**. Both were used for the count-gated
-upgrades on a cohort, and `tier` was simultaneously doing duty for *which cohort*.
-One word for one thing: a **cohort** is which row, a **milestone** is which rung.
+**`tier` and `level` are kept, not retired.** An earlier pass here called for
+both to be replaced by `milestone`, on the reasoning that `tier` was doing double
+duty for *which cohort* as well as *which rung*. Struck this session: **one word
+for one thing** still holds, but the word is `level`, not `milestone` —
+`milestone` already names a different thing in §16 (a firsts the log narrates
+that no beat covers), and reusing it for a cohort's rung would be the exact
+collision this rule exists to prevent. A **cohort** is which row, a **level** is
+which rung.
 
 **body** → **world**. A star is a world too; the game has one word for *the place
 you are standing on* and does not need a second for *the kind of thing it is*.

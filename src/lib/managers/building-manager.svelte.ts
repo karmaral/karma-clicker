@@ -44,18 +44,15 @@ class BuildingManager {
     this.#buildings[target] = new Kind(target, initData);
   }
 
+  /**
+   * A cohort starts manual — the clerk is its own purchase now, cohort 1
+   * included, so nothing here pins autonomy open on the first copy any more.
+   * See `docs/design.md` §5, *Clerks*.
+   */
   acquire(target: string, quantity = 1) {
     if (!Boolean(target in data)) return;
 
-    const building = this.#buildings[target];
-    if (!building) return;
-
-    const firstAcquire = building.count === 0;
-    building.add(quantity);
-
-    if (firstAcquire && data[target].role !== 'click') {
-      building.toggleAutonomy(true);
-    }
+    this.#buildings[target]?.add(quantity);
   }
 
   #cohorts() {
@@ -112,9 +109,13 @@ class BuildingManager {
     return positive + negative;
   }
 
-  /** Split for the two badges that read it separately — same sum as `countKarmaPerSecond`. */
+  /**
+   * Split for the two badges that read it separately — same sum as
+   * `countKarmaPerSecond`. A cohort without its clerk earns nothing until sent
+   * by hand, so it is out here the same way the click is.
+   */
   countKarmaPerSecondByPolarity() {
-    return this.#cohorts().reduce(
+    return this.#cohorts().filter((cohort) => cohort.isAutonomous).reduce(
       (sum, cohort) => {
         const { positive, negative } = cohort.karmaPerSecond();
         sum.positive += positive;
@@ -126,9 +127,11 @@ class BuildingManager {
     );
   }
 
-  /** Souls only, same exclusion as `countKarmaPerSecond` — the click is manual. */
+  /** Souls only, same exclusion as `countKarmaPerSecond` — the click and any unclerked cohort are manual. */
   countExperiencePerSecond() {
-    return this.#cohorts().reduce((sum, cohort) => sum + cohort.perSecond('experience'), 0);
+    return this.#cohorts()
+      .filter((cohort) => cohort.isAutonomous)
+      .reduce((sum, cohort) => sum + cohort.perSecond('experience'), 0);
   }
 
   /**

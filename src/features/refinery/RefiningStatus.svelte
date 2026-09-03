@@ -32,6 +32,14 @@
   /** The clock keeps pulsing unstaffed, but a sweep to nowhere is a lie. */
   const isIdle = $derived(refinery.workers <= 0);
 
+  /** A countdown under a quarter second is not a countdown — see `ResourceEmitter`. */
+  const clockLabel = $derived.by(() => {
+    if (isIdle) return 'idle';
+    if (refinery.isStreaming) return 'streaming';
+
+    return `next ${nextIn.toFixed(1)}s`;
+  });
+
   const subscribe: (fn: Listener) => () => void = (fn) => {
     const wrapped: Listener = (detail) => { if (!isIdle) fn(detail); };
     refinery.addListener('queue', wrapped);
@@ -51,8 +59,8 @@
   </div>
 
   <div class="clock">
-    <SweepBar {subscribe} width="100%" height="10px" />
-    <span class="next">{isIdle ? 'idle' : `next ${nextIn.toFixed(1)}s`}</span>
+    <SweepBar {subscribe} streaming={refinery.isStreaming} width="100%" height="10px" />
+    <span class="next">{clockLabel}</span>
   </div>
 
   <div class="progress">

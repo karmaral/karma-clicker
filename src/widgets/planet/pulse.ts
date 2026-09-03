@@ -303,6 +303,24 @@ export function haloSpreadOf(visual: PulseVisual) {
  * signs un-flipped since nothing here is being undone this time.
  */
 export function sparkWorldPosition(mark: Spot, held: Facing) {
+  return sparkWorldInto(mark, held, { x: 0, y: 0, z: 0 });
+}
+
+/**
+ * The same chain, writing into `out` rather than returning a new point — for a
+ * caller putting a whole frame's worth of marks through it, where an object per
+ * mark is an object per mark per frame.
+ *
+ * The three angles are read per call, so a loop that holds the world still is
+ * paying for six trig calls a mark. That is the price of one authority on the
+ * chain, and it is the right one to pay: a second copy of this arithmetic is the
+ * one way a mark and the world it is placed against can silently disagree.
+ */
+export function sparkWorldInto(
+  mark: Spot,
+  held: Facing,
+  out: { x: number; y: number; z: number },
+) {
   const px = mark.x * mark.r, py = mark.y * mark.r, pz = mark.z * mark.r;
 
   const round = held.turn + held.spin;
@@ -317,11 +335,12 @@ export function sparkWorldPosition(mark: Spot, held: Facing) {
   const rx = qx;
 
   const leanC = Math.cos(held.lean), leanS = Math.sin(held.lean);
-  const wx = rx * leanC + ry * leanS;
-  const wy = ry * leanC - rx * leanS;
-  const wz = rz;
 
-  return { x: wx, y: wy, z: wz };
+  out.x = rx * leanC + ry * leanS;
+  out.y = ry * leanC - rx * leanS;
+  out.z = rz;
+
+  return out;
 }
 
 /**

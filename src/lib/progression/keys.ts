@@ -32,7 +32,6 @@ export type RevealKey =
   | 'details.wave'
   | 'details.cohortTable'
   | 'details.aimGlobal'
-  | 'details.aimPerRow'
   | 'details.split'
   | 'details.field'
 

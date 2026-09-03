@@ -9,7 +9,11 @@ import type { ResourceType, YieldType } from '$types';
 import data from '$data/buildings';
 import type { LadderRow } from './types';
 
-const COUNTS = [1, 2, 3, 5, 8, 12, 16, 20, 25, 30, 40, 50, 65, 80, 100, 125, 150, 175, 200];
+// Runs the milestone gates all the way out — see `LEVEL_GATES` in `buildings.ts`.
+const COUNTS = [
+  1, 2, 3, 5, 8, 12, 16, 20, 25, 30, 40, 50, 65, 80, 100, 125, 150, 175, 200,
+  250, 300, 350, 400,
+];
 
 /**
  * What one more would add, read in whatever resource it is priced in — asked of

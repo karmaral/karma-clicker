@@ -2790,6 +2790,23 @@ export function syncBoltUniforms(
   u.uTrail.value = Math.max(0.001, trail);
 }
 
+/**
+ * The same uniforms again, read off the swarm instead of the click. One material
+ * per mark rather than one shared and re-synced: the two are drawn in the same
+ * frame at different weights, so a single set of uniforms could only ever be
+ * whichever of them wrote last.
+ */
+export function syncSoulBoltUniforms(material: THREE.ShaderMaterial, visual: SwarmVisual) {
+  const u = material.uniforms;
+
+  u.uWidth.value = Math.max(0, visual.boltWidth);
+  u.uWarp.value = Math.max(0, visual.boltWarp);
+  u.uBends.value = Math.max(1, visual.boltBends);
+  u.uTone.value = Math.round(visual.boltTone);
+  u.uOutline.value = Math.max(0, visual.boltOutline);
+  u.uTrail.value = Math.max(0.001, visual.boltTrail);
+}
+
 export function syncHaloUniforms(material: THREE.ShaderMaterial, visual: PulseVisual) {
   const u = material.uniforms;
 

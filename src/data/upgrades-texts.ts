@@ -1,5 +1,6 @@
 import type { ItemTextData } from '$types';
 import { levelTexts } from './cohort-levels';
+import { COHORT_COUNT, cohortId } from './buildings';
 
 const data: Record<string, Record<string, ItemTextData>> = {
   'global': {
@@ -30,6 +31,14 @@ const data: Record<string, Record<string, ItemTextData>> = {
     'slots_2': {
       title: 'The floor below',
       description: 'Twelve more slots.',
+    },
+    'efficiency_2': {
+      title: 'Steadier still',
+      description: 'Karma per batch x2',
+    },
+    'speed_2': {
+      title: 'Shorter still',
+      description: 'Seconds per batch x0.5',
     },
   },
   'harness': {
@@ -110,50 +119,29 @@ const data: Record<string, Record<string, ItemTextData>> = {
       effect: '+0.2% a soul riding',
     },
   },
-  'cohort:basic': {
-    ...levelTexts('basic'),
-    'first': {
-      title: 'Self Discovery',
-      description: 'Unlock souls that can generate karma.',
-    },
-    'str_1': {
-      title: 'A singular purpose',
-      description: 'The collective of souls unifies under a single purpose.\n Current yield squared.',
-      effect: 'current yield squared',
-    },
-  },
-  'cohort:steady': {
-    ...levelTexts('steady'),
-    'first': {
-      title: 'Steady',
-      description: 'Unlock slow souls but very yielding.',
-    },
-    'speed_1': {
-      title: 'An easier way',
-      description: 'Seconds per incarnation x0.75',
-    }
-  },
-  'cohort:chaos': {
-    ...levelTexts('chaos'),
-    'first': {
-      title: 'Free Wilderness',
-      description: 'A soul that explores the full polarity spectrum at random.',
-    },
-  },
-  'cohort:zealot': {
-    ...levelTexts('zealot'),
-    'first': {
-      title: 'MAX_VALUE',
-      description: 'A zealot soul willing to go all in.\n Zealotry can backfire!',
-    },
-  },
-  'cohort:red_basic': {
-    ...levelTexts('red_basic'),
-    'first': {
-      title: 'Auto Refinery',
-      description: 'A refiner soul that can produce tokens without consuming karma. Just like magic.',
-    },
-  },
+  /**
+   * Generated, like the buckets in `upgrades.ts` they describe. `first` and
+   * `clerk` are placeholders until the cohorts themselves are named — see
+   * `buildings-texts.ts`. `clerk`'s own name is unsettled; see
+   * `docs/design.md` §19.
+   */
+  ...Object.fromEntries(
+    Array.from({ length: COHORT_COUNT }, (_, i) => {
+      const n = i + 1;
+      const id = cohortId(n);
+
+      return [`cohort:${id}`, {
+        ...levelTexts(id),
+        'first': n === 1
+          ? { title: 'First soul', description: 'Placeholder. The wheel finds a second hand.' }
+          : { title: 'Placeholder', description: `Placeholder. Cohort ${n} becomes reachable.` },
+        'clerk': {
+          title: 'Clerk',
+          description: 'Placeholder. Sends this cohort’s souls without being asked.',
+        },
+      }];
+    }),
+  ),
   'cohorts': {
     'shorter_lives_1': {
       title: 'Shorter Lives I',

@@ -44,25 +44,18 @@ function fixed(min: number, max: number, step: number) {
   return (): [number, number, number] => [min, max, step];
 }
 
+/**
+ * No per-cohort aim or level fields any more — a level's worth and price both
+ * fall out of `cost`/`cost_multiplier`/`upgrade_threshold` in `cohort-levels.ts`,
+ * and aim is one global dial (`GLOBAL_FIELDS` below). See `docs/design.md` §5/§6.
+ */
 const COHORT_FIELDS: FieldSpec[] = [
   { field: 'cost', label: 'cost', range: scaled(20) },
-  // Finer and shorter than it was: the ramps now live between 1.01 and 1.06, and
-  // a 0.01 notch there is a doubling of the army. The count is 1/ln(ramp).
+  // The ramp is one number for the whole ladder now — see `buildings.ts`.
   { field: 'cost_multiplier', label: 'cost ramp', range: fixed(1.005, 1.5, 0.001) },
   { field: 'duration', label: 'duration ms', range: fixed(0, 20_000, 100) },
-  // The three multipliers author the level upgrades rather than applying to a
-  // count, so moving one moves both what a level is worth and what it is priced
-  // at — see `cohort-levels.ts`.
-  { field: 'duration_reduction', label: 'speed / tier', range: fixed(0, 0.9, 0.01) },
   { field: 'yields.karma', label: 'karma', range: scaled(20) },
   { field: 'yields.experience', label: 'experience', range: scaled(20) },
-  { field: 'yields.red_positive', label: 'red', range: scaled(20) },
-  { field: 'yield_multipliers.karma', label: 'karma / tier', range: fixed(0, 10, 0.01) },
-  { field: 'yield_multipliers.experience', label: 'xp / tier', range: fixed(0, 10, 0.01) },
-  { field: 'yield_multipliers.red_positive', label: 'red / tier', range: fixed(0, 10, 0.01) },
-  { field: 'polarity_bias', label: 'bias', range: fixed(-2, 2, 1) },
-  { field: 'polarity_multiplier', label: 'extremity pay', range: fixed(1, 10, 0.1) },
-  { field: 'resistance', label: 'resistance', range: fixed(0, 1, 0.01) },
 ];
 
 const PLANET_FIELDS: FieldSpec[] = [
@@ -86,7 +79,7 @@ const GLOBAL_FIELDS: FieldSpec[] = [
   { field: 'refinery.expBase', label: 'exp to lvl 2', range: scaled(20) },
   { field: 'refinery.expGrowth', label: 'exp growth', range: fixed(1, 3, 0.01) },
   { field: 'refinery.yieldPerLevel', label: 'batch / level', range: fixed(0, 0.5, 0.005) },
-  { field: 'aim.wavePull', label: 'wave pull', range: fixed(0, 2, 0.01) },
+  { field: 'aim.extremityMultiplier', label: 'extremity pay', range: fixed(1, 10, 0.1) },
   { field: 'aim.reaimPenalty', label: 're-aim cost', range: fixed(0, 1, 0.01) },
   { field: 'aim.reaimPhases', label: 're-aim phases', range: fixed(0, 10, 1) },
   { field: 'wave.biasWith', label: 'with the wave', range: fixed(0, 4, 0.05) },

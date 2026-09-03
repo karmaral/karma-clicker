@@ -10,6 +10,9 @@
     settleScale, swellOf, travelOf, SOUL_CAPACITY, SPAWN_CAPACITY, type SwarmVisual,
   } from './orbit';
   import { lifeOf } from './pulse';
+  import {
+    boltCycleOf, boltDelayOf, boltPeriodOf, createBoltBeats, streamWaveOf, type SoulBolts,
+  } from './soul-bolt';
   import { RENDER_ORDER } from './stack';
 
   interface Props {
@@ -85,11 +88,34 @@
      * authored, and it is not the hatch's — see `syncSoulUniforms`.
      */
     lean?: number;
+    /**
+     * One frame's worth of strikes, filled here and drawn by `SoulBolts`. Handed
+     * in rather than owned because the two are in different frames — see that
+     * component's header. Absent is a view that draws none.
+     */
+    bolts?: SoulBolts;
+    /**
+     * A running count of payouts per band, in the same rows as `counts`. Game
+     * state, so it is a prop and not a `SwarmVisual` field — the same separation
+     * `counts` keeps. Absent falls back to the visual's authored doubling, which
+     * is the lab: nothing there is earning, so there is nothing to strike on.
+     *
+     * Counts and not times, and only the *rise* is read — see `createBoltBeats`.
+     */
+    yields?: number[];
+    /**
+     * Which bands pay by the tick rather than by the life, in the same rows as
+     * `counts`. Game state like `yields`, and the reason it cannot be derived
+     * from it: a streaming band's payout count rises on a clock the economy
+     * chose for its own reasons, so striking on it would show the tick and not
+     * the cohort. Such a band gets a fixed rhythm instead — see `streamCycleOf`.
+     */
+    streaming?: boolean[];
   }
 
   let {
     visual, counts, zoom, loops, riders, clock, spinAngle = 0, size = 1, bleed = 0, merge,
-    core = 0, filled, lean = 0,
+    core = 0, filled, lean = 0, bolts, yields, streaming,
   }: Props = $props();
 
   /** The core as drawn, which is the only one an arrival is measured against. */
@@ -112,6 +138,14 @@
   geometry.setAttribute('stay', stays);
 
   const souls = $derived(createSouls(visual, counts));
+
+  /**
+   * When each band last paid, kept across frames because a payout is a rise and
+   * a rise can only be seen by something that remembers. Not `$state`: it is
+   * written every frame from inside the task, which is the one place a rune
+   * would cost a re-render for a value nothing renders from.
+   */
+  const beats = createBoltBeats();
 
   /**
    * The spawn-in flare: a small second mesh, keyed to the *index* a soul lit
@@ -271,6 +305,24 @@
     // arrival rather than the older one finishing.
     hatches.fill(1);
 
+    // Whether a soul strikes at all, decided once for the world rather than once
+    // per soul. A harvest is the interesting half: a world being *decided* is
+    // not a world at work, so nothing is struck while a split is on the table —
+    // and since the crossing below only runs when there is one, a striking soul
+    // is by construction never crossing or berthed. It is on its orbit or on a
+    // line, and those are all the places there are.
+    const striking = merge === undefined && visual.boltEvery > 0 ? bolts : undefined;
+
+    striking?.reset();
+
+    // What the strikes answer to. A world that is paying out strikes on the
+    // payout; one that is not — the lab, a still, a widget with no economy
+    // behind it — falls back to the authored doubling, which is what that
+    // rhythm is an imitation of in the first place.
+    const paying = yields?.length ? yields : undefined;
+
+    if (striking && paying) beats.follow(paying, elapsed);
+
     spawns.marks.forEach((mark) => {
       const t = lifeOf(mark, elapsed, visual.spawnLife);
       if (t >= 1 || mark.index < 0 || mark.index >= SOUL_CAPACITY) return;
@@ -338,6 +390,50 @@
               arrived,
             );
           }
+        }
+      }
+
+      // Its strike, taken off the position above whatever put the soul there —
+      // orbiting or riding a line, the mark is thrown from wherever the dot
+      // actually is.
+      //
+      // A band strikes as one, because a cohort pays as one: the emitter belongs
+      // to the cohort and not to the soul, so a payout is a whole band at a
+      // single instant. `boltSpread` is what that instant is opened into — each
+      // soul waits its own share of it, so the band arrives as a scatter across
+      // a moment instead of a flash. A negative age is a soul whose turn inside
+      // that window has not come round yet.
+      //
+      // The window is applied to the authored rhythm too, and that is the point:
+      // the lab is where this gets dialled, so it has to be showing the shape a
+      // paying world actually makes.
+      //
+      // Unless the band streams, in which case there is no instant to open: it
+      // pays on a tick of the economy's choosing, and what strikes it instead is
+      // a wave sweeping round the world — asked of where the soul is standing,
+      // not of which soul it is, so the front crosses the swarm rather than
+      // sitting in the seed. A band that pulses rather than one that arrives.
+      if (striking) {
+        let age;
+
+        if (streaming?.[soul.band]) {
+          age = streamWaveOf(dummy.position.x, dummy.position.z, elapsed, visual);
+        } else if (paying) {
+          age = beats.ageOf(soul.band, elapsed) - boltDelayOf(soul, visual);
+        } else {
+          age = boltCycleOf(elapsed, boltPeriodOf(soul.band, visual)) - boltDelayOf(soul, visual);
+        }
+
+        if (age >= 0 && age < visual.boltLife) {
+          striking.add(
+            dummy.position.x, dummy.position.y, dummy.position.z,
+            visual.boltTo,
+            age / visual.boltLife,
+            // When this strike was thrown, which is fixed for its whole life and
+            // moves on to the next one — so a soul bends its line differently
+            // each time rather than repeating one shape for ever.
+            soul.phase + (elapsed - age),
+          );
         }
       }
 

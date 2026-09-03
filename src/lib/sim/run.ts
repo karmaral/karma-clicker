@@ -23,7 +23,7 @@ import VirtualClock from './virtual-clock';
 import { buildLadder, marginalPerSecond, paybackOf } from './ladder';
 import { POLICIES, stanceLabel } from './policy';
 import type {
-  BeatRecord, Candidate, HarvestRecord, Sample, SimConfig, SimProgress, SimResult,
+  ArrivalRecord, BeatRecord, Candidate, HarvestRecord, Sample, SimConfig, SimProgress, SimResult,
 } from './types';
 
 /** Matches the live loop, so beat triggers are polled at the cadence they will be. */
@@ -71,6 +71,7 @@ export async function run(
   const beatRecords: BeatRecord[] = [];
   const samples: Sample[] = [];
   const harvests: HarvestRecord[] = [];
+  const arrivals = new Map<string, ArrivalRecord>();
 
   let recordedBeats = 0;
   let lastBeatAt = 0;
@@ -96,6 +97,49 @@ export async function run(
 
   function click() {
     BuildingManager.getBuilding('main')?.queueAction();
+  }
+
+  /**
+   * A cohort starts manual now (§5, *Clerks*) — without this every run stalls
+   * the moment its clerk is out of reach. Same convention as `buyUpgrades`: a
+   * perfectly attentive player sends every idle row every tick.
+   */
+  function workManualCohorts() {
+    for (const id of BuildingManager.cohorts) {
+      const building = BuildingManager.getBuilding(id);
+      if (!building || building.count === 0) continue;
+      if (building.isAutonomous || building.isInProgress) continue;
+
+      building.queueAction();
+    }
+  }
+
+  /**
+   * Wall-clock to a cohort's own two moments — revealed, then first copy. Read
+   * off `BuildingManager.cohorts` rather than the beat ladder, so the retune
+   * session opens with a figure per cohort instead of one per beat.
+   */
+  function recordArrivals() {
+    for (const id of BuildingManager.cohorts) {
+      const building = BuildingManager.getBuilding(id);
+      if (!building) continue;
+
+      let record = arrivals.get(id);
+      if (!record) {
+        const index = Number(id.match(/^cohort_(\d+)$/)?.[1]) || arrivals.size + 1;
+
+        record = {
+          cohort: id, index, revealedAtMs: clock.now(),
+          firstCopyAtMs: undefined, experienceAtFirstCopy: undefined,
+        };
+        arrivals.set(id, record);
+      }
+
+      if (record.firstCopyAtMs === undefined && building.total > 0) {
+        record.firstCopyAtMs = clock.now();
+        record.experienceAtFirstCopy = ResourceManager.getTotal('experience');
+      }
+    }
   }
 
   /** Every priced upgrade the moment it is affordable — how most players play. */
@@ -275,12 +319,14 @@ export async function run(
     if (progression.runs('refining')) refinery.start();
     if (progression.runs('anchoring')) harness.start();
 
+    workManualCohorts();
     buyUpgrades();
     buyCohorts();
     maybeHarvest();
     await settle();
 
     recordBeats();
+    recordArrivals();
 
     if (clock.now() >= nextSampleAt) {
       takeSample();
@@ -302,6 +348,7 @@ export async function run(
     label: `${policy.label} · ${stanceLabel(config.merge)}`,
     beats: beatRecords,
     samples,
+    arrivals: [...arrivals.values()].sort((a, b) => a.index - b.index),
     harvests,
     ladder,
     endedAtMs: clock.now(),

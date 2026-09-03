@@ -1,5 +1,6 @@
-import type { UpgradeData, UpgradeScope } from '$types';
+import type { ResourceType, UpgradeData, UpgradeScope } from '$types';
 import { levelUpgrades } from './cohort-levels';
+import buildingData, { cohortId, COHORT_COUNT } from './buildings';
 
 const ENTITY_KINDS = ['cohort', 'building', 'planet'] as const;
 
@@ -236,91 +237,58 @@ const data: Record<string, UpgradeData[]> = {
     },
   ],
   /**
-   * Every `first` below **gates in karma and pays in experience**, and the two
-   * jobs are not the same job: `unlocks_at` reads a lifetime total that can
-   * never be spent, so it is a clock saying *when a kind of soul becomes
-   * available*; `costs` reads the spendable pile, so it is the trade. Priced in
-   * karma at the same figure they gated on, they were one currency doing both
-   * and neither read.
+   * Generated off the index — see `docs/design.md` §5, *Entry*. Cohort 1's
+   * first copy is free and gated on the press-count argument (`karma_positive`
+   * is what the click pays flat, untouched by `str_*`); every cohort past it is
+   * only *revealed* at `5 × cost(n)` experience — the first copy is bought
+   * from the row at its own price, so there is no second table.
    *
-   * Experience because the cohorts already are — copies and level upgrades
-   * alike, see *The level-replacements are priced in experience*. It is the same
-   * rule one level up: a cohort now costs you a rung of the click's ladder, so
-   * the two are ordered by price instead of by two clocks running side by side.
+   * `5×`, not the `0.5×` §5 first wrote: at `0.5×cost(2)` cohort 2 unlocked
+   * before cohort 1 did — the 30 clicks the karma+ gate demands already earn
+   * more lifetime xp than that. `5×` sits past what clicking to that gate
+   * alone pays, so a second cohort takes actually running the first one.
    *
-   * Karma for the gate because the click pays a flat 1 of it untouched by
-   * `str_*`, which makes a karma gate a **press count** — so `speed_1` visibly
-   * pulls the next cohort forward in wall-clock time. Placeholder figures.
+   * `clerk` is every cohort's own to buy, cohort 1 included — a row that could
+   * never be automated would fight the arc the doc states (*many hands, then
+   * fewer, then none*), and cohort 1 is the one row that has to have been sent
+   * by hand at least once before it earns the option. Priced at `250 × cost(n)`,
+   * the same ratio §5 lifted from AdCap's manager rung. The label is a
+   * placeholder — `clerk` is unsettled, see §19.
    */
-  'cohort:basic': [
-    {
-      // The one that stays costless, so `#autoAcquire` still grants it: this is
-      // the `first_soul` beat, and the first soul is something that happens to
-      // you, not a chip you find. 30 puts it past both opening click chips —
-      // it used to land at 15, before either of them was buyable.
-      id: 'first',
-      effect: ['unlock', 'acquire'],
-      unlocks_at: { karma_positive: 30 },
-    },
-    ...levelUpgrades('basic'),
-    {
-      // Past the level_4 gate at 50, so the karma reward does not land on the
-      // same count as an experience-priced level.
-      id: 'str_1',
-      effect: [
-        { op: 'mult', value: 1.6, target: 'experience' },
-        { op: 'mult', value: 6.6, target: 'karma' },
-      ],
-      unlocks_at: { count_total: 60 },
-      costs: { karma_positive: 10_000 },
-    },
-  ],
-  'cohort:steady': [
-    {
-      id: 'first',
-      effect: ['unlock', 'acquire'],
-      unlocks_at: { karma_positive: 140 },
-      costs: { experience: 800 },
-    },
-    ...levelUpgrades('steady'),
-    {
-      // `duration_reduction: 0` — steady is the one cohort whose levels carry no
-      // speed, so this is the only thing that shortens it.
-      id: 'speed_1',
-      effect: { op: 'mult', value: 0.75, stat: 'duration' },
-      unlocks_at: { count_total: 25 },
-      costs: { experience: 200 },
-    }
-  ],
-  'cohort:chaos': [
-    {
-      id: 'first',
-      effect: ['unlock', 'acquire'],
-      unlocks_at: { karma_positive: 70 },
-      costs: { experience: 400 },
-    },
-    ...levelUpgrades('chaos'),
-  ],
-  'cohort:zealot': [
-    {
-      // Its own copies cost 10k experience each, so the entry is one copy's
-      // worth. The gate stays where it was — this one is late by design.
-      id: 'first',
-      effect: ['unlock', 'acquire'],
-      unlocks_at: { karma_positive: 10_000 },
-      costs: { experience: 10_000 },
-    },
-    ...levelUpgrades('zealot'),
-  ],
-  'cohort:red_basic': [
-    {
-      id: 'first',
-      effect: ['unlock', 'acquire'],
-      unlocks_at: { red_positive: 5000 },
-      costs: { red_positive: 5000 },
-    },
-    ...levelUpgrades('red_basic'),
-  ],
+  ...Object.fromEntries(
+    Array.from({ length: COHORT_COUNT }, (_, i) => {
+      const n = i + 1;
+      const id = cohortId(n);
+      const { cost = 0, cost_type: costType = 'experience' } = buildingData[id] ?? {};
+
+      const first: UpgradeData = n === 1
+        ? {
+          // The one that stays costless, so `acquireUnpriced` still grants it:
+          // this is the `first_soul` beat, and the first soul is something
+          // that happens to you, not a chip you find.
+          id: 'first',
+          effect: ['unlock', 'acquire'],
+          unlocks_at: { karma_positive: 30 },
+        }
+        : {
+          // Unlocks the row only — no free copy. The first copy is bought at
+          // `getCost(1)`, which is `cost` above, so the entry price lives in
+          // exactly one place.
+          id: 'first',
+          effect: 'unlock',
+          unlocks_at: { experience: 5 * cost },
+        };
+
+      const clerk: UpgradeData = {
+        id: 'clerk',
+        effect: 'autonomy',
+        unlocks_at: { count: 1 },
+        costs: { [costType]: 250 * cost } as Partial<Record<ResourceType, number>>,
+      };
+
+      return [`cohort:${id}`, [first, ...levelUpgrades(id), clerk]];
+    }),
+  ),
   /**
    * Every cohort at once, and only cohorts — the fan-out reads
    * `BuildingManager.cohorts`, which names its members by class, so the click is

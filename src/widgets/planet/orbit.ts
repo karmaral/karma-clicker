@@ -208,6 +208,70 @@ export interface SwarmVisual {
   spawnDim: number;
   /** Radians per second it turns over its life, so it isn't a static sticker. */
   spawnSpin: number;
+
+  /**
+   * The soul's own strike: a small warped line thrown from a dot down at the
+   * world, on an interval taken from the band it was dealt from. The click's
+   * bolt read from the other side — that one comes from *outside* and is you,
+   * this one comes from the orbit and is the world working on its own.
+   *
+   * Seconds between one soul's strikes, for band 0. **0 is the whole thing off**,
+   * so nothing below needs a switch of its own. Later bands double it, which is
+   * the game's own `duration(n) = 1s × 2^(n-1)` read as a look: the inner band
+   * flickers and the outer one tolls.
+   */
+  boltEvery: number;
+  /** Seconds from the strike to gone. */
+  boltLife: number;
+  /**
+   * Seconds across which a band's souls answer a single strike. A cohort has
+   * one emitter however many souls stand in it, so a payout is one event for
+   * the whole band and every dot in it would otherwise fire on the same frame.
+   *
+   * This is what keeps that from reading as a strobe: each soul takes its own
+   * share of this window off its `phase`, so the band arrives as a scatter over
+   * a moment rather than as a flash. 0 is the honest unison.
+   *
+   * Longer than the band's own interval and its slowest souls are still waiting
+   * when the next strike lands, so they never fire — which is a spread wider
+   * than the rhythm it is spreading, and reads as a thinner band.
+   */
+  boltSpread: number;
+  /**
+   * Seconds for one pass of the wave round the world — the rhythm a **streaming**
+   * band strikes on, where the two above are the rhythm a band with lives left
+   * strikes on. A cohort paying by the tick has no beat to answer, so what it
+   * gets instead is a front sweeping the swarm; see `streamWaveOf`.
+   *
+   * Per *pass* and not per strike, which is why it is a whole second or two
+   * where `boltEvery` is a fraction of one. `boltLife` over this is how much of
+   * the ring is lit at once, the way the sweep bar's gradient is a share of its
+   * track — the two knobs are the width of the band, and neither reads alone.
+   */
+  boltWave: number;
+  /**
+   * How far in it reaches, in body radii. The strike runs radially — from the
+   * dot straight down at the world — so this is the one end that is authored and
+   * the other is wherever the soul happens to be.
+   */
+  boltTo: number;
+
+  /**
+   * Its look, and its own rather than the click's. The same seven knobs
+   * `PulseVisual` carries for the press, authored a second time because the two
+   * marks are not the same weight: the click's bolt is *the* event and this one
+   * is the world ticking over behind it. 0 width is off.
+   */
+  boltWidth: number;
+  boltTone: number;
+  /** In pixels, grown past the fill in the fill's flip. 0 is the outline off. */
+  boltOutline: number;
+  /** How far the warp pushes it off the straight line, as a share of its length. */
+  boltWarp: number;
+  /** Bends along that length. */
+  boltBends: number;
+  /** How much of the drawn length is lit behind the head, as a share of it. */
+  boltTrail: number;
 }
 
 /**
@@ -226,6 +290,12 @@ export interface Soul {
   wobbleRate: number;
   /** Its place in the dealing order — the soul with place 0 rides first. */
   place: number;
+  /**
+   * Which band it was dealt from. The one thing a soul carries about where it
+   * came from, and it carries it for one reason: a bolt's period is its band's.
+   * Still not a cohort — the swarm is handed counts and never learns what one is.
+   */
+  band: number;
 }
 
 /** xorshift, so one integer fixes the whole swarm — as `seed` does for the field. */
@@ -408,6 +478,7 @@ export function createSouls(visual: SwarmVisual, counts: number[]): Soul[] {
         wobble: visual.wobble * random(),
         wobbleRate: visual.wobbleRate * (0.5 + random()),
         place: 0,
+        band: index,
       };
 
       orbitBasis(
@@ -598,7 +669,7 @@ export function phaseOf(soul: Soul, elapsed: number) {
   return turns - Math.floor(turns);
 }
 
-export type SwarmGroup = 'Orbits' | 'Scatter' | 'Souls' | 'Spawn';
+export type SwarmGroup = 'Orbits' | 'Scatter' | 'Souls' | 'Spawn' | 'Bolt';
 
 export interface SwarmParam {
   key: keyof SwarmVisual;
@@ -609,7 +680,7 @@ export interface SwarmParam {
   step: number;
 }
 
-export const SWARM_GROUPS: SwarmGroup[] = ['Orbits', 'Scatter', 'Souls', 'Spawn'];
+export const SWARM_GROUPS: SwarmGroup[] = ['Orbits', 'Scatter', 'Souls', 'Spawn', 'Bolt'];
 
 /** Shaped like `VISUAL_PARAMS`, so wiring a panel onto it is mechanical. */
 export const SWARM_PARAMS: SwarmParam[] = [
@@ -650,6 +721,27 @@ export const SWARM_PARAMS: SwarmParam[] = [
   { key: 'spawnRise', label: 'Rise', group: 'Spawn', min: 0.02, max: 0.9, step: 0.02 },
   { key: 'spawnDim', label: 'Dim', group: 'Spawn', min: 0, max: 1, step: 0.05 },
   { key: 'spawnSpin', label: 'Spin', group: 'Spawn', min: 0, max: 12, step: 0.1 },
+
+  // 0 is the whole strike off, so nothing below needs a switch of its own. The
+  // top is long on purpose: it is band 0's period and the outer bands double it,
+  // so 8s here is over four minutes on the eighth band.
+  { key: 'boltEvery', label: 'Every s', group: 'Bolt', min: 0, max: 8, step: 0.05 },
+  { key: 'boltLife', label: 'Life', group: 'Bolt', min: 0.05, max: 2, step: 0.05 },
+  { key: 'boltSpread', label: 'Spread s', group: 'Bolt', min: 0, max: 1.5, step: 0.01 },
+  // Seconds for a whole pass, so its floor is where the sweep stops being a
+  // sweep and becomes a flicker. Read it against `Life` — that pair is the width
+  // of the lit band, and either alone says nothing.
+  { key: 'boltWave', label: 'Wave s', group: 'Bolt', min: 0.4, max: 8, step: 0.1 },
+  // Past the rim at the top: a strike that stops short of the ground reads as a
+  // dash hanging in the air, and how far *into* the world it goes is a look.
+  { key: 'boltTo', label: 'Reach', group: 'Bolt', min: 0, max: 1.4, step: 0.01 },
+  // 0 is the strike off — the same argument `sparks` and `burstWidth` make.
+  { key: 'boltWidth', label: 'Stroke px', group: 'Bolt', min: 0, max: 8, step: 0.25 },
+  { key: 'boltTone', label: 'Ink', group: 'Bolt', min: 0, max: 6, step: 1 },
+  { key: 'boltOutline', label: 'Outline px', group: 'Bolt', min: 0, max: 6, step: 0.25 },
+  { key: 'boltWarp', label: 'Warp', group: 'Bolt', min: 0, max: 0.3, step: 0.005 },
+  { key: 'boltBends', label: 'Bends', group: 'Bolt', min: 1, max: 6, step: 0.5 },
+  { key: 'boltTrail', label: 'Trail', group: 'Bolt', min: 0.05, max: 1, step: 0.05 },
 ];
 
 export const DEFAULT_SWARM: SwarmVisual = {
@@ -668,7 +760,7 @@ export const DEFAULT_SWARM: SwarmVisual = {
   dot: 0.042,
   dotScatter: 0.012,
   dotFloor: 1.5,
-  riders: 0,
+  riders: 1,
   settleAt: 0.8,
   strayTo: 1.1,
   crossing: 24,
@@ -684,6 +776,17 @@ export const DEFAULT_SWARM: SwarmVisual = {
   spawnRise: 0.12,
   spawnDim: 0.3,
   spawnSpin: 0,
+  boltEvery: 0.15,
+  boltLife: 0.2,
+  boltSpread: 0.12,
+  boltWave: 2.4,
+  boltTo: 0.89,
+  boltWidth: 3.5,
+  boltTone: 0,
+  boltOutline: 1.25,
+  boltWarp: 0.055,
+  boltBends: 1,
+  boltTrail: 1,
 };
 
 export function cloneSwarm(visual: SwarmVisual): SwarmVisual {

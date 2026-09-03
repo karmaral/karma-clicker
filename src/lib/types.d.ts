@@ -82,10 +82,9 @@ export interface UpgradeData {
 export type BuildingRole = 'click' | 'soul';
 
 /**
- * `upgrade_threshold`, `yield_multipliers` and `duration_reduction` author the
- * cohort's level upgrades — the counts that unlock them and what each one is
- * worth. `Building` reads none of the three: a level is bought, not earned, so
- * the multiplier arrives as a modifier. See `cohort-levels.ts`.
+ * `upgrade_threshold` authors the cohort's level upgrades — the counts that
+ * unlock them. `Building` does not read it: a level is bought, not earned, so
+ * its multiplier arrives as a modifier. See `cohort-levels.ts`.
  */
 export interface BuildingData {
   role?: BuildingRole;
@@ -94,16 +93,8 @@ export interface BuildingData {
   cost_type?: ResourceType;
   cost_multiplier?: number;
   yields: Partial<Record<YieldType, number>>;
-  yield_multipliers?: Partial<Record<YieldType, number>>;
   count?: number;
   duration?: number;
-  duration_reduction?: number;
-  /** The detent this cohort drifts toward, −2…2. */
-  polarity_bias?: number;
-  /** What a hard detent pays, relative to an even one. */
-  polarity_multiplier?: number;
-  /** 0 does as it is told; 1 is unaimable, drifting around its own bias. */
-  resistance?: number;
 }
 /**
  * What a planet demands before it will let you take the first harvest — the

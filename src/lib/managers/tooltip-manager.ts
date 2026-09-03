@@ -31,6 +31,15 @@ class TooltipManager {
         'appendTo',
         'hideOnClick',
       ],
+      // The singleton never hides between rows during a drag — it retargets
+      // the same box via setProps(), which is gated behind tippy's own
+      // `ignoreOnFirstUpdate` flag (only cleared by a real hide()). So the
+      // reflow+forceUpdate tippy bakes into onMount silently no-ops on every
+      // retarget but the first; onMount itself never fires again either.
+      // `onAfterUpdate` is what actually runs on each retarget — tippy uses
+      // this exact rAF-deferred forceUpdate itself, for the same reason, to
+      // fix re-rendered nested poppers.
+      onAfterUpdate: (instance) => requestAnimationFrame(() => instance.popperInstance?.forceUpdate()),
     });
 
     return this.#singleton;

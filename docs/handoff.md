@@ -4,28 +4,48 @@
 way:
 
 - **One line per item.** If it needs a paragraph it is not orientation.
-- **`§` names the `progression.md` section that carries the argument.** Nothing
-  here restates one. If you want *why*, that is where it is, on purpose.
+- **`§` names the `progression.md` section that carries the argument** — except
+  where a line writes `design.md §n` explicitly, which points at that file
+  instead. The two docs both number their sections and the collision is silent
+  otherwise, so the explicit form is the one to use going forward.
 - **No file table.** `git status` and `git log` are authoritative and never go
   stale; a hand-maintained copy of them did, twice.
 
 ---
 
+## Ahead of the build
+
+`design.md` states more than the build ships. One line each; the section is the
+argument, this is only the flag.
+
+- **`design.md` §13** — world totals are still the old cubic figures
+  (`ages`/`cycles_per_age`/`phase_duration` in `planets.ts`); the doc's
+  `time(p) = 240s × 2^(p−1)` law is not landed.
+- **`design.md` §18** — the whole prestige layer (wisdom, knowledge, commerce)
+  is argument only; nothing exists in code.
+- **`design.md` §12's `perWorker` defect** — the anchoring phase runs ~10×
+  faster than the doc's own intent; not yet retuned.
+- **`design.md` §16's nine beat floors** — fitted to the pre-rewrite cohort
+  ladder, all wrong now that §5 is generated.
+
+§5 (cohorts) and §6 (aim) landed this session — see *Tree* below.
+
 ## Tree
 
-Branch `dev-next`, last commit `9e3069d details tab includes its label`. Behind
-it, `e33eaa5 rebuild checkpoint 18` and `73a587e simplify aim controls`;
-checkpoint 17 carried the cohort table rebuilt around *the head is the sum of
-its rows* and `f` re-rounded game-wide. Uncommitted: **step 7b**, the harvest
-screen — see §*The harvest screen*. `git status` and `git log` for the list.
+Branch `dev-next`, last commit `d326157 rebuild checkpoint 24`. Uncommitted:
+**`design.md` §5 and §6 landed in code** — the generated cohort ladder, the
+global-only aim dial, and the span-averaged phase bias that replaces the cut
+per-cohort figures. `git status` and `git log` for the list.
 
 `planet-visuals.ts` carries a **UTF-8 BOM**, and a new required field on
 `PlanetVisual` means editing all nine records.
 
 ## Verified, and how
 
-- `npm run check` → **904 FILES 2 ERRORS 2 WARNINGS** — table at the end. Both
-  are committed defects; #3 (`TokenRow`) has since been fixed and is gone.
+- `npm run check` → **917 FILES 1 ERROR 7 WARNINGS**, re-run this session. Only
+  #1 below is live — #2 (`UpgradeRail`) and #3 (`TokenRow`) are both fixed and
+  gone; the table used to say otherwise. The 7 warnings are unused-CSS
+  selectors in `Frame.svelte` and `Preview.svelte`, pre-existing and unrelated.
 - `npx vite build` clean.
 - **The probe** — `esbuild` the model modules into the scratchpad, run under
   node. Works only because `pulse` / `harness` / `anchor` / `orbit` / `visual` /
@@ -194,15 +214,10 @@ screen — see §*The harvest screen*. `git status` and `git log` for the list.
     figure. Two things to watch: whether it steps at all across the drag's real
     range, and that **EVEN** here means a mid-length cycle while EVEN eight
     inches to the left means an alignment. The reference's word, kept.
-41. **The lean dial, in four states.** 36×18, and nothing has drawn one. Walk them
-    in this order: **even** (needle up, no wedge — if it reads *empty* rather than
-    *centred*, the plate is too faint at `--line-200`); **a plain aim** at
-    `resistance: 0` (one wedge, needle still and on its outer edge; hard negative
-    lays it flat left); **turns** (a wedge each side, needle sitting on one edge
-    for a whole phase, then stepping to the other on the flip — it must hold, not
-    creep, now that the wave replaced drift); **tidal** (wide band, grey needle,
-    stepping the same way). Then check the light wedge against a hovered row —
-    its `.edge` hairline is the only thing terminating it. §*Lean is a dial*.
+41. ~~**The lean dial, in four states.**~~ Retired, not fixed — `design.md` §6
+    cut `resistance`/`polarity_bias`/`polarity_multiplier` and with them the
+    per-row needle this entry was about to watch. `LeanMeter.svelte` is kept in
+    the tree, unwired, against per-cohort aim coming back; nothing renders it.
 
 42. **The whole anchoring phase.** Nothing here has been rendered.
     §*Anchoring — primitives built, design provisional*. Walk it in this order:
@@ -243,6 +258,18 @@ screen — see §*The harvest screen*. `git status` and `git log` for the list.
     worlds behind you. Check that this reads as *the souls have nowhere to go*
     and not as the game having stopped — there may want to be a word for it in
     the Overview's empty state. §*Between worlds, souls earn nothing*.
+48. **The generated cohort ladder, run for the first time.** `design.md` §5
+    landed this session — no assistant has watched it in the sim bench. Run
+    6 hours × `cheapest`/`payback` and read `arrivals.csv` before touching a
+    single figure: whether cohorts 1–5 land at minutes a person would sit
+    through is the question the whole retune is waiting on.
+49. **`ArrivalTable`, in the sim bench.** New this session, beside
+    `BeatTimeline`. Nothing has confirmed it reads correctly against a real run
+    — watch that a cohort revealed but never bought shows `—` for its first
+    copy rather than a stale row.
+50. **The manual send verb on a cohort row.** `CohortRow`'s `Send` link, live
+    only while `!cohort.isAutonomous`. Never watched — check it disappears the
+    instant the clerk lands and that rapid clicking cannot double-queue a life.
 
 ## Parked — named, argued, not done
 
@@ -262,6 +289,9 @@ screen — see §*The harvest screen*. `git status` and `git log` for the list.
 
 - ~~No screen draws an anchor or a harness.~~ Detail does, from `detail.field`
   on. `Disc.svelte` is still unrendered, left in the tree.
+- **`LeanMeter.svelte` draws nothing either.** `design.md` §6 cut the per-cohort
+  aim figures it read; kept in the tree, unwired, against per-cohort aim coming
+  back. See *Unseen* #41.
 - **A shared renderer** — parked, and no longer blocking anything. The Overview's
   rows are stills: §*A still world needs no context*, price in §*Parked*.
 - **The type→parameter table** (design handoff §4), so `planet-visuals.ts` is the
@@ -290,6 +320,13 @@ It surfaced four live-vs-argued figures — `design.md` §18 — and the `perWor
 one is a real defect: the anchoring phase runs ~10× faster than designed.
 
 Still owed: the **comment sweep** (§*The comments want the same pass*).
+
+**`design.md` §5 and §6 are landed** — the generated cohort ladder
+(`cohort_1`…`cohort_8`, ten shared level rungs, one clerk per cohort including
+the first), and the global-only aim dial with the span-averaged phase bias that
+replaces the cut per-cohort figures. Nothing above is played — the sim bench run
+that opens the retune (*Unseen* #48) is next, not the retune itself. §13 and §18
+are still argument only; see *Ahead of the build*.
 
 ---
 
@@ -326,10 +363,13 @@ Still owed: the **comment sweep** (§*The comments want the same pass*).
 - **`printVisual` and friends** emit every field at four decimals; paste
   indentation has drifted once.
 
-## The 3 `check` errors
+## The 1 `check` error
 
 | # | Where | What |
 |---|---|---|
 | 1 | `notification-manager.ts` | Svelte 5 `Component<Props>` in a legacy `SvelteComponent` slot. |
-| 2 | `UpgradeRail.svelte` | reads `.effect` off `Upgrade`. **The only live defect** — that caption has rendered empty since it was written, and the fallback is what hides it. Decide whether it wants `UpgradeData.effect` or goes. |
-| 3 | `TokenRow.svelte` | missing `quantity` on `PurchaseButton`. **Live** — the prop landed in checkpoint 17 as required, and Refinery buys one grade at a time so it has none to pass. The template already guards `{#if quantity}`; `quantity?: number` is the fix, unless a grade is meant to carry a count. |
+
+~~#2 `UpgradeRail.svelte` read `.effect` off `Upgrade`~~ and ~~#3 `TokenRow.svelte`
+was missing `quantity` on `PurchaseButton`~~ — both fixed before this session,
+before either was ever confirmed here. Re-run `npm run check` if this drifts
+again rather than trusting the table.

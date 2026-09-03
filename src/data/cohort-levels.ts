@@ -1,48 +1,27 @@
 /**
- * The cohort levels, as purchases. A count unlocks the upgrade; buying it grants
- * the multiplier — see *Levels become purchases* in `docs/progression.md`.
+ * The cohort's level upgrades, generated off the index rather than authored per
+ * cohort — see `docs/design.md` §5, *Milestones — why anyone owns four hundred
+ * of anything*. `tier` and `level` stay the vocabulary (kept, not retired — see
+ * §20): a **cohort** is which row, a **level** is which rung.
  *
- * Generated from each cohort's own figures rather than retyped, so the fifth
- * entry cannot drift from the first. `buildings.ts` still authors what a level is
- * worth and how many it has; it no longer applies either.
+ * `buildings.ts` still says which counts unlock a level; this file says what
+ * each one is worth and what it costs. Every rung is ×2 — only the shape of the
+ * ×2 changes: the first `n + 3` rungs halve the life, capped at ten, and the
+ * rest double the yield instead. The split is derived from the cohort's own
+ * index, never authored.
  */
 
-import type { ItemTextData, Modifier, ResourceType, UpgradeData, YieldType } from '$lib/types';
+import type { ItemTextData, Modifier, ResourceType, UpgradeData } from '$lib/types';
 import { roman } from '$lib/utils';
-import buildings from './buildings';
+import buildings, { LEVEL_GATES } from './buildings';
 
-interface LevelSpec {
-  /**
-   * The last gate worth authoring. Past it a copy costs more than the game ever
-   * holds, so the upgrade priced against it is decoration.
-   */
-  through: number;
-  /**
-   * 1 prices the upgrade level with another copy at its gate, so it becomes the
-   * better buy a copy or two later. Under 1 is a treat, over 1 a goal.
-   */
-  priceFactor?: number;
-  /**
-   * The yield whose multiplier the price is measured against. Defaults to what
-   * the cohort is bought with — the same pocket, so it reads as a trade. Only a
-   * cohort that yields none of its own cost currency needs to say otherwise.
-   */
-  pricedOn?: YieldType;
+/** 1 prices a level with another copy at its gate — the same trade every rung. */
+const PRICE_FACTOR = 1;
+
+/** Rungs before this (0-indexed) halve the life; the rest double the yield. */
+function halvingsFor(n: number) {
+  return Math.min(LEVEL_GATES.length, n + 3);
 }
-
-/**
- * Placeholder figures. `through` is 200 across the board now — the ramps were
- * retuned so every cohort actually reaches the top of the shared gate list,
- * which is what makes one figure right for all five. It used to differ per
- * cohort only because the list was fiction for four of them.
- */
-const SPECS: Record<string, LevelSpec> = {
-  'basic': { through: 200 },
-  'steady': { through: 200 },
-  'chaos': { through: 200 },
-  'zealot': { through: 200, pricedOn: 'karma' },
-  'red_basic': { through: 200 },
-};
 
 /** Two significant figures: an authored price nobody would write as 373_519. */
 function round(value: number) {
@@ -53,81 +32,61 @@ function round(value: number) {
   return Math.round(value / scale) * scale;
 }
 
-/** What one level is worth to the resource the price is paid in. Unitless. */
-function improvementOf(id: string, pricedOn: YieldType) {
-  const { yield_multipliers = {}, duration_reduction = 0 } = buildings[id];
-
-  return (1 + (yield_multipliers[pricedOn] ?? 0)) / (1 - duration_reduction) - 1;
-}
-
-/**
- * `1 + 0.57` is 1.5699999999999998 in binary, and `getModifierFigure` prints a
- * `mult` raw — so a generated figure has to arrive clean or the rail's chip reads
- * it out in full.
- */
-function clean(value: number) {
-  return Math.round(value * 1e6) / 1e6;
-}
-
 /** One level, as the modifiers it used to be folded into `#production`. */
-function effectsOf(id: string) {
-  const { yield_multipliers = {}, duration_reduction = 0 } = buildings[id];
-
-  const effects: Omit<Modifier, 'id'>[] = Object.keys(yield_multipliers)
-    .map((target: YieldType) => ({
-      op: 'mult',
-      value: clean(1 + yield_multipliers[target]),
-      target,
-    }));
-
-  if (duration_reduction > 0) {
-    effects.push({ op: 'mult', value: clean(1 - duration_reduction), stat: 'duration' });
+function effectOf(index: number, n: number): Omit<Modifier, 'id'>[] {
+  if (index < halvingsFor(n)) {
+    return [{ op: 'mult', value: 0.5, stat: 'duration' }];
   }
 
-  return effects;
+  return [
+    { op: 'mult', value: 2, target: 'experience' },
+    { op: 'mult', value: 2, target: 'karma' },
+  ];
+}
+
+/** `cohort_7` → 7. Anything else — the click included — has no levels to build. */
+function cohortIndex(id: string) {
+  const n = Number(id.match(/^cohort_(\d+)$/)?.[1]);
+
+  return Number.isFinite(n) && n > 0 ? n : undefined;
 }
 
 export function levelUpgrades(id: string): UpgradeData[] {
-  const spec = SPECS[id];
+  const n = cohortIndex(id);
   const initData = buildings[id];
-  if (!spec || !initData?.upgrade_threshold || !initData.cost_type) return [];
+  if (!n || !initData?.cost || !initData.cost_type) return [];
 
-  const { cost = 0, cost_multiplier: growth = 1, cost_type: costType } = initData;
-  const improvement = improvementOf(id, spec.pricedOn ?? (costType as YieldType));
-  const effect = effectsOf(id);
+  const { cost, cost_multiplier: ramp = 1, cost_type: costType } = initData;
 
-  return initData.upgrade_threshold
-    .filter((gate) => gate <= spec.through)
-    .map((gate, index) => ({
-      id: `level_${index + 1}`,
-      effect,
-      unlocks_at: { count: gate },
-      costs: {
-        [costType]: round(
-          gate * improvement * cost * Math.pow(growth, gate) * (spec.priceFactor ?? 1),
-        ),
-      } as Partial<Record<ResourceType, number>>,
-    }));
+  return LEVEL_GATES.map((gate, index) => ({
+    id: `level_${index + 1}`,
+    effect: effectOf(index, n),
+    unlocks_at: { count: gate },
+    costs: {
+      [costType]: round(gate * cost * Math.pow(ramp, gate) * PRICE_FACTOR),
+    } as Partial<Record<ResourceType, number>>,
+  }));
 }
 
 /**
- * Reads the effects back out, so a description cannot claim a figure it does not
- * carry. `effect` is the chip's one line and stays short on purpose — a level
- * moves three figures at once, and printing all three turns the rail into a
- * paragraph. The figures are the tooltip's job, which is what a hover is for.
+ * Reads the effects back out, so a description cannot claim a figure it does
+ * not carry. `effect` is the chip's one line and stays short on purpose — the
+ * figures are the tooltip's job, which is what a hover is for.
  */
 export function levelTexts(id: string): Record<string, ItemTextData> {
+  const n = cohortIndex(id);
   const texts: Record<string, ItemTextData> = {};
+  if (!n) return texts;
 
   levelUpgrades(id).forEach((item, index) => {
-    const parts = effectsOf(id).map((effect) => (effect.stat === 'duration'
-      ? `x${effect.value} seconds per life`
-      : `x${effect.value} ${effect.target}`));
+    const halving = index < halvingsFor(n);
 
     texts[item.id] = {
       title: `Tier ${roman(index + 1)}`,
-      description: `Placeholder. Every soul in the cohort: ${parts.join(', ')}.`,
-      effect: 'stats improved',
+      description: halving
+        ? 'Placeholder. Every soul in the cohort: half the life, same yield each.'
+        : 'Placeholder. Every soul in the cohort: x2 experience, x2 karma each.',
+      effect: halving ? 'life halved' : 'yield doubled',
     };
   });
 

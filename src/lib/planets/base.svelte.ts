@@ -201,6 +201,38 @@ export default class Planet {
     return this.isDense === positive ? balance.wave.biasAgainst : balance.wave.biasWith;
   }
 
+  /**
+   * Ms spent in a dense phase, from world arrival to `t`. A closed form over the
+   * square wave rather than a loop: dense is the second half of every `2 ×
+   * phaseMs` period, regardless of age boundaries — `phasesPerAge` is always
+   * even, so it never shifts which half of the period is dense. See
+   * `docs/design.md` §6, *The phase bias*.
+   */
+  #denseMsBefore(t: number) {
+    const p = this.#phaseMs;
+    const period = 2 * p;
+
+    return Math.floor(t / period) * p + Math.max(0, (t % period) - p);
+  }
+
+  /**
+   * A life accumulates the phase bias across its whole span, not the instant it
+   * pays out — a one-second life takes one phase's bias whole, a 128-second life
+   * averages several. `bias()` above is the instantaneous case this generalises;
+   * a zero-length span (a click) falls back to it. See `docs/design.md` §6.
+   */
+  biasBetween(fromLived: number, toLived: number, positive: boolean) {
+    const span = toLived - fromLived;
+    if (!(span > 0)) return this.bias(positive);
+
+    const denseShare = (this.#denseMsBefore(toLived) - this.#denseMsBefore(fromLived)) / span;
+    const { biasWith, biasAgainst } = balance.wave;
+
+    return positive
+      ? (1 - denseShare) * biasWith + denseShare * biasAgainst
+      : (1 - denseShare) * biasAgainst + denseShare * biasWith;
+  }
+
   get id() { return this.#id; }
   get data() { return this.#data; }
   get isHarvested() { return this.#isHarvested; }

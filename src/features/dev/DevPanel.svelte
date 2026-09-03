@@ -85,6 +85,8 @@
         <button onclick={() => grant('experience', 1e3)}>+1k</button>
         <button onclick={() => grant('experience', 1e5)}>+100k</button>
         <button onclick={() => grant('experience', 1e6)}>+1M</button>
+        <button onclick={() => grant('experience', 1e7)}>+10M</button>
+        <button onclick={() => grant('experience', 1e8)}>+100M</button>
       </div>
 
       <div class="row">

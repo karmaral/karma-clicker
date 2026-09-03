@@ -41,14 +41,27 @@ export default class Building {
     remove: [],
   };
 
+  /**
+   * When the life in progress started, in world-lived ms — so its payout can
+   * average the phase bias across the whole span rather than take the instant
+   * it lands. See `docs/design.md` §6, *The phase bias*.
+   */
+  #lifeStartedAt: number | undefined;
+
   constructor(id: string, initData: BuildingData) {
     this.#id = id;
     this.#data = initData;
     this.#count = initData.count ?? 0;
     this.#emitter = new ResourceEmitter(
-      () => this.#generateResources(),
+      (lives) => this.#generateResources(lives),
       () => this.#duration,
     );
+
+    // Both a manual send and an autonomous requeue go through the emitter's
+    // own `queue`, never through this class — this is the one place both are seen.
+    this.#emitter.addListener('queue', () => {
+      this.#lifeStartedAt = PlanetManager.getActive()?.lived;
+    });
 
     this.#baseProduction = { ...initData.yields };
   }
@@ -82,9 +95,15 @@ export default class Building {
     this.#emitter.emit();
   }
 
-  #generateResources() {
+  /**
+   * `lives` is how many of them this payout stands for — 1 for a clock you can
+   * watch, and a tick's worth once the cohort streams. The phase bias is still
+   * averaged across the whole span, so a batch is paid at exactly what its lives
+   * were each worth as they passed.
+   */
+  #generateResources(lives = 1) {
     Object.keys(this.#production).forEach((type: YieldType) => {
-      const value = this.#production[type] * this.active * this.yieldScale;
+      const value = this.#production[type] * this.active * this.yieldScale * lives;
 
       if (type === 'karma') {
         this.#payKarma(value);
@@ -95,19 +114,39 @@ export default class Building {
     });
   }
 
-  /** Aim sets the mix; the wave sets what each side of it is worth. */
-  #splitKarma(value: number, { positiveShare, karmaYieldFactor }: ResolvedAim) {
-    const planet = PlanetManager.getActive();
+  /**
+   * Aim sets the mix; the wave sets what each side of it is worth. `bias` reads
+   * the world for one span — the life that just paid out, or the life a preview
+   * is pricing — never the instant alone.
+   */
+  #splitKarma(value: number, { positiveShare, karmaYieldFactor }: ResolvedAim, bias: (positive: boolean) => number) {
     const earned = value * karmaYieldFactor;
 
     return {
-      negative: earned * (1 - positiveShare) * (planet?.bias(false) ?? 1),
-      positive: earned * positiveShare * (planet?.bias(true) ?? 1),
+      negative: earned * (1 - positiveShare) * bias(false),
+      positive: earned * positiveShare * bias(true),
     };
   }
 
+  /** The just-finished life's own span — falls back to the instant outside a world. */
+  #livedBias(positive: boolean) {
+    const planet = PlanetManager.getActive();
+    if (!planet) return 1;
+    if (this.#lifeStartedAt === undefined) return planet.bias(positive);
+
+    return planet.biasBetween(this.#lifeStartedAt, planet.lived, positive);
+  }
+
+  /** The life a purchase or a rate figure is pricing — starting now, not lived yet. */
+  #upcomingBias(positive: boolean) {
+    const planet = PlanetManager.getActive();
+    if (!planet) return 1;
+
+    return planet.biasBetween(planet.lived, planet.lived + this.duration, positive);
+  }
+
   #payKarma(value: number) {
-    const { positive, negative } = this.#splitKarma(value, aim.resolve(this.#data));
+    const { positive, negative } = this.#splitKarma(value, aim.resolve(), (p) => this.#livedBias(p));
 
     if (positive > 0) {
       ResourceManager.add('karma_positive', positive);
@@ -120,7 +159,7 @@ export default class Building {
 
   /** Both piles per second. `count` prices a purchase you have not made. */
   karmaPerSecond(count?: number) {
-    return this.#splitKarma(this.perSecond('karma', count), aim.resolve(this.#data));
+    return this.#splitKarma(this.perSecond('karma', count), aim.resolve(), (p) => this.#upcomingBias(p));
   }
 
   toggleAutonomy(toggle?: boolean) {
@@ -212,6 +251,13 @@ export default class Building {
   get modifiers() { return this.#modifiers.modifiers; }
   get isAutonomous() { return this.#emitter.isAutonomous; }
   get isInProgress() { return this.#emitter.isInProgress; }
+
+  /**
+   * Lives too short to be counted one at a time — the cohort pays by the tick
+   * now. A status and not a rate: `perSecond` is unchanged by it, which is the
+   * whole point of batching this way.
+   */
+  get isStreaming() { return this.#emitter.isStreaming; }
 
   /**
    * Gates the count has passed — which level upgrades are *unlocked*, not which

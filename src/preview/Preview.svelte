@@ -17,11 +17,10 @@
 
   /** Real buildings, off the manager — driven to a state worth looking at. */
   const cohorts = [
-    ['basic', 12],
-    ['steady', 4],
-    ['chaos', 1],
-    ['zealot', 0],
-    ['red_basic', 0],
+    ['cohort_1', 12],
+    ['cohort_2', 4],
+    ['cohort_3', 1],
+    ['cohort_4', 0],
   ].map(([id, count]: [string, number]) => {
     const cohort = new Building(id, buildingData[id]);
     if (count) cohort.add(count);

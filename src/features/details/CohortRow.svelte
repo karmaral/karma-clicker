@@ -3,12 +3,10 @@
   import { PurchaseButton, SweepBar, Tooltip, tooltip } from '$ui';
   import { BuildingManager } from '$lib/managers';
   import type { Listener } from '$lib/emission';
-  import { aim } from '$lib/aim';
   import { spotlight } from '$lib/spotlight.svelte';
   import { f, formatCost, roman } from '$lib/utils';
   import type Building from '$lib/buildings/base.svelte';
   import type { PurchaseMode } from './types';
-  import LeanMeter from './LeanMeter.svelte';
   import CohortTooltip from './CohortTooltip.svelte';
   import { badgeFor } from './badge';
   import { resolvePurchasable, resolveQuantity } from './purchase';
@@ -17,7 +15,6 @@
   interface Props {
     cohort: Building;
     purchaseMode?: PurchaseMode;
-    showAim?: boolean;
     compact?: boolean;
     /** The head prices the same buy this row is previewing. Undefined clears it. */
     onpreview?: (id: string | undefined) => void;
@@ -29,7 +26,6 @@
   let {
     cohort,
     purchaseMode = '1',
-    showAim = true,
     compact = true,
     onpreview,
     onpurchase,
@@ -40,7 +36,34 @@
   const quantity = $derived(resolvePurchasable(cohort, purchaseMode));
   const cost = $derived(cohort.getCost(quantity) ?? 0);
   const affordable = $derived(resolvedQuantity > 0 && BuildingManager.canAfford(cohort.id, resolvedQuantity));
-  const aimed = $derived(aim.resolve(cohort.data));
+
+  /**
+   * A cohort starts manual — see `docs/design.md` §5, *Clerks*. The send verb
+   * is what a row has instead of a clock until its clerk is bought, and the
+   * whole row is the send target — only the purchase cell opts back out.
+   */
+  const canSend = $derived(!cohort.isAutonomous && cohort.count > 0);
+
+  function send() {
+    if (cohort.isInProgress) return;
+
+    cohort.queueAction();
+  }
+
+  /** The purchase cell is its own control — a click there must not also send. */
+  function onRowClick(e: MouseEvent) {
+    if (!canSend) return;
+    if ((e.target as HTMLElement).closest('.purchase-container')) return;
+
+    send();
+  }
+
+  function onRowKeydown(e: KeyboardEvent) {
+    if (!canSend || (e.key !== 'Enter' && e.key !== ' ')) return;
+
+    e.preventDefault();
+    send();
+  }
 
   /** Lit while an upgrade that would change this cohort is being hovered. */
   const isLit = $derived(spotlight.isLit('cohort', cohort.id));
@@ -64,9 +87,9 @@
   }
 
   const tooltipOptions: Partial<TippyProps> = {
-    // Anchored to the button's own edge, so the panel opens back over the table
-    // it describes rather than off the right of the window.
-    placement: 'top-end',
+    // Anchored to the trigger's leading edge — its trailing edge the panel
+    // could run past the window on a wide table.
+    placement: 'top-start',
     delay: [300, 0],
     offset: [0, 16],
     interactive: false,
@@ -77,12 +100,14 @@
   };
 </script>
 
-<div class={["row", { compact, lit: isLit }]}
-  role="group"
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -- role turns interactive with canSend; the linter can't see the ternary. -->
+<div class={["row", { compact, lit: isLit, sendable: canSend }]}
+  role={canSend ? 'button' : 'group'}
+  tabindex={canSend ? 0 : undefined}
+  onclick={onRowClick}
+  onkeydown={onRowKeydown}
 >
-  <div class="count num">{f(cohort.count)}</div>
-
-  <div class="ident">
+  <div class="ident" {@attach tooltip({ content: tooltipElem, options: tooltipOptions })}>
 
     <div class="header">
       <span class="name">
@@ -110,29 +135,29 @@
 
     <span class="description">{texts[cohort.id]?.description ?? ''}</span>
 
+    <!-- A life too short to time is not a fast time, it is a rate — so the
+         figure gives way to the word rather than counting down to two decimals
+         nobody can read. -->
     <span class="duration">
-      <SweepBar subscribe={sweepOf(cohort.id)} />
-      {f(cohort.duration / 1000)}s
+      <SweepBar subscribe={sweepOf(cohort.id)} streaming={cohort.isStreaming} />
+      {#if cohort.isStreaming}
+        <span class="stream">stream</span>
+      {:else}
+        {f(cohort.duration / 1000)}s
+      {/if}
+      {#if canSend}
+        <span class="send" class:sending={cohort.isInProgress}>Send</span>
+      {/if}
     </span>
 
   </div>
 
-  {#if showAim}
-    <LeanMeter
-      negativeReach={aimed.negativeReach}
-      positiveReach={aimed.positiveReach}
-      needle={aim.needleFor(aimed)}
-      unaimable={aimed.unaimable}
-      lean={aim.leanFor(aimed)}
-    />
-  {/if}
+  <div class="count num">{f(cohort.count)}</div>
 
-  <!-- The button fills this cell, so hovering the cell is hovering the button —
-       and the cell, not the name, is what the panel hangs off: you read the
-       derivation where you decide to pay for it. -->
-  <div class="purchase-container" role="group"
-    {@attach tooltip({ content: tooltipElem, options: tooltipOptions })}
-  >
+  <!-- The button fills this cell, so hovering the cell is hovering the button.
+       Its click opts out of the row's own send — you read the derivation where
+       you decide to pay for it, and buying is never also sending. -->
+  <div class="purchase-container" role="group" {@attach tooltip({ content: tooltipElem, options: tooltipOptions })}>
     <PurchaseButton
       kind={badgeFor(cohort.data.cost_type!)}
       amount={formatCost(cost)}
@@ -150,7 +175,6 @@
       </Tooltip>
     </div>
   </div>
-
 
 </div>
 
@@ -173,6 +197,12 @@
      read, and the button says whether you can act on it. */
   .row:hover {
     background-color: var(--surface-alt);
+  }
+
+  /* The whole row is the send target while there is no clerk — only the
+     purchase cell opts back out. */
+  .row.sendable {
+    cursor: pointer;
   }
 
   /* The same tint, lit from outside — hovering an upgrade in the rail or the
@@ -198,6 +228,10 @@
     gap: var(--sp-1);
     min-width: 0;
     position: relative;
+    /* Shrink-to-fit, not the full 1fr track — the tooltip trigger should hug
+       what's actually there. The track itself keeps its width regardless, so
+       count/purchase stay aligned across rows. */
+    justify-self: start;
   }
   .header {
     align-self: start;
@@ -261,6 +295,32 @@
     color: var(--ink-500);
     gap: var(--sp-2);
     font-weight: 500;
+  }
+
+  /* The word standing where the figure was — same weight, so a row that starts
+     streaming does not also get louder. */
+  .stream {
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    font-size: .9em;
+  }
+
+  /* No clock until the clerk is bought — this is the row's clock in the
+     meantime. A hint, not its own control: the row itself is what sends. */
+  .send {
+    font-weight: 600;
+    color: var(--ink-700);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .row.sendable:hover .send {
+    color: var(--ink-900);
+  }
+
+  .send.sending {
+    color: var(--ink-300);
+    text-decoration: none;
   }
 
   .row.compact {

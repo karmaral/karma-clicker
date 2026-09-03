@@ -1,4 +1,3 @@
-import type { BuildingData } from '$types';
 import { PlanetManager } from '$lib/managers';
 import { progression } from '$lib/progression';
 import balance from '$data/balance';
@@ -17,22 +16,15 @@ const DETENT_LABELS: Record<Detent, string> = {
   [2]: 'Hard positive',
 };
 
+/**
+ * One global dial, and every cohort does exactly as it is told — see
+ * `docs/design.md` §6. No per-cohort figures any more: duration alone carries
+ * a cohort's identity, by how much of the wave its life spans (`biasBetween` on
+ * `Planet`), not by anything read here.
+ */
 export interface ResolvedAim {
-  realizedAim: number;
   positiveShare: number;
   karmaYieldFactor: number;
-  unaimable: boolean;
-  /** How far into each polarity this cohort wanders, 0…1 of a hard detent. */
-  negativeReach: number;
-  positiveReach: number;
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
-
-function toDetent(aim: number) {
-  return clamp(Math.round(aim), HARDEST_NEGATIVE, HARDEST_POSITIVE) as Detent;
 }
 
 class Aim {
@@ -64,72 +56,29 @@ class Aim {
     return reaimPenalty * (1 - lived / reaimPhases);
   });
 
-  /** Which polarity this phase pays. 0 between worlds, so nothing is pulled. */
-  #waveSign() {
-    const planet = PlanetManager.getActive();
-    if (!planet) return 0;
-
-    return planet.isDense ? -1 : 1;
-  }
-
-  /** What the aim pays — the wave and the cohort's own bias, and nothing more. */
-  resolve(data: BuildingData, detent: Detent = this.#detent): ResolvedAim {
-    const { polarity_bias = 0, polarity_multiplier = 1, resistance = 0 } = data;
-    const biasPull = clamp(resistance, 0, 1);
-    const centre = detent * (1 - biasPull) + polarity_bias * biasPull;
-    const sway = balance.aim.wavePull * biasPull;
-    const realizedAim = clamp(centre + sway * this.#waveSign(), HARDEST_NEGATIVE, HARDEST_POSITIVE);
-    const unaimable = biasPull >= 1;
-
-    const reach = {
-      negativeReach: -clamp(centre - sway, HARDEST_NEGATIVE, 0) / HARDEST_POSITIVE,
-      positiveReach: clamp(centre + sway, 0, HARDEST_POSITIVE) / HARDEST_POSITIVE,
-    };
-
+  /**
+   * What the aim pays — every cohort does exactly as it is told. `extremity`
+   * is the whole reward for committing: at Even it pays ×1, at a hard detent
+   * ×`extremityMultiplier`. See `docs/design.md` §6.
+   */
+  resolve(detent: Detent = this.#detent): ResolvedAim {
     // Beat 6 splits the pile. Before it, there is nothing to aim at.
     if (!progression.runs('negKarma')) {
-      return {
-        realizedAim: centre,
-        positiveShare: 1,
-        karmaYieldFactor: 1,
-        unaimable,
-        negativeReach: 0,
-        positiveReach: reach.positiveReach,
-      };
+      return { positiveShare: 1, karmaYieldFactor: 1 };
     }
 
     const span = HARDEST_POSITIVE - HARDEST_NEGATIVE;
-    const extremity = Math.abs(realizedAim) / HARDEST_POSITIVE;
-    const extremityPayoff = 1 + extremity * (polarity_multiplier - 1);
+    const extremity = Math.abs(detent) / HARDEST_POSITIVE;
+    const extremityPayoff = 1 + extremity * (balance.aim.extremityMultiplier - 1);
 
     return {
-      realizedAim,
-      positiveShare: (realizedAim - HARDEST_NEGATIVE) / span,
+      positiveShare: (detent - HARDEST_NEGATIVE) / span,
       karmaYieldFactor: extremityPayoff * (1 - this.#reaimPenalty),
-      unaimable,
-      ...reach,
     };
   }
 
   detentLabel(detent: Detent) {
     return DETENT_LABELS[detent];
-  }
-
-  /**
-   * Where the needle points, −1…1 of a hard detent — the reaches' own scale, so
-   * the dial reads one number for the band and one for the line inside it.
-   */
-  needleFor({ realizedAim }: ResolvedAim) {
-    return realizedAim / HARDEST_POSITIVE;
-  }
-
-  /** The row's word. Character, not position — position is the meter beside it. */
-  leanFor({ realizedAim, unaimable, negativeReach, positiveReach }: ResolvedAim) {
-    if (unaimable) return 'tidal';
-    if (negativeReach > 0 && positiveReach > 0) return 'turns';
-    if (!negativeReach && !positiveReach) return 'even';
-
-    return DETENT_LABELS[toDetent(realizedAim)].toLowerCase();
   }
 
   get detent() { return this.#detent; }

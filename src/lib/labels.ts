@@ -142,7 +142,7 @@ export function getBoonLabel(boon: HarvestBoon) {
 /**
  * The catalogue's left-hand column. Only the irregulars are listed — a bucket
  * with an entity resolves through the same tables the rest of the game already
- * names things with, so `cohort:steady` reads `buildingTexts.steady.title`
+ * names things with, so `cohort:cohort_2` reads `buildingTexts.cohort_2.title`
  * rather than repeating it here.
  */
 const SCOPE_LABELS: Record<string, string> = {

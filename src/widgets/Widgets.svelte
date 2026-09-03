@@ -42,6 +42,9 @@
   /** Souls per cohort, off the lab's sliders. One dot is one soul at these counts. */
   const cohorts = $derived(swarmLab.counts);
 
+  /** Which of those bands strike on a rate instead of a rhythm. See `SoulSwarm`. */
+  const streaming = $derived(swarmLab.streaming);
+
   /** One flag per anchor, off the lab's two sliders. */
   const anchored = $derived(anchorLab.anchored);
 
@@ -232,8 +235,18 @@
     </p>
     <div class="canvas strip">
       <div class="member">
-        <PlanetView visual={planetLab.current} widthPx={420} frame={swarmFrame} swarm={swarmLab.current} {cohorts} />
-        <span class="spec">{cohorts.length} cohorts · {cohorts.reduce((n, c) => n + c, 0)} souls</span>
+        <PlanetView
+          visual={planetLab.current}
+          widthPx={420}
+          frame={swarmFrame}
+          swarm={swarmLab.current}
+          {cohorts}
+          {streaming}
+        />
+        <span class="spec">
+          {cohorts.length} cohorts · {cohorts.reduce((n, c) => n + c, 0)} souls
+          {#if swarmLab.size.streams}· {swarmLab.size.streams} streaming{/if}
+        </span>
       </div>
       <div class="member">
         <PlanetView visual={planetLab.current} widthPx={200} frame={swarmFrame} swarm={swarmLab.current} cohorts={cohorts.slice(0, 1)} />

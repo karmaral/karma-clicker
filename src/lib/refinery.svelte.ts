@@ -63,7 +63,7 @@ class Refinery {
   );
 
   constructor() {
-    this.#emitter = new ResourceEmitter(() => this.#refine(), () => this.#interval);
+    this.#emitter = new ResourceEmitter((pulls) => this.#refine(pulls), () => this.#interval);
   }
 
   /** The clock runs from the beat on, staffed or not. Idempotent. */
@@ -81,9 +81,13 @@ class Refinery {
    *
    * Reports what it moved, so a listener on `action` can tell a pull from a
    * stall. The clock pulses either way; only this says which one it was.
+   *
+   * `pulls` is how many draws this one covers — over 1 only once the interval is
+   * short enough to stream, where the emitter batches the clock. The cap is
+   * taken on the scaled draw, so a batch is still stopped by the shorter pile.
    */
-  #refine() {
-    const batch = this.#batch;
+  #refine(pulls = 1) {
+    const batch = this.#batch * pulls;
     if (batch <= 0) return { paired: 0 };
 
     const paired = Math.min(batch, ...PILES.map(([karma]) => ResourceManager.getAmount(karma)));
@@ -143,6 +147,9 @@ class Refinery {
 
   /** When the queued batch lands. */
   get nextAt() { return this.#emitter.nextAt; }
+
+  /** Pulsing faster than a pulse reads. See `ResourceEmitter`. */
+  get isStreaming() { return this.#emitter.isStreaming; }
 
   /** Karma cleared from each pile per second. */
   get perSecond() { return this.#batch / (this.#interval / 1000); }

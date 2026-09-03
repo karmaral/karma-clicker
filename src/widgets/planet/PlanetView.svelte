@@ -30,6 +30,10 @@
     backgroundToken?: string;
     swarm?: SwarmVisual;
     cohorts?: number[];
+    /** A running count of payouts per cohort. See `PlanetScene`. */
+    paid?: number[];
+    /** Which of those cohorts pay by the tick. See `PlanetScene`. */
+    streaming?: boolean[];
     /** The share of the swarm staying with the world. See `SoulSwarm`. */
     merge?: number;
     /** The harvest's alignment, and the whole switch for the core. See `PlanetScene`. */
@@ -86,6 +90,8 @@
     backgroundToken = '--canvas',
     swarm,
     cohorts,
+    paid,
+    streaming,
     merge,
     alignment,
     anchors,
@@ -239,6 +245,8 @@
         {backgroundToken}
         {swarm}
         {cohorts}
+        {paid}
+        {streaming}
         {merge}
         {alignment}
         {anchors}

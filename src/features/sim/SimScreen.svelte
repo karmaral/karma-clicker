@@ -17,6 +17,7 @@
   import { balanceLab } from './balance-lab.svelte';
   import { clockTime, figure, span } from './format';
   import BalanceLabPanel from './BalanceLabPanel.svelte';
+  import ArrivalTable from './ArrivalTable.svelte';
   import BeatTimeline from './BeatTimeline.svelte';
   import MergeCurve from './MergeCurve.svelte';
   import SimChart from './SimChart.svelte';
@@ -267,6 +268,15 @@
       </ul>
 
       <BeatTimeline {results} />
+    </section>
+
+    <section>
+      <h2>When each cohort arrived</h2>
+      <p class="note">
+        Revealed, then first copy — the gap is what a retune session opens with instead of
+        a stopwatch. Full table in <code>arrivals.csv</code>.
+      </p>
+      <ArrivalTable {results} />
     </section>
 
     <section>

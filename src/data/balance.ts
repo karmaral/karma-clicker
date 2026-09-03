@@ -8,6 +8,28 @@
 
 export default {
   /**
+   * Where a clock stops reading as a beat and starts reading as a rate. Past
+   * `streamUnder` an emitter stops keeping one timer per life and pays a whole
+   * `streamTick` at once — the same income, a fraction of the timers, and a bar
+   * that flows instead of strobing.
+   *
+   * Two figures and not one, because they answer different questions. The
+   * threshold is about the **eye**: sixteen a second is a rate, four a second is
+   * still visibly a beat, so it sits at a sixteenth of a second and a cohort
+   * spends a while being merely fast before it becomes a stream. The tick is
+   * about the **machine**: it is the world's own `TICK_MS`, and paying more
+   * often than the world thinks is work for nobody.
+   *
+   * The tick must stay at or above the threshold, or a stream would pay less
+   * than a whole life at a time — the emitter floors the batch at 1 rather than
+   * trusting this, but an authored pair that needs the floor is a mistake.
+   */
+  emission: {
+    streamUnder: 62.5,
+    streamTick: 250,
+  },
+
+  /**
    * Excess is unpaired karma over held karma — a share, with no figure to set.
    * All that is left to author is how close to paired counts as paired.
    */
@@ -50,8 +72,11 @@ export default {
   },
 
   aim: {
-    /** How far the wave drags a resisted cohort, in detents. */
-    wavePull: 0.55,
+    /**
+     * The whole reward for committing to a side: Even pays ×1, a hard detent
+     * pays this. No per-cohort figures any more — see `docs/design.md` §6.
+     */
+    extremityMultiplier: 3,
     /** What re-aiming costs, and how many phases it takes to pay off. */
     reaimPenalty: 0.65,
     reaimPhases: 2,

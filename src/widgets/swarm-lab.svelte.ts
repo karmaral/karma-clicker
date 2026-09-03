@@ -12,11 +12,16 @@ function createSwarmLab() {
   const draft = $state<SwarmVisual>(cloneSwarm(DEFAULT_SWARM));
 
   /**
-   * How many bands and how full, as workbench state rather than swarm authoring:
-   * counts are game state, and `print` must not learn about them. Even per band,
-   * which is also the only way to read one band's density off the strip.
+   * How many bands, how full, and how many of them stream — workbench state
+   * rather than swarm authoring: counts are game state, and `print` must not
+   * learn about them. Even per band, which is also the only way to read one
+   * band's density off the strip.
+   *
+   * `streams` is the inner bands, because that is the order the game collapses
+   * them in: the shortest lives are the first to stop being lives. 0 is a world
+   * where every band still has a clock, which is where a run starts.
    */
-  const size = $state({ bands: 4, per: 12 });
+  const size = $state({ bands: 4, per: 12, streams: 0 });
 
   /**
    * The share staying, on the same footing as the counts and for the same
@@ -42,6 +47,9 @@ function createSwarmLab() {
   const stage = $state({ radius: HARVEST_RADIUS, room: 640, anchor: HARVEST_ANCHOR * 100 });
 
   const counts = $derived(Array.from({ length: size.bands }, () => size.per));
+
+  /** The same rows, as the flags a screen would hand the swarm. */
+  const streaming = $derived(Array.from({ length: size.bands }, (_, band) => band < size.streams));
 
   /** What the sliders actually come to, capped as `createSouls` caps it. */
   const souls = $derived(Math.min(SOUL_CAPACITY, size.bands * size.per));
@@ -75,7 +83,7 @@ function createSwarmLab() {
       : Math.max(1, Math.round(value));
   }
 
-  function resize(key: 'bands' | 'per', value: number) {
+  function resize(key: 'bands' | 'per' | 'streams', value: number) {
     if (!Number.isFinite(value)) return;
 
     size[key] = Math.max(key === 'bands' ? 1 : 0, Math.round(value));
@@ -105,6 +113,7 @@ function createSwarmLab() {
     get size() { return size; },
     get stage() { return stage; },
     get counts() { return counts; },
+    get streaming() { return streaming; },
     get souls() { return souls; },
     get riders() { return riders; },
     get merge() { return split.merge; },

@@ -8,6 +8,7 @@ export { default as Anchors } from './Anchors.svelte';
 export { default as Harness } from './Harness.svelte';
 export { default as Halo } from './Halo.svelte';
 export { default as Sparks } from './Sparks.svelte';
+export { default as SoulBolt } from './SoulBolt.svelte';
 
 export {
   ANCHOR_GROUPS, ANCHOR_MAX, ANCHOR_PARAMS, DEFAULT_ANCHOR,

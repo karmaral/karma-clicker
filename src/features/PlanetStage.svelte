@@ -12,6 +12,10 @@
     id: string;
     /** Souls per cohort, in row order. Empty is a bare world, not a broken one. */
     cohorts?: number[];
+    /** A running count of payouts per cohort, same rows. See `PlanetScene`. */
+    paid?: number[];
+    /** Which of those cohorts pay by the tick, same rows. See `PlanetScene`. */
+    streaming?: boolean[];
     clickActionVerb?: string;
     clickActionSub?: string;
     /** The click's own duration — 0 once it has ramped to instant. */
@@ -36,6 +40,8 @@
   let {
     id,
     cohorts = [],
+    paid,
+    streaming,
     clickActionVerb = 'Incarnate',
     clickActionSub,
     duration = 0,
@@ -77,6 +83,8 @@
       backgroundToken="--surface"
       swarm={DEFAULT_SWARM}
       {cohorts}
+      {paid}
+      {streaming}
       pulse={DEFAULT_PULSE}
       clickMs={duration}
       clockKey={id}

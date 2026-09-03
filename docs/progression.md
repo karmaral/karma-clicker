@@ -208,6 +208,97 @@ A `duration` of 0 stays legal and means *pays once*. `HarvestRates` and
 `sumHarvestRates` both read it that way and show no rate, rather than dividing by
 zero.
 
+### The stream
+
+The other end of the same axis. Zero duration is a clock that never comes round;
+`balance.emission.streamUnder` is the point where it comes round faster than
+anyone can watch — four halvings put `cohort_1` near 60ms, which is a timer
+sixteen times a second paying an amount too small to read, driving a bar that
+cancels and restarts its animation just as often.
+
+**Past the threshold an emitter pays by the tick and not by the life.** The wait
+becomes `streamTick`, and the payout is handed how many lives it covers —
+fractional, so the ledger comes to exactly what those lives would have paid one
+at a time. `perSecond` does not move, and neither does anything priced off it:
+the batch is a change of *cadence*, not of rate, which is the whole reason it is
+safe to do behind the player's back.
+
+**Threshold and tick are two figures, and they answer different questions.** The
+first draft made them one — the cadence a stream pays on being the one at which
+discrete stopped being legible — which is tidy and wrong the moment the threshold
+wants to move. It sat at 250ms and cohorts turned into streams while four a
+second was still visibly a beat; at the honest threshold of a sixteenth of a
+second, one figure would have meant paying sixteen times a second, which is the
+cost the batching exists to avoid.
+
+So `streamUnder` is about the **eye** (62.5ms — a cohort spends a good while
+merely fast before it becomes a stream) and `streamTick` is about the **machine**
+(250ms, the world's own `TICK_MS`; paying more often than the world thinks is
+work for nobody). A cohort between the two keeps one timer per life, which is
+simply what it always did.
+
+The tick must stay at or above the threshold or a stream would pay less than a
+whole life at a time. The emitter floors the batch at 1 rather than trusting the
+data — paying less than was earned is the one way this could be wrong that
+nobody would ever see — but an authored pair that needs the floor is a mistake.
+
+Two constraints fell out of writing it:
+
+- **Only an autonomous run streams.** One press buys one life however short it
+  is; batching a manual send would pay for lives nobody asked for.
+- **Every payout must spend the count it is handed.** One that ignores it
+  silently loses whatever the batch collected. `Building.#generateResources`
+  multiplies its yields by it and `Refinery.#refine` scales its draw — the cap
+  is taken *after*, so a batch is still stopped by the shorter pile.
+
+The phase bias needed no change and is the reason the batch is honest at all:
+`#livedBias` already averages across the span from `#lifeStartedAt`, so a tick
+holding four lives is paid at what those four lives were worth as they passed.
+
+**In the UI it is a status, not a number.** `SweepBar` takes a `streaming` flag
+and draws a full track with a soft band running across it — the skeleton-loader
+reading — and subscribes to nothing at all, which is where the DOM cost went.
+The row's `0.06s` gives way to the word *stream*: a life too short to time is not
+a fast time, it is a rate.
+
+The sweep is deliberately **slower than a loading bar**, at 2.4s a pass. A quick
+sweep says *hurry up*; the cohort under this one has already arrived and is
+simply working, and the bar should say so.
+
+### The wave
+
+The swarm needed the same fact for the opposite reason. A streaming band's
+payouts land on the emitter's tick, so striking on them would show the tick and
+not the cohort — `SoulSwarm` takes `streaming` alongside `yields` and puts such a
+band on `streamWaveOf` instead: a front sweeping round the world, on the same
+seconds the bar takes.
+
+The one decision that matters here is that **the wave is asked of a position and
+not of a soul**. The band rhythm is a property of the seed — which soul, which
+band — and so it holds still while the swarm turns under it; the first version of
+this spread each soul's own phase across the cycle, which gives an even scatter
+that is *statistically* a wave and never reads as one. A wave is a property of
+the world: what decides whether a soul is lit is where it stands when the front
+arrives, so two souls that meet are struck together, a soul crossing the front is
+struck as it crosses, and every band rides one front however wide its orbit. It
+is azimuth in the body's own frame, so the sweep leans and tilts with the world
+rather than with the camera.
+
+`boltWave` is its own knob and not `boltEvery`, for two reasons. The band period
+doubles per band to show a slow cohort tolling against a quick one, and a band
+whose lives have collapsed into a rate has nothing to toll — every streaming band
+is the same speed by definition, so one figure carries all of them. And it is
+seconds *per pass of the world* rather than per strike, a different quantity by
+an order of magnitude: at `boltEvery`'s scale a wave is a strobe.
+
+`boltLife / boltWave` is how much of the ring is lit at once — 8% at the defaults
+— which makes those two the width of the band, the way the sweep bar's gradient
+is a share of its track. Neither reads alone, and that is the pair to dial if the
+front is too thin or too fat.
+
+The swarm lab's `Streaming` slider collapses that many inner bands, since nothing
+there earns.
+
 ### What a finished world pays
 
 The numbers arrived. A harvested world pays **experience and karma into the

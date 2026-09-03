@@ -8,9 +8,10 @@
   import { Badge } from '$ui';
   import { PlanetManager } from '$lib/managers';
   import { progression } from '$lib/progression';
-  import { aim, DETENTS } from '$lib/aim';
-  import { f, formatCost, formatRounded } from '$lib/utils';
+  import { aim } from '$lib/aim';
+  import { f, formatRounded } from '$lib/utils';
   import texts from '$data/buildings-texts';
+  import balance from '$data/balance';
   import type Building from '$lib/buildings/base.svelte';
   import type { YieldType } from '$types';
   import type { PurchaseMode } from './types';
@@ -25,15 +26,12 @@
 
   let { cohort, purchaseMode }: Props = $props();
 
-  const HARDEST_POSITIVE = DETENTS[DETENTS.length - 1];
-
   const text = $derived(texts[cohort.id]);
   const isSplit = $derived(progression.runs('negKarma'));
-  const aimed = $derived(aim.resolve(cohort.data));
+  const aimed = $derived(aim.resolve());
   const planet = $derived(PlanetManager.getActive());
 
   const quantity = $derived(resolvePurchasable(cohort, purchaseMode));
-  const cost = $derived(cohort.getCost(quantity) ?? 0);
 
   const activeCount = $derived(cohort.activeAt(cohort.count));
   const heldBack = $derived(cohort.count - activeCount);
@@ -62,16 +60,19 @@
 
   const showChain = $derived(isSplit && yields.includes('karma'));
 
-  /** Same formula `Aim#resolve` prices — kept apart so extremity and the re-aim
-      penalty can be shown as the two separate multipliers they are. */
-  const extremityPayoff = $derived.by(() => {
-    const { polarity_multiplier = 1 } = cohort.data;
-    const extremity = Math.abs(aimed.realizedAim) / HARDEST_POSITIVE;
-
-    return 1 + extremity * (polarity_multiplier - 1);
-  });
-
   const positivePercent = $derived(Math.round(aimed.positiveShare * 100));
+
+  /**
+   * Isolated from `karmaYieldFactor`, which folds in the re-aim penalty too —
+   * the two are shown as the separate multipliers they are. No per-cohort
+   * figure any more: every cohort is worth the same extremity, the same formula
+   * `Aim#resolve` prices.
+   */
+  const extremityPayoff = $derived.by(() => {
+    const extremity = Math.abs(aim.detent) / 2;
+
+    return 1 + extremity * (balance.aim.extremityMultiplier - 1);
+  });
 </script>
 
 <div class="cohort-tip">
@@ -88,7 +89,7 @@
           {f(cohort.production[type] ?? 0)} each · {f(cohort.duration / 1000)}s
           {#if heldBack > 0}· ×{f(activeCount)}{/if}
         </span>
-        <span class="num">+{f(cohort.perSecond(type))}/s</span>
+        <span class="num">{f(cohort.payout(type))} total</span>
       </div>
     {/each}
   </div>
@@ -99,7 +100,7 @@
     {#if showChain}
       <div class="line">
         <span class="label">aim</span>
-        <span class="num">{f(aimed.realizedAim, 2)} · {aim.leanFor(aimed)}</span>
+        <span class="num">{aim.detentLabel(aim.detent)}</span>
       </div>
       <div class="line">
         <span class="label">split</span>
@@ -107,10 +108,7 @@
       </div>
       <div class="line">
         <span class="label">extremity</span>
-        <span class="num">
-          ×{f(extremityPayoff, 2)}
-          <span class="dim">bias {cohort.data.polarity_bias ?? 0} · resist {f(cohort.data.resistance ?? 0, 2)}</span>
-        </span>
+        <span class="num">×{f(extremityPayoff, 2)}</span>
       </div>
       {#if planet}
         <div class="line">
@@ -154,11 +152,6 @@
         delta={(after.find((r) => r.type === rate.type)?.value ?? rate.value) - rate.value}
       />
     {/each}
-  </div>
-
-  <div class="buy">
-    <span>×{f(quantity)} for {formatCost(cost)}</span>
-    <Badge kind={badgeFor(cohort.data.cost_type!)} />
   </div>
 </div>
 
@@ -229,16 +222,5 @@
     flex-wrap: wrap;
     align-items: flex-end;
     gap: var(--sp-3);
-  }
-
-  .buy {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--badge-gap);
-    font-size: var(--fs-sm);
-    font-weight: 600;
-    color: var(--ink-900);
-    margin-top: var(--sp-1);
   }
 </style>

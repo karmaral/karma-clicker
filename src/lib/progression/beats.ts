@@ -100,8 +100,6 @@ export const beats: Beat[] = [
     reveals: {
       'reading.negKarma': 'live',
       'details.aimGlobal': 'live',
-      // The row's lean meter: what each cohort is doing, with no way to steer it.
-      'details.aimPerRow': 'inert',
     },
   },
 

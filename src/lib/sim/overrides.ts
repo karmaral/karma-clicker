@@ -1,6 +1,6 @@
 /**
  * Lab values written into the data objects, by dotted path from a named root:
- * `buildings.basic.cost`, `planets.second.harvest.mergeHalving`,
+ * `buildings.cohort_1.cost`, `planets.second.harvest.mergeHalving`,
  * `balance.aim.reaimPenalty`. The root is explicit so a cohort can never be
  * mistaken for a data file.
  *

@@ -46,6 +46,38 @@
   /** The same rows as counts — the swarm draws one band per cohort. */
   const soulsPerCohort = $derived(cohorts.map((cohort) => cohort.count));
 
+  /**
+   * And which of them have gone from a clock to a rate. The swarm needs it for
+   * one thing: a streaming cohort's payouts land on the emitter's tick rather
+   * than on its own lives, so its band is struck on a fixed rhythm instead of
+   * on `paidPerCohort`. See `SoulSwarm`.
+   */
+  const streamingPerCohort = $derived(cohorts.map((cohort) => cohort.isStreaming));
+
+  /**
+   * How many times each cohort has paid out. The swarm strikes on the rise, so
+   * a band throws its bolts when that cohort actually yields — the same reading
+   * `yields` gives the click's spark, one row per cohort instead of one figure.
+   *
+   * A count and not a timestamp because the world's clock ticks in quarter
+   * seconds; see `createBoltBeats`.
+   */
+  let paidPerCohort = $state<number[]>([]);
+
+  $effect(() => {
+    const offs = cohorts.map((cohort, row) => {
+      const onaction: Listener = () => {
+        paidPerCohort[row] = (paidPerCohort[row] ?? 0) + 1;
+      };
+
+      BuildingManager.addListener(cohort.id, 'action', onaction);
+
+      return () => BuildingManager.removeListener(cohort.id, 'action', onaction);
+    });
+
+    return () => offs.forEach((off) => off());
+  });
+
   const planet = $derived(PlanetManager.getActive());
 
   /** The centered, borderless prelude layout recedes once the header & rail land. */
@@ -138,6 +170,8 @@
       <PlanetStage
         id={planet.id}
         cohorts={soulsPerCohort}
+        paid={paidPerCohort}
+        streaming={streamingPerCohort}
         {clickActionVerb}
         {clickActionSub}
         duration={click?.duration ?? 0}
@@ -170,7 +204,6 @@
         <CohortTable
           {cohorts}
           {purchaseMode}
-          showAim={progression.isRevealed('details.aimPerRow')}
           showRates={progression.isRevealed('details.status')}
           onpurchasemode={(m) => (purchaseMode = m)}
           onpurchase={purchase}

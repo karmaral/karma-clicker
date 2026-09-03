@@ -6,6 +6,7 @@
    */
   import { Label, Section, Tabs } from '$ui';
   import { progression } from '$lib/progression';
+  import { f } from '$lib/utils';
   import type Building from '$lib/buildings/base.svelte';
   import type { YieldType } from '$types';
   import type { PurchaseMode } from './types';
@@ -19,7 +20,6 @@
     cohorts: Building[];
     purchaseModes?: readonly PurchaseMode[];
     purchaseMode?: PurchaseMode;
-    showAim?: boolean;
     /** The rail of totals. Gated by `details.status`, the beat that reveals rates. */
     showRates?: boolean;
     note?: string;
@@ -32,18 +32,14 @@
     cohorts,
     purchaseModes = ['1', '10', 'Next', 'Max'],
     purchaseMode = '1',
-    showAim = true,
     showRates = false,
     note,
     onpurchasemode,
     onpurchase,
   }: Props = $props();
 
-  const columns = $derived(
-    showAim
-      ? '20px minmax(0, 1fr) 50px 150px'
-      : '20px minmax(0, 1fr) 150px',
-  );
+  /** No per-cohort lean column any more — aim is one global dial. See §6. */
+  const columns = 'minmax(0, 1fr) 40px 150px';
 
   /** Which row is hovering its purchase button, if any. */
   let previewId: string | undefined = $state();
@@ -60,7 +56,9 @@
 
     const isSplit = progression.runs('negKarma');
 
-    cohorts.forEach((cohort) => {
+    // A cohort without its clerk earns nothing until sent by hand — the rail
+    // reads the standing rate, not what a full send queue would pay.
+    cohorts.filter((cohort) => cohort.isAutonomous).forEach((cohort) => {
       const count = cohort.id === preview
         ? cohort.count + resolvePurchasable(cohort, purchaseMode)
         : cohort.count;
@@ -80,6 +78,9 @@
     return [...totals].sort(([a], [b]) => byRateOrder(a, b));
   }
 
+  /** Total souls held across every cohort — the count the label is naming. */
+  const totalSouls = $derived(cohorts.reduce((sum, cohort) => sum + cohort.count, 0));
+
   const totals = $derived(totalsAt(undefined));
   const preview = $derived(new Map(previewId ? totalsAt(previewId) : []));
 
@@ -94,6 +95,7 @@
   {#snippet aside()}
     {#if showRates}
       <span class="rail">
+        <span class="souls">{f(totalSouls)} souls</span>
         {#each totals as [type, value] (type)}
           <RateFigure
             {type}
@@ -107,13 +109,9 @@
   <div class="table" style:--cohort-cols={columns}>
 
     <div class="head">
-      <span class="count right"><Label text="N" size="sm" /></span>
-
       <span><Label text="Soul cohort" size="sm" /></span>
 
-      {#if showAim}
-        <span class="lean"><Label text="Lean" size="sm" /></span>
-      {/if}
+      <span class="count right"><Label text="N" size="sm" /></span>
 
       <!-- The head cell is the switcher: the words are a read-out of where the
            cycle is, and clicking anywhere in the cell advances it. -->
@@ -126,7 +124,6 @@
     {#each cohorts as cohort (cohort.id)}
       <CohortRow
         {cohort}
-        {showAim}
         {purchaseMode}
         onpreview={(id) => (previewId = id)}
         onpurchase={(quantity) => onpurchase?.(cohort.id, quantity)}
@@ -153,6 +150,10 @@
     gap: var(--sp-4);
   }
 
+  .souls {
+    color: var(--ink-500);
+  }
+
   .head {
     display: grid;
     grid-template-columns: var(--cohort-cols);
@@ -170,9 +171,6 @@
 
   .head .right {
     justify-content: flex-end;
-  }
-  .lean {
-    justify-content: center;
   }
 
   .cost {

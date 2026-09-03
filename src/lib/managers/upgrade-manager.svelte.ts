@@ -37,8 +37,8 @@ class UpgradeManager {
 
     if (unlock_type === 'count' || unlock_type === 'count_total') {
       // The building the count is asked of, not the upgrade's own bucket key —
-      // 'cohort:basic' has no building, 'basic' does. Locked while there is no
-      // building at all: a cohort you have not unlocked holds nothing.
+      // 'cohort:cohort_1' has no building, 'cohort_1' does. Locked while there
+      // is no building at all: a cohort you have not unlocked holds nothing.
       const { entity } = parseScope(target);
       const tgt = entity && BuildingManager.getBuilding(entity);
       if (!tgt) return true;
@@ -191,8 +191,8 @@ class UpgradeManager {
           return BuildingManager.acquire(entity);
         case 'discover':
           return PlanetManager.unlock(entity);
-        // case 'autonomy':
-        //   return BuildingManager.getBuilding(entity).toggleAutonomy(true);
+        case 'autonomy':
+          return BuildingManager.getBuilding(entity)?.toggleAutonomy(true);
         default: return;
       }
     }

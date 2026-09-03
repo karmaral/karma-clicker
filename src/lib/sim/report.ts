@@ -72,6 +72,29 @@ export function timelineCsv(results: SimResult[]) {
   return toCsv(headers, rows);
 }
 
+/**
+ * Wall-clock to each cohort's own arrival — see `ArrivalRecord`. What a retune
+ * session opens with instead of a stopwatch.
+ */
+export function arrivalsCsv(results: SimResult[]) {
+  const headers = [
+    'run', 'index', 'cohort', 'revealedSeconds', 'firstCopySeconds',
+    'gapSeconds', 'experienceAtFirstCopy',
+  ];
+
+  const rows = results.flatMap((result) =>
+    result.arrivals.map((arrival) => [
+      result.label, arrival.index, arrival.cohort,
+      seconds(arrival.revealedAtMs ?? NaN), seconds(arrival.firstCopyAtMs ?? NaN),
+      arrival.revealedAtMs !== undefined && arrival.firstCopyAtMs !== undefined
+        ? seconds(arrival.firstCopyAtMs - arrival.revealedAtMs)
+        : '',
+      num(arrival.experienceAtFirstCopy),
+    ]));
+
+  return toCsv(headers, rows);
+}
+
 /** One run's worth — the ladder is data, so every run with the same overrides shares it. */
 export function ladderCsv(result: SimResult) {
   const headers = [
@@ -132,6 +155,7 @@ export function mergeCsv(results: SimResult[]) {
 export function reportsFor(results: SimResult[]) {
   return [
     { name: 'beats.csv', text: beatsCsv(results) },
+    { name: 'arrivals.csv', text: arrivalsCsv(results) },
     { name: 'timeline.csv', text: timelineCsv(results) },
     { name: 'merge.csv', text: mergeCsv(results) },
     ...(results[0] ? [{ name: 'ladder.csv', text: ladderCsv(results[0]) }] : []),

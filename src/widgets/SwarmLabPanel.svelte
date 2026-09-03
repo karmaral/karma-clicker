@@ -9,10 +9,16 @@
   const size = $derived(swarmLab.size);
   const stage = $derived(swarmLab.stage);
 
-  /** Counts, not authoring — so they sit above the groups `copy` prints. */
+  /**
+   * Counts, not authoring — so they sit above the groups `copy` prints.
+   * `Streaming` is how many of the inner bands have collapsed into a rate; it
+   * is the only way to see what `Bolt` does to a band that no longer strikes on
+   * its payouts, since nothing in the lab is earning.
+   */
   const counts = [
     { key: 'bands', label: 'Cohorts', min: 1, max: 8 },
     { key: 'per', label: 'Souls each', min: 0, max: 100 },
+    { key: 'streams', label: 'Streaming', min: 0, max: 8 },
   ] as const;
 
   /**
