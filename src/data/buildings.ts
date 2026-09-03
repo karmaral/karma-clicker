@@ -44,10 +44,13 @@ function cohortData(n: number) {
 }
 
 const data: Record<string, BuildingData> = {
+  // Instant from the first press — 0 is the emitter's synchronous path. The
+  // click-and-wait verb belongs to unclerked cohorts alone now; a cooldown on
+  // the one thing you do continuously was only ever an obstacle. See §5.
   'main': {
     role: 'click',
     yields: { experience: 5, karma: 1 },
-    duration: 1000,
+    duration: 0,
     count: 1,
   },
   ...Object.fromEntries(

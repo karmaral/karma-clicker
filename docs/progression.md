@@ -3399,6 +3399,9 @@ the one that matters:
   with the cohort ladder and the two `global` upgrades. Their gates are the
   authored figure; their ids are not the order they arrive in.
 
+> The pacing rule survives; the *two axes* do not. The three `speed_*` chips are
+> gone and `str_1` is the whole tutorial — see *The press is instant* below.
+
 The general rule this is the first instance of: **an upgrade bucket whose
 `unlocks_at` are all cleared before the rail exists is not a ladder, it is a
 backlog.** Nothing enforces it — a sim run that priced upgrades would catch it,
@@ -4525,6 +4528,12 @@ planted at the cursor's position when it struck, and only `speed_3`'s zeroed
 duration — or a lab with no building — gets the live tracking back, which is
 also the one case short enough that a moving cursor was never the problem.
 
+> This whole section predates the instant press. The code is unchanged and the
+> reasoning still stands — but `speed_3` is gone and the game side now sits
+> permanently at the instant end of every ramp described here. The lab
+> (`clickMs === undefined`) is what still drives the other end. See *The press
+> is instant* below.
+
 **The trail itself eases out rather than switching off.** A head with a lit
 trail earns its keep on a real flight, but on an instant click it did the
 opposite of what it was for: with nothing to travel, a comet with a dark tail
@@ -4791,10 +4800,14 @@ click's ladder and the two order themselves.
 
 The gate stays karma for a reason that is specific to the click: it pays a flat 1
 karma untouched by `str_*`, so **a karma gate is a press count**. 30 karma is 30
-presses whether that takes thirty seconds or eighteen — which makes `speed_1`
+presses whether that takes thirty seconds or eighteen — which made `speed_1`
 visibly pull the next cohort forward in wall-clock time, a speed chip buying
 access rather than only throughput. An experience gate would be pulled forward by
 `str_*` instead, and there are already four of those.
+
+> The press-count half still holds; the `speed_1` half does not. **The `speed_*`
+> ladder is gone and the press is instant** — see *The press is instant* below.
+> A karma gate is now a press count paced by the player's hand alone.
 
 `cohort:basic/first` stays unpriced, and the reason is no longer that it has no
 buyer — beat 3 now opens the rail, ahead of the cohort table at beat 4. It stays
@@ -4827,6 +4840,61 @@ exist before the beat that tested for it — a second route on paper only.
 
 Figures on `planet:second` and `planet:third` are placeholders. They put
 discovery near beat 9 and nothing more; nothing is balanced against them.
+
+## The press is instant
+
+Settled by playtest. The press opened on a 1,000 ms cooldown and ramped down
+through `building:main/speed_1`, `speed_2`, `speed_3` — ×0.6, ×0.5, ×0 — the last
+titled *It clicked for you*. **The pun was the reason the wait survived this
+long, and the wait is annoying.** All three chips are gone and `main.duration` is
+authored 0.
+
+The argument for keeping it was never throughput. It was that a cooldown makes
+the press a *timing* decision against the wave, the same reading §6 wants. But
+the game already has that verb, in a better place: **a cohort without its clerk
+is click-and-wait**, and there the wait is a batch you can hold through a dense
+phase and release into a light one. On the press the same wait bought nothing to
+decide — one press, one life, no batch to hold — so it was a throttle wearing a
+mechanic's clothes. One mechanic, one home: the hand is instant, the unclerked
+row is the clock.
+
+**`speed_3` was the tell.** A ladder whose top rung deletes the mechanic is a
+ladder apologising for it. Three purchases to reach the state the verb should
+have shipped in is three purchases spent undoing a decision.
+
+### What fell out
+
+`duration: 0` is not a special case — `ResourceEmitter.queue()` already treats a
+zero interval as the synchronous path, and `speed_3` used to land on exactly that
+path. So nothing in the emitter, the bias averaging (`biasBetween` returns the
+instant when the span is 0) or the payout changed at all.
+
+What became dead was the cooldown's own surface, and it is pruned:
+
+- `PlanetStage`'s `duration` / `isInProgress` / `subscribe` props, its `SweepBar`
+  and the `.cooldown` caption row. It passes `clickMs={0}` down to `PlanetView`.
+- `DetailsScreen`'s `sweepOf(CLICK)` closure and the `isInProgress` re-entrancy
+  guard on `onclickaction` — with no interval there is no window to re-enter.
+
+`PlanetScene`'s `clickMs` ramp is **kept**, not pruned. `boltLife`, `nearFloor`,
+`boltTrail` and `boltHold` interpolate the strike between an instant press and a
+long flight, and the planet lab drives them with `clickMs === undefined`. That is
+visual-lab surface with an author behind it, not dead game code — the game side
+simply pins it at the instant end now.
+
+### The hazard this leaves
+
+Every early gate was paced against a press that started at one a second. It now
+runs at whatever rate the player clicks, from the first press. Two things move:
+
+- **Beats 1–4.** The rail's `FIRST_CHIP = 40` xp, `first_soul` at 30 karma
+  (30 presses), `rows` at five souls — all arrive sooner in wall-clock.
+- **Unstaffed anchoring.** `harness.clickMs` pays 250 job-ms per press, and
+  design.md §12 sizes the second world at ~288 unstaffed presses. That figure was
+  a number of *seconds* early on; it is now a number of *clicks*.
+
+`sim/run.ts` already models a fast hand (`clicksPerSecond: 4`), so the bench is
+the instrument for this — nothing has been retuned against it yet.
 
 ## Naming
 

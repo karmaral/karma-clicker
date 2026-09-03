@@ -206,44 +206,51 @@ cohort, excluded from everything that fans out over cohorts.
 | | |
 |---|---|
 | Yield | 5 experience, 1 karma |
-| Duration | 1,000 ms |
+| Duration | 0 — instant, and never anything else |
 | Aim | none — the press pays flat karma at any detent (§6) |
+
+**The press is instant from the first one.** It used to open on a 1,000 ms
+cooldown and ramp down through a three-rung `speed_*` ladder ending in *It
+clicked for you* — a pun worth one upgrade name and, in play, an obstacle in
+front of the one verb the player uses continuously. **Click-and-wait now belongs
+to unclerked cohorts alone** (§5): a row you send by hand and watch fill is a
+timing decision against the wave, where a cooldown on the press was only a
+throttle. One mechanic, one home.
 
 **The click's karma is a flat 1, untouched by every strength upgrade.** That is
 load-bearing: it makes a **karma gate a press count**. A cohort gated at 30
-positive karma is 30 presses whether that takes thirty seconds or eighteen —
-which is why buying press *speed* visibly pulls the next cohort forward in
-wall-clock time. A speed chip buys access, not only throughput. An experience
-gate would be pulled forward by the strength ladder instead, and there are
-already four of those.
+positive karma is 30 presses, and how fast they arrive is the player's hand
+rather than a chip. An experience gate would be pulled forward by the strength
+ladder instead, and there are already four of those.
 
 ### The ladder — paced, not priced
 
-Eight upgrades, and their **gates are the authored figure; their ids are not the
-order they arrive in.** Read the gate column, not the name.
+Five upgrades on one axis, and their **gates are the authored figure; their ids
+are not the order they arrive in.** Read the gate column, not the name.
 
 | Upgrade | Effect | Unlocks at | Costs |
 |---|---|---|---|
 | `str_1` | ×1.5 experience | 40 xp | 30 xp |
-| `speed_1` | ×0.6 duration | 100 xp | 80 xp |
 | `str_2` | ×2 experience | 2,500 xp | 1,800 xp |
-| `speed_2` | ×0.5 duration | 6,000 xp | 4,500 xp |
-| `speed_3` | ×0 duration (instant) | 20,000 xp | 15,000 xp |
 | `str_3` | ×3 experience | 400 karma+ | 300 karma+ |
 | `str_4` | ×9 experience | 2,000 karma+ | 1,500 karma+ |
 | `carry_1` | +0.2% per riding soul | 60,000 karma− | 200,000 karma+ |
 
-Two land early — one per axis, which is the whole tutorial. `str_1`'s gate of 40
-is also the gate that opens the upgrade rail, deliberately, so the rail is never
-revealed empty and opens holding exactly one chip.
+`str_1` alone is the tutorial. Its gate of 40 is also the gate that opens the
+upgrade rail, deliberately, so the rail is never revealed empty and opens holding
+exactly one chip.
 
 The strength ladder compounds to **×81** (1.5 × 2 × 3 × 9). `str_4` squares
 everything above it once, which is a retune hazard: moving `str_1`–`str_3` moves
 `str_4`'s meaning.
 
-`speed_3` takes the press to **zero duration** — instant. It sits past the wave
-upgrade on purpose: the press is still worth timing while the wave is the thing
-being learned.
+⚠ **Retune hazard from the instant press.** Every early gate was paced against a
+press that started at one a second and only reached instant at 20,000 xp. It now
+runs at the player's click rate from the first press, so the opening minutes —
+and the unstaffed anchoring of the second world, which is paid per press
+(`harness.clickMs`, §12) — arrive faster than the authored figures assume. The
+sim bench already models a fast hand at `clicksPerSecond: 4`; run it before
+trusting any early figure.
 
 ### `carry` — the hand rides with the crowd
 
@@ -428,9 +435,9 @@ and it earns three things:
 - **Automation becomes a trade.** A clerk buys throughput and sells timing. *The
   wheel outgrows the hand* stops being flavour and becomes the cost curve.
 
-The arc is then legible end to end: **many hands, then fewer, then none — and by
-the time everything is automatic the press has its instant upgrade and the hand is
-the only thing left to do.**
+The arc is then legible end to end: **many hands, then fewer, then none — and the
+press, which was instant all along, is the only thing left to do.** Waiting on a
+clock is the cohort's verb and not the hand's; §4 says why the press gave it up.
 
 Lore: a clerk keeps one cohort's ledger and does not need asking. The
 revision-and-reincarnation loop sits here if it is ever written. The ledger
@@ -1743,7 +1750,10 @@ the slot counts together** — no one of them is meaningful alone.
 
 ### Unplayed — no one has watched these run
 
-- **The opening, beats 1–4**, on the current gates.
+- **The opening, beats 1–4**, on the current gates — and now on an **instant
+  press**, which removes the throttle every one of those gates was paced behind.
+  Beats 1–4 and the second world's unstaffed anchoring both come at the player's
+  click rate; §4 marks the hazard.
 - **The whole anchoring phase.** Nothing about it has been played.
 - **The whole Refinery screen.**
 - **Whether the second world at its current length is the right second world.**

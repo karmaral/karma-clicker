@@ -53,10 +53,10 @@
      */
     hold?: number;
     /**
-     * Whether the click that struck this bolt has no wait of its own —
-     * `speed_3`, or a lab with no building. Gates whether the near end tracks
-     * `getCursor` at all; see the header doc for why a click with a real
-     * duration keeps its strike planted where the press landed.
+     * Whether the click that struck this bolt has no wait of its own — the
+     * game's press always, or a lab with no building. Gates whether the near
+     * end tracks `getCursor` at all; see the header doc for why a click with a
+     * real duration keeps its strike planted where the press landed.
      */
     isInstant: boolean;
     /**

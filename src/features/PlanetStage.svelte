@@ -1,9 +1,6 @@
 <script lang="ts">
   import { DEFAULT_PULSE, DEFAULT_SWARM, DEFAULT_VISUAL, PlanetView } from '$widgets/planet';
   import type { AnchorVisual, HarnessVisual } from '$widgets/planet';
-  import { SweepBar } from '$ui';
-  import { f } from '$lib/utils';
-  import type { Listener } from '$lib/emission';
   import { spotlight } from '$lib/spotlight.svelte';
   import planetVisuals from '$data/planet-visuals';
   import { STAGE_WIDTH } from './planet-viewport';
@@ -18,10 +15,6 @@
     streaming?: boolean[];
     clickActionVerb?: string;
     clickActionSub?: string;
-    /** The click's own duration — 0 once it has ramped to instant. */
-    duration?: number;
-    isInProgress?: boolean;
-    subscribe?: (fn: Listener) => () => void;
     onclickaction?: () => void;
     /** A running count of landed yields. See `PlanetView`. */
     yields?: number;
@@ -44,9 +37,6 @@
     streaming,
     clickActionVerb = 'Incarnate',
     clickActionSub,
-    duration = 0,
-    isInProgress = false,
-    subscribe,
     onclickaction,
     yields = 0,
     yieldValue = 0,
@@ -86,10 +76,9 @@
       {paid}
       {streaming}
       pulse={DEFAULT_PULSE}
-      clickMs={duration}
+      clickMs={0}
       clockKey={id}
       {clickActionVerb}
-      disabled={isInProgress}
       {onclickaction}
       {yields}
       {yieldValue}
@@ -106,12 +95,6 @@
     <span class={['verb', { lit: spotlight.isLit('building', 'main') }]}>{clickActionVerb}</span>
     {#if clickActionSub}
       <span class="sub num">{clickActionSub}</span>
-    {/if}
-    {#if duration && subscribe}
-      <span class="cooldown">
-        <SweepBar {subscribe} width="6rem" />
-        {f(duration / 1000)}s
-      </span>
     {/if}
   </div>
 </div>
@@ -146,15 +129,6 @@
     background-color: var(--surface-alt);
     margin-inline: -4px;
     padding-inline: 4px;
-  }
-
-  .cooldown {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-2);
-    font-size: var(--fs-sm);
-    color: var(--ink-500);
-    margin-top: 2px;
   }
 
   .sub {

@@ -97,8 +97,8 @@
     })) ?? [],
   );
 
+  /** Instant, always — the press has no clock of its own. See `buildings.ts`. */
   function onclickaction() {
-    if (click?.isInProgress) return;
     click?.queueAction();
   }
 
@@ -120,15 +120,6 @@
 
     return () => BuildingManager.removeListener(CLICK, 'action', onaction);
   });
-
-  /** The bar sweeps on the click's own clock; mirrors CohortRow's sweepOf. */
-  function sweepOf(id: string) {
-    return (fn: Listener) => {
-      BuildingManager.addListener(id, 'queue', fn);
-
-      return () => BuildingManager.removeListener(id, 'queue', fn);
-    };
-  }
 
   /**
    * The field is drawn from the beat on, anchored or not: a finished harness
@@ -174,9 +165,6 @@
         streaming={streamingPerCohort}
         {clickActionVerb}
         {clickActionSub}
-        duration={click?.duration ?? 0}
-        isInProgress={click?.isInProgress ?? false}
-        subscribe={sweepOf(CLICK)}
         {onclickaction}
         {yields}
         yieldValue={isAnchoring ? 0 : clickYield}

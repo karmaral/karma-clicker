@@ -168,33 +168,14 @@ const data: Record<string, UpgradeData[]> = {
    * than priced. `str_1`'s gate is the one the `rail` beat opens on, so the rail
    * arrives holding exactly this chip and the ladder is walked a rung at a time
    * — it used to unlock into no rail at all and then land as a wall on the beat
-   * that finally drew one. Two come early, one per axis, which is the whole
-   * tutorial; the rest interleave with the cohort ladder and the two globals.
-   * Read the gates in order, not the ids.
+   * that finally drew one. `str_1` alone is the tutorial; the rest interleave
+   * with the cohort ladder and the two globals. Read the gates in order, not the ids.
+   *
+   * One axis, not two: the press is instant from the start, so the `speed_*`
+   * ladder that used to ramp its duration is gone. Waiting on a clock is the
+   * unclerked cohort's verb now.
    */
   'building:main': [
-    // Ramps the click's duration back toward instant. mult 0 on speed_3 lands
-    // on the same zero-duration path the emitter already treats as synchronous.
-    {
-      id: 'speed_1',
-      effect: { op: 'mult', value: 0.6, stat: 'duration' },
-      unlocks_at: { experience: 100 },
-      costs: { experience: 80 },
-    },
-    {
-      id: 'speed_2',
-      effect: { op: 'mult', value: 0.5, stat: 'duration' },
-      unlocks_at: { experience: 6000 },
-      costs: { experience: 4500 },
-    },
-    {
-      // Last of the ladder, and past `read_the_wave` on purpose: the press is
-      // still worth timing while the wave is the thing being learned.
-      id: 'speed_3',
-      effect: { op: 'mult', value: 0, stat: 'duration' },
-      unlocks_at: { experience: 20_000 },
-      costs: { experience: 15_000 },
-    },
     {
       id: 'str_1',
       effect: { op: 'mult', value: 1.5 },

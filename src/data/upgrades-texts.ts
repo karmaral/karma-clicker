@@ -84,18 +84,6 @@ const data: Record<string, Record<string, ItemTextData>> = {
     },
   },
   'building:main': {
-    'speed_1': {
-      title: 'First stirrings',
-      description: 'Incarnating takes a little less out of you.',
-    },
-    'speed_2': {
-      title: 'Getting faster',
-      description: 'The wait between lives keeps shrinking.',
-    },
-    'speed_3': {
-      title: 'It clicked for you',
-      description: 'You figure out a way to incarnate instantly.'
-    },
     'str_1': {
         title: 'Getting the hang of it',
         description: 'Incarnation XP yield x1.5',
