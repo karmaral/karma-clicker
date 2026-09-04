@@ -11,6 +11,8 @@
 
 export type SplitJob = 'anchoring' | 'refining';
 
+export type ReserveSnapshot = Record<SplitJob, number>;
+
 class Reserve {
   #anchoring = $state(0);
   #refining = $state(0);
@@ -40,6 +42,16 @@ class Reserve {
   /** What the other lever leaves this one. */
   ceilingFor(job: SplitJob) {
     return 1 - this.shareOf(job === 'anchoring' ? 'refining' : 'anchoring');
+  }
+
+  /** Both at once, past `set` — clamped one at a time, the pair truncates itself. */
+  restore({ anchoring, refining }: ReserveSnapshot) {
+    this.#anchoring = anchoring;
+    this.#refining = refining;
+  }
+
+  snapshot(): ReserveSnapshot {
+    return { anchoring: this.#anchoring, refining: this.#refining };
   }
 
   get anchoring() { return this.#anchoring; }

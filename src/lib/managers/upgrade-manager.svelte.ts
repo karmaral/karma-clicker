@@ -19,6 +19,11 @@ Object.keys(data).forEach((name) => {
   });
 });
 
+export interface UpgradeSnapshot {
+  upgrades: Record<string, string[]>;
+  acquiredLog: string[];
+}
+
 class UpgradeManager {
   #upgrades: Record<string, string[]> = $state(
     Object.fromEntries(Object.keys(data).map((name) => [name, []])),
@@ -145,6 +150,47 @@ class UpgradeManager {
       [...this.#upgrades[target]]
         .filter((id) => this.isLocked(target, id))
         .forEach((id) => this.release(target, id));
+    });
+  }
+
+  snapshot(): UpgradeSnapshot {
+    return {
+      upgrades: Object.fromEntries(
+        Object.entries(this.#upgrades).map(([target, ids]) => [target, [...ids]]),
+      ),
+      acquiredLog: [...this.#acquiredLog],
+    };
+  }
+
+  /**
+   * The held ids, then their modifiers — and **only** their modifiers. A string
+   * effect is a verb (`unlock`, `acquire`, `discover`, `autonomy`) and every one
+   * of them has already landed in the saved buildings and planets, so replaying
+   * it would grant a second time. Skipping `acquire` is the whole reason this is
+   * not a loop over `acquire()`; skipping the notification is the other half.
+   *
+   * Synchronous, unlike `#handleEffect`: the `await tick()` there paces toasts,
+   * and there are none here.
+   */
+  restore({ upgrades, acquiredLog }: UpgradeSnapshot) {
+    Object.keys(this.#upgrades).forEach((target) => {
+      this.#upgrades[target] = [...(upgrades[target] ?? [])];
+    });
+    this.#acquiredLog = [...acquiredLog];
+
+    Object.entries(this.#upgrades).forEach(([target, ids]) => {
+      ids.forEach((id) => {
+        const item = upgradeMap[target]?.[id];
+        if (!item?.effect) return;
+
+        const effects = Array.isArray(item.effect) ? item.effect : [item.effect];
+
+        effects.forEach((effect, index) => {
+          if (typeof effect === 'string') return;
+
+          this.#processEffect(target, item, effect, index);
+        });
+      });
     });
   }
 

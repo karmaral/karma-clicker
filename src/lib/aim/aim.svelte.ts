@@ -28,6 +28,12 @@ export interface ResolvedAim {
   karmaYieldFactor: number;
 }
 
+/** `reaimedAtPhase` is in the active world's progress units, not wall-clock. */
+export interface AimSnapshot {
+  detent: Detent;
+  reaimedAtPhase: number | undefined;
+}
+
 class Aim {
   #detent = $state<Detent>(0);
   #reaimedAtPhase = $state<number | undefined>(undefined);
@@ -84,6 +90,16 @@ class Aim {
 
   detentLabel(detent: Detent) {
     return DETENT_LABELS[detent];
+  }
+
+  /** Past `set`, which would stamp the mark with *now* and re-owe the penalty. */
+  restore({ detent, reaimedAtPhase }: AimSnapshot) {
+    this.#detent = detent;
+    this.#reaimedAtPhase = reaimedAtPhase;
+  }
+
+  snapshot(): AimSnapshot {
+    return { detent: this.#detent, reaimedAtPhase: this.#reaimedAtPhase };
   }
 
   get detent() { return this.#detent; }

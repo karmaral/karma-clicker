@@ -2,6 +2,11 @@ import type { ResourceType } from '$types';
 
 type Listener = (detail?: Record<string, unknown>) => void;
 
+export interface ResourceSnapshot {
+  amount: number;
+  total: number;
+}
+
 export default class Resource {
   #type: ResourceType;
   #amount = $state(0);
@@ -34,6 +39,20 @@ export default class Resource {
 
     this.#runCallbacks('change', { amount: this.#amount });
     this.#runCallbacks('remove', { removed: amt });
+  }
+
+  /**
+   * A save writes both figures raw. Not `add`: that rounds, bumps `#total` a
+   * second time, and fires four listener buckets — and `#total` is not a
+   * function of `#amount`, since `remove` never reduces it.
+   */
+  restore({ amount, total }: ResourceSnapshot) {
+    this.#amount = amount;
+    this.#total = total;
+  }
+
+  snapshot(): ResourceSnapshot {
+    return { amount: this.#amount, total: this.#total };
   }
 
   get type() { return this.#type; }

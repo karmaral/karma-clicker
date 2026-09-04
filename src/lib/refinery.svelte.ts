@@ -19,6 +19,11 @@ import { BuildingManager, ResourceManager } from '$lib/managers';
 import balance from '$data/balance';
 import type { Modifier, ResourceType } from '$types';
 
+export interface RefinerySnapshot {
+  level: number;
+  exp: number;
+}
+
 /** Under this the emitter would re-queue inside its own payout. */
 const MIN_INTERVAL = 100;
 
@@ -132,6 +137,16 @@ class Refinery {
 
   removeListener(identifier: string, fn: Listener) {
     this.#emitter.removeListener(identifier, fn);
+  }
+
+  /** The one accumulated pair nothing rederives — a save stores both raw. */
+  restore({ level, exp }: RefinerySnapshot) {
+    this.#level = level;
+    this.#exp = exp;
+  }
+
+  snapshot(): RefinerySnapshot {
+    return { level: this.#level, exp: this.#exp };
   }
 
   get slots() { return this.#slots; }

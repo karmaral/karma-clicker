@@ -21,6 +21,13 @@ export interface Departure {
   rates: HarvestRates;
 }
 
+/** Everything a world holds that the data file does not. What a save writes. */
+export interface PlanetSnapshot extends Departure {
+  livedMs: number;
+  isHarvested: boolean;
+  placedMs: number;
+}
+
 /** The wave's marker steps once per this many ms of world time — a second hand. */
 const POSITION_STEP_MS = 1000;
 
@@ -105,6 +112,15 @@ export default class Planet {
     this.#alignment = alignment;
     this.#rates = rates;
 
+    this.#armHarvest();
+  }
+
+  /**
+   * The recurring harvest's clock. Its own step because a load has to reach it
+   * too: the emitter lives nowhere but here, and a harvested world restored
+   * without it is a finished world that pays nothing and looks fine doing it.
+   */
+  #armHarvest() {
     if (!this.#data.harvest) return;
 
     // A getter, not the figure: the emitter re-queues itself and asks again.
@@ -112,6 +128,31 @@ export default class Planet {
 
     this.#emitter.toggleAutonomy(true);
     this.#emitter.queue();
+  }
+
+  snapshot(): PlanetSnapshot {
+    return {
+      livedMs: this.#livedMs,
+      isHarvested: this.#isHarvested,
+      merged: this.#merged,
+      mergedShare: this.#mergedShare,
+      alignment: this.#alignment,
+      rates: $state.snapshot(this.#rates),
+      placedMs: this.#placedMs,
+    };
+  }
+
+  /** The fields, then the clock. Never `completeFirstHarvest` — that one merges souls. */
+  restore(state: PlanetSnapshot) {
+    this.#livedMs = state.livedMs;
+    this.#isHarvested = state.isHarvested;
+    this.#merged = state.merged;
+    this.#mergedShare = state.mergedShare;
+    this.#alignment = state.alignment;
+    this.#rates = state.rates;
+    this.#placedMs = state.placedMs;
+
+    if (this.#isHarvested) this.#armHarvest();
   }
 
   /**

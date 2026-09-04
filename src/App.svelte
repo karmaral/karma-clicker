@@ -9,6 +9,7 @@
   import planetTexts from '$data/planets-texts';
   import { progression, validate } from '$lib/progression';
   import { nav } from '$lib/nav.svelte';
+  import { loadPending } from '$lib/save';
   import { wire } from '$lib/wiring.svelte';
   import { f } from '$lib/utils';
   import * as loop from '$lib/loop';
@@ -20,9 +21,13 @@
   import DevPanel from '$features/dev/DevPanel.svelte';
   import Log from '$features/Log.svelte';
 
-  PlanetManager.unlock('first');
-  PlanetManager.select('first');
-  BuildingManager.unlock('main');
+  // The module graph is the reset, so a fresh run is what the graph plus these
+  // three lines already are. A load happens instead of them, never over them.
+  if (!loadPending()) {
+    PlanetManager.unlock('first');
+    PlanetManager.select('first');
+    BuildingManager.unlock('main');
+  }
 
   /** What a notification looks like. The manager only knows that one exists. */
   NotificationManager.use(({ title, description }) => {

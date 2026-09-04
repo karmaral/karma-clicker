@@ -1,4 +1,4 @@
-import Building from '$lib/buildings/base.svelte';
+import Building, { type BuildingSnapshot } from '$lib/buildings/base.svelte';
 import Click from '$lib/buildings/click.svelte';
 import Cohort from '$lib/buildings/cohort.svelte';
 import { PlanetManager, ResourceManager } from '.';
@@ -243,6 +243,28 @@ class BuildingManager {
     }
 
     return q - 1;
+  }
+
+  snapshot(): Record<string, BuildingSnapshot> {
+    return Object.fromEntries(
+      Object.entries(this.#buildings).map(([id, building]) => [id, building.snapshot()]),
+    );
+  }
+
+  /**
+   * `unlock` already reads `role` to pick the class, so a save stores ids and
+   * counts and nothing about which kind anything was.
+   */
+  restore(snapshot: Record<string, BuildingSnapshot>) {
+    Object.entries(snapshot).forEach(([id, state]) => {
+      this.unlock(id);
+      this.#buildings[id]?.restore(state);
+    });
+  }
+
+  /** The last step of a load: the clocks start once the modifiers are on. */
+  startEmitters() {
+    Object.values(this.#buildings).forEach((building) => building.startEmitter());
   }
 
   getBuilding(id: string) {

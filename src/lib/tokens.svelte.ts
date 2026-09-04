@@ -147,6 +147,10 @@ class Tokens {
   /** The inversion price's only input. */
   get inversions() { return this.#inversions; }
 
+  restore(inversions: number) {
+    this.#inversions = inversions;
+  }
+
   /** How many of this red the opposite pile can pay for, one at a time — the curve is geometric. */
   getMaxInvert(to: Polarity) {
     const balance = ResourceManager.getAmount(redFor(oppositeOf(to)));

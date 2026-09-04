@@ -7,6 +7,7 @@
   import { getExcess } from '$lib/excess';
   import { reserve, type SplitJob } from '$lib/reserve.svelte';
   import { refinery } from '$lib/refinery.svelte';
+  import * as save from '$lib/save';
   import { f, formatSpan } from '$lib/utils';
   import buildingData from '$data/buildings';
   import planetData from '$data/planets';
@@ -18,11 +19,43 @@
 
   let open = $state(true);
 
+  /** Held rather than derived: the store is not reactive, so the list is refreshed by hand. */
+  let saves = $state(save.list());
+  let saveName = $state('');
+
   const current = $derived(progression.current?.id ?? 'none');
 
   /** The two figures beat 10 turns on, so a stuck run is diagnosable on sight. */
   const excess = $derived(getExcess());
   const planet = $derived(PlanetManager.getActive());
+
+  /** Overwrites a name already there — the panel asks first, since it is one keystroke. */
+  function writeSave() {
+    const name = saveName.trim();
+    if (!name) return;
+    if (save.exists(name) && !confirm(`Overwrite "${name}"?`)) return;
+
+    save.save(name);
+    saves = save.list();
+    saveName = '';
+  }
+
+  function deleteSave(name: string) {
+    save.remove(name);
+    saves = save.list();
+  }
+
+  /** No `pulse` — nothing on this side of the reload survives it. */
+  function loadSave(name: string) {
+    save.load(name);
+  }
+
+  /** The whole save, on hover. Cheap enough that every row carries one. */
+  function describe({ beat, planet, souls, savedAt }: save.SaveSummary) {
+    const when = new Date(savedAt).toLocaleString();
+
+    return `beat ${beat} · ${planet} · ${f(souls)} souls\n${when}`;
+  }
 
   function jump(delta: number) {
     progression.jumpTo(progression.beat + delta);
@@ -73,6 +106,30 @@
 
   {#if open}
     <div class="body">
+      <div class="row">
+        <input
+          class="name"
+          type="text"
+          placeholder="save name"
+          bind:value={saveName}
+          onkeydown={(event) => event.key === 'Enter' && writeSave()}
+        >
+        <button onclick={writeSave}>save</button>
+      </div>
+
+      {#if saves.length}
+        <ul class="saves">
+          {#each saves as entry (entry.name)}
+            <li>
+              <button class="load" title={describe(entry.summary)} onclick={() => loadSave(entry.name)}>
+                {entry.name}
+              </button>
+              <button onclick={() => deleteSave(entry.name)}>×</button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+
       <div class="row">
         <span class="id">{current}</span>
         <button onclick={() => jump(-1)}>−</button>
@@ -198,6 +255,40 @@
   .id {
     flex: 1;
     color: var(--ink-400);
+    white-space: nowrap;
+  }
+
+  .name {
+    flex: 1;
+    min-width: 0;
+    background: var(--surface);
+    border: var(--rule-card);
+    padding: 2px var(--sp-2);
+    font: inherit;
+  }
+
+  /* Capped rather than grown: the panel sits over the game and the list is unbounded. */
+  .saves {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 140px;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .saves li {
+    display: flex;
+    gap: var(--sp-2);
+  }
+
+  .load {
+    flex: 1;
+    overflow: hidden;
+    text-align: left;
+    text-overflow: ellipsis;
     white-space: nowrap;
   }
 

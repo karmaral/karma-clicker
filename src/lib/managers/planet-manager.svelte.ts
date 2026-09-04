@@ -1,8 +1,14 @@
-import Planet from '$lib/planets/base.svelte';
+import Planet, { type PlanetSnapshot } from '$lib/planets/base.svelte';
 import { getFirstHarvestAlignment } from '$lib/excess';
 import { BuildingManager, UpgradeManager } from '.';
 import { clock } from '$lib/clock';
 import data from '$data/planets';
+
+export interface PlanetManagerSnapshot {
+  selected: string;
+  order: string[];
+  states: Record<string, PlanetSnapshot>;
+}
 
 class PlanetManager {
   #selected = $state('');
@@ -107,6 +113,40 @@ class PlanetManager {
         ...boon.effect,
       });
     });
+  }
+
+  snapshot(): PlanetManagerSnapshot {
+    return {
+      selected: this.#selected,
+      order: [...this.#order],
+      states: Object.fromEntries(
+        Object.entries(this.#planets).map(([id, planet]) => [id, planet.snapshot()]),
+      ),
+    };
+  }
+
+  /**
+   * Discovery order first, so the axis comes back in the order it was walked.
+   * `#lastAt` is dropped rather than saved: the wave is a clock on time *stood*
+   * on a world, and a save that banked the gap would charge for time away.
+   */
+  restore({ selected, order, states }: PlanetManagerSnapshot) {
+    order.forEach((id) => this.unlock(id));
+    Object.entries(states).forEach(([id, state]) => this.#planets[id]?.restore(state));
+
+    this.#selected = selected;
+    this.#lastAt = undefined;
+  }
+
+  /**
+   * Boons are not saved — they are what being harvested *means*, so they are
+   * replayed off the flag instead. Runs after the buildings exist, and idempotent
+   * because `ModifierSet.add` drops a repeat id.
+   */
+  grantSavedBoons() {
+    Object.values(this.#planets)
+      .filter((planet) => planet.isHarvested)
+      .forEach((planet) => this.#grantBoons(planet));
   }
 
   getPlanet(id: string) {

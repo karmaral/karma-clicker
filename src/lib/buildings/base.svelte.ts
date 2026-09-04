@@ -6,6 +6,12 @@ import { aim, type ResolvedAim } from '$lib/aim';
 
 type Listener = (detail?: Record<string, unknown>) => void;
 
+export interface BuildingSnapshot {
+  count: number;
+  total: number;
+  isAutonomous: boolean;
+}
+
 export default class Building {
   #id: string;
   #data: BuildingData;
@@ -85,6 +91,33 @@ export default class Building {
 
     this.#runCallbacks('count', { count: this.#count });
     this.#runCallbacks('remove', { removed: amt });
+  }
+
+  /**
+   * A save writes the counts raw and stops short of starting the clock. Not
+   * `add`: it auto-queues on the `#total === 0` edge and fires the `add`
+   * listener, which the wiring turns into a purchase burst — a load is not a
+   * purchase. The clock waits for `startEmitter`, below.
+   */
+  restore({ count, total, isAutonomous }: BuildingSnapshot) {
+    this.#count = count;
+    this.#total = total;
+    this.#emitter.toggleAutonomy(isAutonomous);
+  }
+
+  /**
+   * Separate from `restore` because `#duration` is a modifier away from its base
+   * and the upgrades have not landed yet when the counts do — queueing there
+   * would run one life at the unmodified clock.
+   */
+  startEmitter() {
+    if (!this.#emitter.isAutonomous || !this.#count) return;
+
+    this.queueAction();
+  }
+
+  snapshot(): BuildingSnapshot {
+    return { count: this.#count, total: this.#total, isAutonomous: this.#emitter.isAutonomous };
   }
 
   queueAction() {
