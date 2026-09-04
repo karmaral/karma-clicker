@@ -83,6 +83,18 @@ const data: Record<string, Record<string, ItemTextData>> = {
       description: 'A third world makes itself known. Nothing was asked of you.',
     },
   },
+  'planet:fourth': {
+    'discover': {
+      title: 'Further out',
+      description: 'A fourth world, twice as long as the one before it.',
+    },
+  },
+  'planet:fifth': {
+    'discover': {
+      title: 'The far one',
+      description: 'The last world of this system. It asks half of everyone you have.',
+    },
+  },
   'building:main': {
     'str_1': {
         title: 'Getting the hang of it',

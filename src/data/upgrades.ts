@@ -53,10 +53,14 @@ const data: Record<string, UpgradeData[]> = {
    */
   'refinery': [
     {
+      // Priced in what it is gated on. §14 pays `K` on a tilted lock, so a
+      // Burden lock is worth nothing unless something costs `karma_negative` —
+      // and the three upgrades already *gated* on it were the design saying
+      // service-to-self out loud while the price fell back to the default pile.
       id: 'slots_1',
       effect: { op: 'flat', value: 4, stat: 'slots' },
       unlocks_at: { karma_negative: 5000 },
-      costs: { karma_positive: 25_000 },
+      costs: { karma_negative: 25_000 },
     },
     {
       id: 'efficiency_1',
@@ -88,6 +92,18 @@ const data: Record<string, UpgradeData[]> = {
       unlocks_at: { yellow: 1000 },
       costs: { yellow: 5000 },
     },
+    {
+      id: 'speed_3',
+      effect: { op: 'mult', value: 0.5, stat: 'duration' },
+      unlocks_at: { yellow: 50_000 },
+      costs: { yellow: 150_000 },
+    },
+    {
+      id: 'speed_4',
+      effect: { op: 'mult', value: 0.5, stat: 'duration' },
+      unlocks_at: { blue: 1 },
+      costs: { blue: 50 },
+    },
   ],
   /**
    * Two capacities and a precision. Work slots decide how many reserved souls
@@ -115,7 +131,7 @@ const data: Record<string, UpgradeData[]> = {
       id: 'riders_1',
       effect: { op: 'flat', value: 200, stat: 'riders' },
       unlocks_at: { karma_negative: 50_000 },
-      costs: { karma_positive: 150_000 },
+      costs: { karma_negative: 150_000 },
     },
     {
       id: 'slots_2',
@@ -161,6 +177,20 @@ const data: Record<string, UpgradeData[]> = {
       id: 'discover',
       effect: 'discover',
       unlocks_at: { karma_positive: 750_000 },
+    },
+  ],
+  'planet:fourth': [
+    {
+      id: 'discover',
+      effect: 'discover',
+      unlocks_at: { red_positive: 2000 },
+    },
+  ],
+  'planet:fifth': [
+    {
+      id: 'discover',
+      effect: 'discover',
+      unlocks_at: { yellow: 500 },
     },
   ],
   /**
@@ -214,7 +244,7 @@ const data: Record<string, UpgradeData[]> = {
       id: 'carry_1',
       effect: { op: 'flat', value: 0.002, stat: 'carry' },
       unlocks_at: { karma_negative: 60_000 },
-      costs: { karma_positive: 200_000 },
+      costs: { karma_negative: 200_000 },
     },
   ],
   /**
@@ -285,10 +315,14 @@ const data: Record<string, UpgradeData[]> = {
    */
   'cohorts': [
     {
+      // Priced in negative karma, and the two of them are the bulk of that
+      // pile's sink. Spending lives faster for throughput is the register
+      // exactly — it is not gated there like the other three, it simply reads
+      // as service to self on its face.
       id: 'shorter_lives_1',
       effect: { op: 'boost', value: -0.06, stat: 'duration' },
       unlocks_at: { karma_positive: 250_000 },
-      costs: { karma_positive: 310_000 },
+      costs: { karma_negative: 310_000 },
     },
     {
       // Twice the effect of `shorter_lives_1`, so it is priced past it. It used
@@ -297,7 +331,7 @@ const data: Record<string, UpgradeData[]> = {
       id: 'hard_season',
       effect: { op: 'boost', value: -0.12, stat: 'duration' },
       unlocks_at: { karma_positive: 900_000 },
-      costs: { karma_positive: 1_200_000 },
+      costs: { karma_negative: 1_200_000 },
     },
   ],
 };

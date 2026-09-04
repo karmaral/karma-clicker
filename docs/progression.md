@@ -329,55 +329,69 @@ currency. It is also the first thing that pays excess *management* back rather
 than merely gating on it — until now excess was a wall and nothing else, and a
 balanced pair of piles at the moment of harvest is now worth something for good.
 
-**Merged souls buy speed, and that is the whole of what they buy.**
+**Merging buys tempo; holding buys size.** This is the tempo half.
 
 ```
-duration = base / min(1 + merged / mergeHalving, maxMergeSpeed)
+duration = base / min(1 + mergedShare / mergeHalving, maxMergeSpeed)
 ```
 
 Hyperbolic, so it cannot reach 0 — the freeze above is unreachable from here —
-and capped, so a world's hundreds do not run away. Both terms are **authored per
-world**, because a late world should ask more souls for the same step and stop
-giving it back sooner: 50/×8 on `first`, 200/×6 on `second`, 800/×4 on `third`.
-A world that declares neither takes the module defaults.
+and capped, so no merge runs away. `mergedShare` is a share of the army and
+`mergeHalving` is authored equal to the world's toll, which is what makes the
+toll always buy exactly ×2 and a full merge land near the cap, on every world at
+every population. A world that declares neither term takes the module defaults.
+
+*Both terms were absolute counts once — 50/×8, 200/×6, 800/×4 — and the argument
+for that was the same one now made for shares: a late world should ask more for
+the same step. It still does. See* Denominate everything relatively.
 
 **A world also names a floor.** `firstHarvest.mergeMinimum` is the toll it takes
-for letting you leave, and it reaches the player in two places that say different
-things. As a *condition* it asks whether the floor is payable — `countSouls()`
-against the threshold — which is ambient, so `#unmet` keeps its parameterless
-shape and the Overview's row can name the requirement before you open the screen.
+for letting you leave, and it is **not a first-harvest condition**: as a share of
+your army it is always payable, so it can never be the reason a door is shut.
+`FirstHarvestCondition` is `keyof PlanetFirstHarvestConditions` and the toll sits
+outside that interface, which is what makes leaving it out of a `switch` a
+compile error rather than a silent hole.
+
 In the screen it is **the slider's minimum**, not something to fail against: the
 handle cannot go below the toll, so a short split is not a state the UI can
-express and there is no disabled button explaining one. The floor falls as the
-population grows, which is why the slider's position is `max(chosen, floor)` —
-held up to the toll rather than clamped down to it, so a handle dragged high
-stays where it was put.
+express and there is no disabled button explaining one. The slider's position is
+`max(chosen, floor)` — held up to the toll rather than clamped down to it, so a
+handle dragged high stays where it was put.
 
-Finding that minimum is a search, not a division. Rounding in `#takeFromCohorts`
-is per cohort, so `minimum / souls` is not the fraction that reaches the count;
-`findMergeFloor` bisects whole percents against `countMergeable`, which is exact
-because the count is monotone in the fraction. It can only return 100 when even
-every soul falls short, and the condition has already stopped that case.
+Finding that minimum is still a search, not a division. Rounding in
+`#takeFromCohorts` is per cohort, so the fraction that predicts a count is not the
+one that reaches it; `findMergeFloor` bisects whole percents against
+`countMergeable`, which is exact because the count is monotone in the fraction.
+`findMergeFloorForShare` only converts the toll to a count first, with a `ceil`.
 
-`PlanetManager` still guards with `countMergeable` before calling `mergeSouls`.
-Unreachable from the screen now, and kept anyway: it is the check that makes the
-toll true of the *model* rather than of one control, and `mergeSouls` is
-destructive — a guard that ran after it would have already taken the souls.
+`PlanetManager` still guards before calling `mergeSouls`, now on the *realised*
+share rather than the handle's. Unreachable from the screen, and kept anyway: it
+is the check that makes the toll true of the *model* rather than of one control,
+and `mergeSouls` is destructive — a guard that ran after it would have already
+taken the souls.
 
-The floor is not only a toll: since it is a floor on `merged`, and `merged` is
-what buys speed, it also sets the **slowest** the world can ever pay. Against the
-authored halvings that is ×1.2 on `first`, ×1.6 on `second` and ×1.75 on `third`
-— so no world can be left in a state where it barely delivers.
+The floor is not only a toll: since it is a floor on `mergedShare`, and that is
+what buys speed, it also sets the **slowest** the world can ever pay. With the
+halving tied to the toll the guarantee is now exact and identical everywhere —
+**the floor is ×2** — so no world can be left in a state where it barely delivers.
 
-**Total souls at the first harvest is deliberately not a second variable.** Not
-as a *payout* term, that is — the floor above reads `countSouls()`, but it is a
-gate on leaving rather than a knob on what the world then pays. `mergeSouls`
-returns `Σ round(cohort.count × fraction)`, so the population is already a factor
-of `merged` — a bigger world merged at the same fraction yields a bigger count
-and a faster clock for free. Reading the total separately would count one
-quantity twice and give the player two knobs that cannot be traded against each
-other. That leaves exactly two axes on a finished world, **how much you merged**
-and **how you were aligned**, which is what the first-harvest screen already asks.
+**Total souls at the first harvest is deliberately not an axis.** The merge is a
+share, so the population is already inside it — a bigger army merged at the same
+share pays the same toll and buys the same speed. Reading the count separately
+would count one quantity twice and give the player two knobs that cannot be
+traded against each other.
+
+**Income at departure is the third axis, and it is the one that pays for
+holding.** Before it existed, `yields` was a flat authored amount and merged
+souls bought speed alone, capped — so past `halving × (cap − 1)`, staying longer
+and growing the army bought literally nothing. `yields` is authored in *seconds
+of production* now and multiplied by a snapshot read on the way out.
+
+Two things about that snapshot are load-bearing. It is taken **pre-merge**, or
+merging destroys the thing it is being paid for. And its karma is
+**phase-averaged** — `countKarmaPerSecondAveraged` divides the wave's blend back
+out of the live figure rather than recomputing it from `buildings.ts`, so the two
+cannot drift, and leaving on a dense phase does not pay ×3 forever.
 
 **`polarity` on a planet is now `alignment`.** The type stays `Polarity` — it is
 structurally identical to any alias, so a separate one would catch nothing and
@@ -394,16 +408,15 @@ modules never importing three.
 `mm:ss` countdown to it; the emitter gained `nextAt` for that, and the Overview
 keeps one 1s clock for the whole band. **The total stays `/s` and is the only
 rate on the screen** — batch sizes do not add, since every world's duration moves
-with its own merged count. The base cadence is 60s, chosen so `/y` is a figure worth
+with its own merged share. The base cadence is 60s, chosen so `/y` is a figure worth
 reading and the countdown counts; it sits at the slow end on purpose, since a
 cadence is easier to judge downward than a trickle is to discover was never
 readable.
 
-Every figure is a placeholder anchored at roughly 30% of income at the point you
-leave. All three worlds are now reachable, and their lengths are authored rather
-than inferred — see *The wave is a clock*: 4 minutes, 24 minutes, 96 minutes of
-time on the world. The curve is a separate balance item; the harvest is authored
-anyway.
+The ratios themselves are placeholders; **the denomination is not.** Five worlds
+are authored, and their lengths follow one law — `240 s × 2^(p−1)`, so 4 / 8 / 16
+/ 32 / 64 minutes of time on the world. See *The wave is a clock* and
+*Denominate everything relatively*.
 
 ## Souls
 
@@ -3556,7 +3569,10 @@ Anything denominated in raw souls goes slack when the army grows and has to take
 the same ×5:
 
 - `mergeMinimum` — 10/70/200 → 50/350/1000. Left alone the merge floor would sit
-  near 1% and the toll would stop being one.
+  near 1% and the toll would stop being one. **This rescale was the wrong fix and
+  it broke the run in the other direction** — the ladder cut population rather
+  than growing it, so 1,000 souls became unreachable. It is a share now; see
+  *Denominate everything relatively*.
 - `riders` — 40/400 → 200/2000, and `carry_1` down from 1% to 0.2% a soul so it
   lands on the same +40%/+400% it was designed for.
 - The cost-ramp slider in `params.ts`, which had a 0.01 step. At these values one
@@ -4629,8 +4645,8 @@ wave speed or it does not; this is the version where it does not.
 
 What that buys, beyond the fix:
 
-- **`agesLived` is a promise you can read.** 4 minutes, 24 minutes, 96 minutes
-  for the three worlds, authored in `planets.ts` and printable in the UI.
+- **`agesLived` is a promise you can read.** 4 / 8 / 16 / 32 / 64 minutes across
+  the five worlds, authored in `planets.ts` and printable in the UI.
 - **`reaimPhases: 2` means something fixed.** The re-aim penalty is priced in
   `progress`, so on the old third world it was a permanent debuff with no figure
   in `balance.ts` that could have changed that. Anything else phase-priced is
@@ -4895,6 +4911,71 @@ runs at whatever rate the player clicks, from the first press. Two things move:
 
 `sim/run.ts` already models a fast hand (`clicksPerSecond: 4`), so the bench is
 the instrument for this — nothing has been retuned against it yet.
+
+## Denominate everything relatively
+
+The cohort ladder shipped alone and moved where power comes from: out of
+*headcount*, into *index*. Equivalent power now costs a few hundred souls where
+it cost thousands. Every figure still written in raw souls was therefore
+mis-scaled by about an order of magnitude, invisibly for two worlds — 50 and 350
+both clear a ~450-soul peak — and then the third asked 1,000 and the run stopped.
+
+The through-line of the fix is one rule, and it is worth more than any of the
+numbers it produced:
+
+> **Stop authoring absolutes.** A figure denominated in a quantity the ladder can
+> move is wrong the next time the ladder moves. Denominate it in a *share* of that
+> quantity and it is right at every scale.
+
+Toll and halving became shares of the army; the harvest became a multiple of your
+income; the world floor became wall-clock. Worlds 4 and 5 then cost almost
+nothing to author, which is the test of whether the rule took.
+
+### The one measured run
+
+The only calibration data the upper economy has ever had, off a live run at the
+third world. Recorded because the figures behind the rebalance came from here and
+nowhere else:
+
+```
++150,331 xp/s
++135,298 karma−/s      (hard negative, dense phase)
+~700 xp/click
+```
+
+The karma reading reproduces exactly: `150,331 × 0.2 × 3 (extremity) × 1.5 (bias
+with)`. **That is a dense-phase snapshot** — on the flip it is ~45,100, so true
+phase-averaged income is ~90,200/s. This is why §15's departure snapshot divides
+the bias back out: sizing a permanent reward against the reading would pay ×3 for
+the accident of when you left.
+
+The refinery at level 29 cleared 138,034 karma/s across both lanes, against
+15,033/s per pile that an Even economy could feed it — **4.6× ahead of anything
+the game produces**, which is why idling it is the only sane setting. Nothing
+stops batch capacity outrunning the economy: level is earned by karma moved, and
+the batch it buys is per-pile capacity, so it self-limits only by starving.
+
+Karma moved over that run, `5,000 × (1.35^28 − 1) / 0.35`, is **~64,000,000**.
+That is the refinery's own level experience and therefore the wisdom base — the
+first number `W` can be authored against. `W = 10^6` gives ~8 wisdom for a run,
+which is a sane opening figure; `W = 1` gives 8,000, which is absurd.
+
+### Three implementation notes
+
+**The departure reading is one object, taken once.** `Planet.completeFirstHarvest`
+takes a `Departure` — merged count, merged share, alignment, income — because all
+four have to be read *before* `mergeSouls` runs. Merging destroys both the count
+and the income the world is being paid for; splitting the read across four
+arguments is how that ordering gets quietly broken later.
+
+**The count and the share are both stored.** The clock runs on the share; the
+Overview says "N merged". Deriving one from the other after the fact would need
+the population at departure, which is exactly the thing that just went away.
+
+**`findMergeFloor` was kept, not replaced.** Rounding is per cohort, so the
+fraction that *predicts* a count is not the one that *reaches* it — the bisection
+still has to happen against counts. `findMergeFloorForShare` only converts, with a
+`ceil`, so the split that reaches the toll is never a soul short.
 
 ## Naming
 

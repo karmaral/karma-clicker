@@ -64,12 +64,15 @@ const PLANET_FIELDS: FieldSpec[] = [
   { field: 'phase_duration', label: 'phase ms', range: fixed(1000, 600_000, 1000) },
   { field: 'firstHarvest.excessGate', label: 'excess gate', range: fixed(0, 1, 0.01) },
   { field: 'firstHarvest.agesLived', label: 'ages lived', range: fixed(0, 12, 1) },
-  { field: 'firstHarvest.mergeMinimum', label: 'merge toll', range: scaled(10) },
+  // The toll and the halving are shares of the army, so both run 0…1. Authored
+  // equal to each other on every world — see `PlanetHarvestMerge`.
+  { field: 'firstHarvest.mergeMinimum', label: 'merge toll', range: fixed(0, 1, 0.01) },
   { field: 'harvest.duration', label: 'harvest ms', range: fixed(0, 300_000, 1000) },
-  { field: 'harvest.mergeHalving', label: 'merge halving', range: scaled(10) },
-  { field: 'harvest.maxMergeSpeed', label: 'max speed', range: fixed(1, 32, 1) },
-  { field: 'harvest.yields.experience', label: 'pays xp', range: scaled(20) },
-  { field: 'harvest.yields.karma', label: 'pays karma', range: scaled(20) },
+  { field: 'harvest.mergeHalving', label: 'merge halving', range: fixed(0, 1, 0.01) },
+  { field: 'harvest.maxMergeSpeed', label: 'max speed', range: fixed(1, 32, 0.5) },
+  // Seconds of income at departure, not amounts.
+  { field: 'harvest.yields.experience', label: 'pays xp · s', range: scaled(20) },
+  { field: 'harvest.yields.karma', label: 'pays karma · s', range: scaled(20) },
 ];
 
 const GLOBAL_FIELDS: FieldSpec[] = [
@@ -82,11 +85,12 @@ const GLOBAL_FIELDS: FieldSpec[] = [
   { field: 'aim.extremityMultiplier', label: 'extremity pay', range: fixed(1, 10, 0.1) },
   { field: 'aim.reaimPenalty', label: 're-aim cost', range: fixed(0, 1, 0.01) },
   { field: 'aim.reaimPhases', label: 're-aim phases', range: fixed(0, 10, 1) },
+  { field: 'aim.shortPileFloor', label: 'short pile floor', range: fixed(0, 0.5, 0.01) },
   { field: 'wave.biasWith', label: 'with the wave', range: fixed(0, 4, 0.05) },
   { field: 'wave.biasAgainst', label: 'against it', range: fixed(0, 4, 0.05) },
   { field: 'harvest.evenExperienceBonus', label: 'even xp bonus', range: fixed(0, 3, 0.05) },
-  { field: 'harvest.mergeHalving', label: 'merge halving', range: scaled(10) },
-  { field: 'harvest.maxMergeSpeed', label: 'max speed', range: fixed(1, 32, 1) },
+  { field: 'harvest.mergeHalving', label: 'merge halving', range: fixed(0, 1, 0.01) },
+  { field: 'harvest.maxMergeSpeed', label: 'max speed', range: fixed(1, 32, 0.5) },
 ];
 
 /** The page's own copies, never overridden — a worker mutates its graph, not this one. */

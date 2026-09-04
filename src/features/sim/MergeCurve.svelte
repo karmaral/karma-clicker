@@ -24,10 +24,23 @@
   let planetId = $state(ids[0]);
   let souls = $state(200);
   let alignment = $state<Polarity>(0);
+  /**
+   * Income at departure, which the payout is now a multiple of — so the curve
+   * cannot be read without one. Opens on the figures the first measured run
+   * reached at world 3, karma phase-averaged. See `docs/progression.md`.
+   */
+  let experiencePerSecond = $state(150_000);
+  let karmaPerSecond = $state(90_000);
 
   const planet = $derived(balanceLab.entity<PlanetData>('planets', planetId));
 
-  const curve = $derived(buildMergeCurve(planetId, planet, souls, alignment));
+  const curve = $derived(buildMergeCurve(
+    planetId,
+    planet,
+    souls,
+    { experience: experiencePerSecond, karma: karmaPerSecond },
+    alignment,
+  ));
 
   const series = $derived<Series[]>([
     {
@@ -75,6 +88,16 @@
     <label>
       Souls
       <input type="number" min="0" step="10" bind:value={souls} />
+    </label>
+
+    <label>
+      xp / s
+      <input type="number" min="0" step="10000" bind:value={experiencePerSecond} />
+    </label>
+
+    <label>
+      karma / s
+      <input type="number" min="0" step="10000" bind:value={karmaPerSecond} />
     </label>
 
     <label>

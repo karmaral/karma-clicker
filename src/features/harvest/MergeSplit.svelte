@@ -7,6 +7,7 @@
    * One global fraction across every cohort: you never choose which flavour goes.
    */
   import { Label, SliderBar } from '$ui';
+  import { getMergeTollLabel } from '$lib/labels';
   import { resolveHarvestDuration } from '$lib/planets/harvest';
   import { f } from '$lib/utils';
   import type { PlanetHarvestMerge } from '$types';
@@ -14,17 +15,19 @@
   interface Props {
     staying: number;
     returning: number;
-    /** The share, 0…1, and the least of it the world will accept. */
+    /** What `staying` came out as, rounded per cohort — what the clock runs on. */
+    share: number;
+    /** The handle's own share, 0…1, and the least of it the world will accept. */
     value: number;
     floor: number;
-    /** The toll in souls, for the note. 0 is a world that asks none. */
+    /** The toll, as a share of the army. 0 is a world that asks none. */
     minimum: number;
     /** What the cycle is measured against — the same terms the clock reads. */
     merge: PlanetHarvestMerge;
     onchange: (share: number) => void;
   }
 
-  let { staying, returning, value, floor, minimum, merge, onchange }: Props = $props();
+  let { staying, returning, share, value, floor, minimum, merge, onchange }: Props = $props();
 
   /**
    * Longest first, so the row runs the way the handle does: more souls staying
@@ -39,11 +42,13 @@
    */
   const lit = $derived.by(() => {
     const slowest = resolveHarvestDuration(1, 0, merge);
-    const fastest = resolveHarvestDuration(1, Number.MAX_SAFE_INTEGER, merge);
+    // Merging everything: the fastest a share can ever go, which is the cap or
+    // just under it — never an unreachable asymptote, now that the axis is 0…1.
+    const fastest = resolveHarvestDuration(1, 1, merge);
     const span = slowest - fastest;
     if (span <= 0) return 0;
 
-    const through = (slowest - resolveHarvestDuration(1, staying, merge)) / span;
+    const through = (slowest - resolveHarvestDuration(1, share, merge)) / span;
 
     return Math.min(CYCLE_WORDS.length - 1, Math.floor(through * CYCLE_WORDS.length));
   });
@@ -66,7 +71,7 @@
   <div class="foot">
     <span class="toll">
       {#if minimum}
-        Min staying · <span class="num">{f(minimum)}</span>
+        Min staying · <span class="num">{getMergeTollLabel(minimum)}</span>
       {/if}
     </span>
 

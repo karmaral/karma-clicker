@@ -195,7 +195,7 @@ export async function run(
    */
   function mergeFraction() {
     const planet = PlanetManager.getActive();
-    const floor = BuildingManager.findMergeFloor(planet?.mergeMinimum ?? 0) / 100;
+    const floor = BuildingManager.findMergeFloorForShare(planet?.mergeMinimum ?? 0) / 100;
 
     switch (config.merge) {
       case 'floor': return floor;
@@ -221,14 +221,14 @@ export async function run(
     const soulsBefore = BuildingManager.countSouls();
     const karmaPerSecondBefore = BuildingManager.countKarmaPerSecond();
 
-    PlanetManager.completeFirstHarvest(fraction);
+    const merged = PlanetManager.completeFirstHarvest(fraction);
     if (!planet.isHarvested) return;
 
     harvests.push({
       planet: planet.id,
       atMs: clock.now(),
       fraction,
-      merged: planet.merged,
+      merged,
       soulsBefore,
       soulsAfter: BuildingManager.countSouls(),
       harvestDurationMs: planet.harvestDuration,

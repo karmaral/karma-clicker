@@ -1,10 +1,25 @@
-import { BuildingManager, ResourceManager } from '$lib/managers';
+import { ResourceManager } from '$lib/managers';
 import { ResourceEmitter } from '$lib/emission';
 import { getExcess } from '$lib/excess';
 import { FIRST_HARVEST_CONDITIONS } from '$lib/labels';
 import balance from '$data/balance';
 import { resolveHarvestDuration, resolveHarvestYields } from './harvest';
-import type { FirstHarvestCondition, PlanetData, Polarity, ResourceType } from '$types';
+import type {
+  FirstHarvestCondition, HarvestRates, PlanetData, Polarity, ResourceType,
+} from '$types';
+
+/**
+ * What leaving is worth, all of it read before a single soul goes. Merging
+ * destroys both the count and the income, and the harvest is paid for both — so
+ * they are gathered once, by whoever is doing the merging, and handed over.
+ */
+export interface Departure {
+  /** Souls left with the world, and what share of the army they were. */
+  merged: number;
+  mergedShare: number;
+  alignment: Polarity;
+  rates: HarvestRates;
+}
 
 /** The wave's marker steps once per this many ms of world time — a second hand. */
 const POSITION_STEP_MS = 1000;
@@ -15,8 +30,11 @@ export default class Planet {
   /** Time spent standing on this world, in ms. The wave is nothing but this. */
   #livedMs = $state(0);
   #isHarvested = $state(false);
+  /** The count is for reading; the share is what the clock runs on. */
   #merged = $state(0);
+  #mergedShare = $state(0);
   #alignment = $state<Polarity>(0);
+  #rates = $state<HarvestRates>({});
   #emitter = $state<ResourceEmitter>();
   /**
    * Milliseconds of the anchoring job done, across every anchor. One accumulator
@@ -65,11 +83,6 @@ export default class Planet {
 
         return excess !== undefined && Math.abs(excess) < threshold;
       }
-      // Whether the floor is *payable*. Whether it is actually paid depends on
-      // the split, which only the harvest screen knows — see `isMergeSufficient`.
-      case 'mergeMinimum': {
-        return BuildingManager.countSouls() >= threshold;
-      }
       default: {
         const unhandled: never = condition;
 
@@ -80,14 +93,17 @@ export default class Planet {
 
   /**
    * The one-off event that ends the planet. Merged souls stop being yours, and
-   * the alignment read here locks what the recurring harvest pays.
+   * both readings taken on the way out — the alignment and the income — lock
+   * what the recurring harvest pays, forever.
    */
-  completeFirstHarvest(merged: number, alignment: Polarity) {
+  completeFirstHarvest({ merged, mergedShare, alignment, rates }: Departure) {
     if (this.#isHarvested) return;
 
     this.#isHarvested = true;
     this.#merged = Math.max(0, Math.trunc(merged));
+    this.#mergedShare = Math.max(0, Math.min(1, mergedShare));
     this.#alignment = alignment;
+    this.#rates = rates;
 
     if (!this.#data.harvest) return;
 
@@ -111,13 +127,13 @@ export default class Planet {
   }
 
   #harvestYields = $derived.by(() => {
-    return resolveHarvestYields(this.#data.harvest?.yields ?? {}, this.#alignment);
+    return resolveHarvestYields(this.#data.harvest?.yields ?? {}, this.#alignment, this.#rates);
   });
 
   #harvestDuration = $derived.by(() => {
     const harvest = this.#data.harvest;
 
-    return resolveHarvestDuration(harvest?.duration ?? 0, this.#merged, harvest ?? {});
+    return resolveHarvestDuration(harvest?.duration ?? 0, this.#mergedShare, harvest ?? {});
   });
 
   /**
@@ -237,6 +253,7 @@ export default class Planet {
   get data() { return this.#data; }
   get isHarvested() { return this.#isHarvested; }
   get merged() { return this.#merged; }
+  get mergedShare() { return this.#mergedShare; }
   get alignment() { return this.#alignment; }
   get emitter() { return this.#emitter; }
 
@@ -273,10 +290,14 @@ export default class Planet {
   get unmetFirstHarvestConditions() { return this.#unmet; }
   get isFirstHarvestReady() { return !this.#isHarvested && this.#unmet.length === 0; }
 
-  /** The toll the world takes for letting you leave. 0 is a world that asks none. */
+  /**
+   * The toll, as a share of the army. 0 is a world that asks none. Not one of
+   * the first-harvest conditions: a share is always payable, so it is the merge
+   * slider's floor and never a door — see `PlanetFirstHarvest`.
+   */
   get mergeMinimum() { return this.#data.firstHarvest.mergeMinimum ?? 0; }
 
-  isMergeSufficient(merged: number) { return merged >= this.mergeMinimum; }
+  isMergeSufficient(mergedShare: number) { return mergedShare >= this.mergeMinimum; }
 
   /** What the world is worth in wall-clock, and how far in you are. Both in ms. */
   get lived() { return this.#livedMs; }

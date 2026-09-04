@@ -12,20 +12,22 @@
   import { badgeFor, byRateOrder } from '../details/badge';
   import { f, formatSpan } from '$lib/utils';
   import type Planet from '$lib/planets/base.svelte';
-  import type { ResourceType } from '$types';
+  import type { HarvestRates, ResourceType } from '$types';
 
   interface Props {
     planet: Planet;
-    /** Souls the split would leave with the world. The clock reads off it. */
-    merged: number;
+    /** The share of the army the split would leave. The clock reads off it. */
+    mergedShare: number;
+    /** Income at departure. What one delivery is worth is a multiple of it. */
+    rates: HarvestRates;
   }
 
-  let { planet, merged }: Props = $props();
+  let { planet, mergedShare, rates }: Props = $props();
 
   const harvest = $derived(planet.data.harvest);
 
   const yields = $derived.by(() => {
-    const paid = resolveHarvestYields(harvest?.yields ?? {}, getFirstHarvestAlignment());
+    const paid = resolveHarvestYields(harvest?.yields ?? {}, getFirstHarvestAlignment(), rates);
 
     return (Object.keys(paid) as ResourceType[])
       .sort(byRateOrder)
@@ -38,7 +40,7 @@
    * the handle — an exact-looking span on a number still being dragged is a lie.
    */
   const cycle = $derived(
-    harvest ? resolveHarvestDuration(harvest.duration, merged, harvest) : 0,
+    harvest ? resolveHarvestDuration(harvest.duration, mergedShare, harvest) : 0,
   );
 
   const boons = $derived(planet.data.boons ?? []);

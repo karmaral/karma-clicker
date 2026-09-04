@@ -1,8 +1,8 @@
 <script lang="ts">
   /**
-   * The head is the sum of the rows under it. That is the whole rule the table
-   * rests on: the rail carries the total, each row is quiet until you point at
-   * it, and a purchase you are only hovering moves both at once.
+   * The foot is the sum of the rows above it. That is the whole rule the table
+   * rests on: the foot row carries the total, each row is quiet until you point
+   * at it, and a purchase you are only hovering moves both at once.
    */
   import { Label, Section, Tabs } from '$ui';
   import { progression } from '$lib/progression';
@@ -20,7 +20,7 @@
     cohorts: Building[];
     purchaseModes?: readonly PurchaseMode[];
     purchaseMode?: PurchaseMode;
-    /** The rail of totals. Gated by `details.status`, the beat that reveals rates. */
+    /** The foot row of totals. Gated by `details.status`, the beat that reveals rates. */
     showRates?: boolean;
     note?: string;
     onpurchasemode?: (mode: PurchaseMode) => void;
@@ -38,15 +38,19 @@
     onpurchase,
   }: Props = $props();
 
-  /** No per-cohort lean column any more — aim is one global dial. See §6. */
-  const columns = 'minmax(0, 1fr) 40px 150px';
+  /**
+   * No per-cohort lean column any more — aim is one global dial. See §6.
+   * 64px on the count track: wide enough that the foot's total — a sum, so
+   * the widest figure in the column — doesn't bleed into the rates beside it.
+   */
+  const columns = 'minmax(0, 1fr) 64px .75fr';
 
   /** Which row is hovering its purchase button, if any. */
   let previewId: string | undefined = $state();
 
   /**
-   * Summed off the rows' own figures rather than the manager's, so the rail
-   * cannot read a different number than the rows it heads — and so a preview
+   * Summed off the rows' own figures rather than the manager's, so the foot
+   * cannot read a different number than the rows above it — and so a preview
    * lands in it for free, by counting one cohort at the count it would reach.
    */
   function totalsAt(preview: string | undefined) {
@@ -56,7 +60,7 @@
 
     const isSplit = progression.runs('negKarma');
 
-    // A cohort without its clerk earns nothing until sent by hand — the rail
+    // A cohort without its clerk earns nothing until sent by hand — the foot
     // reads the standing rate, not what a full send queue would pay.
     cohorts.filter((cohort) => cohort.isAutonomous).forEach((cohort) => {
       const count = cohort.id === preview
@@ -92,26 +96,12 @@
 </script>
 
 <Section label="Incarnations" {title}>
-  {#snippet aside()}
-    {#if showRates}
-      <span class="rail">
-        <span class="souls">{f(totalSouls)} souls</span>
-        {#each totals as [type, value] (type)}
-          <RateFigure
-            {type}
-            value={preview.get(type) ?? value}
-          />
-        {/each}
-      </span>
-    {/if}
-  {/snippet}
-
   <div class="table" style:--cohort-cols={columns}>
 
     <div class="head">
-      <span><Label text="Soul cohort" size="sm" /></span>
+      <span><Label text="Cohort" size="sm" /></span>
 
-      <span class="count right"><Label text="N" size="sm" /></span>
+      <span class="count right"><Label text="Souls" size="sm" /></span>
 
       <!-- The head cell is the switcher: the words are a read-out of where the
            cycle is, and clicking anywhere in the cell advances it. -->
@@ -130,6 +120,23 @@
         oncyclemode={cyclePurchaseMode}
       />
     {/each}
+
+    {#if showRates}
+      <div class="foot">
+        <span><Label text="Total" size="sm" muted /></span>
+
+        <span class="count num">{f(totalSouls)}</span>
+
+        <span class="rates">
+          {#each totals as [type, value] (type)}
+            <RateFigure
+              {type}
+              value={preview.get(type) ?? value}
+            />
+          {/each}
+        </span>
+      </div>
+    {/if}
   </div>
 
   {#if note}
@@ -144,14 +151,27 @@
     min-width: 0;
   }
 
-  .rail {
-    display: flex;
+  .foot {
+    display: grid;
+    grid-template-columns: var(--cohort-cols);
+    column-gap: var(--sp-3);
     align-items: center;
-    gap: var(--sp-4);
+    padding-top: var(--sp-2);
   }
 
-  .souls {
-    color: var(--ink-500);
+  .foot .count {
+    font-size: var(--fs-md);
+    font-weight: 600;
+    text-align: right;
+    color: var(--ink-900);
+  }
+
+  .foot .rates {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--sp-4);
+    min-width: 0;
   }
 
   .head {

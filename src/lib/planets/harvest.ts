@@ -7,7 +7,7 @@
  */
 
 import balance from '$data/balance';
-import type { PlanetHarvestMerge, Polarity, ResourceType, YieldType } from '$types';
+import type { HarvestRates, PlanetHarvestMerge, Polarity, ResourceType, YieldType } from '$types';
 
 /** One finished world's take, as the summing needs it. */
 export interface HarvestSource {
@@ -19,16 +19,21 @@ export interface HarvestSource {
  * The locked alignment picks karma's pile. Even can pick neither, so it takes
  * the experience bonus instead of the karma — on top it would be strictly best
  * and the reading would stop being a choice.
+ *
+ * `declared` is **seconds of production**, so one delivery is worth that many
+ * seconds of the income you left with. Nothing here is an absolute, which is
+ * what keeps a world authored once through a ladder change.
  */
 export function resolveHarvestYields(
   declared: Partial<Record<YieldType, number>>,
   alignment: Polarity,
+  rates: HarvestRates,
 ): Partial<Record<ResourceType, number>> {
   const isEven = alignment === 0;
   const paid: Partial<Record<ResourceType, number>> = {};
 
   Object.keys(declared).forEach((type: YieldType) => {
-    const amount = declared[type] ?? 0;
+    const amount = (declared[type] ?? 0) * (rates[type] ?? 0);
 
     if (type === 'karma') {
       if (isEven) return;
@@ -49,21 +54,25 @@ export function resolveHarvestYields(
 }
 
 /**
- * Merged souls buy speed. Hyperbolic and capped, so no merge can drive the
- * duration to 0 — a clock with no interval does not run fast, it does not run.
- * Both terms are authored per world: a late one asks more souls for the same
- * step and stops giving it back sooner.
+ * Merging buys tempo; holding buys size. This is the tempo half — hyperbolic
+ * and capped, so no merge can drive the duration to 0: a clock with no interval
+ * does not run fast, it does not run.
+ *
+ * `mergedShare` is the share of the army left with the world, not a count. With
+ * `mergeHalving` authored equal to the toll, paying exactly the toll always
+ * buys ×2 and merging everything lands near `maxMergeSpeed`, on every world and
+ * at every population.
  */
 export function resolveHarvestDuration(
   base: number,
-  merged: number,
+  mergedShare: number,
   {
     mergeHalving = balance.harvest.mergeHalving,
     maxMergeSpeed = balance.harvest.maxMergeSpeed,
   }: PlanetHarvestMerge = {},
 ) {
   const halving = mergeHalving > 0 ? mergeHalving : balance.harvest.mergeHalving;
-  const speed = Math.min(1 + Math.max(0, merged) / halving, Math.max(1, maxMergeSpeed));
+  const speed = Math.min(1 + Math.max(0, mergedShare) / halving, Math.max(1, maxMergeSpeed));
 
   return base / speed;
 }

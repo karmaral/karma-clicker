@@ -1,5 +1,6 @@
 import { PlanetManager } from '$lib/managers';
 import { progression } from '$lib/progression';
+import { clamp } from '$lib/utils';
 import balance from '$data/balance';
 
 export const DETENTS = [-2, -1, 0, 1, 2] as const;
@@ -62,7 +63,8 @@ class Aim {
    * ×`extremityMultiplier`. See `docs/design.md` §6.
    */
   resolve(detent: Detent = this.#detent): ResolvedAim {
-    // Beat 6 splits the pile. Before it, there is nothing to aim at.
+    // Beat 6 splits the pile. Before it, there is nothing to aim at — and
+    // nothing to floor either: there is no negative pile yet to keep breathing.
     if (!progression.runs('negKarma')) {
       return { positiveShare: 1, karmaYieldFactor: 1 };
     }
@@ -70,9 +72,12 @@ class Aim {
     const span = HARDEST_POSITIVE - HARDEST_NEGATIVE;
     const extremity = Math.abs(detent) / HARDEST_POSITIVE;
     const extremityPayoff = 1 + extremity * (balance.aim.extremityMultiplier - 1);
+    const floor = balance.aim.shortPileFloor;
 
     return {
-      positiveShare: (detent - HARDEST_NEGATIVE) / span,
+      // Clamped off both ends: a hard detent used to land on exactly 0 or 1,
+      // which starves the refinery for good. See `shortPileFloor`.
+      positiveShare: clamp((detent - HARDEST_NEGATIVE) / span, floor, 1 - floor),
       karmaYieldFactor: extremityPayoff * (1 - this.#reaimPenalty),
     };
   }

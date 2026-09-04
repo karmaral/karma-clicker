@@ -50,15 +50,31 @@
 
   /**
    * The world's toll is where the slider starts, not something to fail against —
-   * you cannot dial below it. It falls as the population grows, so the handle is
-   * held up to it rather than clamped down to it.
+   * you cannot dial below it. A share of the army now, so it holds its meaning
+   * at every population instead of falling out from under the ladder.
    */
-  const floorPercent = $derived(BuildingManager.findMergeFloor(planet?.mergeMinimum ?? 0));
+  const floorPercent = $derived(BuildingManager.findMergeFloorForShare(planet?.mergeMinimum ?? 0));
   const percent = $derived(Math.max(mergedPercent, floorPercent));
 
   const mergeFraction = $derived(percent / 100);
   const merged = $derived(BuildingManager.countMergeable(mergeFraction));
   const kept = $derived(souls - merged);
+
+  /**
+   * What the clock actually runs on — the realized share, not the handle's, so
+   * the preview cannot disagree with what leaving does. Rounding is per cohort.
+   */
+  const mergedShare = $derived(souls > 0 ? merged / souls : 0);
+
+  /**
+   * Income at departure, live. What the world will pay is a multiple of this,
+   * so the panels are previewing the real figure and not an authored one —
+   * karma phase-averaged, because the wave must not decide what a world is worth.
+   */
+  const rates = $derived({
+    experience: BuildingManager.countExperiencePerSecond(),
+    karma: BuildingManager.countKarmaPerSecondAveraged(),
+  });
 
   /** The same rows the cohort table draws, as counts — one band per cohort. */
   const soulsPerCohort = $derived.by(() => {
@@ -114,7 +130,7 @@
   <div class="decision">
     <div class="shoulder">
       {#if planet}
-        <AlignmentPanel yields={planet.data.harvest?.yields ?? {}} />
+        <AlignmentPanel yields={planet.data.harvest?.yields ?? {}} {rates} />
       {/if}
     </div>
 
@@ -123,6 +139,7 @@
         <MergeSplit
           staying={merged}
           returning={kept}
+          share={mergedShare}
           value={mergeFraction}
           floor={floorPercent / 100}
           minimum={planet.mergeMinimum}
@@ -155,7 +172,7 @@
 
     <div class="shoulder right">
       {#if planet}
-        <OutputPanel {planet} {merged} />
+        <OutputPanel {planet} {mergedShare} {rates} />
       {/if}
     </div>
   </div>

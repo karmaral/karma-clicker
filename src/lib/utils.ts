@@ -159,6 +159,10 @@ export function withinRange(val: number, min: number, max: number) {
   return val >= min && val < max;
 }
 
+export function clamp(val: number, min: number, max: number) {
+  return Math.min(Math.max(val, min), max);
+}
+
 export function compoundScale(initial: number, times: number, multiplier: number) {
   return initial * (1 + multiplier) ** (times - 1);
 }

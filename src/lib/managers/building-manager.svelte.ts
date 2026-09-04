@@ -1,8 +1,9 @@
 import Building from '$lib/buildings/base.svelte';
 import Click from '$lib/buildings/click.svelte';
 import Cohort from '$lib/buildings/cohort.svelte';
-import { ResourceManager } from '.';
+import { PlanetManager, ResourceManager } from '.';
 import { reserve } from '$lib/reserve.svelte';
+import { aim } from '$lib/aim';
 import data from '$data/buildings';
 
 /** Named in, never excluded out: an unlisted role is a plain building. */
@@ -127,6 +128,28 @@ class BuildingManager {
     );
   }
 
+  /**
+   * The same income with the wave taken back out — what a phase-averaged second
+   * is worth, rather than what this instant reads. The bias swings the figure ×3
+   * across the wave, so anything sizing a *lasting* reward against income has to
+   * use this or it pays triple for leaving on a dense phase.
+   *
+   * The blend is divided back out rather than the income being recomputed from
+   * `buildings.ts`, so the two cannot drift apart when either moves. It is the
+   * *instant's* blend, though, where a long cohort's own payout already averages
+   * across its life — so this over-corrects the slow end of the ladder a little,
+   * and the correction shrinks as lives lengthen. Approximate on purpose.
+   */
+  countKarmaPerSecondAveraged() {
+    const planet = PlanetManager.getActive();
+    if (!planet) return this.countKarmaPerSecond();
+
+    const { positiveShare } = aim.resolve();
+    const blend = (1 - positiveShare) * planet.bias(false) + positiveShare * planet.bias(true);
+
+    return blend > 0 ? this.countKarmaPerSecond() / blend : 0;
+  }
+
   /** Souls only, same exclusion as `countKarmaPerSecond` — the click and any unclerked cohort are manual. */
   countExperiencePerSecond() {
     return this.#cohorts()
@@ -174,6 +197,15 @@ class BuildingManager {
     }
 
     return low;
+  }
+
+  /**
+   * The same floor for a toll authored as a *share* — worlds author shares now,
+   * and the bisection still has to happen against counts, because rounding is
+   * per cohort. `ceil`, so the split that reaches the count is never a soul short.
+   */
+  findMergeFloorForShare(share: number) {
+    return this.findMergeFloor(Math.ceil(share * this.countSouls()));
   }
 
   /** Merged souls stop being yours. Returns how many went. */

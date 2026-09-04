@@ -80,6 +80,15 @@ export default {
     /** What re-aiming costs, and how many phases it takes to pay off. */
     reaimPenalty: 0.65,
     reaimPhases: 2,
+    /**
+     * The least of the karma the short pile may ever get. Without it a hard
+     * detent puts the short pile at exactly zero, the refinery pairs `min(batch,
+     * 0)` forever, and it stops levelling — and refinery level experience is the
+     * wisdom base, so the highest-income play would bank nothing. At 0.05 the
+     * cliff's one honest job survives at 95% of its old speed: hard positive
+     * with the refinery idled is still the fastest correction for a deep tilt.
+     */
+    shortPileFloor: 0.05,
   },
 
   /** What the wave pays a polarity running with it, and against it. */
@@ -88,9 +97,13 @@ export default {
     biasAgainst: 0.5,
   },
 
+  /**
+   * What a world leaves unsaid. `mergeHalving` is a *share* of the army now, not
+   * a count — see `PlanetHarvestMerge`; a world authors it equal to its own toll.
+   */
   harvest: {
     evenExperienceBonus: 2.0,
-    mergeHalving: 25,
+    mergeHalving: 0.25,
     maxMergeSpeed: 8,
   },
 };

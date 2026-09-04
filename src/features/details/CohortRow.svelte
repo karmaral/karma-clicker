@@ -101,7 +101,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -- role turns interactive with canSend; the linter can't see the ternary. -->
-<div class={["row", { compact, lit: isLit, sendable: canSend }]}
+<div class={["row", { compact, lit: isLit, sendable: canSend, sending: canSend && cohort.isInProgress }]}
   role={canSend ? 'button' : 'group'}
   tabindex={canSend ? 0 : undefined}
   onclick={onRowClick}
@@ -211,6 +211,42 @@
     background-color: var(--surface-alt);
   }
 
+  /* A trip is out. A band crosses the whole row, because this is the one state
+     you have to read without looking for it — a mark on the verb alone is lost
+     in a table of rows. The same reading as the stream bar, at row scale: not a
+     thing moving across, a shading passing over.
+
+     A wash of the page's own ink at low alpha rather than a light tone, so it
+     composites over whatever the row is already wearing — the hover tint, the
+     spotlight tint — instead of replacing it. Constant colour, alpha alone
+     ramping, so the falloff never dips muddy on its way out.
+
+     Half the row wide, travelling from off one edge to off the other. **The two
+     middle stops are the only knob**: together they are the flat top of the
+     band, so widen the gap to fatten it and close it to soften the edges. Held
+     nearly shut here — the band is almost pure falloff, which is what keeps a
+     whole row of movement from reading as an alarm.
+
+     Painted as the row's own background-image, so it sits behind the text with
+     no stacking games and the hover colour still shows through it. */
+  .row.sending {
+    background-image: linear-gradient(
+      90deg,
+      rgba(17, 17, 17, 0) 0%,
+      rgba(17, 17, 17, .04) 46%,
+      rgba(17, 17, 17, .04) 54%,
+      rgba(17, 17, 17, 0) 100%
+    );
+    background-size: 50% 100%;
+    background-repeat: no-repeat;
+    animation: row-flow 2.4s linear infinite;
+  }
+
+  @keyframes row-flow {
+    from { background-position: -100% 0; }
+    to { background-position: 200% 0; }
+  }
+
   /* The button fills the cell height, then reclaims the row's own padding on
      top of that — short 4px, so it reads as the row's one control without
      crowding the rule above it or the duration line below. */
@@ -318,6 +354,8 @@
     color: var(--ink-900);
   }
 
+  /* The verb goes quiet while the trip is out — the row's breathing is what
+     says it is working, so the word only has to stop offering. */
   .send.sending {
     color: var(--ink-300);
     text-decoration: none;

@@ -13,14 +13,16 @@
   import { badgeFor, byRateOrder } from '../details/badge';
   import { f } from '$lib/utils';
   import balance from '$data/balance';
-  import type { Polarity, ResourceType, YieldType } from '$types';
+  import type { HarvestRates, Polarity, ResourceType, YieldType } from '$types';
 
   interface Props {
-    /** What the world declares it pays, before the alignment routes it. */
+    /** Seconds of income, before the alignment routes them. */
     yields: Partial<Record<YieldType, number>>;
+    /** Income at departure, live — so the three columns preview real amounts. */
+    rates: HarvestRates;
   }
 
-  let { yields }: Props = $props();
+  let { yields, rates }: Props = $props();
 
   /** A pile at zero, both ways — the same span the header's meter reads on. */
   const SPAN = 1;
@@ -46,8 +48,8 @@
    */
   const sides = $derived(
     SIDES.map((polarity) => {
-      const paid = resolveHarvestYields(yields, polarity);
-      const declared = yields.experience ?? 0;
+      const paid = resolveHarvestYields(yields, polarity, rates);
+      const declared = (yields.experience ?? 0) * (rates.experience ?? 0);
       const experience = paid.experience ?? 0;
 
       return {

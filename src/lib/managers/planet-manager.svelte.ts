@@ -58,12 +58,16 @@ class PlanetManager {
 
   /**
    * The active planet's one-off ending. Returns how many souls were merged.
-   * The floor is counted before anything is taken — `mergeSouls` is destructive.
+   * Everything the harvest is paid for is counted before anything is taken —
+   * `mergeSouls` destroys both the count and the income it was earning.
    */
   completeFirstHarvest(mergeFraction: number) {
     const planet = this.getActive();
     if (!planet?.isFirstHarvestReady) return 0;
-    if (!planet.isMergeSufficient(BuildingManager.countMergeable(mergeFraction))) return 0;
+
+    const souls = BuildingManager.countSouls();
+    const share = souls > 0 ? BuildingManager.countMergeable(mergeFraction) / souls : 0;
+    if (!planet.isMergeSufficient(share)) return 0;
 
     // Read first, and nowhere else — §3.9, and it is the reading the screen showed.
     // The order used to be load-bearing: against an income-shaped wall the two
@@ -71,13 +75,20 @@ class PlanetManager {
     // is a share of the held piles now, and merging souls does not touch them.
     const alignment = getFirstHarvestAlignment();
 
+    // Pre-merge, and phase-averaged: merging must not destroy the thing you are
+    // being paid for, and the wave must not decide what the world is worth.
+    const rates = {
+      experience: BuildingManager.countExperiencePerSecond(),
+      karma: BuildingManager.countKarmaPerSecondAveraged(),
+    };
+
     const merged = BuildingManager.mergeSouls(mergeFraction);
 
     // After the souls go, so the levels the merge drops you below go with them —
     // and only those. What the rebuild costs is the other half of what the slider
     // weighs; see *Levels become purchases*.
     UpgradeManager.releaseUnheld();
-    planet.completeFirstHarvest(merged, alignment);
+    planet.completeFirstHarvest({ merged, mergedShare: share, alignment, rates });
     this.#grantBoons(planet);
     this.#selected = '';
 

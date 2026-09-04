@@ -102,14 +102,22 @@ export interface BuildingData {
  * optional: a planet authors only what it imposes, absent means unrestricted.
  * A new kind of restriction is a field here, a guard in `Planet`, and a label.
  */
-export interface PlanetFirstHarvest {
+export interface PlanetFirstHarvestConditions {
   excessGate?: number;
   agesLived?: number;
-  /** Souls the world will not let you leave without merging. */
+}
+
+export interface PlanetFirstHarvest extends PlanetFirstHarvestConditions {
+  /**
+   * The share of your army the world takes for letting you leave, 0…1. A toll
+   * and not a condition: you always own all of yourself, so a share can never
+   * fail to be payable — it is the merge slider's floor and nothing else.
+   */
   mergeMinimum?: number;
 }
 
-export type FirstHarvestCondition = keyof PlanetFirstHarvest;
+/** Only what can fail. The toll is out of it — see `mergeMinimum` above. */
+export type FirstHarvestCondition = keyof PlanetFirstHarvestConditions;
 
 /**
  * What merged souls are worth to a world's harvest clock. Authored, because a
@@ -117,11 +125,24 @@ export type FirstHarvestCondition = keyof PlanetFirstHarvest;
  * sooner. Both fall back to a default when a world says nothing.
  */
 export interface PlanetHarvestMerge {
-  /** Merged souls that double the rate. Higher asks more for the same speed. */
+  /**
+   * The merged *share* that doubles the rate, 0…1. Authored equal to the toll,
+   * which is what makes paying exactly the toll always buy ×2 and merging
+   * everything land near `maxMergeSpeed`. A share for the same reason the toll
+   * is one: an absolute halving point moves under every ladder change.
+   */
   mergeHalving?: number;
   /** The most any merge can multiply the rate by. */
   maxMergeSpeed?: number;
 }
+
+/**
+ * Income per second at the moment you left, read **before** the merge. What a
+ * finished world pays is a multiple of this rather than an authored amount, so
+ * no figure in `planets.ts` is denominated in a quantity the ladder can move —
+ * see `docs/design.md` §15. `karma` is phase-averaged, never the instant.
+ */
+export type HarvestRates = Partial<Record<YieldType, number>>;
 /**
  * What taking the first harvest leaves you holding, for good. A reward, so it is
  * not a `PlanetFirstHarvest` field — that interface is what the world *demands*.
@@ -172,6 +193,7 @@ export interface PlanetData {
    * merged souls shorten.
    */
   harvest?: PlanetHarvestMerge & {
+    /** **Seconds of your income at departure**, not amounts. See `HarvestRates`. */
     yields: Partial<Record<YieldType, number>>;
     duration: number;
   };

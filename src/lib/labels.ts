@@ -261,8 +261,7 @@ export function getUpgradeReading(
  */
 const CONDITION_ORDER: Record<FirstHarvestCondition, number> = {
   agesLived: 1,
-  mergeMinimum: 2,
-  excessGate: 3,
+  excessGate: 2,
 };
 
 /**
@@ -272,6 +271,15 @@ const CONDITION_ORDER: Record<FirstHarvestCondition, number> = {
 export const FIRST_HARVEST_CONDITIONS = (Object.keys(CONDITION_ORDER) as FirstHarvestCondition[])
   .sort((a, b) => CONDITION_ORDER[a] - CONDITION_ORDER[b]);
 
+/**
+ * The toll, which is not one of the conditions above and so has no label there:
+ * it can never fail, so it is never a reason. A share of the army rather than a
+ * count of souls, and it prints as one — see `PlanetFirstHarvest`.
+ */
+export function getMergeTollLabel(share: number) {
+  return `${Math.round(share * 100)}%`;
+}
+
 /** Why a planet will not let you take the first harvest yet. */
 export function getFirstHarvestConditionLabel(
   condition: FirstHarvestCondition,
@@ -280,8 +288,6 @@ export function getFirstHarvestConditionLabel(
   switch (condition) {
     case 'agesLived':
       return `${value} ${value === 1 ? 'age' : 'ages'} lived`;
-    case 'mergeMinimum':
-      return `${value} souls to merge`;
     case 'excessGate':
       return `excess under ${Math.round(value * 100)}%`;
     default: {

@@ -535,7 +535,7 @@ per-cohort aiming and there is no per-cohort answer to the dial any more — **e
 cohort does exactly as it is told.**
 
 ```
-positiveShare    = (detent + 2) / 4
+positiveShare    = clamp((detent + 2) / 4, shortPileFloor, 1 − shortPileFloor)
 extremity        = |detent| / 2
 karmaYieldFactor = (1 + extremity × (extremityMultiplier − 1)) × (1 − reaimPenalty)
 ```
@@ -543,6 +543,26 @@ karmaYieldFactor = (1 + extremity × (extremityMultiplier − 1)) × (1 − reai
 `extremityMultiplier: 3`, global. **Extremity is the whole reward for
 committing:** at Even you take ×1, at a hard detent ×3, and the middle detents sit
 at ×2. Running a side pays; the game never says which side.
+
+### The dial had a cliff, and it was a wisdom kill switch
+
+Unclamped, `±2` put `positiveShare` at exactly 0 or 1. Short-pile income is
+`positiveShare × karmaYieldFactor`, so the five detents read **0.5 · 0.5 · 0.5 ·
+0.5 · 0** — three identical positions and two dead ends, not the smooth
+commitment reward this section describes.
+
+At an exact zero the refinery's `min(batch, shorter pile)` is 0 forever, so it
+stops levelling — and refinery level experience is the wisdom base (§18).
+
+> **The highest-income play banked zero prestige currency, forever.**
+
+`shortPileFloor: 0.05` is the fix, and the cliff's one legitimate job survives at
+95% of its old speed: **hard positive with the refinery idled is the only
+correction fast enough to clear a deep tilt**, and that is still true at 0.05.
+
+The floor is not applied before beat 6 — there is no negative pile yet to keep
+breathing. **The dial is still two mechanics wearing one control**, and nothing
+in the UI says so. Open.
 
 ### What was cut, and what replaced it
 
@@ -1087,10 +1107,17 @@ freely — a slower phase just means fewer of them.
 | World | Total | Phase | Phases | Cycles | Ages | Cycles/age |
 |---|---|---|---|---|---|---|
 | 1 | **4 min** | 30 s | 8 | 4 | 1 | 4 |
-| 2 | **8 min** | 40 s | 12 | 6 | 2 | 3 |
+| 2 | **8 min** | 30 s | 16 | 8 | 2 | 4 |
 | 3 | **16 min** | 60 s | 16 | 8 | 2 | 4 |
 | 4 | **32 min** | 60 s | 32 | 16 | 4 | 4 |
-| 5 | **64 min** | 80 s | 48 | 24 | 4 | 6 |
+| 5 | **64 min** | 60 s | 64 | 32 | 8 | 4 |
+
+**Built, and this is the live decomposition.** `cycles_per_age` holds at 4 on
+every world, so the wave reads the same everywhere and an age is always eight
+phases; `phase_duration` doubles exactly once, between worlds 2 and 3; `ages`
+carries the rest. The freedom the total-first law hands you is real and this
+first pass spends almost none of it — one world breathing at 30 s and four at
+60 s. **Making them differ is the authoring work still outstanding.**
 
 **A three-world system is 28 minutes of floor instead of 124.** Five worlds is 124
 — so the old third world's length is now where the *fifth* sits, which is about
@@ -1099,41 +1126,67 @@ where that commitment belongs once there is a prestige loop behind it.
 ### The other indexed figures
 
 ```
-excessGate(p)    = 0.12 × 0.65^(p−1)        0.12 · 0.08 · 0.05 · 0.03 · 0.02
-mergeHalving(p)  = 50 × 4^(p−1)             50 · 200 · 800 · 3,200 · 12,800
+excessGate(p)    = 0.12 × 0.7^(p−1)         0.12 · 0.08 · 0.05 · 0.04 · 0.03
 mergeMinimum(p)  = min(0.5, 0.15 + 0.10(p−1))
+mergeHalving(p)  = mergeMinimum(p)
 ```
 
 | | **1** | **2** | **3** | **4** | **5** |
 |---|---|---|---|---|---|
 | **Minimum stay** | **4 min** | **8 min** | **16 min** | **32 min** | **64 min** |
-| Phase duration | 30 s | 40 s | 60 s | 60 s | 80 s |
-| `agesLived` required | 1 | 2 | 2 | 4 | 4 |
-| `excessGate` | 0.12 | 0.08 | 0.05 | 0.03 | 0.02 |
+| Phase duration | 30 s | 30 s | 60 s | 60 s | 60 s |
+| `agesLived` required | 1 | 2 | 2 | 4 | 8 |
+| `excessGate` | 0.12 | 0.08 | 0.05 | 0.04 | 0.03 |
 | `mergeMinimum` | 15% | 25% | 35% | 45% | 50% |
-| Merge halving | 50 | 200 | 800 | 3,200 | 12,800 |
+| `mergeHalving` | 15% | 25% | 35% | 45% | 50% |
 | — | | | | | |
-| Anchoring | none | ⚠ | ⚠ | ⚠ | ⚠ |
-| Harvest yields | ~30% of income at departure | " | " | " | " |
-| Harvest cadence | 60 s | 60 s | 60 s | 90 s | 90 s |
+| Anchoring | none | 2 × 36 s | 3 × 180 s | 4 × 240 s | 5 × 300 s |
+| Harvest pays, xp · karma | 15 s · 45 s | 30 · 90 | 45 · 135 | 60 · 180 | 80 · 240 |
+| Harvest cadence | 60 s | 60 s | 60 s | 60 s | 60 s |
 | Max merge speed | ×8 | ×5 | ×4 | ×3.5 | ×3 |
 | Densities | 3 | 3 | 6 | 6 | 9 |
 | — | | | | | |
-| Discovery gate | start | 20,000 karma+ | 750,000 karma+ | — | — |
+| Discovery gate | start | 20,000 karma+ | 750,000 karma+ | 2,000 Crimson+ | 500 Ochre |
 
-`worlds(system 1) = 3` is what the current build ships, so worlds 4 and 5 are the
-formula evaluated rather than content that exists.
+**All five worlds are authored.** `worlds(system 1) = 5` — worlds 4 and 5 cost
+almost nothing to add once nothing in the row was denominated in souls, which is
+the whole argument for the section below.
 
-### `mergeMinimum` is a share, not a count
+### Nothing here is an absolute
 
-It was 50 / 350 / 1,000 souls, authored against an army capped near 200 a cohort.
-**With counts running to 400 across an open-ended ladder (§5), any absolute toll
-stops being a toll within one prestige run.** Expressed as a share of population it
-keeps meaning at every scale, and it is capped at half — **no world may ask for more
-souls than it leaves you.**
+The section used to argue this for the toll alone. It is now the law of the whole
+table, and it is the one idea worth carrying out of the post-ladder rebalance:
 
-The rest of §14 and §15 is unaffected: the floor is still a floor, it still sets
-the slowest a world can ever pay, and it still prices the upgrade ladder it burns.
+> **Stop authoring absolutes.** The toll is a share of your army, the harvest is
+> a multiple of your income, the world floor is wall-clock. Once no figure is
+> denominated in a quantity the ladder can move, the next ladder change cannot
+> invalidate the balance.
+
+**`mergeMinimum` is a share.** It was 50 / 350 / 1,000 souls, authored against an
+army capped near 200 a cohort. The generated ladder (§5) then took power from
+*index* rather than headcount and cut population by roughly an order of magnitude
+— so the third world asked 1,000 souls of a run that peaked at ~450 and the game
+stopped dead. §13 predicted that failure in one direction (*any absolute toll
+stops being a toll within one prestige run*); the opposite happened, same root
+cause, sign flipped. A share is immune to both. Capped at half: **no world may ask
+for more souls than it leaves you.**
+
+**`mergeHalving` is a share too, and it is authored equal to the toll.** An
+absolute halving point is reached at a wildly different army size after every
+ladder change — at 50/200/800 against ~450 souls, merging *everything* on world 3
+bought ×1.56 against a ×4 cap, so the deep merge the design asks you to weigh was
+unreachable. Tying it to the toll gives one invariant that holds on every world at
+every population:
+
+> **Paying exactly the toll always buys ×2 speed. Merging everything lands near
+> the world's `maxMergeSpeed`.**
+
+### The toll is a toll, not a condition
+
+A share of your army is **always payable** — you own all of yourself. So
+`mergeMinimum` is no longer one of §14's first-harvest conditions: it cannot fail,
+so it can never be the reason a door is shut. It survives as the merge slider's
+floor and nothing else, and `agesLived` and `excessGate` carry the gating alone.
 
 ### Three things the shortening knocks on
 
@@ -1157,19 +1210,23 @@ clock nothing can buy, and that argument survives either way.
 
 ### What is still authored by hand
 
-- **The decomposition on every row** — phase duration, ages and cycles are now
-  free within the total, and the figures above are a first pass at making worlds
-  breathe differently rather than a tuned set.
+- **The decomposition on every row** — phase duration, ages and cycles are free
+  within the total, and the live set spends almost none of that freedom.
 - **`maxMergeSpeed`**, which resisted every formula tried. It may not want one.
+  Note it is now load-bearing in a way it was not: with `mergeHalving` tied to
+  the toll, the cap is the only thing separating a full merge from `1 + 1/toll`.
 - **Anchoring durations and bonuses**, which cannot be indexed until `perWorker`
   is retuned (§19) — and which must now be retuned against **these** totals, not
   the old ones. A 36-second harness against a 16-minute world is a different
-  proposition to one against 24 minutes.
-- **Harvest cadence**, sized against 96 minutes. At 16 minutes a 60-second cadence
-  is about twelve batches before you leave, which is probably still enough to read
-  as a rhythm — but it was not chosen for this length.
-- **Both discovery gates**, which put discovery near the harvest beat and nothing
-  more.
+  proposition to one against 24 minutes. Worlds 4 and 5 continue the hand-authored
+  pattern (`anchors` and `duration` both climbing) and are guesses.
+- **The harvest ratios** — the seconds-of-income figures in the table. Starting
+  figures to measure against, not settled ones. See §15.
+- **Harvest cadence**, now 60 s on all five. At 16 minutes that is about twelve
+  batches before you leave, which is probably still enough to read as a rhythm —
+  but it was not chosen for this length.
+- **All four discovery gates**, which put discovery near the harvest beat and
+  nothing more.
 - **`densities`**, which is a visual figure.
 ### The system is the next rung
 
@@ -1195,13 +1252,16 @@ free to leave.
 
 ### The conditions
 
-A world authors its own. All three must hold:
+A world authors its own. Both must hold:
 
 | Condition | Reads |
 |---|---|
 | `agesLived` | you have spent the world's full authored length on it |
 | `excessGate` | your excess is inside the world's band |
-| `mergeMinimum` | you have enough souls to pay the toll |
+
+**Two, not three.** `mergeMinimum` was a condition while it was a soul count; as
+a share of the army it is always payable and so can never be a reason (§13). It
+is the slider's floor and it is not listed here.
 
 The excess gate is the only one that reads a **live** figure, so readiness can
 lapse while you are looking at it. That is reached by drifting, never by
@@ -1246,9 +1306,34 @@ balanced pair of piles at the moment of harvest is now worth something for good.
 Even locks inside `evenBand: 0.02` — strictly tighter than the tightest world
 gate, so **locking Even is harder than passing any door**.
 
-> ⚠ **`evenExperienceBonus` is currently 2.0, so Even pays ×3.** An earlier
-> argument in `progression.md` reasons from 0.5 (×1.5) and calls ×2 the possible
-> intent. Three different numbers have been in play. **This wants a decision.**
+### `K` has to be worth something, or this is a two-way trade
+
+The lock paid `E + K` on a tilted alignment while **nothing in the game cost
+`karma_negative`**. So a Burden lock paid `E` where Even paid `3E`, and the
+central choice quietly resolved to *run negative for the income, lock Even at
+every harvest* — worst of all for exactly the polarity the income curve favours.
+One measured run found this at the second world and it read as the climb
+restarting.
+
+**The fix is repricing, not new content.** Three upgrades already *gated* on
+`karma_negative` and then *charged* `karma_positive` — the design was already
+calling them service to self and only the price had fallen back to the default
+pile. Two more are plainly the same register:
+
+| Upgrade | Now costs | Why |
+|---|---|---|
+| `refinery:slots_1` | 25,000 karma− | already gated on `karma_negative` |
+| `harness:riders_1` | 150,000 karma− | " |
+| `building:main:carry_1` | 200,000 karma− | " |
+| `cohorts:shorter_lives_1` | 310,000 karma− | spending lives faster for throughput |
+| `cohorts:hard_season` | 1,200,000 karma− | the same, doubled |
+
+Roughly 1.7M of negative sink against positive's remainder, so Burden's `K` is
+worth about what Comfort's is and the reading is a three-way trade again.
+
+> ⚠ **`evenExperienceBonus` stays at 2.0, so Even still pays ×3.** The finding
+> that ×3 dominates was measured while `K` was worth zero on one side. It has to
+> be re-measured now that it is not, and only then decided.
 
 ### Boons
 
@@ -1284,53 +1369,98 @@ A harvested world pays **experience and karma into the piles**, forever, on a
 slow clock.
 
 ```
-duration = base / min(1 + merged / mergeHalving, maxMergeSpeed)
+perDelivery = yields[type] × departureRate[type]
+duration    = base / min(1 + mergedShare / mergeHalving, maxMergeSpeed)
+rate        = perDelivery ÷ duration
 ```
 
+### Merging buys tempo. Holding buys size.
+
+The two levers separate cleanly, and they did not before. `yields` used to be a
+flat authored amount and merged souls bought speed alone, capped — so past
+`merged = halving × (cap − 1)`, **staying longer and growing the army bought
+literally nothing.** That is the answer to *holding should be worth more*.
+
+> **`yields` is authored in seconds of your production**, and the payout
+> multiplies it by an income snapshot taken at departure.
+
+So world 1's `15 s` of experience means one delivery is worth fifteen seconds of
+whatever you were earning when you left. Nothing in `planets.ts` is denominated
+in a quantity the cohort ladder can move (§13), and each world carries its own
+ratio so progression still climbs: a later world banks a larger multiple of a
+larger income.
+
+**The snapshot is taken pre-merge.** Merging must not destroy the thing you are
+being paid for.
+
+**Karma is phase-averaged, never read off the instant.** The wave swings karma
+income ×3 (`biasWith` 1.5 / `biasAgainst` 0.5), so an instantaneous reading would
+pay triple for the accident of leaving on a dense phase and make the wave a thing
+you time a *permanent* reward against. The bias is divided back out of the live
+figure rather than recomputed, so the two cannot drift. Experience needs no such
+treatment — the bias lives only in the karma split.
+
 **Merged souls buy speed, and that is the whole of what they buy.** Hyperbolic,
-so it cannot reach zero, and capped, so a world's hundreds do not run away. Both
-terms are authored per world (§13).
+so it cannot reach zero, and capped, so no merge runs away. `mergedShare` is a
+share of the army and `mergeHalving` is authored equal to the toll, so the toll
+always buys ×2 (§13).
 
 **The experience goes to the pile only, and never to the active world.** A world
 behind you buys **progression**; it does not walk the phases of the world you are
 standing on. Those stay yours to earn.
 
-### Exactly two axes, deliberately
+### Exactly three axes now, deliberately
 
-**How much you merged** and **how you were aligned**. Total souls at the harvest
-is not a third: the merged count is `Σ round(cohort.count × fraction)`, so the
-population is already a factor of it — a bigger world merged at the same fraction
-yields a bigger count and a faster clock for free. Reading the total separately
-would count one quantity twice and give the player two knobs that cannot be
-traded against each other.
+**How much you merged**, **how you were aligned**, and **what you were earning
+when you left**. The third is new and it is what makes holding pay: it is read
+once, before the merge, and then it is fixed forever.
+
+Total souls at the harvest is still not an axis. The merge is a share, so the
+population is already inside it — a bigger army merged at the same share pays the
+same toll and buys the same speed. Reading the count separately would count one
+quantity twice and hand the player two knobs that cannot be traded off.
 
 ### The floor is also a promise
 
-Since the merge toll is a floor on `merged`, and `merged` buys speed, the toll
+Since the merge toll is a floor on `mergedShare`, and that buys speed, the toll
 also sets the **slowest** a world can ever pay. **No world can be left in a state
 where it barely delivers.**
 
-⚠ The figures that used to sit here — ×1.2 / ×1.6 / ×1.75 — were computed from an
-absolute toll of 50 / 350 / 1,000 souls. **The toll is now a share of population
-(§13), so the floor scales with the army instead of being outrun by it**, and the
-guarantee is stronger than it was. The multiples themselves want recomputing once
-population at departure is known, which needs the ladder played.
+With `mergeHalving` authored equal to the toll, the promise is now exact and the
+same on every world: **the floor is ×2**, and merging everything is near the
+world's cap. What each world guarantees at its floor, as a multiple of the income
+you left with:
+
+| World | at the toll (×2) | at a full merge |
+|---|---|---|
+| 1 | 0.5× xp/s · 1.5× karma/s | ×7.7 speed |
+| 2 | 1.0× · 3.0× | ×5 |
+| 3 | 1.5× · 4.5× | ×3.9 |
+| 4 | 2.0× · 6.0× | ×3.2 |
+| 5 | 2.7× · 8.0× | ×3 |
+
+The old figures here — ×1.2 / ×1.6 / ×1.75 — were computed from an absolute toll
+of 50 / 350 / 1,000 souls against an army that outran them.
 
 ### Cadence
 
-The base is 60 seconds (90 on the third world). Chosen so a per-year figure is
-worth reading and a countdown counts. It sits at the slow end on purpose: **a
-cadence is easier to judge downward than a trickle is to discover was never
-readable.**
+The base is 60 seconds on every world. Chosen so a per-year figure is worth
+reading and a countdown counts. It sits at the slow end on purpose: **a cadence is
+easier to judge downward than a trickle is to discover was never readable.**
 
 Batch sizes do not add across worlds — every world's duration moves with its own
-merged count — so the only honest total is per second.
+merged share — so the only honest total is per second.
 
-### Every figure is a placeholder
+### The ratios are placeholders; the denomination is not
 
-Anchored at roughly **30% of income at the point you leave**, and never measured.
-Whether it repays a deep merge is the open question that §5's upgrade-burn
-argument hands off, and it wants a sim run rather than an argument.
+The seconds-of-income figures (§13's row) are starting figures to measure against.
+**What is settled is that they are seconds and not amounts** — that is the part
+that survives the next ladder change, and re-tuning them is a one-column edit
+rather than a rescale of the file.
+
+Whether the payout repays a **deep** merge is the question §5's upgrade-burn
+argument hands off, and it is now askable: it could not be tested before, because
+`mergeHalving` was unreachable at the population the ladder produces.
 
 ---
 
@@ -1527,6 +1657,11 @@ wisdom gained = √(karma moved across the whole run / W)
 own level experience (§9) — karma actually taken off the piles, summed from what
 they gave up. Nothing new needs measuring.
 
+**And it has now been measured once.** A run reaching refinery level 29 moved
+`5,000 × (1.35^28 − 1) / 0.35` ≈ **64,000,000** karma. So `W` has a figure to be
+authored against for the first time: `W = 10^6` pays about **8 wisdom for a run**,
+which is a sane opening; `W = 1` pays 8,000, which is absurd.
+
 **The square root is what makes this fractal rather than merely repeatable.**
 Doubling a run's output gives about 1.41× the wisdom, so each turn of the larger
 wheel is worth roughly a constant amount of *progress* instead of a constant amount
@@ -1679,14 +1814,15 @@ authored well enough to run that test against — see §1.
 | Question | Where it bites |
 |---|---|
 | **Which screen hosts the harvest** | §17 — Overview today, Details is live |
-| **Even's experience bonus: ×1.5, ×2, or ×3** | §14 — three figures have been in play; ×3 is live |
-| **Whether the Burden/Comfort sink asymmetry is right** | §3, §8 — commerce is the candidate answer and is unauthored |
+| **Even's experience bonus: ×1.5, ×2, or ×3** | §14 — ×3 is live; the "×3 dominates" reading was taken while `K` was worth zero and must be re-measured |
+| **Whether the Burden/Comfort sink asymmetry is right** | §3, §8 — five upgrades now price in `karma_negative`; whether that is the *shape* of the answer or just the stopgap before commerce is still open |
 | **Whether commerce is a system or a framing** | §18 — the rates worsening may be enough without a market screen |
 | **Wisdom's structure shelf vs knowledge's permanent shelf** | §18 — both permanent, both bought; the distinction is real and uncomfortable |
 | **Whether prestige is chosen or forced** | §18 — may you end a run early |
-| **A karma-to-red ratio** | §9 — the obvious next refinery knob, deliberately absent |
+| **A karma-to-red ratio** | §9 — the refinery ran 4.6× ahead of the economy at level 29, so this is now needed rather than merely absent. Held until worlds 4–5 are played |
+| **The click** | §4 — 700/click against 150k/s is 0.5% of income. `carry` is linear and capped against income compounding ×5 per index; it needs a different shape (a share of *income*) or an explicit decision to let the hand go vestigial |
 | **Continuous vs square-wave phase bias** | §6 — now also the thing that keeps the two ends of the cohort ladder distinct |
-| **How many worlds a system has** | §13 — 3 is authored, not derived |
+| **How many worlds a system has** | §13 — 5 is authored, not derived |
 | **Per-cohort aiming** | §6 — parked, and further away now that cohorts have no aim figures. `LeanMeter` is kept in the tree, unwired, against this coming back |
 | **`clerk`'s own name** | §5, §20 — the mechanic shipped, the word did not; ledger, mechanical and managerial candidates all tried and set aside |
 | **Whether the anchor count should be an upgrade axis** | §12 — deferred as speculative |
@@ -1706,6 +1842,22 @@ authored well enough to run that test against — see §1.
 | **The cap at 200 a cohort** | gone — income compounds by construction, so counts no longer stall |
 | **Six rungs and not ten** | ten rungs; the emission-rate constraint is handled by a 60 ms floor rather than by a shorter ladder |
 | **Per-cohort `resistance` / `polarity_bias` / `polarity_multiplier`** | cut; duration and the manual batch carry cohort identity (§6) |
+
+### Resolved by the post-ladder rebalance
+
+The ladder rewrite shipped alone, took power from headcount and gave it to index,
+and every figure still written in raw souls or raw resources was mis-scaled by
+about an order of magnitude. One measured run found all of the below; the
+rebalance is the answer to all of it at once.
+
+| Was | Now |
+|---|---|
+| **Whether the harvest payout repays a deep merge** | askable at last — `mergeHalving` is a share tied to the toll, so a full merge is reachable on every world (§13) |
+| **Whether excess reading flat near ±1 lands as ominous or dead** | **terminal** — at ±2 the short pile was exactly zero, so the refinery starved and the wisdom base stopped accruing. Clamped (§6) |
+| **The entire generated cohort ladder** | runs, and is fun. Verified against formula at 150k xp/s |
+| **Whether a 4 / 8 / 16-minute system is too short** | still unplayed, but there are now five worlds and 124 minutes to sit in |
+| **Worlds 4 and 5** | authored. They cost almost nothing once no row was denominated in souls |
+| **`riders_2`'s +2,000** | still wrong — ~80% of the purchase buys nobody at current headcount. Same denomination error, but it wants the click decision first |
 
 ### Doc-vs-data drift found and resolved into this file
 
@@ -1738,15 +1890,21 @@ the slot counts together** — no one of them is meaningful alone.
   checked against this economy.
 - **`W`, `P`, and the +2% per wisdom** — every figure in §18.
 - **Every beat floor in §16**, all nine fitted to an economy that no longer
-  exists.
-- **Every harvest payout** — anchored at ~30% of income at departure, never
-  measured.
-- **All anchoring durations and both bonus figures.**
-- **Both world-discovery gates.** They put discovery near the harvest beat and
+  exists. **Re-fit them after this pass is measured, not during it** — they were
+  fitted to the pre-ladder economy and are all wrong in the same direction.
+- **Every harvest ratio** — the seconds-of-income figures, never measured. The
+  denomination is settled; the numbers are not (§15).
+- **All anchoring durations and both bonus figures**, worlds 4 and 5 included and
+  those two are guesses.
+- **All four world-discovery gates.** They put discovery near the harvest beat and
   nothing more.
 - **The whole click ladder**, whose gates were set against the old cohort costs.
 - **`shorter_lives_1` and `hard_season`**, now much smaller than a single
-  level rung.
+  level rung — and now the bulk of the `karma_negative` sink (§14), so they are
+  load-bearing for the alignment trade as well as for duration.
+- **`shortPileFloor`**, chosen so the cliff's one honest use survives at 95%.
+- **Worlds 4 and 5's pictures**, which are existing specimens at a new seed and
+  have never been through the widget lab.
 
 ### Unplayed — no one has watched these run
 
@@ -1757,19 +1915,21 @@ the slot counts together** — no one of them is meaningful alone.
 - **The whole anchoring phase.** Nothing about it has been played.
 - **The whole Refinery screen.**
 - **Whether the second world at its current length is the right second world.**
-- **Whether the harvest payout repays a deep merge** — the question §5 hands off.
-- **Whether excess reading flat near ±1 lands as ominous or as dead.**
+- **Whether holding now reads as worth it** — §15 makes departure income an axis,
+  and nobody has yet harvested one world twice to feel the difference.
 - **Whether the idle count on the split lever reads as a cost or as a bug.**
 - **Whether `riders_1` reads as a purchase**, given nothing rides before it.
-- **The entire generated cohort ladder.** It is internally consistent and nobody
-  has watched it run against a clock.
+- **Worlds 3, 4 and 5.** No run has ever finished the third world, which is where
+  the rebalance's whole argument gets tested.
 - **Whether manual cohorts are a floor of ledgers or a chore**, and how many is
   too many before the first clerk.
 - **Whether a life spanning several phases reads as steadiness or as mush**, which
   is the whole of §6's replacement for the cut aim figures.
-- **Everything in §18.** No run has ever ended.
-- **Whether a 4 / 8 / 16-minute system is too short**, which is the opposite risk
-  to the one §13 just fixed and the only way to find out is to sit in one.
+- **Everything in §18.** No run has ever ended. **Prestige is deliberately not
+  built yet** — it needs a finishable, measured run first, and this rebalance is
+  what produces one. Beat 14 stays unwritten and must never be given a floor.
+- **Whether a 4 / 8 / 16 / 32 / 64-minute system is too short**, which is the
+  opposite risk to the one §13 fixed and the only way to find out is to sit in one.
 
 ---
 
