@@ -4,7 +4,8 @@
     HeaderBand, Label, Meter, Tabs, Rail, Value,
   } from '$ui';
   import type { BadgeKind, ChipStatus, FigureSize, LabelSize, MeterTick } from '$ui';
-  import type { ResourceType } from '$types';
+  import { ChevronsUp, HourglassEmpty, Refresh } from '@steeze-ui/tabler-icons';
+  import type { IconSource } from '@steeze-ui/svelte-icon';
   import {
     ExperienceModule, InertiaModule, KarmaModule, ManualModule,
   } from '$features/header';
@@ -58,14 +59,14 @@
 
   const upgrades: {
     label: string;
-    costs?: Partial<Record<ResourceType, number>>;
+    icon?: IconSource;
     status: ChipStatus;
   }[] = [
-    { label: 'More cause means more effect', costs: { karma_positive: 15 }, status: 'affordable' },
-    { label: 'An easier way', costs: { experience: 200 }, status: 'affordable' },
-    { label: 'Free Wilderness', costs: { karma_positive: 50 }, status: 'unlocked' },
-    { label: 'A singular purpose', costs: { karma_positive: 10_000 }, status: 'unlocked' },
-    { label: 'Nothing is lost', costs: { karma_positive: 24_000 }, status: 'unlocked' },
+    { label: 'Cohort I', icon: Refresh, status: 'affordable' },
+    { label: 'You', icon: ChevronsUp, status: 'affordable' },
+    { label: 'Refinery', icon: HourglassEmpty, status: 'unlocked' },
+    { label: 'Cohort III', icon: ChevronsUp, status: 'unlocked' },
+    { label: 'World', icon: ChevronsUp, status: 'unlocked' },
     { label: '3 approaching', status: 'approaching' },
   ];
 
@@ -244,9 +245,10 @@
       purchased upgrades leave the queue entirely.
     </p>
     <div class="chips-demo">
-      <Chip label="Affordable" costs={{ karma_positive: 15 }} />
-      <Chip label="Unlocked" costs={{ karma_positive: 50 }} status="unlocked" />
-      <Chip label="3 approaching" status="approaching" />
+      <Chip label="Affordable" icon={Refresh} />
+      <Chip label="Unlocked" icon={HourglassEmpty} status="unlocked" />
+      <Chip label="Approaching" icon={ChevronsUp} status="approaching" />
+      <Chip label="Arriving" icon={ChevronsUp} status="arriving" />
     </div>
   </section>
 
@@ -344,7 +346,7 @@
             </div>
             <ChipQueue escape="all 48 →">
               {#each upgrades as u (u.label)}
-                <Chip label={u.label} costs={u.costs} status={u.status} />
+                <Chip label={u.label} icon={u.icon} status={u.status} />
               {/each}
             </ChipQueue>
           </div>

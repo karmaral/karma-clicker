@@ -67,6 +67,12 @@ class Refinery {
     Math.max(MIN_INTERVAL, this.#modifiers.apply(balance.refinery.interval, 'duration')),
   );
 
+  /** The shorter pile, live — what the next pull would be capped to. */
+  #supply = $derived(Math.min(...PILES.map(([karma]) => ResourceManager.getAmount(karma))));
+
+  /** Share of a full batch the piles could currently feed. Idle reads full — staffing, not supply, gates it. */
+  #capacityPct = $derived(this.#batch > 0 ? Math.min(1, this.#supply / this.#batch) * 100 : 100);
+
   constructor() {
     this.#emitter = new ResourceEmitter((pulls) => this.#refine(pulls), () => this.#interval);
   }
@@ -127,8 +133,11 @@ class Refinery {
     }
   }
 
+  /** An interval upgrade shortens the pull already in flight. See `retime`. */
   addModifier(modifier: Modifier) {
-    this.#modifiers.add(modifier);
+    if (this.#modifiers.add(modifier)) {
+      this.#emitter.retime();
+    }
   }
 
   addListener(identifier: string, fn: Listener) {
@@ -171,6 +180,14 @@ class Refinery {
 
   /** Across both piles, and uncapped by what they hold — this is the ceiling. */
   get clearedPerSecond() { return this.perSecond * PILES.length; }
+
+  /** 0–100, how much of a full batch the piles can currently feed. */
+  get capacityPct() { return this.#capacityPct; }
+
+  /** Staffed, but the piles can't fill a full batch — never true while idle. */
+  get isStrained() {
+    return this.#workers > 0 && this.#capacityPct < balance.refinery.strainedBelow * 100;
+  }
 }
 
 export const refinery = new Refinery();

@@ -65,7 +65,11 @@ export default class Building {
 
     // Both a manual send and an autonomous requeue go through the emitter's
     // own `queue`, never through this class — this is the one place both are seen.
-    this.#emitter.addListener('queue', () => {
+    this.#emitter.addListener('queue', (detail) => {
+      // A re-armed wait is the same life on a shorter clock, so it keeps the
+      // moment it began — the bias is averaged across the span it really lived.
+      if (detail?.retimed) return;
+
       this.#lifeStartedAt = PlanetManager.getActive()?.lived;
     });
 
@@ -203,8 +207,13 @@ export default class Building {
     }
   }
 
+  /**
+   * Only on a real change. The fan-out re-offers every held modifier off the
+   * loop, and a `retime` fires `queue` — four re-armings a second would restart
+   * every sweep watching this row without the clock having moved at all.
+   */
   addModifier(modifier: Modifier) {
-    this.#modifiers.add(modifier);
+    if (this.#modifiers.add(modifier)) this.#emitter.retime();
   }
 
   /**
@@ -217,7 +226,9 @@ export default class Building {
   }
 
   removeModifier(id: string) {
-    this.#modifiers.remove(id);
+    if (this.#modifiers.remove(id)) {
+      this.#emitter.retime();
+    }
   }
 
   getCost(n: number) {

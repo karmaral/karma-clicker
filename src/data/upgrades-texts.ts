@@ -40,6 +40,14 @@ const data: Record<string, Record<string, ItemTextData>> = {
       title: 'Shorter still',
       description: 'Seconds per batch x0.5',
     },
+    'speed_3': {
+      title: 'speed_3',
+      description: 'Seconds per batch x0.5',
+    },
+    'speed_4': {
+      title: 'speed_4',
+      description: 'Seconds per batch x0.5',
+    },
   },
   'harness': {
     'slots_1': {

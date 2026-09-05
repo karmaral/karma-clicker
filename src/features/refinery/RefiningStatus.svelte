@@ -32,6 +32,14 @@
   /** The clock keeps pulsing unstaffed, but a sweep to nowhere is a lie. */
   const isIdle = $derived(refinery.workers <= 0);
 
+  /** Idle, strained, or the live share of a batch the piles can feed. */
+  const supplyLabel = $derived.by(() => {
+    if (isIdle) return 'Unstaffed — nothing to clear.';
+    if (refinery.isStrained) return `Strained — clearing at ${f(Math.round(refinery.capacityPct))}%.`;
+
+    return `Clearing at ${f(Math.round(refinery.capacityPct))}%.`;
+  });
+
   /** A countdown under a quarter second is not a countdown — see `ResourceEmitter`. */
   const clockLabel = $derived.by(() => {
     if (isIdle) return 'idle';
@@ -77,7 +85,7 @@
     <span class="num">{f(intake)} Crimson</span>
   </div>
 
-  <p class="note">{isIdle ? 'Unstaffed — nothing to clear.' : 'Pulses on its own cadence.'}</p>
+  <p class="note">{supplyLabel}</p>
 </Section>
 
 <style>
@@ -117,9 +125,19 @@
     flex: none;
     font-size: var(--fs-xs);
     font-weight: 600;
+    font-variant-numeric: tabular-nums;
     letter-spacing: .14em;
     text-transform: uppercase;
     color: var(--ink-500);
+  }
+
+  /* The figure sizes the row, so the track is whatever it leaves — a label that
+     narrows as its digits tick steals width back from the fill, and the bar walks
+     backwards while the number it reports goes up. Reserved and right-aligned, so
+     the track is the same track from one pulse to the next. */
+  .progress .next {
+    min-width: 22ch;
+    text-align: right;
   }
 
   .batch {

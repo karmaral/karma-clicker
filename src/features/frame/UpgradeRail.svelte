@@ -2,17 +2,14 @@
   import { Badge, Chip, ChipQueue, Label } from '$ui';
   import { formatCost } from '$lib/utils';
   import { badgeFor } from '$features/details/badge';
-  import { getUpgradeReading } from '$lib/labels';
+  import { getEffectLabel, getScopeLabel } from '$lib/labels';
+  import { iconFor } from './upgrade-icon';
   import { nav } from '$lib/nav.svelte';
   import { spotlight } from '$lib/spotlight.svelte';
   import type { YieldType } from '$types';
   import { catalogue, type Upgrade } from './upgrades.svelte';
 
   const VISIBLE = 5;
-
-  /** The chip's own line — short, and the authored one where there is one. */
-  const readingOf = (upgrade: Upgrade) =>
-    getUpgradeReading(upgrade.target, upgrade.effect, upgrade.effectTarget, upgrade.textData.effect);
 
   /**
    * This screen's, and the global ones. A chip is about the thing under it: the
@@ -41,37 +38,31 @@
   <ChipQueue escape="all {total} →" onescape={catalogue.open}>
     {#each shown as upgrade (upgrade.target + upgrade.id)}
       <Chip
-        label={upgrade.label}
-        costs={upgrade.costs}
+        label={getScopeLabel(upgrade.target)}
+        icon={iconFor(upgrade)}
         status={upgrade.status}
         onclick={() => buy(upgrade)}
         onmouseenter={() => spotlight.point(upgrade.target)}
         onmouseleave={() => spotlight.clear()}
       >
-        {#snippet caption()}
-          {@const reading = readingOf(upgrade)}
-          <span class="scope">{reading.scope}</span>
-          ·
-          <span class="effect">{reading.effect}</span>
-        {/snippet}
-
         {#snippet tooltipContent()}
           <div class="item-header">
             <span class="title">{upgrade.textData.title}</span>
-          </div>
-          <div class="item-body">
-            <p class="description">{upgrade.textData.description}</p>
-            <p class="cost">
-              Cost:
+
+            <span class="cost num">
               {#if upgrade.costs}
                 {#each Object.entries(upgrade.costs) as [costType, costVal]}
-                  <strong><span>{formatCost(costVal)}</span></strong>
+                  <span>{formatCost(costVal)}</span>
                   <Badge kind={badgeFor(costType as YieldType)} />
                 {/each}
               {/if}
-            </p>
+            </span>
           </div>
-          {upgrade.label}
+
+          <div class="item-body">
+            <p class="effect">{getEffectLabel(upgrade.effect, upgrade.effectTarget)}</p>
+            <p class="description">{upgrade.textData.description}</p>
+          </div>
         {/snippet}
       </Chip>
     {/each}
@@ -94,13 +85,6 @@
     min-width: 0;
   }
 
-  .scope {
-    color: var(--ink-300);
-    font-size: 9px;
-    text-transform: uppercase;
-    font-weight: 600;
-  }
-
   .head {
     display: flex;
     flex-direction: column;
@@ -111,5 +95,19 @@
   .caption {
     font-size: var(--fs-xs);
     color: var(--ink-300);
+  }
+
+  .item-header {
+    display: flex;
+    justify-content: space-between;
+
+  }
+  .title {
+    font-weight: 600;
+    margin-right: 2ch;
+  }
+  .cost {
+    font-weight: 600;
+    margin-left: auto;
   }
 </style>

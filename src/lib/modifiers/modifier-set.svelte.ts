@@ -4,14 +4,25 @@ import type { Modifier, ModifierOp, ModifierStat, YieldType } from '$types';
 export default class ModifierSet {
   #modifiers = $state<Modifier[]>([]);
 
+  /**
+   * Whether the list actually moved. Both report it because the fan-out re-adds
+   * every held modifier each tick — an owner reacting to a *change* has to be
+   * able to tell that apart from a repeat it dropped.
+   */
   add(modifier: Modifier) {
-    if (this.has(modifier.id)) return;
+    if (this.has(modifier.id)) return false;
 
     this.#modifiers.push(modifier);
+
+    return true;
   }
 
   remove(id: string) {
+    if (!this.has(id)) return false;
+
     this.#modifiers = this.#modifiers.filter((mod) => mod.id !== id);
+
+    return true;
   }
 
   has(id: string) {

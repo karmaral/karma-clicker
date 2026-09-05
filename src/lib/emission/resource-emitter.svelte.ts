@@ -25,6 +25,16 @@ export default class ResourceEmitter {
   /** What the queued payout covers, in cycles. Set by `queue`, spent by `emit`. */
   #batch = 1;
 
+  /** The wait in flight, and when it notionally began. What `retime` measures against. */
+  #queuedAt = 0;
+  #queuedWait = 0;
+
+  /**
+   * The timer allowed to land. `clock.after` has no cancel — a re-armed wait
+   * leaves the old one pending, and this is how it comes back to nothing.
+   */
+  #epoch = 0;
+
   /**
    * A clock too fast to read as a clock. It is the *autonomous* run that streams
    * and never a single send: one press buys one life however short it is, and
@@ -51,6 +61,31 @@ export default class ResourceEmitter {
   }
 
   queue() {
+    this.#arm(0);
+  }
+
+  /**
+   * Re-hangs the wait in flight on the duration as it stands now, keeping the
+   * share of it already served. An upgrade that halves the clock halves what is
+   * left of *this* cycle too, rather than landing only on the next one — work
+   * done is work done, so the fraction carries and never the remaining ms.
+   *
+   * A no-op unless a wait is actually pending, so an owner may call it on every
+   * change without asking whether the clock is running.
+   */
+  retime() {
+    if (!this.#isInProgress || !this.#queuedWait) return;
+
+    this.#arm(Math.min(1, (clock.now() - this.#queuedAt) / this.#queuedWait));
+  }
+
+  /**
+   * One wait, `progress` of the way through it already. A stream's tick is a
+   * fixed cadence, so the share carries it across unchanged and only the batch
+   * is re-derived — one tick's worth of it priced at the new rate, which is the
+   * bounded slop that buys the whole thing having no streaming branch.
+   */
+  #arm(progress: number) {
     this.#isInProgress = true;
 
     const duration = this.#duration;
@@ -62,17 +97,29 @@ export default class ResourceEmitter {
     // the threshold is a mistake, and paying *less* than was earned is the one
     // way this could be wrong that nobody would see.
     const wait = isStreaming ? balance.emission.streamTick : duration;
+    const remaining = wait * (1 - progress);
 
     this.#batch = isStreaming ? Math.max(1, wait / duration) : 1;
-    this.#nextAt = clock.now() + wait;
 
-    if (!wait) {
+    // Backdated, not stamped: the next `retime` measures its share against the
+    // start this wait would have had if it had always been this long.
+    this.#queuedAt = clock.now() - wait * progress;
+    this.#queuedWait = wait;
+    this.#nextAt = clock.now() + remaining;
+
+    const epoch = ++this.#epoch;
+
+    if (!remaining) {
       this.emit();
     } else {
-      clock.after(wait, () => this.emit());
+      clock.after(remaining, () => { if (epoch === this.#epoch) this.emit(); });
     }
 
-    this.#runCallbacks('queue', { duration: wait, streaming: isStreaming });
+    // `retimed` says the cycle is the same cycle and only its clock moved —
+    // anything that stamped something when this one began must not stamp again.
+    this.#runCallbacks('queue', {
+      duration: wait, remaining, streaming: isStreaming, retimed: progress > 0,
+    });
   }
 
   emit() {
@@ -80,6 +127,11 @@ export default class ResourceEmitter {
     // one cycle whatever the last queued batch happened to be.
     const batch = this.#batch;
     this.#batch = 1;
+
+    // Retires the wait this pays for, so a timer still pending against it — an
+    // `emit` called by hand, or one the last `retime` outran — lands on nothing.
+    this.#epoch += 1;
+    this.#queuedWait = 0;
 
     // The clock fires whether or not the payout found anything to pay, so what
     // it did is the only way a listener can tell a real pull from an empty one.

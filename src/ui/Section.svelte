@@ -1,26 +1,34 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import type { LabelTone } from './types';
   import Label from './Label.svelte';
+    import type { ClassValue } from 'svelte/elements';
 
   interface Props {
     label?: string;
+    /** Active reads as the panel's own heading rather than a category word. */
+    labelTone?: LabelTone;
     title?: string;
     /** What the section's own control currently says. */
     reading?: string;
     /** Lit while an upgrade that would change this whole panel is hovered. */
     highlighted?: boolean;
+    /** The content is someone else's grid columns, not this section's own —
+     * horizontal padding moves to `.head` so the body can subgrid cleanly. */
+    subgrid?: boolean;
+    className?: ClassValue;
     aside?: Snippet;
     children?: Snippet;
   }
 
-  let { label, title, reading, highlighted = false, aside, children }: Props = $props();
+  let { label, labelTone = 'inactive', title, reading, highlighted = false, subgrid = false, className, aside, children }: Props = $props();
 </script>
 
-<section class={['section', { lit: highlighted }]}>
+<section class={['section', className, { lit: highlighted, subgrid }]}>
   <div class="head">
     <div class="titles">
       {#if label}
-        <Label text={label} />
+        <Label text={label} tone={labelTone} />
       {/if}
       {#if title}
         <h2>{title}</h2>
@@ -49,6 +57,20 @@
      says so the way one that changes a single row does. */
   .section.lit {
     background-color: var(--surface-alt);
+  }
+
+  /* Padding on a subgridded axis fights the inherited column tracks — see
+     karma-clicker's OverviewScreen for the ledger this aligns to. */
+  .section.subgrid {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
+    padding-inline: 0;
+  }
+
+  .section.subgrid > .head {
+    grid-column: 1 / -1;
+    padding-inline: var(--sp-4);
   }
 
   .head {

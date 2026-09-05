@@ -16,11 +16,18 @@
     subscribe: (fn: Listener) => () => void;
     /** Paying by the tick rather than by the life. See `ResourceEmitter`. */
     streaming?: boolean;
+    /**
+     * Where the current cycle already stands, for a bar mounted mid-sweep — a
+     * screen that stays alive off-camera (`Screen`) resumes to a cycle already
+     * running, and the next `queue` event may be minutes off. Read once, at
+     * mount: a reactive value here would re-seed the bar on every tick.
+     */
+    resume?: { duration: number; remaining: number };
     width?: string;
     height?: string;
   }
 
-  let { subscribe, streaming = false, width = '12rem', height = '3px' }: Props = $props();
+  let { subscribe, streaming = false, resume, width = '12rem', height = '3px' }: Props = $props();
 
   let bar = $state<HTMLSpanElement>();
 
@@ -29,13 +36,31 @@
     // on its own clock rather than on the emitter's.
     if (streaming) return;
 
-    const sweep = (detail?: Record<string, unknown>) => {
-      const duration = Number(detail?.duration ?? 0);
-      if (!duration || !bar) return;
+    /**
+     * From wherever the cycle already stands to full. A fresh queue has all of
+     * its wait left and so starts at 0; a re-armed one — an upgrade shortening
+     * the clock mid-cycle, see `ResourceEmitter.retime` — keeps the share it has
+     * already served rather than snapping back to empty.
+     */
+    const draw = (duration: number, remaining: number) => {
+      if (!duration || remaining <= 0 || !bar) return;
+
+      const startPct = Math.max(0, Math.min(1, 1 - remaining / duration)) * 100;
 
       bar.getAnimations().forEach((animation) => animation.cancel());
-      bar.animate([{ width: '0%' }, { width: '100%' }], { duration, easing: 'linear' });
+      bar.animate(
+        [{ width: `${startPct}%` }, { width: '100%' }],
+        { duration: remaining, easing: 'linear' },
+      );
     };
+
+    const sweep = (detail?: Record<string, unknown>) => {
+      const duration = Number(detail?.duration ?? 0);
+
+      draw(duration, Number(detail?.remaining ?? duration));
+    };
+
+    if (resume) draw(resume.duration, resume.remaining);
 
     return subscribe(sweep);
   });

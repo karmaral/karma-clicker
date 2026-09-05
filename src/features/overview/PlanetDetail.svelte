@@ -8,7 +8,8 @@
   import { DEFAULT_VISUAL, PlanetView } from '$widgets/planet';
   import planetVisuals from '$data/planet-visuals';
   import planetTexts from '$data/planets-texts';
-    import { nav } from '$lib/nav.svelte';
+  import { nav } from '$lib/nav.svelte';
+  import AheadRequirements from './AheadRequirements.svelte';
 
   interface Props {
     id: string;
@@ -36,18 +37,6 @@
   const isHere = $derived(id === PlanetManager.selected);
   const isAhead = $derived(!isHere && Boolean(planet) && !planet.isHarvested);
 
-  function getBandLabel() {
-    if (isHere) {
-      return 'Active';
-    }
-
-    if (isAhead) {
-      return 'Ahead';
-    }
-
-    return 'Behind';
-  }
-
   function getStatus() {
     if (!planet) return '';
 
@@ -74,7 +63,7 @@
 </script>
 
 {#if planet}
-  <Section label={getBandLabel()} title={name}>
+  <Section label={name} labelTone="active">
     {#snippet aside()}
       {getStatus()}
     {/snippet}
@@ -110,6 +99,8 @@
         disabled={!progression.isLive('overview.ahead') || !PlanetManager.canReach}
         onclick={() => onreach(id)}
       />
+
+      <AheadRequirements {planet} />
     {/if}
   </Section>
 {:else}

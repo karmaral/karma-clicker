@@ -8,93 +8,36 @@
    * the tabs use rather than removed — a band is a planet apiece, and those
    * WebGL contexts should come back turning instead of blank.
    */
-  import { Badge } from '$ui';
   import { PlanetManager } from '$lib/managers';
-  import { FIRST_HARVEST_CONDITIONS, getFirstHarvestConditionLabel } from '$lib/labels';
   import { progression } from '$lib/progression';
-  import { sumHarvestRates } from '$lib/planets/harvest';
   import { f } from '$lib/utils';
-  import { badgeFor } from '../details/badge';
-  import PlanetList from './PlanetList.svelte';
+  import { Label, Section } from '$ui';
+  import ActiveCell from './ActiveCell.svelte';
   import PlanetDetail from './PlanetDetail.svelte';
+  import BehindLedger from './BehindLedger.svelte';
+  import AheadGrid from './AheadGrid.svelte';
   import HarvestLedger from './HarvestLedger.svelte';
-  import HarvestRates from './HarvestRates.svelte';
   import { FirstHarvestScreen } from '$features/harvest';
   import { Screen } from '$features/frame';
   import { nav } from '$lib/nav.svelte';
 
-  /** Size is the only thing that separates the three bands' pictures. */
   const BEHIND_PX = 24;
-  const ACTIVE_PX = 24;
-  const AHEAD_PX = 40;
-
-  const TICK_MS = 1000;
+  /** Active and Ahead sit in one row now, so they share a picture size. */
+  const HERE_PX = 40;
 
   let picked = $state('');
-
-  /**
-   * One clock for every countdown in the Behind band. Local, and written only by
-   * the timer — never read and written in the same effect.
-   */
-  let now = $state(Date.now());
-
-  $effect(() => {
-    const handle = setInterval(() => (now = Date.now()), TICK_MS);
-
-    return () => clearInterval(handle);
-  });
 
   const selected = $derived(picked || PlanetManager.selected);
 
   /** Whether the Behind band reports rates at all, or is still just a list. */
   const isReporting = $derived(progression.isRevealed('overview.harvest'));
 
-  /** The band's own figure. Batches do not add, so the header reads per second. */
-  const behindTotal = $derived(
-    sumHarvestRates(
-      PlanetManager.behind.map((id) => {
-        const planet = PlanetManager.getPlanet(id);
-
-        return { yields: planet.harvestYields, duration: planet.harvestDuration };
-      }),
-    ),
-  );
-
   function getHereStat(id: string) {
     const planet = PlanetManager.getPlanet(id);
 
     return `${f(planet.agesLived)} ages · phase ${planet.phase + 1} of ${planet.phasesPerAge}`;
   }
-
-  function getBehindStat(id: string) {
-    return `${f(PlanetManager.getPlanet(id).merged)} merged`;
-  }
-
-  /** An unreached world is known only by what it will ask of you. */
-  function getAheadStat(id: string) {
-    const { firstHarvest } = PlanetManager.getPlanet(id).data;
-
-    return FIRST_HARVEST_CONDITIONS
-      .filter((condition) => firstHarvest[condition] !== undefined)
-      .map((condition) => getFirstHarvestConditionLabel(condition, firstHarvest[condition] ?? 0))
-      .join(' · ');
-  }
 </script>
-
-{#snippet behindRates(id: string)}
-  <HarvestRates planet={PlanetManager.getPlanet(id)} {now} />
-{/snippet}
-
-{#snippet behindHeader()}
-  <span class="total">
-    {#each behindTotal as rate (rate.type)}
-      <span class="rate">
-        <Badge kind={badgeFor(rate.type)} />
-        <span class="num">{f(rate.perSecond)}/s</span>
-      </span>
-    {/each}
-  </span>
-{/snippet}
 
 <div class="stack">
   <Screen active={!nav.isHarvesting}>
@@ -112,39 +55,46 @@
       </div>
 
       <div class="axis">
-        {#if progression.isRevealed('overview.active')}
-          <PlanetList
-            label="Active"
-            ids={PlanetManager.selected ? [PlanetManager.selected] : []}
-            {selected}
-            stat={getHereStat}
-            empty="No active planet."
-            stillPx={ACTIVE_PX}
-            onpick={(id) => (picked = id)}
-            ondblclick={() => nav.to('details')}
-          />
-        {/if}
 
-        {#if progression.isRevealed('overview.ahead')}
-          <PlanetList
-            label="Ahead"
-            ids={PlanetManager.ahead}
-            {selected}
-            stat={getAheadStat}
-            empty="Nowhere else is known."
-            stillPx={AHEAD_PX}
-            onpick={(id) => (picked = id)}
-          />
+        <!-- `overview.ahead` reveals in the same beat as `overview.active` —
+             one gate, one card. -->
+        {#if progression.isRevealed('overview.active')}
+          <Section subgrid label="Active">
+            {#snippet aside()}
+              <Label text="Ahead" />
+            {/snippet}
+
+            <div class="here">
+              <div class="here-active">
+                <ActiveCell
+                  id={PlanetManager.selected}
+                  {selected}
+                  stat={getHereStat}
+                  empty="No active planet."
+                  stillPx={HERE_PX}
+                  onpick={(id) => (picked = id)}
+                  ondblclick={() => nav.to('details')}
+                />
+              </div>
+
+              <div class="here-ahead">
+                <AheadGrid
+                  ids={PlanetManager.ahead}
+                  {selected}
+                  empty="Nowhere else is known."
+                  stillPx={HERE_PX}
+                  onpick={(id) => (picked = id)}
+                />
+              </div>
+            </div>
+          </Section>
         {/if}
 
         {#if progression.isRevealed('overview.behind') && PlanetManager.behind.length}
-          <PlanetList
-            label="Behind"
+          <BehindLedger
             ids={PlanetManager.behind}
             {selected}
-            stat={isReporting ? undefined : getBehindStat}
-            rowAside={isReporting ? behindRates : undefined}
-            aside={isReporting && behindTotal.length ? behindHeader : undefined}
+            reporting={isReporting}
             stillPx={BEHIND_PX}
             onpick={(id) => (picked = id)}
           />
@@ -166,31 +116,39 @@
     position: relative;
   }
 
+  /* Same five tracks BehindLedger's rows use — still/name/sweep/clock/deliveries
+     — so Active+Ahead's split lines up with the ledger below via subgrid. */
   .axis {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: auto 1fr 12rem auto 5rem;
+    column-gap: var(--sp-3);
+    min-width: 0;
+  }
+
+  .here {
+    display: grid;
+    grid-template-columns: subgrid;
+    grid-column: 1 / -1;
+    align-items: start;
+    min-width: 0;
+  }
+
+  /* Still + name columns — the same width a Behind row gives them. */
+  .here-active {
+    grid-column: 1 / 3;
+    min-width: 0;
+  }
+
+  /* Sweep + clock + deliveries columns, taken as one block. */
+  .here-ahead {
+    grid-column: 3 / -1;
     min-width: 0;
   }
 
   .detail {
     display: flex;
     flex-direction: column;
-    border-left: var(--rule-card);
+    border-right: var(--rule-card);
     min-width: 0;
-  }
-
-  .total {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: flex-end;
-    gap: var(--sp-1) var(--sp-3);
-  }
-
-  .rate {
-    display: flex;
-    align-items: center;
-    gap: var(--badge-gap);
-    color: var(--ink-900);
   }
 </style>

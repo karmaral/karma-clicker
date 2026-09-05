@@ -53,6 +53,8 @@ export default {
     expGrowth: 1.35,
     /** Compounds on the batch base, before modifiers — never on the interval. */
     yieldPerLevel: 0.08,
+    /** Below this share of a full batch available, the status reads "strained". */
+    strainedBelow: 0.25,
   },
 
   /**
@@ -79,7 +81,7 @@ export default {
     extremityMultiplier: 3,
     /** What re-aiming costs, and how many phases it takes to pay off. */
     reaimPenalty: 0.65,
-    reaimPhases: 2,
+    reaimPhases: 1,
     /**
      * The least of the karma the short pile may ever get. Without it a hard
      * detent puts the short pile at exactly zero, the refinery pairs `min(batch,

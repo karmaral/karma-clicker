@@ -39,7 +39,7 @@
 
   const WIDTHS: Record<ScreenName, string> = {
     details: '640px',
-    overview: '230px',
+    overview: '200px',
     refinery: 'minmax(0, 1fr)',
   };
 
@@ -171,7 +171,7 @@
         labelNote={getSectionNote(screen)}
         labelTone={getSectionTone(screen)}
         caption={screen === 'refinery' && isRefineryTab
-          ? `refining ${f(refinery.clearedPerSecond)}/s · matched ${f(matched)} · backlog ${f(backlog)}`
+          ? `refining ${f(refinery.clearedPerSecond)}/s · ${refinery.isStrained ? 'strained' : `working at ${f(Math.round(refinery.capacityPct))}%`}`
           : undefined}
         banded
       >
