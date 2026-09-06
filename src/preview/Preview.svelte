@@ -337,20 +337,25 @@
           </InertiaModule>
           <ManualModule sub="+3.1 xp · 3.6s" banded />
         </HeaderBand>
-        <Rail>
-          <Tabs tabs={views} active={view} onselect={(v) => (view = v)} />
-          <div class="upgrades">
-            <div class="upgrades-head">
-              <Label text="Upgrades" />
-              <span class="caption">8 more coming</span>
+        <!-- Rail is now a vertical column (absolute against a sized, positioned
+             ancestor) rather than a horizontal band — this wrapper stands in for
+             the grid track it occupies in App.svelte. -->
+        <div class="rail-slot">
+          <Rail>
+            <Tabs tabs={views} active={view} onselect={(v) => (view = v)} />
+            <div class="upgrades">
+              <div class="upgrades-head">
+                <Label text="Upgrades" />
+                <span class="caption">8 more coming</span>
+              </div>
+              <ChipQueue escape="all 48 →">
+                {#each upgrades as u (u.label)}
+                  <Chip label={u.label} icon={u.icon} status={u.status} />
+                {/each}
+              </ChipQueue>
             </div>
-            <ChipQueue escape="all 48 →">
-              {#each upgrades as u (u.label)}
-                <Chip label={u.label} icon={u.icon} status={u.status} />
-              {/each}
-            </ChipQueue>
-          </div>
-        </Rail>
+          </Rail>
+        </div>
         <PlanetSection
           name="A regular planet"
           status={waveStatus}
@@ -573,12 +578,18 @@
     padding: var(--sp-4);
   }
 
+  .rail-slot {
+    position: relative;
+    width: 260px;
+    height: 320px;
+  }
+
   .upgrades {
     display: flex;
-    align-items: center;
-    gap: var(--sp-4);
+    flex-direction: column;
+    gap: var(--sp-3);
     flex: 1;
-    min-width: 0;
+    min-height: 0;
   }
 
   .upgrades-head {

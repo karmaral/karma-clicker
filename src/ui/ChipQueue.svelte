@@ -26,24 +26,27 @@
 <style>
   .queue {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
     gap: var(--sp-3);
     flex: 1;
-    min-width: 0;
+    min-height: 0;
   }
 
   .viewport {
     position: relative;
     flex: 1;
-    min-width: 0;
+    min-height: 0;
   }
 
   .chips {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
     gap: var(--sp-2);
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
+    height: 100%;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
     scrollbar-width: none;
     user-select: none;
   }
@@ -52,16 +55,31 @@
     display: none;
   }
 
+  .chips > :global(li) {
+    align-self: stretch;
+  }
+
+  .chips :global(.chip) {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .chips :global(.name) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .fade {
     position: absolute;
-    inset: 0 0 0 auto;
-    width: 90px;
-    background: linear-gradient(to right, transparent, var(--surface));
+    inset: auto 0 0 0;
+    height: 60px;
+    background: linear-gradient(to bottom, transparent, var(--surface));
     pointer-events: none;
   }
 
   .escape {
     flex: none;
+    align-self: flex-end;
     background: none;
     border: none;
     padding: 0 0 2px;

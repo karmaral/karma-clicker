@@ -60,7 +60,7 @@ class Prestige {
   get held() { return this.#held; }
   get isOpen() { return this.#isOpen; }
 
-  /** +2% cohort yield a unit. Spent by `Cohort.yieldScale`, and nowhere else. */
+  /** +2% cohort yield a unit; `Click.yieldScale` spends it at half strength. */
   get yieldMultiplier() { return this.#yieldMultiplier; }
 }
 

@@ -110,6 +110,7 @@
 
   .aside {
     font-size: var(--fs-sm);
+    line-height: 1;
     color: var(--ink-500);
     text-align: right;
   }

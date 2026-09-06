@@ -4,7 +4,7 @@
    * — the four rows are not four of a kind, and the differences between them
    * (two polarised, one paired, one locked) are the table's to resolve.
    */
-  import { Badge, PurchaseButton } from '$ui';
+  import { Badge, PurchaseButton, Value } from '$ui';
   import type { BadgeKind } from '$ui';
   import { f, formatCost } from '$lib/utils';
   import { GRADE_LABELS, GRADE_SOURCES, type GradeKey } from '$lib/labels';
@@ -13,7 +13,6 @@
   interface Props {
     grade: GradeKey;
     held: number;
-    perBatch?: number;
     /** The passive route, drawn beside the price and never a control. */
     passive?: { amount: number; kind: BadgeKind };
     cost?: number;
@@ -29,7 +28,6 @@
   let {
     grade,
     held,
-    perBatch,
     passive,
     cost,
     costKind = 'red-both',
@@ -45,21 +43,12 @@
 
 <div class={['row', { locked: isLocked }]} role="group">
   <div class="ident">
-    <span class="name">
-      <Badge kind={badgeFor(grade)} />
-      {GRADE_LABELS[grade]}
-    </span>
+    <span class="name">{GRADE_LABELS[grade]}</span>
     <span class="source">{GRADE_SOURCES[grade]}</span>
   </div>
 
-  <span class="num held">{f(held)}</span>
-
-  <span class="num batch">
-    {#if perBatch === undefined}
-      —
-    {:else}
-      +{f(perBatch)}
-    {/if}
+  <span class="held">
+    <Value kind={badgeFor(grade)} value={f(held)} size="md" />
   </span>
 
   <div class="cost" title={note}>
@@ -93,7 +82,7 @@
     column-gap: var(--sp-3);
     align-items: center;
     padding-inline: 12px;
-    padding-block: var(--sp-3);
+    padding-block: var(--sp-4);
     margin-inline: -12px;
     border-bottom: var(--rule-row);
     min-width: 0;
@@ -108,45 +97,42 @@
   .row.locked {
     color: var(--ink-300);
 
-    & .name,
-    & .held { color: var(--ink-300); }
+    & .name { color: var(--ink-300); }
+    & .held :global(.fig) { color: var(--ink-300); }
   }
 
+  /* Baselined against `.held` (see below) rather than centred — the description
+     hangs absolute beneath it, so nothing here needs flow room for it. */
   .ident {
-    display: flex;
-    flex-direction: column;
-    gap: var(--sp-1);
+    position: relative;
+    align-self: baseline;
     min-width: 0;
   }
 
   .name {
-    display: flex;
-    align-items: center;
-    gap: var(--badge-gap);
     font-size: var(--fs-base);
     font-weight: 600;
     line-height: 1.2;
     color: var(--ink-900);
   }
 
+  /* Out of flow: the row's own height no longer has to fit it, only the taller
+     `padding-block` above does. */
   .source {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    padding-top: var(--sp-1);
     font-size: var(--fs-sm);
     color: var(--ink-500);
     line-height: 1.3;
   }
 
   .held {
-    font-size: var(--fs-md);
-    font-weight: 600;
-    text-align: right;
-    color: var(--ink-900);
-  }
-
-  .batch {
-    font-size: var(--fs-sm);
-    font-weight: 600;
-    text-align: right;
-    color: var(--ink-500);
+    display: flex;
+    justify-content: flex-end;
+    align-self: baseline;
   }
 
   .cost {
@@ -158,7 +144,7 @@
     align-self: stretch;
     /* Reclaims the row's own block padding, short 4px — same inset CohortRow
        gives its purchase cell, so the two row families read as one system. */
-    margin-block: calc((var(--sp-3) - 4px) * -1);
+    margin-block: calc((var(--sp-4) - 4px) * -1);
   }
 
   /* Information, not a control: what the refinery pays for the same thing. */

@@ -23,6 +23,10 @@
   const before = $derived(prestige.yieldMultiplier);
   const after = $derived(1 + total * balance.prestige.yieldPerWisdom);
 
+  /** Half-strength mirror of `before`/`after` — see `Click.yieldScale`. */
+  const clickBefore = $derived(1 + (before - 1) * 0.5);
+  const clickAfter = $derived(1 + (after - 1) * 0.5);
+
   /** What the run is short of, when it is short. */
   const missing = $derived(balance.prestige.firstWisdomAt - refinery.produced);
 
@@ -42,32 +46,39 @@
 <div class="prestige">
   <div class="shoulder">
     <div class="panel">
-      <Label text="What survives" />
+      <Label text="What goes" />
 
-      <div class="wisdom">
-        <Value kind="wisdom" value={f(total)} size="hero" />
-        <span class="sum">{f(prestige.held)} held + {f(prestige.gained)} earned</span>
+      <div class="ledger">
+        {#each lost as row (row.label)}
+          <div class="row">
+            <span class="name">{row.label}</span>
+            <span class="num">{row.value}</span>
+          </div>
+        {/each}
       </div>
 
-      <div class="multiplier">
-        <Label text="Cohort yield" size="sm" />
-        <div class="swing">
-          <Figure value="×{f(before)}" size="lg" muted />
-          <span class="arrow">→</span>
-          <Figure value="×{f(after)}" size="hero" />
-        </div>
-        <span class="sum">{Math.round(balance.prestige.yieldPerWisdom * 100)}% a unit, forever</span>
+      <div class="ledger">
+        {#each GRADES as grade (grade)}
+          <div class="row">
+            <span class="name">
+              <Badge kind={badgeFor(grade)} />{GRADE_LABELS[grade]}
+            </span>
+            <span class="num">{f(ResourceManager.getAmount(grade))}</span>
+          </div>
+        {/each}
       </div>
     </div>
   </div>
 
   <div class="middle">
     <div class="score">
+      <div class="gain">
+        <Value kind="wisdom" value={f(prestige.gained)} size="hero" />
+        <span class="unit">wisdom</span>
+      </div>
       <span class="formula">
-        √( <strong>{f(refinery.produced)}</strong> crimson produced ÷ {f(balance.prestige.firstWisdomAt)} )
+        for producing <Value kind="red" value={f(refinery.produced)} size="lg" /> crimson this run
       </span>
-      <span class="equals">=</span>
-      <Value kind="wisdom" value={f(prestige.gained)} size="hero" />
     </div>
 
     <div class="verb">
@@ -98,26 +109,31 @@
 
   <div class="shoulder right">
     <div class="panel">
-      <Label text="What goes" />
+      <Label text="What survives" />
 
-      <div class="ledger">
-        {#each lost as row (row.label)}
-          <div class="row">
-            <span class="name">{row.label}</span>
-            <span class="num">{row.value}</span>
-          </div>
-        {/each}
+      <div class="wisdom">
+        <Value kind="wisdom" value={f(total)} size="xl" />
+        <span class="sum">{f(prestige.held)} held + {f(prestige.gained)} earned</span>
       </div>
 
-      <div class="ledger">
-        {#each GRADES as grade (grade)}
-          <div class="row">
-            <span class="name">
-              <Badge kind={badgeFor(grade)} />{GRADE_LABELS[grade]}
-            </span>
-            <span class="num">{f(ResourceManager.getAmount(grade))}</span>
-          </div>
-        {/each}
+      <div class="multiplier">
+        <Label text="Cohort yield" size="sm" />
+        <div class="swing">
+          <Figure value="×{f(before)}" size="lg" muted />
+          <span class="arrow">→</span>
+          <Figure value="×{f(after)}" size="xl" />
+        </div>
+        <span class="sum">{Math.round(balance.prestige.yieldPerWisdom * 100)}% a unit, forever</span>
+      </div>
+
+      <div class="multiplier">
+        <Label text="Direct yield" size="sm" />
+        <div class="swing">
+          <Figure value="×{f(clickBefore)}" size="lg" muted />
+          <span class="arrow">→</span>
+          <Figure value="×{f(clickAfter)}" size="xl" />
+        </div>
+        <span class="sum">Half the cohort rate — the press rides wisdom, not a cohort</span>
       </div>
     </div>
   </div>
@@ -196,25 +212,29 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    margin-bottom: auto;
     gap: var(--sp-2);
+  }
+  .gain :global(.value) {
     --badge-size: 18px;
     --badge-gap: 12px;
+  }
+
+  .gain {
+    display: flex;
+    align-items: baseline;
+    gap: var(--sp-2);
+  }
+
+  .unit {
+    font-size: var(--fs-lg);
+    color: var(--ink-500);
   }
 
   .formula {
     font-size: var(--fs-base);
     font-variant-numeric: tabular-nums;
     color: var(--ink-500);
-  }
-
-  .formula strong {
-    font-weight: 600;
-    color: var(--ink-900);
-  }
-
-  .equals {
-    font-size: var(--fs-sm);
-    color: var(--ink-300);
   }
 
   .verb {

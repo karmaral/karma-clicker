@@ -184,9 +184,9 @@ button {
 
 .view-layout {
   display: grid;
-  grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+  grid-template-columns: minmax(0, 4fr) minmax(0, 6.25fr);
   align-items: stretch;
   padding: var(--sp-5) var(--sp-4);
   padding-top: var(--sp-1);
-  gap: var(--sp-5);
+  gap: var(--sp-4);
 }

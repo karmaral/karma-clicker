@@ -9,22 +9,34 @@
 </script>
 
 <div class="rail">
-  {@render children?.()}
+  <div class="track">
+    {@render children?.()}
+  </div>
 </div>
 
 <style>
+  /* The grid item itself: sized by the grid, and by nothing inside it — `.track`
+     is absolute, so `.rail` contributes no intrinsic height of its own. Without
+     that split a long queue would stretch the row (and every screen sharing it)
+     to its own height instead of scrolling inside the one the grid already gave
+     it. */
   .rail {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-4);
-    padding: var(--sp-3) var(--sp-4);
-    border-bottom: var(--rule-card);
+    position: relative;
     min-width: 0;
-    min-height: 75px;
   }
 
-  .rail > :global(* + *) {
-    border-left: var(--rule-row);
-    padding-left: var(--sp-4);
+  .track {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+    padding: calc(var(--sp-1) + var(--sp-4)) var(--sp-4) var(--sp-4);
+    border-left: var(--rule-card);
+  }
+
+  .track > :global(* + *) {
+    border-top: var(--rule-row);
+    padding-top: var(--sp-4);
   }
 </style>

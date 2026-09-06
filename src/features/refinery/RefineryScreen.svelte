@@ -30,7 +30,6 @@
   .engine {
     display: flex;
     flex-direction: column;
-    padding: 0 var(--sp-4);
     border-right: var(--rule-card);
     min-width: 0;
   }

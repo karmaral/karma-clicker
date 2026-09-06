@@ -9,18 +9,16 @@
   import type { YieldType } from '$types';
   import { catalogue, type Upgrade } from './upgrades.svelte';
 
-  const VISIBLE = 5;
-
   /**
    * This screen's, and the global ones. A chip is about the thing under it: the
    * rail's hover lights its target on the screen below, and a chip pointing two
    * tabs away was lighting nothing. What is cut out is not lost — the header's
    * tabs carry the count of what is buyable behind each of them.
+   *
+   * The column is tall rather than wide, so all of it shows — no `VISIBLE` cap,
+   * the queue itself scrolls past the fold.
    */
   const here = $derived(catalogue.onScreen(nav.active));
-
-  const shown = $derived(here.slice(0, VISIBLE));
-  const overflow = $derived(here.length - shown.length);
 
   /** The window is every bucket, so its own count is the one on the way out. */
   const total = $derived(catalogue.available.length);
@@ -33,10 +31,10 @@
 <div class="rail-upgrades">
   <div class="head">
     <Label text="Upgrades" />
-    <span class="caption">{nav.label(nav.active).toLowerCase()} · {overflow} more coming</span>
+    <span class="aside">{nav.label(nav.active).toLowerCase()}</span>
   </div>
   <ChipQueue escape="all {total} →" onescape={catalogue.open}>
-    {#each shown as upgrade (upgrade.target + upgrade.id)}
+    {#each here as upgrade (upgrade.target + upgrade.id)}
       <Chip
         label={getScopeLabel(upgrade.target)}
         icon={iconFor(upgrade)}
@@ -66,35 +64,30 @@
         {/snippet}
       </Chip>
     {/each}
-    {#if overflow > 0}
-      <Chip
-        label="{overflow} more"
-        status="approaching"
-        disabled
-      />
-    {/if}
   </ChipQueue>
 </div>
 
 <style>
   .rail-upgrades {
     display: flex;
-    align-items: center;
-    gap: var(--sp-4);
+    flex-direction: column;
+    gap: var(--sp-3);
     flex: 1;
-    min-width: 0;
+    min-height: 0;
   }
 
   .head {
     display: flex;
-    flex-direction: column;
-    gap: var(--sp-1);
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--sp-3);
     flex: none;
   }
 
-  .caption {
+  .aside {
     font-size: var(--fs-xs);
     color: var(--ink-300);
+    text-align: right;
   }
 
   .item-header {

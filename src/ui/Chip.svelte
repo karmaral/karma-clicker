@@ -31,9 +31,16 @@
 
   let tooltipElem: HTMLElement | undefined = $state();
   const tooltipOptions: Partial<TippyProps> = {
-    placement: 'bottom-start',
+    // Anchored to the chip's top-left, not below it — the rail sits at the
+    // screen's own right edge, so the panel opens into the room the rail
+    // doesn't have. flip disabled outright: there's no width to flip into
+    // on the right, so a fallback there would only run under the rail.
+    placement: 'left-start',
     delay: [450, 0],
+    offset: [0, 12],
     interactive: false,
+    arrow: true,
+    popperOptions: { modifiers: [{ name: 'flip', enabled: false }] },
   };
 
 </script>

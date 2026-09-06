@@ -76,7 +76,6 @@
 </script>
 
 <div class="cohort-tip">
-  <div class="title">{text?.title ?? cohort.id}</div>
   {#if text?.description}
     <div class="description">{text.description}</div>
   {/if}
@@ -163,12 +162,6 @@
     min-width: 220px;
   }
 
-  .title {
-    font-weight: 600;
-    font-size: var(--fs-sm);
-    color: var(--ink-900);
-  }
-
   .description {
     font-size: var(--fs-sm);
     line-height: 1.4;
@@ -222,5 +215,6 @@
     flex-wrap: wrap;
     align-items: flex-end;
     gap: var(--sp-3);
+    margin-top: var(--sp-3);
   }
 </style>

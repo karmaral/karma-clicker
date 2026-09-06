@@ -1,5 +1,6 @@
 import Building from './base.svelte';
 import { harness } from '$lib/harness.svelte';
+import { prestige } from '$lib/prestige.svelte';
 
 /**
  * The hand. One verb with one payoff at a time: while a world is still being
@@ -24,6 +25,9 @@ export default class Click extends Building {
   get yieldScale() {
     if (harness.isPlacing) return 0;
 
-    return 1 + this.#carry * harness.riding;
+    /** Half-strength here — the hand rides wisdom less than a cohort does. */
+    const wisdom = 1 + (prestige.yieldMultiplier - 1) * 0.5;
+
+    return (1 + this.#carry * harness.riding) * wisdom;
   }
 }

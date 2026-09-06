@@ -43,7 +43,7 @@
    * 64px on the count track: wide enough that the foot's total — a sum, so
    * the widest figure in the column — doesn't bleed into the rates beside it.
    */
-  const columns = 'minmax(0, 1fr) 64px .75fr';
+  const columns = 'minmax(0, .75fr) 4ch .75fr';
 
   /** Which row is hovering its purchase button, if any. */
   let previewId: string | undefined = $state();
@@ -99,6 +99,7 @@
   <div class="table" style:--cohort-cols={columns}>
 
     <div class="head">
+
       <span><Label text="Cohort" size="sm" /></span>
 
       <span class="count right"><Label text="Souls" size="sm" /></span>
@@ -151,6 +152,10 @@
     min-width: 0;
   }
 
+  .table :global(.count) {
+    padding-right: var(--sp-2);
+  }
+
   .foot {
     display: grid;
     grid-template-columns: var(--cohort-cols);
@@ -160,7 +165,7 @@
   }
 
   .foot .count {
-    font-size: var(--fs-md);
+    font-size: var(--fs-base);
     font-weight: 600;
     text-align: right;
     color: var(--ink-900);
@@ -191,6 +196,9 @@
 
   .head .right {
     justify-content: flex-end;
+  }
+  .head .count {
+    padding-right: var(--sp-2);
   }
 
   .cost {

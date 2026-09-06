@@ -65,6 +65,8 @@
   const preludePlanet = $derived(PlanetManager.getActive());
   const preludePlanetName = $derived(planetTexts[preludePlanet?.id ?? '']?.title);
 
+  const hasRail = $derived(progression.isRevealed('frame.rail'));
+
   wire();
 
   onMount(() => {
@@ -110,24 +112,26 @@
       </div>
     {/if}
 
-    {#if progression.isRevealed('frame.rail')}
-      <Rail>
-        <UpgradeRail />
-      </Rail>
-    {/if}
+    <div class="body" class:railed={hasRail}>
+      <div class="screens">
+        <Screen active={nav.active === 'details'}>
+          <DetailsScreen />
+        </Screen>
 
-    <div class="screens">
-      <Screen active={nav.active === 'details'}>
-        <DetailsScreen />
-      </Screen>
+        <Screen active={nav.active === 'overview'}>
+          <OverviewScreen />
+        </Screen>
 
-      <Screen active={nav.active === 'overview'}>
-        <OverviewScreen />
-      </Screen>
+        <Screen active={nav.active === 'refinery'}>
+          <RefineryScreen />
+        </Screen>
+      </div>
 
-      <Screen active={nav.active === 'refinery'}>
-        <RefineryScreen />
-      </Screen>
+      {#if hasRail}
+        <Rail>
+          <UpgradeRail />
+        </Rail>
+      {/if}
     </div>
   </Card>
 </main>
@@ -158,9 +162,24 @@
     max-width: 1440px;
   }
 
+  .body {
+    display: grid;
+    align-items: stretch;
+  }
+
+  .body.railed {
+    grid-template-columns: minmax(0, 9fr) minmax(0, 2fr);
+  }
+
   /* The ground the hidden screens are positioned out of flow against. */
   .screens {
     position: relative;
+    min-width: 0;
+  }
+
+  /* The rail reads the screens' height, never sets it — see Rail.svelte. */
+  .body > :global(.rail) {
+    min-width: 0;
   }
 
   .prelude {

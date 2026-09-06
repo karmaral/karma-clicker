@@ -15,7 +15,7 @@
   import TokenRow from './TokenRow.svelte';
   import { resolvePurchasable, resolveQuantity, type TokenPurchaseMode } from './purchase';
 
-  const COLUMNS = 'minmax(0, 1fr) 72px 88px 190px';
+  const COLUMNS = 'minmax(0, 1fr) 72px 190px';
 
   const PURCHASE_MODES: readonly TokenPurchaseMode[] = ['1', '10', '100', 'Max'];
 
@@ -63,7 +63,6 @@
     <div class="head">
       <span><Label text="Grade" size="sm" /></span>
       <span class="right"><Label text="Held" size="sm" /></span>
-      <span class="right"><Label text="Per batch" size="sm" /></span>
 
       <button type="button" class="cost right" onclick={cyclePurchaseMode}>
         <Label text="Cost ×" size="sm" />
@@ -74,7 +73,6 @@
     <TokenRow
       grade="red_negative"
       held={ResourceManager.getAmount('red_negative')}
-      {perBatch}
       passive={perBatch ? { amount: perBatch, kind: 'neg' } : undefined}
       cost={tokens.inversionCost(invertNegQuantity)}
       costKind="red-pos"
@@ -88,7 +86,6 @@
     <TokenRow
       grade="red_positive"
       held={ResourceManager.getAmount('red_positive')}
-      {perBatch}
       passive={perBatch ? { amount: perBatch, kind: 'pos' } : undefined}
       cost={tokens.inversionCost(invertPosQuantity)}
       costKind="red-neg"

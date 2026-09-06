@@ -3,12 +3,15 @@
   import { progression } from '$lib/progression';
   import { f, formatSpan } from '$lib/utils';
   import { pulse } from '$lib/loop';
+  import { getWaveLabel } from '$lib/labels';
   import type { Listener } from '$lib/emission';
   import type Building from '$lib/buildings/base.svelte';
 
   import { harness } from '$lib/harness.svelte';
   import harnessVisuals from '$data/harness-visuals';
+  import planetTexts from '$data/planets-texts';
 
+  import { Section } from '$ui';
   import PlanetStage from '../PlanetStage.svelte';
   import SplitControl from '../refinery/SplitControl.svelte';
   import { STAGE_WIDTH } from '../planet-viewport';
@@ -79,6 +82,13 @@
   });
 
   const planet = $derived(PlanetManager.getActive());
+
+  const planetName = $derived(planet ? planetTexts[planet.id]?.title ?? planet.id : '');
+
+  /** Same reading the header's own tab note gives this screen — see `Frame`. */
+  const waveLabel = $derived(
+    planet ? getWaveLabel(planet.phase, planet.phasesPerAge, planet.isDense) : '',
+  );
 
   /** The centered, borderless prelude layout recedes once the header & rail land. */
   const isFramed = $derived(progression.isRevealed('frame.header'));
@@ -153,10 +163,7 @@
 
 <div class="details view-layout" class:stacked={!isColumns}>
 
-  <div 
-    class={isFramed ? 'planet' : 'viewport'} 
-    style:max-width={isFramed ? undefined : `${STAGE_WIDTH}px`}
-  >
+  {#snippet planetBody()}
     {#if progression.isRevealed('details.disc') && planet}
       <PlanetStage
         id={planet.id}
@@ -179,6 +186,25 @@
 
     {#if progression.isRevealed('details.wave') && planet}
       <WaveStrip {phases} current={planet.phase} position={planet.position} />
+    {/if}
+  {/snippet}
+
+  <div
+    class={isFramed ? 'planet' : 'viewport'}
+    style:max-width={isFramed ? undefined : `${STAGE_WIDTH}px`}
+  >
+    <!-- The header rides in with the frame — the prelude column stays the
+         same borderless, labelless block it always was. -->
+    {#if isFramed}
+      <Section label={planetName || 'Planet'} className="planet-head">
+        {#snippet aside()}
+          <span>{waveLabel}</span>
+        {/snippet}
+
+        {@render planetBody()}
+      </Section>
+    {:else}
+      {@render planetBody()}
     {/if}
   </div>
 
@@ -227,11 +253,11 @@
     margin-inline: auto;
   }
 
+  /* Padding and gap now live on the nested Section, so the framed column
+     itself is just the border and the stretch. */
   .planet {
     display: flex;
     flex-direction: column;
-    gap: var(--sp-5);
-    padding: 0 var(--sp-4);
     border-right: var(--rule-card);
     min-width: 0;
   }

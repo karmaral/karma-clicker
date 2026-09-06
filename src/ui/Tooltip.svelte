@@ -39,6 +39,7 @@
     background: var(--surface);
     border: 1px solid var(--ink-900);
     border-radius: var(--radius);
+    width: var(--tooltip-width, auto);
     max-width: var(--tooltip-max, 320px);
     /* box-shadow: 0 4px 4px rgba(0, 0, 0, 0.15); */
     box-shadow: 0 8px 24px rgba(0,0,0,.10);
@@ -55,6 +56,76 @@
 
   :global(.tippy-content) .tooltip {
     display: block;
+  }
+
+  /* No tippy.css in this project — the box has no chrome of its own, so the
+     arrow has to draw its own border+fill to match `.tooltip`'s. A square
+     rotated 45deg, half hidden behind the box: the content div paints after
+     the arrow in tippy's own DOM order, so it covers the near half and only
+     the outward-facing corner — matching border, matching fill — shows. Only
+     rendered when a consumer opts in with `arrow: true`; otherwise tippy
+     never creates the element. */
+  :global(.tippy-arrow) {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+  }
+
+  :global(.tippy-arrow::before) {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--surface);
+    border: 1px solid var(--ink-900);
+    transform: rotate(45deg);
+  }
+
+  /* Popper's arrow modifier centers on the reference/popper overlap, applied
+     as an inline `transform: translate()` (not `left`) — on a `-start`
+     placement with a wide reference that lands wherever the overlap happens
+     to be, nowhere near the box's own left edge. Cancelling the transform
+     and setting `left` ourselves pins it there instead; both need
+     `!important` because they're fighting that inline style. */
+  :global([data-placement^='bottom'] > .tippy-arrow) {
+    top: -5px;
+    left: var(--sp-3) !important;
+    transform: none !important;
+  }
+
+  /* The hidden half's border would still show through as a stray edge at
+     the seam if the box's own paint doesn't land pixel-perfect on top of
+     it — dropped outright so the visible corner reads as a clean
+     continuation of the box's own top border rather than a shape sitting
+     next to it. */
+  :global([data-placement^='bottom'] > .tippy-arrow::before) {
+    border-right: none;
+    border-bottom: none;
+  }
+
+  :global([data-placement^='top'] > .tippy-arrow) {
+    bottom: -5px;
+    left: var(--sp-3) !important;
+    transform: none !important;
+  }
+
+  :global([data-placement^='top'] > .tippy-arrow::before) {
+    border-left: none;
+    border-top: none;
+  }
+
+  :global([data-placement^='right'] > .tippy-arrow) {
+    left: -5px;
+  }
+
+  :global([data-placement^='left'] > .tippy-arrow) {
+    right: -5px;
+    top: var(--sp-3) !important;
+    transform: none !important;
+  }
+
+  :global([data-placement^='left'] > .tippy-arrow::before) {
+    border-left: none;
+    border-bottom: none;
   }
 
   .title {

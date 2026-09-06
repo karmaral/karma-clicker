@@ -86,17 +86,33 @@
     };
   }
 
+  const ROW_DELAY = 750;
+  const PURCHASE_DELAY = 200;
+
   const tooltipOptions: Partial<TippyProps> = {
-    // Anchored to the trigger's leading edge — its trailing edge the panel
-    // could run past the window on a wide table.
-    placement: 'top-start',
-    delay: [300, 0],
-    offset: [0, 16],
+    // Anchored to the row's leading edge — its trailing edge the panel
+    // could run past the window on a wide table. flipVariations disabled:
+    // otherwise Popper swaps start->end near the right edge, flipping the
+    // anchor to the side we just pinned it away from.
+    placement: 'bottom-start',
+    delay: [ROW_DELAY, 0],
+    offset: [0, 8],
     interactive: false,
+    arrow: true,
+    popperOptions: { modifiers: [{ name: 'flip', options: { flipVariations: false } }] },
     // The reference is a buy button: a click must not dismiss the panel that
     // says what the click just did. Without this the row goes quiet mid-buy and
     // stays quiet until the pointer leaves the cell and comes back.
     hideOnClick: false,
+    // One trigger, two speeds: the buy cell is a decision already underway, so
+    // it opens at the old rate; the rest of the row is a glance, and gets to
+    // ask for a beat longer before the panel commits to it. tippy reads
+    // `delay` right after this hook fires, so setting it here still lands on
+    // the show it is about to schedule — see `scheduleShow` in tippy's source.
+    onTrigger(instance, event) {
+      const overPurchase = (event.target as HTMLElement).closest('.purchase-container');
+      instance.setProps({ delay: [overPurchase ? PURCHASE_DELAY : ROW_DELAY, 0] });
+    },
   };
 </script>
 
@@ -106,8 +122,10 @@
   tabindex={canSend ? 0 : undefined}
   onclick={onRowClick}
   onkeydown={onRowKeydown}
+  {@attach tooltip({ content: tooltipElem, options: tooltipOptions })}
 >
-  <div class="ident" {@attach tooltip({ content: tooltipElem, options: tooltipOptions })}>
+
+  <div class="ident">
 
     <div class="header">
       <span class="name">
@@ -157,7 +175,7 @@
   <!-- The button fills this cell, so hovering the cell is hovering the button.
        Its click opts out of the row's own send — you read the derivation where
        you decide to pay for it, and buying is never also sending. -->
-  <div class="purchase-container" role="group" {@attach tooltip({ content: tooltipElem, options: tooltipOptions })}>
+  <div class="purchase-container" role="group">
     <PurchaseButton
       kind={badgeFor(cohort.data.cost_type!)}
       amount={formatCost(cost)}
@@ -169,7 +187,7 @@
       {quantity}
     />
 
-    <div class="tooltip-wrapper" bind:this={tooltipElem} style:--tooltip-max="380px">
+    <div class="tooltip-wrapper" bind:this={tooltipElem} style:--tooltip-width="380px">
       <Tooltip>
         <CohortTooltip {cohort} {purchaseMode} />
       </Tooltip>
@@ -317,9 +335,10 @@
   }
 
   .count {
-    font-size: var(--fs-md);
+    font-size: var(--fs-sm);
     font-weight: 600;
     text-align: right;
+    padding-right: var(--sp-2);
   }
 
   .duration {
@@ -366,7 +385,11 @@
 
     & .description { display: none; }
 
-    & .count { font-size: var(--fs-base); }
+    & .count { 
+      font-size: var(--fs-sm); 
+      line-height: 1;
+      align-self: end;
+    }
 
     & .duration { font-size: 10.5px; }
 
