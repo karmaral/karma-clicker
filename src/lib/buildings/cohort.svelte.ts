@@ -2,6 +2,7 @@ import Building from './base.svelte';
 import { PlanetManager } from '$lib/managers';
 import { reserve } from '$lib/reserve.svelte';
 import { harness } from '$lib/harness.svelte';
+import { prestige } from '$lib/prestige.svelte';
 
 /**
  * A building whose count is souls: the only thing that can be reserved or
@@ -40,11 +41,15 @@ export default class Cohort extends Building {
    * earning. Zero rather than a stopped emitter, so the roster and the header
    * read the same figure from `perSecond` and what is left running is the worlds
    * behind you.
+   *
+   * Wisdom rides here rather than on `Building` because §18 pays *cohort* yield,
+   * and not as a `Modifier` because a modifier's value is a fixed authored
+   * number taken once — the live count has to be re-read, the way `carry` is.
    */
   get yieldScale() {
     if (!PlanetManager.getActive()) return 0;
 
-    return harness.multiplierFor(this.active);
+    return harness.multiplierFor(this.active) * prestige.yieldMultiplier;
   }
 
   get anchoring() { return this.#anchoring; }

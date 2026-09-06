@@ -1,8 +1,18 @@
 <script lang="ts">
   /**
-   * The clock, and what it clears. The batch line is written as a conversion
-   * even though it is 1:1 today — that arrow is where a karma-to-red ratio would
-   * show, and it is the one balance knob the engine deliberately does not have.
+   * The clock, and what it refines. The headline is the *forecast* rate —
+   * coverage times short-pile income, across both poles — so it moves only on a
+   * real event (an upgrade, a tilt, a cohort) and never with the pile, which is
+   * the one property a headline needs.
+   *
+   * Not coverage: a share answers "is this good" but is not a reward, and the
+   * Coverage panel below owns that reading outright — it was being said twice.
+   *
+   * Karma refined is the headline and Crimson is the line under it, because the
+   * headline is what the *engine* did and the yield is what it paid. The two
+   * figures come apart on `ratio` now — the level's own axis, not coverage's —
+   * so the headline stays a straight karma-cleared reading and Crimson is
+   * where the level's work actually shows.
    *
    * Two bars, and the difference matters: the sweep is this pulse, the meter
    * under it is every pulse so far.
@@ -24,21 +34,14 @@
 
   const nextIn = $derived(Math.max(0, (refinery.nextAt - now) / 1000));
 
-  /** Both piles, so it reads against the arriving rate rather than half of it. */
-  const cleared = $derived(refinery.clearedPerSecond);
+  /** Both poles, forecast — what the refinery takes in per second. */
+  const karma = $derived(refinery.perSecond * 2);
 
-  const intake = $derived(refinery.batch * 2);
+  /** What that pays out — karma cleared times the level's crimson-per-karma. */
+  const crimson = $derived(karma * refinery.ratio);
 
   /** The clock keeps pulsing unstaffed, but a sweep to nowhere is a lie. */
   const isIdle = $derived(refinery.workers <= 0);
-
-  /** Idle, strained, or the live share of a batch the piles can feed. */
-  const supplyLabel = $derived.by(() => {
-    if (isIdle) return 'Unstaffed — nothing to clear.';
-    if (refinery.isStrained) return `Strained — clearing at ${f(Math.round(refinery.capacityPct))}%.`;
-
-    return `Clearing at ${f(Math.round(refinery.capacityPct))}%.`;
-  });
 
   /** A countdown under a quarter second is not a countdown — see `ResourceEmitter`. */
   const clockLabel = $derived.by(() => {
@@ -58,12 +61,20 @@
 
 <Section label="Refining" highlighted={spotlight.isLit('refinery')}>
   {#snippet aside()}
-    <span class="level">level {f(refinery.level)}</span>
+    <span class="level">
+      level {f(refinery.level)} 
+    </span>
+
   {/snippet}
 
   <div class="rate">
-    <Figure value={f(cleared)} size="xxl" />
-    <span class="unit">karma/s<br>cleared</span>
+    {#if isIdle}
+      <Figure value="—" size="xxl" muted />
+      <span class="unit">unstaffed<br>nothing to clear</span>
+    {:else}
+      <Figure value={f(karma)} size="xxl" />
+      <span class="unit">karma/s<br>refined at this coverage</span>
+    {/if}
   </div>
 
   <div class="clock">
@@ -79,13 +90,11 @@
   </div>
 
   <div class="batch">
-    <span class="num">{f(intake)} karma</span>
-    <span class="arrow">→</span>
     <Badge kind="red" />
-    <span class="num">{f(intake)} Crimson</span>
-  </div>
+    <span class="num">{f(crimson)} Crimson/s</span>
 
-  <p class="note">{supplyLabel}</p>
+    <span class="ratio">×{f(refinery.ratio)} efficiency</span>
+  </div>
 </Section>
 
 <style>
@@ -152,15 +161,7 @@
     font-weight: 600;
     color: var(--ink-900);
   }
-
-  .arrow {
-    margin-inline: var(--sp-2);
-    color: var(--ink-300);
-  }
-
-  .note {
-    margin: 0;
-    font-size: var(--fs-sm);
-    color: var(--ink-300);
+  .ratio {
+    margin-left: auto;
   }
 </style>

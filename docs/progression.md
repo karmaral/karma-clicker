@@ -3946,6 +3946,33 @@ considered and set aside as too complex for a first pass.
 Still open, and none of it mechanical: every figure in the bucket and in
 `refinery.svelte.ts` is a placeholder.
 
+**Everything above predates coverage and is now doubly superseded — see
+`docs/design.md` §9 v6, not this section.** Two changes worth the rationale
+living somewhere:
+
+**Why the interval stopped being a lever.** Once capacity read as a share of
+income (`coverage × shortPileIncome`) rather than a fixed batch, `capacity ×
+interval` cancelled the interval clean out of throughput — a duration modifier
+on the refinery would move nothing. `speed_*` upgrades had been authored
+against the old batch model and kept their name into the coverage model
+without anyone re-deriving what they now did; they were multiplying coverage,
+the same channel `efficiency_*` moved, under a name that implied a different
+mechanic. v6 renamed them `reach_*` to match what they had already become.
+
+**Why the level left `reach` for its own axis.** Coverage let upgrades push an
+unbounded product straight past the 1.0 milestone (§9's old "coverage crossing
+1.0 is the payoff") — the shipped ladder overshot to 2.88 against a stated
+target of 1.2, and past 1.0 the backlog drains to nothing and the refinery
+starves on arrivals forever, ending the tension it was supposed to create.
+Capping the product with `maxLevelFactor` only traded one ceiling for another
+that needed hand-tuning against every future upgrade. `coverage = reach / (1 +
+reach)` removes the need for any cap — reach is free to grow forever and
+coverage still can't cross 1.0. That freed the level to stop being a fourth
+name on the same efficiency/speed multiplier and become a real second axis:
+crimson paid per karma drawn, starting below 1 so the refinery is lossy at
+first and ratio crossing 1.0 becomes the new milestone — one that does not end
+anything when passed.
+
 ### The grades are bought above the refinery
 
 `$lib/tokens.svelte.ts` is the layer the refinery feeds, and the one place
@@ -4001,10 +4028,11 @@ the thing you give up. Beside it, greyed and not a control, the **passive
 route**: what the refinery clears each batch without being asked. Two ways to the
 same pile, one of which you are already getting for free.
 
-That greyed figure is exactly where a karma-to-red ratio would show if the
-"obvious next balance knob" above ever lands. At today's 1:1 it equals the red it
-yields, which is why the two numbers on a red row currently read as the same kind
-of thing.
+That greyed figure landed the ratio it was reserved for — `refinery.lastProduced`,
+not `lastPaired`, so the passive route now reads crimson paid rather than karma
+drawn. Below refinery level 28 it reads *smaller* than the karma the batch drew;
+past it, larger. The two numbers on a red row are no longer the same kind of
+thing wearing two names — see `docs/design.md` §9 v6.
 
 `PER BATCH` is the refinery's batch, so only red has one; yellow and blue draw a
 dash. The column was briefly read as an emission on the yellow row — it is not.

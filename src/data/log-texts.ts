@@ -20,6 +20,7 @@ const data = {
     'anchor': 'The first world is behind you. What you left in it still turns.',
     'refining': 'The two piles can be made into something. The reserved souls do the making.',
     'second_harvest': 'Two worlds turn without you, out of phase. There is nowhere you need to be.',
+    'terminus': 'The whole of it can be ended, the way a world can. Only what you understood would cross.',
   } as Record<string, string>,
 
   moments: {
@@ -27,7 +28,17 @@ const data = {
     'first_reserve': 'Some of them will not incarnate again. You decided that.',
     'first_token': 'The first of it comes out solid, holding the side it came in on.',
     'deep_excess': 'The imbalance is no longer small.',
+    'ratio_even': 'The refinery pays back what it takes, and then some.',
   } as Record<string, string>,
+
+  /**
+   * Written by the boot rather than by `wiring`, because it fires exactly once
+   * per module graph and there is no event left over from the run that earned it.
+   */
+  prestige: {
+    legacy: (wisdom: number) =>
+      `It has all turned over again. You arrive holding ${f(wisdom)} wisdom and nothing else.`,
+  },
 
   ambient: {
     incarnation: (n: number) => (n === 1 ? 'A life ended.' : `${f(n)} lives ended.`),

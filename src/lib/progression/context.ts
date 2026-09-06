@@ -1,6 +1,8 @@
 import type { ResourceType } from '$types';
 import { ResourceManager, BuildingManager, UpgradeManager, PlanetManager } from '$lib/managers';
 import { getExcess } from '$lib/excess';
+import { prestige } from '$lib/prestige.svelte';
+import { refinery } from '$lib/refinery.svelte';
 
 export interface TriggerContext {
   total(type: ResourceType): number;
@@ -15,8 +17,12 @@ export interface TriggerContext {
   readonly isActivePlanetHarvestable: boolean;
   /** Souls the split holds back, phase or no phase — see `countHeldBySplit`. */
   readonly reserve: number;
+  /** Crimson per karma. Crosses 1.0 once the refinery stops being lossy — see `milestones.ts`. */
+  readonly refineryRatio: number;
   readonly planetsUnlocked: number;
   readonly planetsFinished: number;
+  /** Whether ending the run would bank a whole wisdom. The subject is the run. */
+  readonly leavesLegacy: boolean;
 }
 
 export function createTriggerContext(): TriggerContext {
@@ -45,5 +51,9 @@ export function createTriggerContext(): TriggerContext {
     },
 
     get reserve() { return BuildingManager.countHeldBySplit(); },
+
+    get refineryRatio() { return refinery.ratio; },
+
+    get leavesLegacy() { return prestige.isOpen; },
   };
 }

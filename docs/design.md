@@ -1,11 +1,35 @@
 # Karma Clicker — Design
 
-**This file supersedes CONTEXT v3.** It states what the game *is*: mechanics,
-economy, progression, and the authored numbers behind them. It contains no
-implementation — no components, no architecture, no rendering. Where a filename
-appears it is because that file is the **authoring surface for a design knob**
-(`balance.ts`, `planets.ts`, `buildings.ts`, `upgrades.ts`), never because it is
-where code lives.
+**v6** · 2026-09-05 · supersedes CONTEXT v3
+
+> **v6** — coverage saturates and the level moves off it: §9 rewritten. Upgrades
+>  push an uncapped `reach`; `coverage = reach / (1 + reach)` approaches 1.0 and
+>  never crosses it, so no ladder total can overshoot the milestone the way the
+>  v5 model did. The level no longer scales `reach` — it earns a separate,
+>  uncapped crimson-per-karma ratio that starts below 1, so the coverage-1.0
+>  beat this version retires is replaced by ratio crossing 1.0. Wisdom (§18) now
+>  reads crimson produced, not karma moved, so the level's climb compounds into
+>  the outer wheel. §8's excess consequences are unaffected — pairing, the
+>  unpaired remainder, and the hard-detent cliff (§6) are all untouched.
+> **v5** — the refinery draws by coverage, a share of income, not a share of the
+>  pile: §9 rewritten. Dwell/residence read as a stock and jittered; coverage
+>  reads as a percentage and does not. §10's stall-escape note carries over
+>  unchanged — coverage still leaves nothing to stall.
+> **v4** — the refinery drew by dwell time, not by batch: §9 rewritten, and §10
+>  lost its stall-escape job — an empty pile thinned smoothly instead of
+>  stopping the machine. Superseded by v5 above.
+> **v3** — replaced the economy's shape: §5 (cohorts), §6 (aim), §13 (worlds) and
+>  §18 (the larger wheel) are new; §3, §10, §16 and §20 changed to follow them. The
+>  move was from **authored figures per thing** to **one formula and an index**, on
+>  the Cookie Clicker / AdventureCapitalist model: every cohort, every level and
+>  every world is now generated, and the game can be extended by incrementing a
+>  number rather than by inventing a row.
+
+It states what the game *is*: mechanics, economy, progression, and the authored
+numbers behind them. It contains no implementation — no components, no
+architecture, no rendering. Where a filename appears it is because that file is
+the **authoring surface for a design knob** (`balance.ts`, `planets.ts`,
+`buildings.ts`, `upgrades.ts`), never because it is where code lives.
 
 Two companion documents remain, and neither owns design any more:
 
@@ -17,14 +41,6 @@ Two companion documents remain, and neither owns design any more:
 Every figure below is checked against source data as of this writing. Figures
 that are placeholders are marked; §19 is the full index of what is untuned and
 unplayed.
-
-**This revision replaced the economy's shape.** §5 (cohorts), §6 (aim), §13
-(worlds) and §18 (the larger wheel) are new; §3, §10, §16 and §20 changed to
-follow them. The move was from **authored figures per thing** to **one formula and
-an index**, on the Cookie Clicker / AdventureCapitalist model: every cohort, every
-level and every world is now generated, and the game can be extended by
-incrementing a number rather than by inventing a row. Nothing that is generated
-has been played.
 
 ---
 
@@ -696,9 +712,10 @@ excess = (P − N) / (P + N)
 Signed: **negative is Burden**, **positive is Comfort**. No denominator to
 author, no window, no seconds figure. It is a proportion of the piles themselves.
 
-**Bounded ±1, and ±1 means something specific: a pile is at zero, which is the
-same event as the refinery stalling.** The meter's end and the machine stopping
-are one thing, so full scale is not "very bad" — it is a named state.
+**Bounded ±1, and ±1 means a pile is at zero.** Under the coverage model (§9)
+that is no longer the same event as the refinery stalling — coverage never
+reaches 1.0, so there is nothing left here that stalls — but it is still the
+meter's honest end: one pile fully spent, the other holding everything.
 
 It reads `undefined` until **both piles have ever existed**. Before the choice
 that creates negative karma there is one pole and no imbalance to read.
@@ -778,85 +795,176 @@ than neutral: once the shorter pile emptied, the surviving lane ground the
 surplus away on its own. **The refinery was quietly cleaning up after the
 player**, which is the whole reason excess never read as dangerous.
 
-**An empty pile stalls the machine outright, and the stall compounds** — a
-stalled refinery moves no karma, so it earns no levels either. That is deliberate.
-Inversion (§10) is the paid way out.
+**Capacity is a saturating share of what you produce, not a share of what you
+are holding.** A fixed batch is a fixed figure against an economy with no
+ceiling: it is correct for a few minutes of one run and then either drains
+both piles on arrival or moves a rounding error of production once income has
+grown past it. A residence-time draw — proportional to the *pile* — fixed that
+but read as a stock, so the number jittered whenever the backlog moved and
+never visibly answered "is this upgrade working." A first pass at coverage
+fixed the jitter but let upgrades multiply an unbounded product straight past
+1.0 — coverage above 1.0 asks for karma that does not exist, which nothing can
+spend, so the rungs above the milestone bought nothing. Coverage is now a
+*saturating view* over that product instead:
 
-### Three axes, and no fourth
+```
+reach     = coveragePerWorker × workers × efficiency   per lane, unitless, uncapped
+coverage  = reach / (1 + reach)                        approaches 1.0, never reaches it
+capacity  = coverage × shortPileIncome                 per lane, karma/s
+batch     = capacity × interval
+```
+
+`shortPileIncome` is cohort karma with the wave's phase bias excluded — the bias
+is 1.5 and 0.5 over equal halves of a cycle, so it averages to exactly 1.0, and
+excluding it *is* the cycle mean, not an approximation. That is what keeps
+coverage from jittering: nothing about it depends on the size of a pile.
+
+**The backlog always grows, by construction, and that is deliberate.**
+Coverage never reaches 1.0, so capacity is permanently pinned under
+production — there is nothing here that stalls, and no worker count or
+upgrade total can ever push the refinery past what exists to clear. There is
+no coverage milestone any more; the payoff for running the refinery lives in
+the level's conversion ratio instead (below).
+
+### Two bought axes, and the level moves a third that upgrades cannot touch
 
 | Axis | Moves | How |
 |---|---|---|
-| **staffing** | reserved souls working it | `min(reserve, slots)`, linear on the batch |
-| **efficiency** | the X — karma per batch | yield multiplier |
-| **speed** | the Y — seconds per batch | duration multiplier |
+| **staffing** | reserved souls working it | `min(reserve, slots)`, linear |
+| **efficiency** | what one worker is worth | multiplies `reach` |
+| **reach** | the same channel as efficiency, renamed for the fiction | multiplies `reach` |
 
-**Staffing appears in X and never in Y.** In both, throughput would go quadratic
-in souls and the other two axes would be decorative. Slots pay off exactly when
-there are souls to fill them, which couples the split to the upgrades instead of
-stacking with them.
+**None of these buy rate directly — they buy `reach`, and `coverage` reads it
+back as a saturating share.** `capacity × interval` cancels the interval clean
+out of throughput, so a duration modifier here would do nothing; `reach_*`
+upgrades multiply `reach`, on the same channel `efficiency_*` does. `interval`
+is fixed as pulse granularity, nothing more — free to move for feel, since the
+saturating pile can never run thin the way a fixed batch could.
 
-That leaves efficiency and staffing both scaling X, kept apart only because they
-are *paid* differently: staffing costs incarnations every second it is held,
-efficiency is bought once. **Batch and interval stay genuinely distinct for a
-separate reason:** at equal throughput, big slow batches leave karma sitting
-unrefined longer, and unrefined karma is exactly what excess measures.
+### The level
 
-### The level is not a fourth axis
+Both axes above only move when something is bought, so `reach` — and the
+coverage read off it — would flatline once the upgrade table runs out. **The
+level is growth the refinery earns by running, but it no longer feeds
+`reach`.** Coverage would have no ceiling to approach if the level pushed it
+too, and prior drafts of this section paid the level onto the same product
+efficiency and speed did — a fourth name on one multiplier, not a fourth axis.
+The level now owns a genuinely separate quantity: crimson paid per karma
+drawn.
 
-All three axes above only move when something is bought, so throughput is a step
-function of the upgrade table and flatlines when that table runs out. **The level
-is growth the refinery earns by running.** It scales the *base* of an existing
-axis — `batchPerWorker × (1 + yieldPerLevel)^(level − 1)` — before any bought
-modifier applies.
+```
+ratio = ratioBase + (level − 1) / levelHalving
+```
 
-**It scales the batch and never the interval**, for the same reason the staffing
-knob is closed.
+**Deliberately below 1 at level 1.** The refinery starts lossy — four karma in
+for one crimson out at the authored figures below — and levelling is what
+closes the gap. Crossing `ratio` 1.0 is a real milestone the log calls out:
+the refinery stops wasting what passes through it. Uncapped past that, so it
+keeps climbing after the upgrade table runs dry, but `expGrowth` makes every
+level 35% steeper than the last, so it self-limits in wall-clock without an
+authored ceiling.
 
-**Its experience is karma actually moved**, summed from what the piles gave up,
-not a flat tick per pulse. **That same running total is what prestige reads** —
-wisdom is `√(karma moved across the run)` (§18) — so the refinery's own level
-counter is the game's measure of what a run was worth, and nothing new needs
-measuring for the outer wheel. That is what makes it scale late: the refinery levels
-at the rate the world feeds it, a starved pile halves the rate, and an unstaffed
-one earns nothing while its clock keeps pulsing.
+Pairing and polarity still survive the step exactly as before — the draw is
+still symmetric across both lanes, still capped by the shorter pile, and the
+unpaired remainder still never enters. What changes is only the size of the
+matched pair that comes out the other side.
 
-The compounding is real but self-damping — the batch grows
-`(1 + yieldPerLevel)^(L−1)` while the rung grows `expGrowth^(L−1)`. **`expGrowth`
-must stay above `1 + yieldPerLevel`** or the ladder outruns its own thresholds.
+**Its experience is karma actually moved**, summed from what the piles gave
+up, not a flat tick per pulse — and only the karma side, never the crimson
+`ratio` pays out, or the level would be raising its own input. **A separate,
+never-decremented total of *crimson produced* is what prestige reads** —
+wisdom is `√(crimson produced across the run / W)` (§18), so a level's climbing
+ratio compounds into the outer wheel the same run that earned it. That is what
+makes it scale late: the refinery levels at the rate the world feeds it, a
+starved pile halves the rate, and an unstaffed one earns nothing while its
+clock keeps pulsing.
+
+### What throughput actually is
+
+> **Karma moved per second is `coverage × shortPileIncome`, and crimson paid
+> per second is that times `ratio` — two different figures, legible on their
+> own screens, at every scale the economy reaches.**
+
+Run one pole hard and the short pile is a trickle, so the refinery moves a
+trickle and the run banks little wisdom despite enormous karma production —
+refining is the work that produces understanding, and a one-sided life produces
+plenty of karma and little of it.
 
 ### Authored figures — all placeholders
 
 | Knob | Value |
 |---|---|
-| `batchPerWorker` | 250 karma from each pile |
-| `interval` | 4,000 ms |
+| `slots` base | 4 |
+| `coveragePerWorker` | 0.00125 |
+| `interval` | 2,000 ms |
 | `expBase` | 5,000 karma to reach level 2 |
 | `expGrowth` | 1.35 |
-| `yieldPerLevel` | 0.08 |
+| `ratioBase` | 0.25 — four karma to make one crimson at level 1 |
+| `levelHalving` | 36 — crosses ratio 1.0 at level 28 |
 
-Conversion is **1:1** — efficiency scales the karma *consumed*, and no separate
-karma-to-red ratio exists. That ratio is the obvious next balance knob if the
-refinery turns out to pay too well, and it is deliberately not there yet.
+`slots` used to open at 0 and reach 4 through a free `slots_0` grant. Baked in
+as a base instead: the refinery must be able to pair from the moment it is
+revealed, not sit inert until an unrelated karma total crosses a threshold
+nobody is told about. `slots_1` below now adds to this base rather than to zero.
+
+At 16 workers and ×64 efficiency (the full ladder, uniform ×2 rungs) that
+gives `reach` 1.28 → **56.1%** coverage, and the ladder's coverage steps grow
+monotonically rung to rung. Coverage plateaus there — it is a stable
+characterization, not a growth axis — while `ratio` keeps climbing past 1.0
+for as long as the refinery keeps running.
+
+Conversion is no longer 1:1. `ratio` is now authored and earned rather than
+fixed — the knob this section once reserved as "the obvious next balance
+knob" is spent.
 
 ### Upgrades
 
 | Upgrade | Effect | Unlocks at | Costs |
 |---|---|---|---|
-| `slots_1` | +4 slots | 5,000 karma− | 25,000 karma+ |
-| `efficiency_1` | ×1.5 batch | 500 Crimson+ | 1,000,000 xp |
-| `speed_1` | ×0.75 interval | 2,000 Crimson+ | 1,500 Crimson+ |
-| `slots_2` | +12 slots (16 total) | 8,000 Crimson+ | 6,000 Crimson+ |
-| `efficiency_2` | ×2 batch | 500 Ochre | 1,500 Ochre |
-| `speed_2` | ×0.5 interval | 1,000 Ochre | 5,000 Ochre |
+| `efficiency_1` | reach ×2 | 2,000 Crimson+ | 1,000,000 xp |
+| `reach_1` | reach ×2 | 8,000 Crimson+ | 6,000 Crimson+ |
+| `slots_1` | +12 slots (16 total) | 16,000 Crimson+ | 12,000 Crimson+ |
+| `efficiency_2` | reach ×2 | 500 Ochre | 1,500 Ochre |
+| `reach_2` | reach ×2 | 1,000 Ochre | 5,000 Ochre |
+| `reach_3` | reach ×2 | 50,000 Ochre | 150,000 Ochre |
+| `reach_4` | reach ×2 | 1 Indigo | 50 Indigo |
 
-Each is **priced in what buying it should make you feel**: slots in karma,
-efficiency in lifetimes, speed in what the refinery itself makes.
+Every rung is now ×2, uniformly — the ×1.5 rungs made the earliest steps
+mushy for no benefit once coverage reads as a saturating percentage. Each is
+**priced in what buying it should make you feel**: slots in karma, efficiency
+and reach in what the refinery itself makes. The crimson-denominated gates sit
+further out than they would at 1:1 conversion, because the refinery is lossy
+early — an early gate in crimson is scarcer than the same figure was before
+`ratio` existed.
+
+`slots_2` is not yet authored. Slots enter `reach` linearly and saturation
+makes any worker count safe, but souls cap well below the 40 this section once
+assumed (`countRefining()` is bounded by what a run's souls actually reach) —
+a slot rung past the reachable soul supply is a dead rung, the same disease in
+a different channel. Author it once the real ceiling is known.
 
 ### Parked
 
 Soul *types* feeding the refinery differently, and any partial-staffing curve
-where empty slots slow the batch rather than shrink it. Both considered and set
-aside as too complex for a first pass.
+where empty slots slow coverage rather than shrink it. Both considered and set
+aside as too complex for a first pass. A blunter, step-function alternative to
+coverage — pegging the batch to the cohort ladder's own ×5-per-index growth — is
+kept as a fallback if coverage still reads as too indirect once played.
+
+A **bought** third axis is reserved but not spent: the saturation constant
+itself (`coverage = reach / (c + reach)`, `c` bought down from 1 — the same
+reach going further rather than more of it) is the leading candidate. A bought
+conversion-ratio upgrade is explicitly rejected for now — the level already
+owns that quantity, and a second source on it would recreate the very
+one-multiplier-two-names problem this rewrite just resolved.
+
+Letting the refinery reach the unpaired remainder — rather than only the
+matched pairs — was considered as a replacement for the retired coverage
+milestone and rejected for this pass: it contradicts "the imbalance never
+enters" above, it would make excess *fall* rather than rise when the refinery
+runs (see §8's "staffing the refinery does not clean you"), and it would blunt
+the hard-detent cliff `shortPileFloor` exists to keep survivable (§6). Worth
+its own design pass, not a rider on this one.
 
 ---
 
@@ -899,14 +1007,23 @@ polarity, because the wave, the aim and the whole excess reading assume you are
 living with the polarity you earned. **Each inversion is a confession and makes
 the next dearer for the rest of the run.**
 
+**Inversion no longer buys an escape from a stalled refinery** (§9) — coverage
+saturates below 1.0 and pins capacity under production forever, so the pile
+only ever grows and there is no stall left to be paid out of. What inversion still buys
+is the opposite Crimson directly, at a climbing price, which stands on its own:
+a run committed to one polarity can still want a little of the other grade
+without re-aiming the whole fleet. Whether that alone is enough of a reason for
+the price to keep climbing is open.
+
 The verb is **`invert`** and the noun is **`inversion`**. Not *reverse* —
 reversing implies undoing a step, and this undoes nothing: it buys the opposite
 side at a loss, which is a different admission.
 
 ### Open
 
-- **Wisdom has left this section.** It is no longer bought with experience at all;
-  it is the prestige residue (§18) and it is earned, not priced.
+- **Wisdom has left this section**, and this is no longer a promise: the token row
+  and its price are deleted, and wisdom is the prestige residue (§18), earned by
+  ending a run and never bought.
 - **Indigo's buyer is the deep end of the knowledge market** (§18) and that market
   is unauthored.
 - **The flat grade prices are the discrete version of an idea §18 argues should be
@@ -1013,8 +1130,13 @@ lever wants.
 |---|---|---|
 | `perWorker` | 0.2 job-ms per real ms | placeholder |
 | `clickMs` | 250 job-ms per press | placeholder |
-| `slots` base | 0 | bought |
-| `riders` base | 0 | bought — this is `riders_1`'s whole content |
+| `slots` base | 6 | the harness must be workable the moment it is revealed |
+| `riders` base | 200 | the finished harness must pay the moment it is revealed |
+
+Both bases used to be free grants (`slots_0`, `riders_0`) gated on an unrelated
+karma total, so a harness could sit revealed and inert until that total
+happened to be crossed. Baked in as bases instead — `slots_1`/`riders_1` below
+now add to them rather than to zero.
 
 | World | Anchors | Each | Total job | Bonus per anchor |
 |---|---|---|---|---|
@@ -1650,17 +1772,18 @@ literally rather than bolting a meta-layer above it.
 ### Wisdom is the residue, and it is the only thing prestige makes
 
 ```
-wisdom gained = √(karma moved across the whole run / W)
+wisdom gained = √(crimson produced across the whole run / W)
 ```
 
-**`karma moved` is a quantity the game already computes.** It is the refinery's
-own level experience (§9) — karma actually taken off the piles, summed from what
-they gave up. Nothing new needs measuring.
+**`crimson produced` is a quantity the refinery already computes** — a
+lifetime, never-decremented total, alongside but distinct from the karma moved
+that levels it (§9 v6). Reading crimson rather than karma is what lets the
+level's earned conversion ratio compound into the outer wheel: two runs that
+move identical karma but level to different ratios leave different wisdom.
 
-**And it has now been measured once.** A run reaching refinery level 29 moved
-`5,000 × (1.35^28 − 1) / 0.35` ≈ **64,000,000** karma. So `W` has a figure to be
-authored against for the first time: `W = 10^6` pays about **8 wisdom for a run**,
-which is a sane opening; `W = 1` pays 8,000, which is absurd.
+**`W = 10⁸` is what shipped**, as `balance.prestige.firstWisdomAt` — figured
+against karma moved before the v6 split. It is now denominated in crimson and
+wants recalibrating once a run has been played to redenominate against.
 
 **The square root is what makes this fractal rather than merely repeatable.**
 Doubling a run's output gives about 1.41× the wisdom, so each turn of the larger
@@ -1780,6 +1903,16 @@ an income curve to price against and §5's is generated but unplayed.
 than the first run faster.** It is §15's mechanism at the outer index and it needs
 no new machinery.
 
+**What ships today is the first row alone.** Wisdom survives; everything else in
+the left column is ambition. No knowledge, no shelves, no commerce — those make
+the fifth run interesting, not the second.
+
+**Prestige is chosen, not forced**, and this is settled. The crawl into the outer
+worlds is structural — income grows about `t^2.3` and only the outer wheel ends it
+— so waiting for the system to finish itself would be waiting for a wall rather
+than arriving at a decision. The verb sits on the Overview's axis from the moment
+the run would bank a whole wisdom, which is long before every world is reached.
+
 ### Framing
 
 **Not another galaxy.** A bigger box is not a higher index, and the game's whole
@@ -1801,10 +1934,9 @@ authored well enough to run that test against — see §1.
   shelf.** Both are permanent, both are bought. The distinction held here is that
   **wisdom buys what exists and knowledge buys facts about your run** — scale
   against texture. It is a real distinction and it is not yet a comfortable one.
-- **`W` and `P`, and the +2% per wisdom.** All three unauthored.
+- **`P`.** `W` and the +2% per wisdom are now authored in `balance.ts` as
+  `prestige.firstWisdomAt` and `prestige.yieldPerWisdom`; `P` is what is left.
 - **What the in-run knowledge shelf actually sells**, which is unwritten.
-- **Whether prestige is chosen or forced.** A run ends when the system is
-  finished; whether you may end one early is undecided.
 - **Whether commerce is a system or a framing.** It may be enough that the rates
   worsen, without a market screen ever existing.
 ## 19. Open design questions
@@ -1818,7 +1950,6 @@ authored well enough to run that test against — see §1.
 | **Whether the Burden/Comfort sink asymmetry is right** | §3, §8 — five upgrades now price in `karma_negative`; whether that is the *shape* of the answer or just the stopgap before commerce is still open |
 | **Whether commerce is a system or a framing** | §18 — the rates worsening may be enough without a market screen |
 | **Wisdom's structure shelf vs knowledge's permanent shelf** | §18 — both permanent, both bought; the distinction is real and uncomfortable |
-| **Whether prestige is chosen or forced** | §18 — may you end a run early |
 | **A karma-to-red ratio** | §9 — the refinery ran 4.6× ahead of the economy at level 29, so this is now needed rather than merely absent. Held until worlds 4–5 are played |
 | **The click** | §4 — 700/click against 150k/s is 0.5% of income. `carry` is linear and capped against income compounding ×5 per index; it needs a different shape (a share of *income*) or an explicit decision to let the hand go vestigial |
 | **Continuous vs square-wave phase bias** | §6 — now also the thing that keeps the two ends of the cohort ladder distinct |
@@ -1880,15 +2011,21 @@ the slot counts together** — no one of them is meaningful alone.
 
 ### Placeholder figures — nobody has tuned these
 
-- **Every refinery figure** — batch, interval, both experience-ladder terms,
-  per-level yield, and all six upgrades.
+- **Every refinery figure** — `coveragePerWorker`, interval, both
+  experience-ladder terms, `ratioBase`, `levelHalving`, and all eight upgrades.
+  The saturation and ratio-split shapes (v6) are new and entirely unplayed;
+  whether coverage plateauing at ~56% and ratio crossing even at level 28 read
+  right is a sim question, not a desk one.
 - **All four token prices** — Ochre, Indigo, inversion base and growth. Not tuned
   against the refinery's placeholders either.
 - **`priceFactor`**, now a single number and the pacing knob on every level in
   the game.
 - **The clerk multiplier**, 250× a cohort's base cost, lifted from AdCap and never
   checked against this economy.
-- **`W`, `P`, and the +2% per wisdom** — every figure in §18.
+- **`W` and the +2% per wisdom** — `firstWisdomAt` was fitted against karma moved
+  at one coverage and has not been re-measured now that it reads crimson
+  produced through the v6 ratio split. `P` is still unwritten because nothing
+  spends wisdom yet.
 - **Every beat floor in §16**, all nine fitted to an economy that no longer
   exists. **Re-fit them after this pass is measured, not during it** — they were
   fitted to the pre-ladder economy and are all wrong in the same direction.
@@ -1925,9 +2062,10 @@ the slot counts together** — no one of them is meaningful alone.
   too many before the first clerk.
 - **Whether a life spanning several phases reads as steadiness or as mush**, which
   is the whole of §6's replacement for the cut aim figures.
-- **Everything in §18.** No run has ever ended. **Prestige is deliberately not
-  built yet** — it needs a finishable, measured run first, and this rebalance is
-  what produces one. Beat 14 stays unwritten and must never be given a floor.
+- **§18's first row.** No run has ever ended. The minimum shipped — beat 14, the
+  root, the +2%, the reset — but the figure it pays on is calibrated and not
+  played, and the rest of §18 (knowledge, commerce, the structure shelf) is still
+  argument only. Beat 14 has no floor and must never be given one.
 - **Whether a 4 / 8 / 16 / 32 / 64-minute system is too short**, which is the
   opposite risk to the one §13 fixed and the only way to find out is to sit in one.
 

@@ -11,6 +11,7 @@
   import { Badge, Cell, ExcessMeter, Figure, HeaderBand, Label, Pip, PolarityBars, Value } from '$ui';
   import { BuildingManager, PlanetManager, ResourceManager } from '$lib/managers';
   import { getExcess } from '$lib/excess';
+  import { getKarmaIncomeByPolarity } from '$lib/income';
   import { progression } from '$lib/progression';
   import { nav } from '$lib/nav.svelte';
   import { refinery } from '$lib/refinery.svelte';
@@ -79,12 +80,12 @@
   }
 
   const showRates = $derived(progression.isRevealed('details.status'));
-  const karmaRates = $derived(BuildingManager.countKarmaPerSecondByPolarity());
+  const karmaRates = $derived(getKarmaIncomeByPolarity());
   const experienceRate = $derived(
     f(BuildingManager.countExperiencePerSecond() + harvestRateFor('experience')),
   );
-  const posKarmaRate = $derived(f(karmaRates.positive + harvestRateFor('karma_positive')));
-  const negKarmaRate = $derived(f(karmaRates.negative + harvestRateFor('karma_negative')));
+  const posKarmaRate = $derived(f(karmaRates.positive));
+  const negKarmaRate = $derived(f(karmaRates.negative));
 
   const reading = $derived(getExcess());
 
@@ -171,7 +172,7 @@
         labelNote={getSectionNote(screen)}
         labelTone={getSectionTone(screen)}
         caption={screen === 'refinery' && isRefineryTab
-          ? `refining ${f(refinery.clearedPerSecond)}/s · ${refinery.isStrained ? 'strained' : `working at ${f(Math.round(refinery.capacityPct))}%`}`
+          ? `refining ${f(refinery.clearedPerSecond)}/s · ${refinery.workers > 0 ? `${f(refinery.coverage * 100)}% coverage` : 'unstaffed'}`
           : undefined}
         banded
       >

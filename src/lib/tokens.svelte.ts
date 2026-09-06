@@ -21,8 +21,6 @@ const YELLOW_PRICE = 1500;
 /** Yellow per blue. Placeholder figure. */
 const BLUE_PRICE = 3000;
 
-const WISDOM_PRICE = 1_000_000;
-
 /**
  * Opposite red for the first single unit inverted. Flat prices above; this one
  * scales, because it is the only purchase that must never become the cheap way
@@ -51,7 +49,6 @@ class Tokens {
   #posRed = $derived(ResourceManager.getAmount('red_positive'));
   #negRed = $derived(ResourceManager.getAmount('red_negative'));
   #yellow = $derived(ResourceManager.getAmount('yellow'));
-  #experience = $derived(ResourceManager.getAmount('experience'));
 
   /**
    * Cumulative over the counter, the same shape `Building.#cumulativePrice`
@@ -92,15 +89,6 @@ class Tokens {
 
     return true;
   }
-  
-  purchaseWisdom(n = 1) {
-    const price = n * WISDOM_PRICE;
-    if (n < 1) return;
-    if (this.#experience < price) return;
-
-    ResourceManager.remove('experience', price);
-    ResourceManager.add('wisdom', n);
-  }
 
   /** Named for where it lands, because the row it sits on is the destination. */
   invert(to: Polarity, n = 1) {
@@ -131,10 +119,6 @@ class Tokens {
     return this.#yellow >= n * BLUE_PRICE;
   }
 
-  canPurchaseWisdom(n = 1) {
-    return this.#experience >= n * WISDOM_PRICE;
-  }
-
   /** The ladder teaches itself: the grade opens once the one below it exists. */
   get isBlueUnlocked() {
     return this.#yellow > 0;
@@ -142,7 +126,6 @@ class Tokens {
 
   get yellowPrice() { return YELLOW_PRICE; }
   get bluePrice() { return BLUE_PRICE; }
-  get wisdomPrice() { return WISDOM_PRICE; }
 
   /** The inversion price's only input. */
   get inversions() { return this.#inversions; }
@@ -168,10 +151,6 @@ class Tokens {
 
   getMaxBlue() {
     return Math.floor(this.#yellow / BLUE_PRICE);
-  }
-
-  getMaxWisdom() {
-    return Math.floor(this.#experience / WISDOM_PRICE);
   }
 }
 

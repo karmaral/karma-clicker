@@ -77,11 +77,12 @@ const PLANET_FIELDS: FieldSpec[] = [
 
 const GLOBAL_FIELDS: FieldSpec[] = [
   { field: 'excess.evenBand', label: 'even band', range: fixed(0, 0.5, 0.005) },
-  { field: 'refinery.batchPerWorker', label: 'batch / worker', range: scaled(20) },
+  { field: 'refinery.coveragePerWorker', label: 'coverage / worker', range: fixed(0, 0.01, 0.00005) },
   { field: 'refinery.interval', label: 'interval ms', range: fixed(100, 30_000, 100) },
   { field: 'refinery.expBase', label: 'exp to lvl 2', range: scaled(20) },
   { field: 'refinery.expGrowth', label: 'exp growth', range: fixed(1, 3, 0.01) },
-  { field: 'refinery.yieldPerLevel', label: 'batch / level', range: fixed(0, 0.5, 0.005) },
+  { field: 'refinery.ratioBase', label: 'ratio base', range: fixed(0, 4, 0.05) },
+  { field: 'refinery.levelHalving', label: 'level halving', range: fixed(1, 200, 1) },
   { field: 'aim.extremityMultiplier', label: 'extremity pay', range: fixed(1, 10, 0.1) },
   { field: 'aim.reaimPenalty', label: 're-aim cost', range: fixed(0, 1, 0.01) },
   { field: 'aim.reaimPhases', label: 're-aim phases', range: fixed(0, 10, 1) },

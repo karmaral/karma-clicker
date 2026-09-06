@@ -31,6 +31,7 @@
     font-weight: 700;
     color: var(--ink-300);
     line-height: 1;
+    user-select: none;
   }
 
   .label.active { color: var(--ink-900); }

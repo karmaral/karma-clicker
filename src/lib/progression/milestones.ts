@@ -35,4 +35,10 @@ export const milestones: Milestone[] = [
     id: 'deep_excess',
     when: (ctx) => ctx.excess !== undefined && Math.abs(ctx.excess) >= 0.6,
   },
+
+  // The refinery starts lossy — see `refinery.svelte.ts`. This is where it stops.
+  {
+    id: 'ratio_even',
+    when: (ctx) => ctx.refineryRatio >= 1,
+  },
 ];

@@ -5,6 +5,10 @@ export type { SaveState, SaveSummary };
 export type { SaveEntry } from './storage';
 export { list, remove, exists } from './storage';
 
+/** `setLegacy` stays off the barrel — `prestige` is its only writer and takes the leaf. */
+export type { Legacy } from './legacy';
+export { takeLegacy } from './legacy';
+
 /** Captures the run under a name, overwriting one already there. */
 export function save(name: string) {
   return storage.write(name, capture());

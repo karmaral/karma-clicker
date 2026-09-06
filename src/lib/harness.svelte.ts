@@ -20,10 +20,10 @@ class Harness {
   #isRunning = $state(false);
   #lastAt: number | undefined;
 
-  /** Bought, like the refinery's. Reserved souls fill them; the rest sit idle. */
+  /** A base plus whatever is bought, like the refinery's. Reserved souls fill them; the rest sit idle. */
   #slots = $derived(this.#modifiers.apply(balance.harness.slots, 'slots'));
 
-  /** What the finished harness carries. Only carried souls get the anchor bonus. */
+  /** What the finished harness carries, a base plus whatever is bought. Only carried souls get the anchor bonus. */
   #riders = $derived(this.#modifiers.apply(balance.harness.riders, 'riders'));
 
   /** Rungs down the split ladder, not a fraction — see `ModifierStat`. */

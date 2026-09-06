@@ -1,10 +1,12 @@
 import { progression } from '$lib/progression';
 import { harness } from '$lib/harness.svelte';
+import { refinery } from '$lib/refinery.svelte';
 import { PlanetManager, UpgradeManager } from '$lib/managers';
 
 /**
  * Somewhere for progression to be evaluated. Buildings still schedule their own
- * output; this only polls the beat triggers, which are cheap predicates.
+ * output; this mostly polls the beat triggers, which are cheap predicates —
+ * plus one sample of the refinery's lifetime counter, for its trailing rate.
  */
 
 const TICK_MS = 250;
@@ -32,6 +34,8 @@ export function pulse() {
   // Reads `clock` deltas rather than the interval, so a direct call after a
   // discrete event costs nothing and a simulated run fast-forwards it.
   harness.tick();
+  // Self-throttled, so a direct `pulse()` elsewhere costs nothing extra.
+  refinery.sample();
   // Before the triggers, so a beat gated on what it unlocked sees it this tick.
   UpgradeManager.acquireUnpriced();
   // And after it, so a cohort unlocked on this very tick still catches the

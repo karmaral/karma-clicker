@@ -9,7 +9,9 @@
   import planetTexts from '$data/planets-texts';
   import { progression, validate } from '$lib/progression';
   import { nav } from '$lib/nav.svelte';
-  import { loadPending } from '$lib/save';
+  import { log } from '$lib/log.svelte';
+  import logTexts from '$data/log-texts';
+  import { loadPending, takeLegacy } from '$lib/save';
   import { wire } from '$lib/wiring.svelte';
   import { f } from '$lib/utils';
   import * as loop from '$lib/loop';
@@ -21,12 +23,27 @@
   import DevPanel from '$features/dev/DevPanel.svelte';
   import Log from '$features/Log.svelte';
 
+  // Read outside the `if` and unconditionally: a boot that consumed a pending
+  // save would otherwise leave the legacy to ambush the boot after it.
+  const legacy = takeLegacy();
+
   // The module graph is the reset, so a fresh run is what the graph plus these
-  // three lines already are. A load happens instead of them, never over them.
+  // three lines already are. A load happens instead of them, never over them —
+  // a save is a whole run including its wisdom and its beat, so a legacy laid
+  // over one would either double the wisdom or contradict the beat.
   if (!loadPending()) {
     PlanetManager.unlock('first');
     PlanetManager.select('first');
     BuildingManager.unlock('main');
+
+    // Before `wire()`, and it matters: `watchBeats` seeds itself on its first
+    // run, so jumping here is silent where jumping after it would dump every
+    // beat behind you into the log on frame one.
+    if (legacy) {
+      ResourceManager.add('wisdom', legacy.wisdom);
+      progression.jumpTo(legacy.beat);
+      log.add(logTexts.prestige.legacy(legacy.wisdom));
+    }
   }
 
   /** What a notification looks like. The manager only knows that one exists. */

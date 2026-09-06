@@ -16,6 +16,7 @@ import PurchaseButton from './PurchaseButton.svelte';
 import Rail from './Rail.svelte';
 import Section from './Section.svelte';
 import SliderBar from './SliderBar.svelte';
+import Sparkline from './Sparkline.svelte';
 import Stub from './Stub.svelte';
 import SweepBar from './SweepBar.svelte';
 import Tabs from './Tabs.svelte';
@@ -41,6 +42,7 @@ export {
   Rail,
   Section,
   SliderBar,
+  Sparkline,
   Stub,
   SweepBar,
   Tabs,

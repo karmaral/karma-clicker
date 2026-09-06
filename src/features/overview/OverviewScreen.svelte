@@ -11,13 +11,14 @@
   import { PlanetManager } from '$lib/managers';
   import { progression } from '$lib/progression';
   import { f } from '$lib/utils';
-  import { Label, Section } from '$ui';
+  import { Button, Label, Section } from '$ui';
   import ActiveCell from './ActiveCell.svelte';
   import PlanetDetail from './PlanetDetail.svelte';
   import BehindLedger from './BehindLedger.svelte';
   import AheadGrid from './AheadGrid.svelte';
   import HarvestLedger from './HarvestLedger.svelte';
   import { FirstHarvestScreen } from '$features/harvest';
+  import { PrestigeScreen } from '$features/prestige';
   import { Screen } from '$features/frame';
   import { nav } from '$lib/nav.svelte';
 
@@ -40,7 +41,7 @@
 </script>
 
 <div class="stack">
-  <Screen active={!nav.isHarvesting}>
+  <Screen active={!nav.isHarvesting && !nav.isPrestiging}>
     <div class="overview view-layout">
 
       <div class="detail">
@@ -100,12 +101,30 @@
           />
         {/if}
 
+        <!-- The axis reads behind → active → ahead; past *ahead* is the end of
+             the system, so the way out of the run sits at the bottom of it. -->
+        {#if progression.isRevealed('prestige.screen')}
+          <div class="terminus">
+            <Button
+              variant="outline"
+              label="End the run"
+              onclick={() => nav.openPrestige()}
+            />
+          </div>
+        {/if}
+
       </div>
     </div>
   </Screen>
 
   {#if nav.isHarvesting}
     <FirstHarvestScreen onclose={() => nav.closeHarvest()} />
+  {/if}
+
+  <!-- Plain `{#if}` where the harvest takes a `Screen`: there is no WebGL here
+       to keep alive off-camera. -->
+  {#if nav.isPrestiging}
+    <PrestigeScreen onclose={() => nav.closePrestige()} />
   {/if}
 </div>
 
@@ -142,6 +161,12 @@
   /* Sweep + clock + deliveries columns, taken as one block. */
   .here-ahead {
     grid-column: 3 / -1;
+    min-width: 0;
+  }
+
+  .terminus {
+    grid-column: 1 / -1;
+    padding-top: var(--sp-4);
     min-width: 0;
   }
 

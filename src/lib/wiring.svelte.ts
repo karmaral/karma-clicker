@@ -111,7 +111,6 @@ function watchHarness() {
 const sounded = new Set<string>();
 
 /**
- * The click sounds on the accepted press, not the raw button or the payout.
  * Souls sound on `'add'`, cohort by cohort as each unlocks — it carries how
  * many arrived in that one purchase, so a x10 buy bursts instead of clicking
  * once. Fires on a free grant too (an upgrade's `acquire`), which is correct:
@@ -119,7 +118,6 @@ const sounded = new Set<string>();
  */
 function watchSound() {
   sound.warm();
-  BuildingManager.addListener('main', 'queue', () => sound.play('planet.click'));
 
   $effect(() => {
     for (const id of BuildingManager.cohorts) {

@@ -2,10 +2,10 @@
  * What a run is, written down. Ids and raw counters only — everything derived is
  * rebuilt by `apply`, so the save stays small and survives a balance change.
  *
- * Three figures are here because nothing rederives them: a resource's `total`
- * (which `remove` never reduces), the refinery's level and exp, and the
- * inversion counter. Planet boons are *not* here — they are what being harvested
- * means, so they are replayed off the flag instead.
+ * A handful of figures are here because nothing rederives them: a resource's
+ * `total` (which `remove` never reduces), the refinery's level, exp and lifetime
+ * karma refined, and the inversion counter. Planet boons are *not* here — they
+ * are what being harvested means, so they are replayed off the flag instead.
  */
 
 import {
@@ -22,7 +22,7 @@ import type { UpgradeSnapshot } from '$lib/managers/upgrade-manager.svelte';
 import type { ResourceSnapshot } from '$lib/resources/base.svelte';
 
 /** Bumped whenever a field changes shape. An older save is refused, not patched. */
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 3;
 
 export interface SaveState {
   version: number;

@@ -22,6 +22,10 @@
   --res-red:#9e2b25;
   --res-yellow:#9a7b21;
   --res-blue:#33407a;
+  /* Above the ladder rather than on it: wisdom is the only mark that crosses a
+     run, so it shares its hue with nothing. Desaturated plum, same flatness and
+     chroma as the four below it. */
+  --res-wisdom:#6b3f6e;
 
   --status-gain:#2f7d4f;
   --status-loss:#9e2b25;

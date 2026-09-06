@@ -158,6 +158,18 @@ class BuildingManager {
   }
 
   /**
+   * Karma earned before the aim split and the wave bias — neither the dial nor
+   * the phase have touched it yet. The refinery's coverage reads this: the aim
+   * split and the phase average out over a run, so folding them back in would
+   * only reintroduce the jitter coverage is built to avoid.
+   */
+  countKarmaEarnedPerSecond() {
+    return this.#cohorts()
+      .filter((cohort) => cohort.isAutonomous)
+      .reduce((sum, cohort) => sum + cohort.perSecond('karma'), 0);
+  }
+
+  /**
    * One fraction taken out of every cohort, proportionally — you never choose
    * which flavour goes (CONTEXT v3 §3.3). Rounding is per cohort, so read the
    * count off `countMergeable` rather than recomputing it from the fraction.

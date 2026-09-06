@@ -27,7 +27,7 @@
     background: var(--res-xp);
   }
   .badge.wisdom {
-    background: var(--res-xp);
+    background: var(--res-wisdom);
   }
 
   .badge.red    { background: var(--res-red); }

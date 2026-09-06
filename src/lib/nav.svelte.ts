@@ -48,12 +48,30 @@ const isHarvesting = $derived.by(() => {
   return Boolean(planet) && !planet.isHarvested;
 });
 
+/**
+ * The end of the run, taking the same screen the same way and for the same
+ * reasons — see `asked` above.
+ *
+ * **It does not close itself**, and must not be commented as if it did:
+ * `isHarvesting` falls away because `planet.isHarvested` flips under it, where
+ * `refinery.produced` never falls, so this condition only ever becomes true. What
+ * the derived buys is the reveal: a dev rewind past beat 14 takes the screen
+ * down with it.
+ */
+let askedPrestige = $state(false);
+
+const isPrestiging = $derived(askedPrestige && progression.isRevealed('prestige.screen'));
+
 export const nav = {
   get active() { return active; },
   get isHarvesting() { return isHarvesting; },
+  get isPrestiging() { return isPrestiging; },
 
   openHarvest() { asked = true; },
   closeHarvest() { asked = false; },
+
+  openPrestige() { askedPrestige = true; },
+  closePrestige() { askedPrestige = false; },
 
   state(screen: ScreenName) {
     return progression.reveal(NAV_KEY[screen]);

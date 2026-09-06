@@ -45,11 +45,11 @@
     const draw = (duration: number, remaining: number) => {
       if (!duration || remaining <= 0 || !bar) return;
 
-      const startPct = Math.max(0, Math.min(1, 1 - remaining / duration)) * 100;
+      const from = Math.max(0, Math.min(1, 1 - remaining / duration));
 
       bar.getAnimations().forEach((animation) => animation.cancel());
       bar.animate(
-        [{ width: `${startPct}%` }, { width: '100%' }],
+        [{ transform: `scaleX(${from})` }, { transform: 'scaleX(1)' }],
         { duration: remaining, easing: 'linear' },
       );
     };
@@ -79,8 +79,20 @@
     display: inline-flex;
     background: var(--line-100);
   }
+  /* Full width and scaled down to nothing, rather than grown from zero width:
+     `width` is laid out on the main thread every frame, and one bar per cohort
+     row animating that was the whole of a profile's Animations track. A
+     transform is composited, so the sweep costs the page nothing while it runs.
+
+     `scaleX(0)` at rest is what `width: 0` used to be — the animation has no
+     fill, so a finished cycle drops back to empty and the next queue starts it
+     again. */
   .progress {
+    flex: none;
+    width: 100%;
     background: var(--ink-400);
+    transform: scaleX(0);
+    transform-origin: left;
   }
 
   /* Full, because a stream is always mid-payout — the track itself carries the

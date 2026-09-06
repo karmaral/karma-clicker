@@ -16,53 +16,41 @@ const data: Record<string, Record<string, ItemTextData>> = {
     },
   },
   'refinery': {
-    'slots_1': {
-      title: 'Room to work',
-      description: 'Four slots. Reserved souls fill them; an empty slot refines nothing.',
-    },
     'efficiency_1': {
       title: 'A steadier hand',
-      description: 'Karma per batch x1.5',
+      description: 'Twice the reach — the gap narrows.',
     },
-    'speed_1': {
-      title: 'Shorter shifts',
-      description: 'Seconds per batch x0.75',
+    'reach_1': {
+      title: 'Longer reach',
+      description: 'Twice the reach — the gap narrows.',
     },
-    'slots_2': {
+    'slots_1': {
       title: 'The floor below',
       description: 'Twelve more slots.',
     },
     'efficiency_2': {
       title: 'Steadier still',
-      description: 'Karma per batch x2',
+      description: 'Twice the reach — the gap narrows.',
     },
-    'speed_2': {
-      title: 'Shorter still',
-      description: 'Seconds per batch x0.5',
+    'reach_2': {
+      title: 'Further still',
+      description: 'Twice the reach — the gap narrows.',
     },
-    'speed_3': {
-      title: 'speed_3',
-      description: 'Seconds per batch x0.5',
+    'reach_3': {
+      title: 'Across the floor',
+      description: 'Twice the reach — the gap narrows.',
     },
-    'speed_4': {
-      title: 'speed_4',
-      description: 'Seconds per batch x0.5',
+    'reach_4': {
+      title: 'Nothing out of reach',
+      description: 'Twice the reach — the gap narrows.',
     },
   },
   'harness': {
-    'slots_1': {
-      title: 'Hands on the lines',
-      description: 'Six slots. Reserved souls fill them; the rest wait their turn.',
-    },
     'split_1': {
       title: 'A finer hand',
       description: 'Set the allocation in quarters instead of halves.',
     },
-    'riders_1': {
-      title: 'Something to hold',
-      description: 'Two hundred souls can ride the finished harness and take what it pays.',
-    },
-    'slots_2': {
+    'slots_1': {
       title: 'The whole crew',
       description: 'Twenty-four more slots.',
     },
@@ -70,7 +58,7 @@ const data: Record<string, Record<string, ItemTextData>> = {
       title: 'Finer still',
       description: 'Set the allocation in tenths.',
     },
-    'riders_2': {
+    'riders_1': {
       title: 'Room for the rest',
       description: 'Two thousand souls ride instead of two hundred.',
     },
@@ -81,8 +69,8 @@ const data: Record<string, Record<string, ItemTextData>> = {
   },
   'planet:second': {
     'discover': {
-      title: 'Somewhere else',
-      description: 'A second world, and a way to reach it.',
+      title: 'It finds you',
+      description: 'A second world makes itself known. Nothing was asked of you.',
     },
   },
   'planet:third': {
@@ -143,10 +131,13 @@ const data: Record<string, Record<string, ItemTextData>> = {
         'first': n === 1
           ? { title: 'First soul', description: 'Placeholder. The wheel finds a second hand.' }
           : { title: 'Placeholder', description: `Placeholder. Cohort ${n} becomes reachable.` },
-        'clerk': {
-          title: 'Clerk',
-          description: 'Placeholder. Sends this cohort’s souls without being asked.',
-        },
+        // Cohort 1 has no `clerk` row — its autonomy rides the free `first` grant instead.
+        ...(n === 1 ? {} : {
+          'clerk': {
+            title: 'Clerk',
+            description: 'Placeholder. Sends this cohort’s souls without being asked.',
+          },
+        }),
       }];
     }),
   ),

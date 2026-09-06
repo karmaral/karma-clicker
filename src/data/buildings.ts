@@ -37,7 +37,7 @@ function cohortData(n: number) {
     cost_multiplier: COHORT_RAMP,
     yields: {
       experience: yieldXp,
-      karma: 0.2 * yieldXp,
+      karma: 0.25 * yieldXp,
     },
     duration: 1000 * 2 ** (n - 1),
   };
@@ -49,7 +49,7 @@ const data: Record<string, BuildingData> = {
   // the one thing you do continuously was only ever an obstacle. See §5.
   'main': {
     role: 'click',
-    yields: { experience: 5, karma: 1 },
+    yields: { experience: 1 },
     duration: 0,
     count: 1,
   },

@@ -29,6 +29,17 @@
   const excess = $derived(getExcess());
   const planet = $derived(PlanetManager.getActive());
 
+  $effect(() => {
+    if (!open) return;
+
+    function onkeydown(event: KeyboardEvent) {
+      if (event.key === 'Escape') open = false;
+    }
+
+    window.addEventListener('keydown', onkeydown);
+    return () => window.removeEventListener('keydown', onkeydown);
+  });
+
   /** Overwrites a name already there — the panel asks first, since it is one keystroke. */
   function writeSave() {
     const name = saveName.trim();
@@ -194,7 +205,10 @@
         <span class="id">
           slots {refinery.workers}/{refinery.slots}
           · lvl {refinery.level} ({f(refinery.exp)}/{f(refinery.expToNext)})
-          · {f(refinery.perSecond)}/s each way
+          · {f(refinery.coverage * 100)}% coverage
+          · ×{f(refinery.ratio)} ratio
+          · {f(refinery.perSecond)}/s each way (forecast)
+          · {f(refinery.clearedPerSecond)}/s both (measured)
           · red {f(ResourceManager.getAmount('red_positive'))}
           /{f(ResourceManager.getAmount('red_negative'))}
         </span>

@@ -11,8 +11,8 @@
 
 import { isSaveState, summarize, type SaveState, type SaveSummary } from './state';
 
-const PREFIX = 'karma:save:';
-const PENDING_KEY = 'karma:pending';
+const PREFIX = 'karma-clicker:save:';
+const PENDING_KEY = 'karma-clicker:pending';
 
 export interface SaveEntry {
   name: string;

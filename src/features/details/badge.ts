@@ -11,7 +11,6 @@ import type { YieldType } from '$types';
  */
 const RATE_ORDER: YieldType[] = [
   'experience',
-  'wisdom',
   'karma',
   'karma_negative',
   'karma_positive',

@@ -22,7 +22,7 @@ const GLOBAL = 'global';
  * `building:main/str_1`'s own gate. The rail opens on the figure that puts the
  * first chip in it, so it is never revealed empty — keep the two together.
  */
-const FIRST_CHIP = 40;
+const FIRST_CHIP = 50;
 
 export const beats: Beat[] = [
   // One button, one number. The log carries the reward.
@@ -37,16 +37,6 @@ export const beats: Beat[] = [
       'reading.experience': 'live',
     },
   },
-
-  // Incarnating leaves residue. Positive only — no polarity, no reading.
-  {
-    id: 'karma',
-    when: (ctx) => ctx.total('karma_positive') > 0,
-    floor: 340,
-    runs: ['posKarma'],
-    reveals: { 'reading.posKarma': 'live' },
-  },
-
   // Somewhere to spend. Gated on experience and not on souls: what the rail
   // holds here is the click's own ladder, which souls have nothing to do with —
   // and on a soul count the two chips unlocked before it arrived together as a
@@ -57,7 +47,6 @@ export const beats: Beat[] = [
     floor: FIRST_CHIP,
     reveals: { 'frame.rail': 'live' },
   },
-
   // Automatic from the first one — the wheel starting to turn.
   {
     id: 'first_soul',
@@ -66,6 +55,15 @@ export const beats: Beat[] = [
     runs: ['cohort'],
     reveals: { 'details.cohortTable': 'live' },
   },
+  // Incarnating leaves residue. Positive only — no polarity, no reading.
+  {
+    id: 'karma',
+    when: (ctx) => ctx.total('karma_positive') > 0,
+    floor: 340,
+    runs: ['posKarma'],
+    reveals: { 'reading.posKarma': 'live' },
+  },
+
 
   // The figures fly up into the header; the disc stays where it was. Five, not
   // ten: five is the first cohort gate, so the rows land on the beat that gives
@@ -178,5 +176,15 @@ export const beats: Beat[] = [
     id: 'second_harvest',
     eventOnly: true,
     when: (ctx) => ctx.planetsFinished >= 2,
+  },
+
+  // The run can be ended the way a world can. `eventOnly` with no floor, and
+  // firmly so: what it measures is karma actually moved through the refinery,
+  // and no experience figure stands in for that.
+  {
+    id: 'terminus',
+    eventOnly: true,
+    when: (ctx) => ctx.leavesLegacy,
+    reveals: { 'prestige.screen': 'live' },
   },
 ];

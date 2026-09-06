@@ -53,7 +53,12 @@ export type RevealKey =
   // the same beat, in the same object literal, with no state where one was
   // true and another false — see `harvest.screen` above. One key, and the
   // screen has no internal guard.
-  | 'refinery.screen';
+  | 'refinery.screen'
+
+  // Also a takeover, and for the same reason `harvest.screen` is one — the nav
+  // keys above are exactly three, permanently. Nothing simulates behind it, so
+  // it has no `SystemKey`.
+  | 'prestige.screen';
 
 export type SystemKey =
   | 'incarnation'

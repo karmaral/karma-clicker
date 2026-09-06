@@ -45,40 +45,41 @@ const data: Record<string, UpgradeData[]> = {
     },
   ],
   /**
-   * Three axes and no fourth. Slots cap the souls, efficiency moves the batch,
-   * speed moves the interval — staffing must never touch the interval, or
-   * throughput goes quadratic in souls. Each is priced in what buying it should
-   * make you feel: slots in karma, efficiency in lifetimes, speed in what the
-   * refinery itself makes. Placeholder figures.
+   * Slots cap the souls; efficiency and reach both push `reach`, uncapped —
+   * `coveragePerWorker × workers × efficiency` — which `coverage = reach / (1 +
+   * reach)` then reads as a saturating share. Multiplying coverage by the
+   * interval to get a pulse's draw cancels the interval straight back out, so
+   * a duration modifier here would do nothing. `interval` stays fixed as pulse
+   * granularity; `reach_*` stacks on the same channel `efficiency_*` does. The
+   * level is a separate, unbought axis — see `refinery.svelte.ts` — so nothing
+   * here touches it. Slots start with a base — see `balance.refinery` — so the
+   * refinery can pair from the moment it is revealed; `slots_1` only adds to it.
+   *
+   * Every rung is now ×2, uniformly. Each is priced in what buying it should
+   * make you feel: slots in karma, efficiency and reach in what the refinery
+   * itself makes. The crimson-denominated gates sit further out than the karma
+   * ones because the refinery starts lossy — `ratioBase` under 1 — so an early
+   * gate in crimson is scarcer than the same figure would have been at 1:1.
+   * Placeholder figures.
    */
   'refinery': [
     {
-      // Priced in what it is gated on. §14 pays `K` on a tilted lock, so a
-      // Burden lock is worth nothing unless something costs `karma_negative` —
-      // and the three upgrades already *gated* on it were the design saying
-      // service-to-self out loud while the price fell back to the default pile.
-      id: 'slots_1',
-      effect: { op: 'flat', value: 4, stat: 'slots' },
-      unlocks_at: { karma_negative: 5000 },
-      costs: { karma_negative: 25_000 },
-    },
-    {
       id: 'efficiency_1',
-      effect: { op: 'mult', value: 1.5 },
-      unlocks_at: { red_positive: 500 },
+      effect: { op: 'mult', value: 2 },
+      unlocks_at: { red_positive: 2000 },
       costs: { experience: 1_000_000 },
     },
     {
-      id: 'speed_1',
-      effect: { op: 'mult', value: 0.75, stat: 'duration' },
-      unlocks_at: { red_positive: 2000 },
-      costs: { red_positive: 1500 },
-    },
-    {
-      id: 'slots_2',
-      effect: { op: 'flat', value: 12, stat: 'slots' },
+      id: 'reach_1',
+      effect: { op: 'mult', value: 2 },
       unlocks_at: { red_positive: 8000 },
       costs: { red_positive: 6000 },
+    },
+    {
+      id: 'slots_1',
+      effect: { op: 'flat', value: 12, stat: 'slots' },
+      unlocks_at: { red_positive: 16_000 },
+      costs: { red_positive: 12_000 },
     },
     {
       id: 'efficiency_2',
@@ -87,20 +88,20 @@ const data: Record<string, UpgradeData[]> = {
       costs: { yellow: 1500 },
     },
     {
-      id: 'speed_2',
-      effect: { op: 'mult', value: 0.5, stat: 'duration' },
+      id: 'reach_2',
+      effect: { op: 'mult', value: 2 },
       unlocks_at: { yellow: 1000 },
       costs: { yellow: 5000 },
     },
     {
-      id: 'speed_3',
-      effect: { op: 'mult', value: 0.5, stat: 'duration' },
+      id: 'reach_3',
+      effect: { op: 'mult', value: 2 },
       unlocks_at: { yellow: 50_000 },
       costs: { yellow: 150_000 },
     },
     {
-      id: 'speed_4',
-      effect: { op: 'mult', value: 0.5, stat: 'duration' },
+      id: 'reach_4',
+      effect: { op: 'mult', value: 2 },
       unlocks_at: { blue: 1 },
       costs: { blue: 50 },
     },
@@ -110,15 +111,11 @@ const data: Record<string, UpgradeData[]> = {
    * can place at once, so the split gets an optimum instead of "always max";
    * rider slots cap how many souls the finished harness pays the anchor bonus
    * to. `step` is a rung down the split ladder, not a fraction — see
-   * `balance.harness.splitSteps`. Placeholder figures.
+   * `balance.harness.splitSteps`. Both capacities start with a base — see
+   * `balance.harness` — so the harness can do its job the moment it is
+   * revealed; every row here only adds to that base. Placeholder figures.
    */
   'harness': [
-    {
-      id: 'slots_1',
-      effect: { op: 'flat', value: 6, stat: 'slots' },
-      unlocks_at: { karma_positive: 40_000 },
-      costs: { karma_positive: 60_000 },
-    },
     {
       id: 'split_1',
       effect: { op: 'flat', value: 1, stat: 'step' },
@@ -126,15 +123,7 @@ const data: Record<string, UpgradeData[]> = {
       costs: { experience: 500_000 },
     },
     {
-      // Both rider caps are soul counts, so they take the army's ×5 with it —
-      // 40 out of a thousand incarnating would carry nobody worth counting.
-      id: 'riders_1',
-      effect: { op: 'flat', value: 200, stat: 'riders' },
-      unlocks_at: { karma_negative: 50_000 },
-      costs: { karma_negative: 150_000 },
-    },
-    {
-      id: 'slots_2',
+      id: 'slots_1',
       effect: { op: 'flat', value: 24, stat: 'slots' },
       unlocks_at: { red_positive: 1000 },
       costs: { red_positive: 2500 },
@@ -146,7 +135,7 @@ const data: Record<string, UpgradeData[]> = {
       costs: { red_positive: 5000 },
     },
     {
-      id: 'riders_2',
+      id: 'riders_1',
       effect: { op: 'flat', value: 2000, stat: 'riders' },
       unlocks_at: { red_positive: 10_000 },
       costs: { red_positive: 12_000 },
@@ -169,7 +158,6 @@ const data: Record<string, UpgradeData[]> = {
       id: 'discover',
       effect: 'discover',
       unlocks_at: { karma_positive: 20_000 },
-      costs: { karma_positive: 30_000 },
     },
   ],
   'planet:third': [
@@ -208,24 +196,24 @@ const data: Record<string, UpgradeData[]> = {
   'building:main': [
     {
       id: 'str_1',
-      effect: { op: 'mult', value: 1.5 },
+      effect: { op: 'mult', value: 2 },
       effect_target: 'experience',
-      unlocks_at: { experience: 40 },
-      costs: { experience: 30 }
+      unlocks_at: { experience: 100 },
+      costs: { experience: 200 }
     },
     {
       id: 'str_2',
       effect: { op: 'mult', value: 2 },
       effect_target: 'experience',
       unlocks_at: { experience: 2500 },
-      costs: { experience: 1800 }
+      costs: { experience: 5000 }
     },
     {
       id: 'str_3',
-      effect: { op: 'mult', value: 3 },
+      effect: { op: 'mult', value: 2 },
       effect_target: 'experience',
-      unlocks_at: { karma_positive: 400 },
-      costs: { karma_positive: 300 }
+      unlocks_at: { karma_positive: 250 },
+      costs: { karma_positive: 500 }
     },
     {
       id: 'str_4',
@@ -259,12 +247,13 @@ const data: Record<string, UpgradeData[]> = {
    * more lifetime xp than that. `5×` sits past what clicking to that gate
    * alone pays, so a second cohort takes actually running the first one.
    *
-   * `clerk` is every cohort's own to buy, cohort 1 included — a row that could
-   * never be automated would fight the arc the doc states (*many hands, then
-   * fewer, then none*), and cohort 1 is the one row that has to have been sent
-   * by hand at least once before it earns the option. Priced at `250 × cost(n)`,
-   * the same ratio §5 lifted from AdCap's manager rung. The label is a
-   * placeholder — `clerk` is unsettled, see §19.
+   * `clerk` is every other cohort's own to buy — a row that could never be
+   * automated would fight the arc the doc states (*many hands, then fewer,
+   * then none*). Cohort 1 is the exception: by the time a second row exists,
+   * clicking the first is busywork with nothing left to teach, so it grants
+   * itself alongside the free first soul rather than waiting on a purchase.
+   * Priced at `250 × cost(n)`, the same ratio §5 lifted from AdCap's manager
+   * rung. The label is a placeholder — `clerk` is unsettled, see §19.
    */
   ...Object.fromEntries(
     Array.from({ length: COHORT_COUNT }, (_, i) => {
@@ -276,10 +265,12 @@ const data: Record<string, UpgradeData[]> = {
         ? {
           // The one that stays costless, so `acquireUnpriced` still grants it:
           // this is the `first_soul` beat, and the first soul is something
-          // that happens to you, not a chip you find.
+          // that happens to you, not a chip you find. Autonomy rides along —
+          // see the block comment above.
           id: 'first',
-          effect: ['unlock', 'acquire'],
-          unlocks_at: { karma_positive: 30 },
+          effect: ['unlock', 'acquire', 'autonomy'],
+          unlocks_at: { experience: 50 },
+          costs: { experience: 100 },
         }
         : {
           // Unlocks the row only — no free copy. The first copy is bought at
@@ -290,14 +281,15 @@ const data: Record<string, UpgradeData[]> = {
           unlocks_at: { experience: 5 * cost },
         };
 
-      const clerk: UpgradeData = {
+      // Cohort 1 already has autonomy for free — see `first` above.
+      const clerk: UpgradeData[] = n === 1 ? [] : [{
         id: 'clerk',
         effect: 'autonomy',
         unlocks_at: { count: 1 },
         costs: { [costType]: 250 * cost } as Partial<Record<ResourceType, number>>,
-      };
+      }];
 
-      return [`cohort:${id}`, [first, ...levelUpgrades(id), clerk]];
+      return [`cohort:${id}`, [first, ...levelUpgrades(id), ...clerk]];
     }),
   ),
   /**

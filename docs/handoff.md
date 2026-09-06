@@ -21,8 +21,9 @@ argument, this is only the flag.
 - **`design.md` §13** — world totals are still the old cubic figures
   (`ages`/`cycles_per_age`/`phase_duration` in `planets.ts`); the doc's
   `time(p) = 240s × 2^(p−1)` law is not landed.
-- **`design.md` §18** — the whole prestige layer (wisdom, knowledge, commerce)
-  is argument only; nothing exists in code.
+- **`design.md` §18** — the minimum landed: wisdom is the run's residue, beat 14
+  opens the Overview's *End the run*, and the reset is a reload. Knowledge,
+  commerce and the structure shelf are still argument only.
 - **`design.md` §12's `perWorker` defect** — the anchoring phase runs ~10×
   faster than the doc's own intent; not yet retuned.
 - **`design.md` §16's nine beat floors** — fitted to the pre-rewrite cohort

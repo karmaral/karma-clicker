@@ -39,22 +39,35 @@ export default {
   },
 
   /**
-   * What one worker clears from each pile, and how often. Placeholder figures.
+   * Capacity is a *saturating* share of what the cohorts produce, not a share
+   * of what is held — see `docs/design.md` §9. `reach = coveragePerWorker ×
+   * workers × efficiency` is bought and uncapped; `coverage = reach / (1 +
+   * reach)` approaches 1.0 without ever crossing it, so no worker count or
+   * upgrade total can push the refinery past what exists to clear. Multiplying
+   * coverage by `interval` gives the karma one pulse draws — the interval
+   * cancels back out of throughput, so it is pulse granularity, not a lever.
    *
-   * It levels on karma it actually moved, so it grows at the rate the world
-   * feeds it rather than at the rate upgrades are bought. `expGrowth` must stay
-   * above `1 + yieldPerLevel` or the ladder outruns its own thresholds.
+   * The level moves a separate axis: crimson per karma, not throughput.
+   * `ratioBase` is deliberately below 1 — the refinery starts lossy, and
+   * `levelHalving` levels are how long it takes to break even. Placeholder
+   * figures, calibrated so the live build reads ~12% coverage at 16 workers,
+   * x3 efficiency, and crosses ratio 1.0 at level 28.
+   *
+   * `slots` is a base, not a placeholder to fill by upgrade — the refinery
+   * must be able to do its one job the moment it is revealed, so the capacity
+   * that used to be a free `slots_0` grant is authored here instead.
    */
   refinery: {
-    batchPerWorker: 250,
-    interval: 4000,
+    slots: 4,
+    coveragePerWorker: 0.00125,
+    interval: 2000,
     /** Karma to reach level 2, and how much steeper each rung gets. */
     expBase: 5_000,
     expGrowth: 1.35,
-    /** Compounds on the batch base, before modifiers — never on the interval. */
-    yieldPerLevel: 0.08,
-    /** Below this share of a full batch available, the status reads "strained". */
-    strainedBelow: 0.25,
+    /** Crimson per karma at level 1 — four karma to make one crimson. */
+    ratioBase: 0.25,
+    /** Levels to raise the ratio by 1 — level 28 is where it crosses even. */
+    levelHalving: 36,
   },
 
   /**
@@ -63,10 +76,15 @@ export default {
    * so souls speed the clock rather than adding to a pile. `clickMs` is what one
    * press takes off the job — a deliberate trickle, so a hand can open a world
    * alone but stops mattering once souls arrive.
+   *
+   * `slots` and `riders` are bases, not placeholders to fill by upgrade — an
+   * anchoring phase must be workable and the finished harness must pay its
+   * bonus the moment either is reached, so the capacity that used to be free
+   * `slots_0`/`riders_0` grants is authored here instead.
    */
   harness: {
-    slots: 0,
-    riders: 0,
+    slots: 6,
+    riders: 200,
     perWorker: 0.2,
     clickMs: 250,
     /** Finer every rung — a `step` upgrade that coarsened the lever would be a downgrade. */
@@ -107,5 +125,15 @@ export default {
     evenExperienceBonus: 2.0,
     mergeHalving: 0.25,
     maxMergeSpeed: 8,
+  },
+
+  /**
+   * What a run leaves the next one — see `docs/design.md` §18. Wisdom is earned,
+   * never bought, and the whole payout is one root over one constant.
+   */
+  prestige: {
+    /** §18's `W`: crimson produced that earns the first wisdom. `√(produced / W)`. */
+    firstWisdomAt: 1_000,
+    yieldPerWisdom: 0.02,
   },
 };

@@ -27,8 +27,8 @@
     purchaseMode = PURCHASE_MODES[(at + 1) % PURCHASE_MODES.length];
   }
 
-  /** The refinery draws the same batch from each pile, so both rows read alike. */
-  const perBatch = $derived(refinery.batch || undefined);
+  /** What the refinery's last pulse actually paid into each red pile — both rows read alike. */
+  const perBatch = $derived(refinery.lastProduced || undefined);
 
   const invertNegRaw = $derived(resolveQuantity(purchaseMode, () => tokens.getMaxInvert(-1)));
   const invertNegQuantity = $derived(resolvePurchasable(purchaseMode, () => tokens.getMaxInvert(-1)));
@@ -45,10 +45,6 @@
   const blueRaw = $derived(resolveQuantity(purchaseMode, () => tokens.getMaxBlue()));
   const blueQuantity = $derived(resolvePurchasable(purchaseMode, () => tokens.getMaxBlue()));
   const blueAffordable = $derived(blueRaw > 0 && tokens.canPurchaseBlue(blueRaw));
-
-  const wisdomRaw = $derived(resolveQuantity(purchaseMode, () => tokens.getMaxWisdom()));
-  const wisdomQuantity = $derived(resolvePurchasable(purchaseMode, () => tokens.getMaxWisdom()));
-  const wisdomAffordable = $derived(wisdomRaw > 0 && tokens.canPurchaseWisdom(wisdomRaw));
 
   const inversionNote = $derived(
     `Bought with the opposite Crimson, and dearer every time — ${tokens.inversions} so far.`,
@@ -124,17 +120,6 @@
       affordable={blueAffordable}
       note={tokens.isBlueUnlocked ? undefined : 'Opens with the first Ochre.'}
       onpurchased={() => purchase(() => tokens.purchaseBlue(blueQuantity))}
-      oncyclemode={cyclePurchaseMode}
-    />
-
-    <TokenRow
-      grade="wisdom"
-      held={ResourceManager.getAmount('wisdom')}
-      cost={tokens.wisdomPrice * wisdomQuantity}
-      costKind="wisdom"
-      quantity={wisdomQuantity}
-      affordable={wisdomAffordable}
-      onpurchased={() => purchase(() => tokens.purchaseWisdom(wisdomQuantity))}
       oncyclemode={cyclePurchaseMode}
     />
   </div>
