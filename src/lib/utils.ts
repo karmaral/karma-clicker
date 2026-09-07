@@ -79,6 +79,35 @@ export function f(val: number, floats?: number, useLongForm = false) {
   );
 }
 
+/** One, where a standalone figure gets two — see `formatRate`. */
+const RATE_DECIMALS = 1;
+
+/**
+ * A rate, which is never alone on its line: it rides beside the figure it is
+ * the flow of, and has to fit in what that figure leaves. So it abbreviates a
+ * scale earlier than `f` and at one decimal rather than two — `113.5k` where a
+ * quantity would read `113,480`.
+ *
+ * Note that dropping to a `k` alone buys nothing: six digits and a comma and
+ * five digits, a point and a suffix are the same width. It is the decimal that
+ * pays, which is why this is not just a lower `SUFFIX_FLOOR`.
+ *
+ * Padded like `f`'s scaled branch, so a rate holds its width as it ticks.
+ */
+export function formatRate(val: number) {
+  if (!isFinite(val) || val < BASE) return f(val);
+  if (val >= SUFFIX_FLOOR) return f(val, RATE_DECIMALS);
+
+  const thousands = (val / BASE).toFixed(RATE_DECIMALS);
+
+  // Rounding can carry past the scale it was measured at, the same way `f`'s
+  // own does: 999,990/s lands on `1000.0k`, a figure nobody writes. Stepped
+  // here rather than handed back to `f`, which cannot take it — its suffix
+  // floor is the line being stepped over, so it would print the digits again.
+  // Everything in the carry band rounds to the same figure, so the floor is it.
+  return Number(thousands) < BASE ? `${thousands}k` : f(SUFFIX_FLOOR, RATE_DECIMALS);
+}
+
 /**
  * A price, rounded the way a price has to round: never below what you will be
  * charged. A rate that reads low is an estimate; a cost that reads low is a

@@ -1,22 +1,24 @@
 <script lang="ts">
   /**
-   * One axis, three bands. Selecting feeds the right column; the verb lives there.
+   * One axis, three bands. Selecting feeds the planet column beside it, and
+   * that column carries the verb for whatever is picked.
    *
-   * And the verb's screen: the first harvest takes this screen's body rather
-   * than the frame, so the header stays and this tab stays lit while the one
-   * decision the Overview leads to is being taken. Hidden by the same `Screen`
-   * the tabs use rather than removed — a band is a planet apiece, and those
-   * WebGL contexts should come back turning instead of blank.
+   * And the takeover's screen: the first harvest takes this screen's body
+   * rather than the frame, so the navbar stays lit while the one decision the
+   * Overview leads to is being taken. Hidden by the same `Screen` the tabs use
+   * rather than removed — a band is a planet apiece, and those WebGL contexts
+   * should come back turning instead of blank.
    */
   import { PlanetManager } from '$lib/managers';
   import { progression } from '$lib/progression';
   import { f } from '$lib/utils';
-  import { Button, Label, Section } from '$ui';
+  import { Label, Section } from '$ui';
   import ActiveCell from './ActiveCell.svelte';
   import PlanetDetail from './PlanetDetail.svelte';
   import BehindLedger from './BehindLedger.svelte';
   import AheadGrid from './AheadGrid.svelte';
   import HarvestLedger from './HarvestLedger.svelte';
+  import { selection } from './selection.svelte';
   import { FirstHarvestScreen } from '$features/harvest';
   import { PrestigeScreen } from '$features/prestige';
   import { Screen } from '$features/frame';
@@ -26,9 +28,7 @@
   /** Active and Ahead sit in one row now, so they share a picture size. */
   const HERE_PX = 40;
 
-  let picked = $state('');
-
-  const selected = $derived(picked || PlanetManager.selected);
+  const selected = $derived(selection.id);
 
   /** Whether the Behind band reports rates at all, or is still just a list. */
   const isReporting = $derived(progression.isRevealed('overview.harvest'));
@@ -46,7 +46,7 @@
 
       <div class="detail">
         {#if progression.isRevealed('overview.active')}
-          <PlanetDetail id={selected} onharvest={() => nav.openHarvest()} />
+          <PlanetDetail id={selected} />
         {/if}
 
         <!-- Only while the Behind band cannot carry the rates itself. -->
@@ -73,7 +73,7 @@
                   stat={getHereStat}
                   empty="No active planet."
                   stillPx={HERE_PX}
-                  onpick={(id) => (picked = id)}
+                  onpick={(id) => selection.pick(id)}
                   ondblclick={() => nav.to('details')}
                 />
               </div>
@@ -84,7 +84,7 @@
                   {selected}
                   empty="Nowhere else is known."
                   stillPx={HERE_PX}
-                  onpick={(id) => (picked = id)}
+                  onpick={(id) => selection.pick(id)}
                 />
               </div>
             </div>
@@ -97,20 +97,8 @@
             {selected}
             reporting={isReporting}
             stillPx={BEHIND_PX}
-            onpick={(id) => (picked = id)}
+            onpick={(id) => selection.pick(id)}
           />
-        {/if}
-
-        <!-- The axis reads behind → active → ahead; past *ahead* is the end of
-             the system, so the way out of the run sits at the bottom of it. -->
-        {#if progression.isRevealed('prestige.screen')}
-          <div class="terminus">
-            <Button
-              variant="outline"
-              label="End the run"
-              onclick={() => nav.openPrestige()}
-            />
-          </div>
         {/if}
 
       </div>
@@ -135,11 +123,11 @@
     position: relative;
   }
 
-  /* Same five tracks BehindLedger's rows use — still/name/sweep/clock/deliveries
-     — so Active+Ahead's split lines up with the ledger below via subgrid. */
+  /* Same two halves BehindLedger's rows use — planet+name, then time+yield —
+     so Active+Ahead's split lines up with the ledger below via subgrid. */
   .axis {
     display: grid;
-    grid-template-columns: auto 1fr 12rem auto 5rem;
+    grid-template-columns: 1fr 1fr;
     column-gap: var(--sp-3);
     min-width: 0;
   }
@@ -152,21 +140,13 @@
     min-width: 0;
   }
 
-  /* Still + name columns — the same width a Behind row gives them. */
   .here-active {
-    grid-column: 1 / 3;
+    grid-column: 1;
     min-width: 0;
   }
 
-  /* Sweep + clock + deliveries columns, taken as one block. */
   .here-ahead {
-    grid-column: 3 / -1;
-    min-width: 0;
-  }
-
-  .terminus {
-    grid-column: 1 / -1;
-    padding-top: var(--sp-4);
+    grid-column: 2;
     min-width: 0;
   }
 

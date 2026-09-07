@@ -56,19 +56,23 @@
     class={['row', { selected: id === selected, lit: spotlight.isLit('planet', id) }]}
     onclick={() => onpick(id)}
   >
-    <PlanetStill visual={planetVisuals[id] ?? DEFAULT_VISUAL} widthPx={stillPx} frame={ROW_FRAME} />
-    <span class="name">{planetTexts[id]?.title ?? id}</span>
-    <SweepBar {subscribe} height="3px" {resume} />
-    <span class="num clock">{countdown}</span>
-    <span class="deliveries">
-      {#each deliveries as delivery (delivery.type)}
-        <span class="rate">
-          <Badge kind={badgeFor(delivery.type)} />
-          <span class="num">{f(delivery.amount)}</span>
-        </span>
-      {:else}
-        <span class="none">nothing yet</span>
-      {/each}
+    <span class="left">
+      <PlanetStill visual={planetVisuals[id] ?? DEFAULT_VISUAL} widthPx={stillPx} frame={ROW_FRAME} />
+      <span class="name">{planetTexts[id]?.title ?? id}</span>
+    </span>
+    <span class="right">
+      <SweepBar {subscribe} height="3px" {resume} />
+      <span class="num clock">{countdown}</span>
+      <span class="deliveries">
+        {#each deliveries as delivery (delivery.type)}
+          <span class="rate">
+            <Badge kind={badgeFor(delivery.type)} />
+            <span class="num">{f(delivery.amount)}</span>
+          </span>
+        {:else}
+          <span class="none">nothing yet</span>
+        {/each}
+      </span>
     </span>
   </button>
 </li>
@@ -102,11 +106,20 @@
     background: var(--surface-alt);
   }
 
-  /* The column is sized to the bar's own 12rem, but right-aligned rather than
-     stretched — a sweep filling every row's slack width would read as one
-     mismatched pace per row instead of one shared length. */
-  .row :global(.sweep) {
-    justify-self: end;
+  .left,
+  .right {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    min-width: 0;
+  }
+
+  .left {
+    grid-column: 1;
+  }
+
+  .right {
+    grid-column: 2;
   }
 
   .name {
@@ -119,7 +132,6 @@
     font-variant-numeric: tabular-nums;
     font-size: var(--fs-sm);
     color: var(--ink-500);
-    margin-right: var(--sp-4);
   }
 
   .deliveries {

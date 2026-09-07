@@ -1,9 +1,13 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import type { HTMLAttributes } from 'svelte/elements';
   import Label from './Label.svelte';
   import type { LabelSize, LabelTone } from './types';
 
-  interface Props {
+  /** Rest props land on the root, so a consumer can hang an attachment — a
+      tooltip — on the whole cell. A banded cell is a subgrid child of the band,
+      so it cannot be wrapped to get a hover target. */
+  interface Props extends HTMLAttributes<HTMLDivElement> {
     label: string;
     /** Qualifies the label in place, for a section named after what it currently reads. */
     labelNote?: string;
@@ -39,10 +43,11 @@
     children,
     graphic,
     foot,
+    ...rest
   }: Props = $props();
 </script>
 
-<div class={['cell', { banded }]}>
+<div class={['cell', { banded }]} {...rest}>
   <div class="labelrow">
     <span class="labels">
       <Label text={label} size={labelSize} tone={labelTone} />
@@ -90,7 +95,7 @@
     display: grid;
     grid-template-rows: subgrid;
     grid-row: span 2;
-    row-gap: var(--sp-2);
+    row-gap: var(--sp-1);
   }
 
   .labelrow {
@@ -153,6 +158,15 @@
     flex-direction: column;
     gap: var(--sp-2);
     min-width: 0;
+  }
+
+  /* Cells in a band share one row, and their figures are not the same size —
+     tokens read at `lg` where karma reads at `xl`. Centred in that row, each
+     cell sat on a baseline of its own height and the captions under them
+     scattered. Pinned to the bottom, every figure in the band sits on one
+     baseline and every caption on one rail. */
+  .cell.banded .content {
+    justify-content: end;
   }
 
   .values {

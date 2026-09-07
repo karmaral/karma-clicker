@@ -81,14 +81,30 @@
   }
 
   /* Popper's arrow modifier centers on the reference/popper overlap, applied
-     as an inline `transform: translate()` (not `left`) — on a `-start`
+     as an inline `transform: translate()` (not `left`) — on a cornered
      placement with a wide reference that lands wherever the overlap happens
-     to be, nowhere near the box's own left edge. Cancelling the transform
-     and setting `left` ourselves pins it there instead; both need
-     `!important` because they're fighting that inline style. */
+     to be, nowhere near the corner the box was aligned to. Cancelling the
+     transform and setting the offset ourselves pins it there instead; both
+     need `!important` because they're fighting that inline style.
+
+     Keyed to the corner the placement names, not to the axis: `-end` aligns
+     the box's *right* edge to the reference, so an arrow pinned left points
+     out into open air. A plain `bottom`/`top` is centred on the reference
+     already and keeps popper's own placement. */
   :global([data-placement^='bottom'] > .tippy-arrow) {
     top: -5px;
+  }
+
+  :global([data-placement='bottom-start'] > .tippy-arrow),
+  :global([data-placement='top-start'] > .tippy-arrow) {
     left: var(--sp-3) !important;
+    transform: none !important;
+  }
+
+  :global([data-placement='bottom-end'] > .tippy-arrow),
+  :global([data-placement='top-end'] > .tippy-arrow) {
+    left: auto !important;
+    right: var(--sp-3);
     transform: none !important;
   }
 
@@ -104,8 +120,6 @@
 
   :global([data-placement^='top'] > .tippy-arrow) {
     bottom: -5px;
-    left: var(--sp-3) !important;
-    transform: none !important;
   }
 
   :global([data-placement^='top'] > .tippy-arrow::before) {

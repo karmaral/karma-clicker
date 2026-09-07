@@ -17,7 +17,12 @@ export type BadgeKind =
   | 'both'
   | 'any';
 
-export type LabelSize = 'default' | 'sm';
+/**
+ * `caption` is the odd one out on purpose — a role, not a size. It names the
+ * figure directly above it rather than a section, and is lighter and paler as
+ * well as smaller, so it recedes instead of competing with a cell's own title.
+ */
+export type LabelSize = 'default' | 'sm' | 'caption';
 
 export type LabelTone = 'active' | 'inactive' | 'disabled';
 

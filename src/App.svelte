@@ -15,7 +15,7 @@
   import { wire } from '$lib/wiring.svelte';
   import { f } from '$lib/utils';
   import * as loop from '$lib/loop';
-  import { AllUpgrades, Frame, Screen, UpgradeRail } from '$features/frame';
+  import { ActionBar, AllUpgrades, Frame, Screen, UpgradeRail } from '$features/frame';
   import { catalogue } from '$features/frame/upgrades.svelte';
   import { DetailsScreen } from '$features/details';
   import { OverviewScreen } from '$features/overview';
@@ -65,7 +65,7 @@
   const preludePlanet = $derived(PlanetManager.getActive());
   const preludePlanetName = $derived(planetTexts[preludePlanet?.id ?? '']?.title);
 
-  const hasRail = $derived(progression.isRevealed('frame.rail'));
+  const hasRail = $derived(progression.isRevealed('frame.rail') && !nav.isTakeover);
 
   wire();
 
@@ -133,6 +133,10 @@
         </Rail>
       {/if}
     </div>
+
+    {#if progression.isRevealed('frame.header')}
+      <ActionBar railed={hasRail} />
+    {/if}
   </Card>
 </main>
 
@@ -154,7 +158,7 @@
   main {
     display: flex;
     justify-content: center;
-    min-height: 100%;
+    height: 100%;
   }
 
   main > :global(.card) {
@@ -165,6 +169,12 @@
   .body {
     display: grid;
     align-items: stretch;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    /* Stable so its scrollbar never shifts the grid's 9fr/2fr split out from
+       under the action bar's matching grid below, which reserves the same gutter. */
+    scrollbar-gutter: stable;
   }
 
   .body.railed {

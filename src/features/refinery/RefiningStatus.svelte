@@ -14,6 +14,10 @@
    * so the headline stays a straight karma-cleared reading and Crimson is
    * where the level's work actually shows.
    *
+   * The two are on different bases and say so: karma across both poles, crimson
+   * per pile and worded "matched". They are not meant to divide into each other
+   * by eye — `ratio` sits between them anyway.
+   *
    * Two bars, and the difference matters: the sweep is this pulse, the meter
    * under it is every pulse so far.
    */
@@ -37,8 +41,18 @@
   /** Both poles, forecast — what the refinery takes in per second. */
   const karma = $derived(refinery.perSecond * 2);
 
-  /** What that pays out — karma cleared times the level's crimson-per-karma. */
-  const crimson = $derived(karma * refinery.ratio);
+  /**
+   * What that pays out, *per pile* — the same figure the header reads, so one
+   * crimson rate exists in the game rather than two that differ by a factor of
+   * two and never say why. Halving it costs nothing in meaning, because crimson
+   * only ever arrives paired: one from each pile, always the same amount. That
+   * is what "matched" says, and it is the word `GRADE_SOURCES` already uses for
+   * the crimson Ochre is bought with.
+   *
+   * The karma headline above stays across both poles on purpose — that one is
+   * what the engine *drew*, and karma has no pairing until it gets here.
+   */
+  const crimson = $derived(refinery.crimsonPerSecond);
 
   /** The clock keeps pulsing unstaffed, but a sweep to nowhere is a lie. */
   const isIdle = $derived(refinery.workers <= 0);
@@ -90,8 +104,8 @@
   </div>
 
   <div class="batch">
-    <Badge kind="red" />
-    <span class="num">{f(crimson)} Crimson/s</span>
+    <Badge kind="red-both" />
+    <span class="num">{f(crimson)} matched Crimson/s</span>
 
     <span class="ratio">×{f(refinery.ratio)} efficiency</span>
   </div>

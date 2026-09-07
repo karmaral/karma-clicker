@@ -25,10 +25,9 @@ const active = $derived(isAvailable(requested) ? requested : 'overview');
 
 /**
  * The first harvest is a **takeover**, not a fourth tab — but of the screen it
- * is reached from rather than of the frame. The header and the rail stay, so
- * the tab above it stays lit and there is a way back out; a screen with nothing
- * lit over it is a room with no door, which is also why it is not a tab of its
- * own.
+ * is reached from rather than of the frame. The navbar stays, so the tab above
+ * it stays lit and there is a way back out; a screen with nothing lit over it
+ * is a room with no door, which is also why it is not a tab of its own.
  *
  * It lives here rather than in the Overview because **which screen hosts it is
  * not settled** — Overview holds it today, Details is the live alternative, and
@@ -66,6 +65,8 @@ export const nav = {
   get active() { return active; },
   get isHarvesting() { return isHarvesting; },
   get isPrestiging() { return isPrestiging; },
+  /** Either takeover: the one condition that hides the rail and the verb row. */
+  get isTakeover() { return isHarvesting || isPrestiging; },
 
   openHarvest() { asked = true; },
   closeHarvest() { asked = false; },

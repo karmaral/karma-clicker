@@ -12,6 +12,7 @@
   import planetTexts from '$data/planets-texts';
 
   import { Section } from '$ui';
+  import { HarvestVerb } from '$features/harvest';
   import PlanetStage from '../PlanetStage.svelte';
   import SplitControl from '../refinery/SplitControl.svelte';
   import { STAGE_WIDTH } from '../planet-viewport';
@@ -202,6 +203,10 @@
         {/snippet}
 
         {@render planetBody()}
+
+        <!-- This world's one door out, under the world it opens. Inside the
+             section so it takes the same padding the stage does. -->
+        <HarvestVerb id={PlanetManager.selected} />
       </Section>
     {:else}
       {@render planetBody()}
@@ -236,6 +241,7 @@
       <SplitControl job="anchoring" />
     {/if}
   </div>
+
 </div>
 
 <style>

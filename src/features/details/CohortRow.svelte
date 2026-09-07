@@ -88,18 +88,28 @@
 
   const ROW_DELAY = 750;
   const PURCHASE_DELAY = 200;
+  const HIDE_MS = 80;
 
   const tooltipOptions: Partial<TippyProps> = {
-    // Anchored to the row's leading edge — its trailing edge the panel
-    // could run past the window on a wide table. flipVariations disabled:
-    // otherwise Popper swaps start->end near the right edge, flipping the
-    // anchor to the side we just pinned it away from.
-    placement: 'bottom-start',
+    // Beside the row's top-left, the way an upgrade chip opens — see `Chip`.
+    // The roster sits in the table column, so left is where the room is: the
+    // planet column takes the panel and the row stays uncovered, where opening
+    // downward buried the rows you were comparing this one against.
+    //
+    // flip off outright rather than tuned: a fallback to the right would only
+    // run the panel under the upgrade rail, and swapping start->end near an
+    // edge moves the anchor off the corner it is pinned to.
+    placement: 'left-start',
     delay: [ROW_DELAY, 0],
+    // Off the planet almost at once. Opening left puts the panel over the world
+    // you buy for, so the pointer's next stop is behind it — tippy's own quarter
+    // second trails the whole way there. Short of nothing on purpose: cut dead,
+    // a panel you were still reading reads as a flicker.
+    duration: [300, HIDE_MS],
     offset: [0, 8],
     interactive: false,
     arrow: true,
-    popperOptions: { modifiers: [{ name: 'flip', options: { flipVariations: false } }] },
+    popperOptions: { modifiers: [{ name: 'flip', enabled: false }] },
     // The reference is a buy button: a click must not dismiss the panel that
     // says what the click just did. Without this the row goes quiet mid-buy and
     // stays quiet until the pointer leaves the cell and comes back.

@@ -91,7 +91,7 @@
 
 <style>
   /* Shares OverviewScreen's here-row columns via subgrid, so Active/Ahead
-     line up with the still/name/sweep/clock/deliveries tracks below them. */
+     line up with the planet+name / time+yield halves below them. */
   .ledger {
     display: grid;
     grid-template-columns: subgrid;
@@ -102,7 +102,7 @@
   }
 
   /* The foot is the sum of the rows above it — same subgrid chain as a row,
-     see `BehindRow`, but with nothing in the still/sweep/clock columns. */
+     see `BehindRow`, but with nothing in the still/sweep/clock half. */
   .foot {
     display: grid;
     grid-column: 1 / -1;
@@ -113,11 +113,11 @@
   }
 
   .total-label {
-    grid-column: 1 / 3;
+    grid-column: 1;
   }
 
   .deliveries {
-    grid-column: 5;
+    grid-column: 2;
     display: flex;
     flex-wrap: wrap;
     justify-content: flex-start;

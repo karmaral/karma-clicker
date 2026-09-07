@@ -322,6 +322,25 @@ class Refinery {
    */
   get clearedPerSecond() { return this.#clearedPerSecond; }
 
+  /**
+   * Crimson per second *per pile*. Both lanes are paid the same figure every
+   * pulse, so this is the rate of the pair rather than of either side — which is
+   * what a header reading one crimson figure wants.
+   *
+   * Forecast, not measured, and deliberately the same basis the refinery screen
+   * reads: `#capacity` is coverage times short-pile income, both smooth, so it
+   * only moves when a cohort or an upgrade does. The sawtooth the class comment
+   * warns a HUD about is `#batch`'s — a per-pulse figure that collapses the
+   * instant a pulse lands — not this one's. `clearedPerSecond` is the honest
+   * measurement, but a trailing window over a lumpy counter reads as a number
+   * that will not sit still, and the two settle to the same place anyway.
+   *
+   * So this is exactly half of what Refining prints, always, by construction.
+   */
+  get crimsonPerSecond() {
+    return this.#capacity * this.#ratio;
+  }
+
   /** What the last pulse drew off karma, per pile — 0 before the first one. */
   get lastPaired() { return this.#lastPaired; }
 

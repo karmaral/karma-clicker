@@ -23,7 +23,7 @@
    * One verb, and the split that arms it. Everything here arrives at once, which
    * is why there is one reveal key and no `{#if}` inside.
    */
-  import { Button } from '$ui';
+  import { Button, EscapeButton } from '$ui';
   import { BuildingManager, PlanetManager } from '$lib/managers';
   import { getFirstHarvestAlignment } from '$lib/excess';
   import { FIRST_HARVEST_ALIGNMENT_LABELS, getFirstHarvestConditionLabel } from '$lib/labels';
@@ -135,6 +135,8 @@
     </div>
 
     <div class="middle">
+      <EscapeButton onclose={() => onclose?.()} />
+
       {#if planet}
         <MergeSplit
           staying={merged}
@@ -205,6 +207,7 @@
   }
 
   .middle {
+    position: relative;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;

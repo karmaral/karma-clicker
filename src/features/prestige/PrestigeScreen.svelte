@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Badge, Button, Figure, Label, Value } from '$ui';
+  import { Badge, Button, EscapeButton, Figure, Label, Value } from '$ui';
   import { BuildingManager, PlanetManager, ResourceManager, UpgradeManager } from '$lib/managers';
   import { GRADES, GRADE_LABELS } from '$lib/labels';
   import { badgeFor } from '$features/details/badge';
@@ -71,6 +71,8 @@
   </div>
 
   <div class="middle">
+    <EscapeButton onclose={() => onclose?.()} />
+
     <div class="score">
       <div class="gain">
         <Value kind="wisdom" value={f(prestige.gained)} size="hero" />
@@ -200,6 +202,7 @@
   }
 
   .middle {
+    position: relative;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;

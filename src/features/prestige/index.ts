@@ -1,3 +1,4 @@
+import EndRunVerb from './EndRunVerb.svelte';
 import PrestigeScreen from './PrestigeScreen.svelte';
 
-export { PrestigeScreen };
+export { EndRunVerb, PrestigeScreen };

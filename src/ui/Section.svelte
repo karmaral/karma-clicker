@@ -48,7 +48,7 @@
   .section {
     display: flex;
     flex-direction: column;
-    gap: var(--sp-3);
+    gap: var(--sp-2);
     padding: var(--sp-4);
     min-width: 0;
   }

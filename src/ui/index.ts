@@ -5,6 +5,7 @@ import Card from './Card.svelte';
 import Cell from './Cell.svelte';
 import Chip from './Chip.svelte';
 import ChipQueue from './ChipQueue.svelte';
+import EscapeButton from './EscapeButton.svelte';
 import ExcessMeter from './ExcessMeter.svelte';
 import Figure from './Figure.svelte';
 import HeaderBand from './HeaderBand.svelte';
@@ -14,6 +15,8 @@ import Pip from './Pip.svelte';
 import PolarityBars from './PolarityBars.svelte';
 import PurchaseButton from './PurchaseButton.svelte';
 import Rail from './Rail.svelte';
+import Rate from './Rate.svelte';
+import Reading from './Reading.svelte';
 import Section from './Section.svelte';
 import SliderBar from './SliderBar.svelte';
 import Sparkline from './Sparkline.svelte';
@@ -31,6 +34,7 @@ export {
   Cell,
   Chip,
   ChipQueue,
+  EscapeButton,
   ExcessMeter,
   Figure,
   HeaderBand,
@@ -40,6 +44,8 @@ export {
   PolarityBars,
   PurchaseButton,
   Rail,
+  Rate,
+  Reading,
   Section,
   SliderBar,
   Sparkline,

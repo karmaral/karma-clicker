@@ -23,9 +23,10 @@
   --res-yellow:#9a7b21;
   --res-blue:#33407a;
   /* Above the ladder rather than on it: wisdom is the only mark that crosses a
-     run, so it shares its hue with nothing. Desaturated plum, same flatness and
-     chroma as the four below it. */
-  --res-wisdom:#6b3f6e;
+     run, so it shares its hue with nothing. Desaturated rose-plum — pink enough
+     to part from crimson at a glance, same flatness and chroma as the four
+     below it. */
+  --res-wisdom:#b0628c;
 
   --status-gain:#2f7d4f;
   --status-loss:#9e2b25;
@@ -73,6 +74,31 @@
   --fs-label-sm:9.5px;
   --ls-label:.16em;
   --ls-label-sm:.14em;
+
+  /* A third tier under the two label sizes, and the only one named for its job
+     rather than its size: a caption names the figure directly above it, where a
+     label names a section. 10px against 9.5px was never a hierarchy — half a
+     pixel reads as the same word twice — so this drops the size, the weight and
+     the tracking together, which is what actually makes one recede behind the
+     other. Nothing but a caption under a figure should use it. */
+  --fs-caption:8.5px;
+  --ls-caption:.12em;
+
+  /* Figure to its caption. Structural, not decorative: every block that sits on
+     the band's caption rail leaves exactly this much, which is what lets one
+     baseline alignment line up the figures above them too. */
+  --gap-caption:6px;
+
+  /* The excess meter's track. A token because two components have to agree on
+     it and cannot see each other: the meter draws it, and the aside naming it
+     on the header's label line is width-matched to it from the other side of
+     the cell. In `ch` so it holds a proportion of the figures beside it rather
+     than a pixel count that goes stale when they resize.
+
+     18 is close to a floor rather than a preference: the readout under the
+     track reads `Burden −4% · Gate ±4%` and already fills it, so the meter has
+     little width to hand back to the figures beside it. */
+  --meter-track:18ch;
 
   --rule-strong: 2px solid var(--ink-900);
   --rule-section: 1px solid var(--ink-900);

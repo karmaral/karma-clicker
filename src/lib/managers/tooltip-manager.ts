@@ -29,6 +29,11 @@ class TooltipManager {
         'delay',
         'interactive',
         'appendTo',
+        // How long the box takes to fade, not how long it waits — that is
+        // `delay`. Overridable because a panel that opens *over* something you
+        // then want to click has to clear out faster than one that opens into
+        // empty room; a tooltip that says nothing about it keeps tippy's own.
+        'duration',
         'hideOnClick',
       ],
       // The singleton never hides between rows during a drag — it retargets

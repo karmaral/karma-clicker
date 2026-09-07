@@ -51,6 +51,23 @@ export const GRADE_SOURCES: Record<GradeKey, string> = {
 };
 
 /**
+ * The words the header band writes *under* its figures. A cell's title says what
+ * the reading is of; these say what each figure inside it counts — which is why
+ * Legacy's figure says Wisdom and Karma's two say their sides. Crimson is bare
+ * here: the header reads the two reds as one rung, so neither qualifier applies.
+ */
+export const READING_LABELS = {
+  /** The score's figure is the standing total; the rates beside it are the flow. */
+  total: 'Total',
+  wisdom: 'Wisdom',
+  karmaNegative: 'Negative',
+  karmaPositive: 'Positive',
+  red: 'Crimson',
+  yellow: GRADE_LABELS.yellow,
+  blue: GRADE_LABELS.blue,
+};
+
+/**
  * How a planet was first harvested, which sets what its recurring harvest pays.
  * The karma column words, so nobody mistakes them for the excess sides.
  */
@@ -75,16 +92,23 @@ export function getWaveLabel(phase: number, phasesPerAge: number, isDense: boole
 }
 
 /**
+ * The two ends of the excess scale. Named as a pair because the meter draws
+ * both at once — the end you are on and the one you are not — where a caller
+ * asking which side a reading sits on wants only the one word.
+ */
+export const EXCESS_SIDES = { negative: 'Burden', positive: 'Comfort' } as const;
+
+/**
  * Which side the excess sits on. One signed reading, never two bars — the side
  * is a qualifier on the label, not a resource of its own (CONTEXT v3 §3.2).
  */
 export function getExcessSideLabel(excess: number | undefined) {
   if (!excess) return undefined;
 
-  return excess > 0 ? 'Comfort' : 'Burden';
+  return excess > 0 ? EXCESS_SIDES.positive : EXCESS_SIDES.negative;
 }
 
-/** The side as a section's qualifier — the meter says the bare word itself. */
+/** The side spelt out as a sentence's qualifier, where a bare word would not do. */
 export function getExcessSideNote(excess: number | undefined) {
   const side = getExcessSideLabel(excess);
 

@@ -38,12 +38,11 @@
 {/if}
 
 <style>
-  /* Flex rather than grid: cells pack from the right and wrap as a row fills,
+  /* Flex rather than grid: cells pack from the left and wrap as a row fills,
      so one planet and a dozen both end up flush against the same edge. */
   .grid {
     display: flex;
     flex-wrap: wrap;
-    justify-content: flex-end;
     gap: var(--sp-3);
     margin: 0;
     padding: 0;

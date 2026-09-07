@@ -42,6 +42,19 @@
     letter-spacing: var(--ls-label-sm);
   }
 
+  /* Three levers at once, not just the size: a caption that only shrank still
+     read as a heading, because weight and tracking are what carry the register. */
+  .label.caption {
+    font-size: var(--fs-caption);
+    letter-spacing: var(--ls-caption);
+    font-weight: 600;
+    color: var(--ink-200);
+  }
+
+  /* The tone still wins — a caption on a live section is the one case where it
+     has to come forward. */
+  .label.caption.active { color: var(--ink-500); }
+
   /* Lighter than the label it qualifies, so the two never read as a pair of headings. */
   .label.muted {
     font-weight: 600;

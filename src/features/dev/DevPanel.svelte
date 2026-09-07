@@ -1,4 +1,9 @@
 <script lang="ts">
+  /**
+   * Off screen until asked for, on tilde. Mounted the whole time even so — the
+   * console handle below and the headless driver that reads it must be there
+   * before anyone thinks to open a panel.
+   */
   import { progression, beats } from '$lib/progression';
   import {
     BuildingManager, PlanetManager, ResourceManager, UpgradeManager,
@@ -17,7 +22,7 @@
     karma: { progression, ResourceManager, BuildingManager, PlanetManager, UpgradeManager },
   });
 
-  let open = $state(true);
+  let open = $state(false);
 
   /** Held rather than derived: the store is not reactive, so the list is refreshed by hand. */
   let saves = $state(save.list());
@@ -29,10 +34,32 @@
   const excess = $derived(getExcess());
   const planet = $derived(PlanetManager.getActive());
 
-  $effect(() => {
-    if (!open) return;
+  /**
+   * By position and by character both: `code` is the physical key, which is what
+   * "the tilde key" means on a US layout, and `key` catches the layouts that put
+   * the character somewhere else. Shift is not excluded — `~` is a shifted key.
+   */
+  function isTilde(event: KeyboardEvent) {
+    return event.code === 'Backquote' || event.key === '`' || event.key === '~';
+  }
 
+  /** Bound for the session, not for the open state — the key that opens it has
+      to be listened for while it is closed. */
+  $effect(() => {
     function onkeydown(event: KeyboardEvent) {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+
+      // The panel has a text field of its own, and a save name may hold a backtick.
+      const target = event.target as HTMLElement | null;
+      if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
+
+      if (isTilde(event)) {
+        event.preventDefault();
+        open = !open;
+
+        return;
+      }
+
       if (event.key === 'Escape') open = false;
     }
 
@@ -110,12 +137,12 @@
   }
 </script>
 
-<aside class={['dev', { open }]}>
-  <button class="toggle" onclick={() => (open = !open)}>
-    dev · beat {progression.beat}/{beats.length}
-  </button>
+{#if open}
+  <aside class="dev">
+    <button class="toggle" title="tilde or escape to hide" onclick={() => (open = false)}>
+      dev · beat {progression.beat}/{beats.length}
+    </button>
 
-  {#if open}
     <div class="body">
       <div class="row">
         <input
@@ -227,8 +254,8 @@
         <button onclick={unlockCohorts}>unlock all cohorts</button>
       </div>
     </div>
-  {/if}
-</aside>
+  </aside>
+{/if}
 
 <style>
   .dev {

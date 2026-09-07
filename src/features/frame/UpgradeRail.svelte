@@ -31,9 +31,9 @@
 <div class="rail-upgrades">
   <div class="head">
     <Label text="Upgrades" />
-    <span class="aside">{nav.label(nav.active).toLowerCase()}</span>
+    <button type="button" class="escape" onclick={catalogue.open}>all {total} →</button>
   </div>
-  <ChipQueue escape="all {total} →" onescape={catalogue.open}>
+  <ChipQueue>
     {#each here as upgrade (upgrade.target + upgrade.id)}
       <Chip
         label={getScopeLabel(upgrade.target)}
@@ -84,10 +84,21 @@
     flex: none;
   }
 
-  .aside {
-    font-size: var(--fs-xs);
-    color: var(--ink-300);
-    text-align: right;
+  .escape {
+    flex: none;
+    background: none;
+    border: none;
+    padding: 0 0 2px;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    color: var(--ink-900);
+    border-bottom: 1px solid var(--ink-900);
+    white-space: nowrap;
+  }
+
+  .escape:hover {
+    color: var(--ink-500);
+    border-bottom-color: var(--ink-500);
   }
 
   .item-header {
