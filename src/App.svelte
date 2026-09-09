@@ -9,6 +9,7 @@
   import planetTexts from '$data/planets-texts';
   import { progression, validate } from '$lib/progression';
   import { nav } from '$lib/nav.svelte';
+  import { setDock } from '$lib/dock';
   import { log } from '$lib/log.svelte';
   import logTexts from '$data/log-texts';
   import { loadPending, takeLegacy } from '$lib/save';
@@ -66,6 +67,23 @@
   const preludePlanetName = $derived(planetTexts[preludePlanet?.id ?? '']?.title);
 
   const hasRail = $derived(progression.isRevealed('frame.rail') && !nav.isTakeover);
+
+  /**
+   * The rail doubles as the app's reading room: a panel with nowhere to float is
+   * pinned to its foot and spans it, over the chips rather than over a screen.
+   *
+   * The grid item, not the track inside it — the track's padding is room a
+   * docked panel is welcome to, and a column this narrow has none to give away.
+   * Which is also why the width is the Rail's to publish and not App's to
+   * reconstruct: one box is measured, so there is no pair of numbers to cancel.
+   */
+  let dockBox: HTMLElement | undefined = $state();
+  let dockWidth = $state(0);
+
+  setDock({
+    get box() { return hasRail ? dockBox : undefined; },
+    get width() { return dockWidth; },
+  });
 
   wire();
 
@@ -128,7 +146,7 @@
       </div>
 
       {#if hasRail}
-        <Rail>
+        <Rail bind:box={dockBox} bind:width={dockWidth}>
           <UpgradeRail />
         </Rail>
       {/if}
@@ -172,17 +190,23 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    /* Stable so its scrollbar never shifts the grid's 9fr/2fr split out from
-       under the action bar's matching grid below, which reserves the same gutter. */
+    /* Stable so its scrollbar never shifts `--body-split` out from under the
+       action bar's matching grid below, which reserves the same gutter. */
     scrollbar-gutter: stable;
   }
 
   .body.railed {
-    grid-template-columns: minmax(0, 9fr) minmax(0, 2fr);
+    grid-template-columns: var(--body-split);
   }
 
-  /* The ground the hidden screens are positioned out of flow against. */
+  /* The ground the hidden screens are positioned out of flow against — and the
+     first link in the height chain. A grid rather than a block so its one
+     in-flow screen is handed the body's whole height instead of hugging its own
+     content; every box below repeats the trick, which is what lets a verb at the
+     foot of a column reach for `margin-top: auto`. Content taller than the body
+     still sizes the row and scrolls, so nothing is clipped. */
   .screens {
+    display: grid;
     position: relative;
     min-width: 0;
   }

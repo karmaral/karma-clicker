@@ -61,12 +61,17 @@
     <span class="name">{label}</span>
   </button>
 
+  <!-- The wrapper is what tippy takes, so `--tooltip-max` set here reaches
+       `.tooltip` after the node is moved into the popper — inheriting from the
+       chip would not, since the box ends up under `<body>`. -->
   {#if tooltipContent}
-    <Tooltip bind:contentElem={tooltipElem}>
-      <div class="tooltip-content">
-        {@render tooltipContent()}
-      </div>
-    </Tooltip>
+    <div class="chip-tooltip" bind:this={tooltipElem}>
+      <Tooltip>
+        <div class="tooltip-content">
+          {@render tooltipContent()}
+        </div>
+      </Tooltip>
+    </div>
   {/if}
 
 </li>
@@ -75,6 +80,14 @@
   li {
     list-style: none;
     padding: unset;
+  }
+
+  /* Narrower than the 320px default. A chip's panel is a name, a price and a
+     sentence — at the full width the sentence ran to one long line and the
+     price sat a third of the box away from the title it belongs to. This is a
+     ceiling, not a width: a short panel still shrinks to its own content. */
+  .chip-tooltip {
+    --tooltip-max: 250px;
   }
   .chip {
     display: inline-flex;

@@ -9,6 +9,7 @@
   import type { PurchaseMode } from './types';
   import CohortTooltip from './CohortTooltip.svelte';
   import { badgeFor } from './badge';
+  import { getDock } from '$lib/dock';
   import { resolvePurchasable, resolveQuantity } from './purchase';
   import texts from '$data/buildings-texts';
 
@@ -90,44 +91,107 @@
   const PURCHASE_DELAY = 200;
   const HIDE_MS = 80;
 
-  const tooltipOptions: Partial<TippyProps> = {
-    // Beside the row's top-left, the way an upgrade chip opens — see `Chip`.
-    // The roster sits in the table column, so left is where the room is: the
-    // planet column takes the panel and the row stays uncovered, where opening
-    // downward buried the rows you were comparing this one against.
-    //
-    // flip off outright rather than tuned: a fallback to the right would only
-    // run the panel under the upgrade rail, and swapping start->end near an
-    // edge moves the anchor off the corner it is pinned to.
-    placement: 'left-start',
+  /**
+   * How far right there is to go — the rail, which is the last thing before the
+   * card's edge. Absent on the preview page and before the rail lands, which
+   * fall back to opening beside the row instead.
+   */
+  const dock = getDock();
+  const docked = $derived(dock?.box);
+
+  let rowElem: HTMLElement | undefined = $state();
+
+  /** 380 was never real: `Tooltip` clamps to `--tooltip-max`, which defaults to 320. */
+  const BESIDE_WIDTH = 380;
+
+  /** The one gap between the row and its panel, and where the arrow lives. */
+  const ROW_GAP = 8;
+
+  /**
+   * Everything from the row's right edge to the rail's: the screens' own gutter,
+   * then the whole rail. The gutter is measured off the two edges rather than
+   * read back from a token, so the only things that have to agree are where the
+   * boxes actually are — and the rail's published width is what makes the figure
+   * recompute when the window resizes.
+   */
+  const panelWidth = $derived.by(() => {
+    if (!docked || !rowElem) return BESIDE_WIDTH;
+
+    const gutter = docked.getBoundingClientRect().left - rowElem.getBoundingClientRect().right;
+
+    return gutter + dock!.width - ROW_GAP;
+  });
+
+  /**
+   * One trigger, two speeds: the buy cell is a decision already underway, so
+   * it opens at the old rate; the rest of the row is a glance, and gets to
+   * ask for a beat longer before the panel commits to it. tippy reads
+   * `delay` right after this hook fires, so setting it here still lands on
+   * the show it is about to schedule — see `scheduleShow` in tippy's source.
+   */
+  const onTrigger: TippyProps['onTrigger'] = (instance, event) => {
+    const overPurchase = (event.target as HTMLElement).closest('.purchase-container');
+    instance.setProps({ delay: [overPurchase ? PURCHASE_DELAY : ROW_DELAY, 0] });
+  };
+
+  const shared: Partial<TippyProps> = {
     delay: [ROW_DELAY, 0],
-    // Off the planet almost at once. Opening left puts the panel over the world
-    // you buy for, so the pointer's next stop is behind it — tippy's own quarter
-    // second trails the whole way there. Short of nothing on purpose: cut dead,
-    // a panel you were still reading reads as a flicker.
-    duration: [300, HIDE_MS],
-    offset: [0, 8],
     interactive: false,
-    arrow: true,
     popperOptions: { modifiers: [{ name: 'flip', enabled: false }] },
     // The reference is a buy button: a click must not dismiss the panel that
     // says what the click just did. Without this the row goes quiet mid-buy and
     // stays quiet until the pointer leaves the cell and comes back.
     hideOnClick: false,
-    // One trigger, two speeds: the buy cell is a decision already underway, so
-    // it opens at the old rate; the rest of the row is a glance, and gets to
-    // ask for a beat longer before the panel commits to it. tippy reads
-    // `delay` right after this hook fires, so setting it here still lands on
-    // the show it is about to schedule — see `scheduleShow` in tippy's source.
-    onTrigger(instance, event) {
-      const overPurchase = (event.target as HTMLElement).closest('.purchase-container');
-      instance.setProps({ delay: [overPurchase ? PURCHASE_DELAY : ROW_DELAY, 0] });
-    },
+    onTrigger,
   };
+
+  /**
+   * Straight out to the row's right, filling everything left over: the screens'
+   * gutter and the whole rail, out to the card's edge. Wider than the rail alone
+   * by that gutter, which is the width the panel was short.
+   *
+   * It runs over the rail rather than over the world or the rows — the rail is
+   * the only column on screen that is nobody's click target, and both the disc's
+   * feedback and the rows you are comparing stay uncovered. It moves with the
+   * row again, but level with it, so it never crosses the roster.
+   *
+   * `-start` and not `-end`: the panel's top lines up with the row's, which is
+   * where the name it belongs to is.
+   */
+  const dockedOptions: Partial<TippyProps> = {
+    ...shared,
+    placement: 'right-start',
+    offset: [0, ROW_GAP],
+    duration: [300, HIDE_MS],
+    arrow: true,
+  };
+
+  /**
+   * Beside the row's top-left, the way an upgrade chip opens — see `Chip`.
+   * What the docked panel does properly, this does by pointing left at whatever
+   * happens to be there: it keeps the rows you are comparing uncovered, which
+   * is all a layout with no dock to aim at can promise.
+   *
+   * flip off outright rather than tuned: a fallback to the right would only run
+   * the panel under the upgrade rail, and swapping start->end near an edge moves
+   * the anchor off the corner it is pinned to.
+   */
+  const besideOptions: Partial<TippyProps> = {
+    ...shared,
+    placement: 'left-start',
+    offset: [0, 8],
+    // Short of nothing on purpose: cut dead, a panel you were still reading
+    // reads as a flicker.
+    duration: [300, HIDE_MS],
+    arrow: true,
+  };
+
+  const tooltipOptions = $derived(docked ? dockedOptions : besideOptions);
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -- role turns interactive with canSend; the linter can't see the ternary. -->
 <div class={["row", { compact, lit: isLit, sendable: canSend, sending: canSend && cohort.isInProgress }]}
+  bind:this={rowElem}
   role={canSend ? 'button' : 'group'}
   tabindex={canSend ? 0 : undefined}
   onclick={onRowClick}
@@ -197,7 +261,14 @@
       {quantity}
     />
 
-    <div class="tooltip-wrapper" bind:this={tooltipElem} style:--tooltip-width="380px">
+    <!-- Both, because `Tooltip`'s own `--tooltip-max` would otherwise clamp the
+         panel to 320px and the dock's width would be a number that does nothing. -->
+    <div
+      class="tooltip-wrapper"
+      bind:this={tooltipElem}
+      style:--tooltip-width="{panelWidth}px"
+      style:--tooltip-max="{panelWidth}px"
+    >
       <Tooltip>
         <CohortTooltip {cohort} {purchaseMode} />
       </Tooltip>

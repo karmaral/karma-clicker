@@ -100,6 +100,18 @@
      little width to hand back to the figures beside it. */
   --meter-track:18ch;
 
+  /* The body's outer split, screens against rail. One token because three boxes
+     stand on it — the body, the action bar's strip below it, and the cohort
+     panel that measures the rail to size itself — and a seam that disagrees
+     between them shows as a tab landing off the column rule.
+
+     Widened from 9/2 on purpose: the rail is the only column nothing is clicked
+     in, so it is where the cohort panel opens, and at 2fr the panel was narrow
+     enough that its longer rate lines overflowed. The table pays for it out of
+     slack it was not using. This is the number to turn if the panel still
+     overflows — not a floor inside the panel, which would only overhang. */
+  --body-split: minmax(0, 17fr) minmax(0, 4fr);
+
   --rule-strong: 2px solid var(--ink-900);
   --rule-section: 1px solid var(--ink-900);
   --rule-row: 1px solid var(--line-100);

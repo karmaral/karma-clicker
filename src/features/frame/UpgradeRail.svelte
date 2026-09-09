@@ -12,8 +12,8 @@
   /**
    * This screen's, and the global ones. A chip is about the thing under it: the
    * rail's hover lights its target on the screen below, and a chip pointing two
-   * tabs away was lighting nothing. What is cut out is not lost — the header's
-   * tabs carry the count of what is buyable behind each of them.
+   * tabs away was lighting nothing. What is cut out is not lost — the action
+   * bar's tabs carry the count of what is buyable behind each of them.
    *
    * The column is tall rather than wide, so all of it shows — no `VISIBLE` cap,
    * the queue itself scrolls past the fold.
@@ -101,17 +101,28 @@
     border-bottom-color: var(--ink-500);
   }
 
+  /* Title and price on one line while the panel has room, price dropping to its
+     own line when it does not. The `2ch` was doing the wrap's job by force: it
+     held the two apart at any width, so at the narrower panel the title broke
+     mid-word instead of the pair breaking at the seam between them. A gap and a
+     wrap say the same thing without setting a floor. */
   .item-header {
     display: flex;
-    justify-content: space-between;
-
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--sp-1) var(--sp-3);
   }
+
   .title {
     font-weight: 600;
-    margin-right: 2ch;
+    min-width: 0;
   }
+
+  /* Its own margin rather than `space-between`, so it stays right-aligned on the
+     wrapped line too, where it is the only thing on it. A price never breaks. */
   .cost {
     font-weight: 600;
     margin-left: auto;
+    white-space: nowrap;
   }
 </style>

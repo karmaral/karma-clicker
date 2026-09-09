@@ -75,7 +75,7 @@
   });
 </script>
 
-<div class="cohort-tip">
+<div class="cohort-tooltip">
   {#if text?.description}
     <div class="description">{text.description}</div>
   {/if}
@@ -155,11 +155,12 @@
 </div>
 
 <style>
-  .cohort-tip {
+  /* No floor: the panel is docked now and takes the dock's width, so a minimum
+     of its own could only overhang the column it is pinned into. */
+  .cohort-tooltip {
     display: flex;
     flex-direction: column;
     gap: var(--sp-1);
-    min-width: 220px;
   }
 
   .description {
@@ -176,27 +177,40 @@
     width: 100%;
   }
 
+  /* Name and figure on one line while there is room, stacked when there is not.
+     Both halves are `nowrap` — a figure broken across lines is a different
+     number, and the badge belongs to the words beside it — so the wrap has to
+     happen at the seam between them or not at all. */
   .line {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: var(--sp-3);
     font-size: var(--fs-sm);
   }
 
+  /* Breakable, unlike the figure beside it. This is the widest thing in the
+     panel and it used to be `nowrap`, which set a floor no `max-width` could
+     hold — the box grew past the dock it is pinned into and hung off both
+     sides. Words are what may break here; a number is not. */
   .label {
     display: inline-flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: var(--badge-gap);
     color: var(--ink-500);
-    white-space: nowrap;
+    min-width: 0;
   }
 
+  /* Pushed right by its own margin rather than by `space-between`, so it stays
+     on the right edge on the wrapped line too, where it is the only thing there. */
   .num {
     font-stretch: var(--wd-figure);
     color: var(--ink-900);
     text-align: right;
     white-space: nowrap;
+    margin-left: auto;
   }
 
   .dim {

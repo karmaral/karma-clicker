@@ -3,12 +3,16 @@
 
   interface Props {
     children?: Snippet;
+    /** The grid item, published for whoever wants to pin something to it. */
+    box?: HTMLElement;
+    /** Its full width — the item's, not the track's, so padding is real estate. */
+    width?: number;
   }
 
-  let { children }: Props = $props();
+  let { children, box = $bindable(), width = $bindable(0) }: Props = $props();
 </script>
 
-<div class="rail">
+<div class="rail" bind:this={box} bind:clientWidth={width}>
   <div class="track">
     {@render children?.()}
   </div>

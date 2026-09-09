@@ -64,7 +64,7 @@
   }
 
   .strip.railed {
-    grid-template-columns: minmax(0, 9fr) minmax(0, 2fr);
+    grid-template-columns: var(--body-split);
   }
 
   /**

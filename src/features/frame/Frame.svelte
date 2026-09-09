@@ -70,8 +70,8 @@
       last column, so a bottom-start sheet would hang off the right edge. `arrow`
       is not settable here: it is not in the singleton's `overrides`, so every
       tooltip in the app takes the singleton's own. */
-  let legacyTipElem: HTMLElement | undefined = $state();
-  const LEGACY_TIP: Partial<TippyProps> = {
+  let legacyTooltipElem: HTMLElement | undefined = $state();
+  const LEGACY_TOOLTIP: Partial<TippyProps> = {
     placement: 'bottom-end',
     delay: [300, 0],
     offset: [0, 10],
@@ -143,7 +143,7 @@
   const showRates = $derived(progression.isRevealed('details.status'));
   const karmaRates = $derived(getKarmaIncomeByPolarity());
 
-  const showWorldRates = $derived(progression.isRevealed('overview.behind'));
+  const showWorldRates = $derived(PlanetManager.behind.length !== 0);
   /** The two payers, kept apart: souls still incarnating, and the worlds behind you. */
   const cohortRate = $derived(BuildingManager.countExperiencePerSecond());
   const worldsRate = $derived(harvestRateFor('experience'));
@@ -289,7 +289,7 @@
     <Cell
       label="Legacy"
       banded
-      {@attach tooltip({ content: legacyTipElem, options: LEGACY_TIP })}
+      {@attach tooltip({ content: legacyTooltipElem, options: LEGACY_TOOLTIP })}
     >
       <Reading label={READING_LABELS.wisdom}>
         <Value kind="wisdom" value={f(prestige.held)} muted={!prestige.held} size="lg" />
@@ -301,8 +301,8 @@
 <!-- Placeholder copy — the sheet's shape, not its words yet. Rendered outside
      the band so it is never a grid item of it. -->
 {#if showLegacy}
-  <Tooltip bind:contentElem={legacyTipElem}>
-    <div class="legacy-tip">
+  <Tooltip bind:contentElem={legacyTooltipElem}>
+    <div class="legacy-tooltip">
       <div class="title">Legacy</div>
       <p>Wisdom carried out of runs already ended. Placeholder — what it buys, and why it survived, goes here.</p>
       <p class="note">Placeholder: where this legacy came from, run by run.</p>
@@ -383,6 +383,7 @@
     flex: none;
     border-left: var(--rule-row);
     padding-left: var(--sp-4);
+    margin-left: auto;
     /* What the track rests its baseline on — the size the karma figures beside
        it are set at, so the bar underlines them rather than floating. */
     --meter-figure: var(--fs-xl);
@@ -390,40 +391,42 @@
 
   /* Matches Tooltip's own title/description register — the sheet is a snippet
      here only so the placeholder can grow a breakdown without a props rewrite. */
-  .legacy-tip {
+  .legacy-tooltip {
     display: flex;
     flex-direction: column;
     gap: var(--sp-2);
   }
 
-  .legacy-tip .title {
+  .legacy-tooltip .title {
     font-weight: 600;
     font-size: var(--fs-sm);
     color: var(--ink-900);
   }
 
-  .legacy-tip p {
+  .legacy-tooltip p {
     margin: 0;
     font-size: var(--fs-sm);
     line-height: 1.4;
     color: var(--ink-600);
   }
 
-  .legacy-tip .note {
+  .legacy-tooltip .note {
     color: var(--ink-300);
   }
 
-  /* Width-matched to `.meter` — the same track plus the same seam and padding —
-     and pushed to the end of the label row, so the aside starts exactly above
-     the track it names instead of at the cell's edge. Both sides read
-     `--meter-track`; neither can see the other, so the token is the agreement. */
+  /* One box the width of the track, pushed to the end of the label row, so its
+     left edge *is* the track's left edge. It used to be the seam's width with
+     the seam's padding added back — two numbers that had to cancel, and any
+     mismatch between them came out as the title standing a gap in from the bar
+     it names. Nothing to cancel now: both sides read `--meter-track` and only
+     that. Neither box can see the other, so the token is the whole agreement —
+     if this drifts again the fix is containment, not a second number. */
   .excess-title {
     display: flex;
     align-items: baseline;
     gap: 5px;
     margin-left: auto;
-    width: calc(var(--meter-track) + var(--sp-4));
-    padding-left: var(--sp-4);
+    width: var(--meter-track);
   }
 
 </style>

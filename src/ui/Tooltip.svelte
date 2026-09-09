@@ -127,8 +127,18 @@
     border-top: none;
   }
 
+  /* Same pinning as `left`, mirrored: a `-start` box is aligned to the
+     reference's top corner, so the arrow belongs at the box's own top and not
+     wherever the overlap with a tall row happens to fall. */
   :global([data-placement^='right'] > .tippy-arrow) {
     left: -5px;
+    top: var(--sp-3) !important;
+    transform: none !important;
+  }
+
+  :global([data-placement^='right'] > .tippy-arrow::before) {
+    border-right: none;
+    border-top: none;
   }
 
   :global([data-placement^='left'] > .tippy-arrow) {
