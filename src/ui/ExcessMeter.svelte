@@ -67,8 +67,18 @@
   const slugFrom = $derived(isComfort ? at(0) : at(value));
   const slugTo = $derived(isComfort ? at(value) : at(0));
 
+  /**
+   * Below this the whole/percent step is coarser than the question being asked —
+   * near the gate a point of a percent is the difference between arriving and not.
+   */
+  const FINE = 15;
+
   /** A magnitude: the lit end word is what says which way, so the sign would too. */
-  const figure = $derived(`${Math.abs(Math.round(value * 100))}%`);
+  const figure = $derived.by(() => {
+    const percent = Math.abs(value) * 100;
+
+    return `${percent < FINE ? percent.toFixed(1) : Math.round(percent)}%`;
+  });
 </script>
 
 <div class="excess">
