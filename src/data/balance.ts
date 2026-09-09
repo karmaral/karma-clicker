@@ -96,7 +96,7 @@ export default {
      * The whole reward for committing to a side: Even pays ×1, a hard detent
      * pays this. No per-cohort figures any more — see `docs/design.md` §6.
      */
-    extremityMultiplier: 3,
+    extremityMultiplier: 2,
     /** What re-aiming costs, and how many phases it takes to pay off. */
     reaimPenalty: 0.65,
     reaimPhases: 1,
