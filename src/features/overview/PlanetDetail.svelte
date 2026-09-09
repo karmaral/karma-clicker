@@ -67,13 +67,20 @@
       <p class="description">{description}</p>
     {/if}
 
-    <HarvestVerb {id} />
+    
 
     {#if progression.isRevealed('overview.ahead') && isAhead}
-      <ReachVerb {id} />
-
-      <AheadRequirements {planet} />
+        <AheadRequirements {planet} />
     {/if}
+
+    <div class="action">
+      <HarvestVerb {id} />
+
+      {#if progression.isRevealed('overview.ahead') && isAhead}
+        <ReachVerb {id} />
+      {/if}
+    </div>
+
   </Section>
 {:else}
   <Section label="Active">
@@ -91,5 +98,8 @@
     margin: 0;
     font-size: var(--fs-sm);
     color: var(--ink-500);
+  }
+  .action {
+    margin-top: auto;
   }
 </style>

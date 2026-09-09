@@ -204,9 +204,13 @@
 
         {@render planetBody()}
 
-        <!-- This world's one door out, under the world it opens. Inside the
-             section so it takes the same padding the stage does. -->
-        <HarvestVerb id={PlanetManager.selected} />
+        <!-- This world's one door out, at the foot of the world it opens.
+             Inside the section so it takes the same padding the stage does, and
+             in its own box so it can be pushed down rather than left to trail
+             the wave strip by a gap. -->
+        <div class="action">
+          <HarvestVerb id={PlanetManager.selected} />
+        </div>
       </Section>
     {:else}
       {@render planetBody()}
@@ -266,6 +270,18 @@
     flex-direction: column;
     border-right: var(--rule-card);
     min-width: 0;
+  }
+
+  /* The column's slack handed across the component seam — the head Section is
+     this column's only child, so without this it hugs the stage and the verb
+     below has nothing to be pushed into. Mirrors Overview's `.detail`. */
+  .planet > :global(.section) {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .action {
+    margin-top: auto;
   }
 
   .cohort {

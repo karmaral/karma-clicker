@@ -42,6 +42,13 @@
 {/if}
 
 <style>
+  /* Passes the height it was given straight down. A block box here would size to
+     its content and every screen below would inherit the hug — see `.screens`. */
+  .screen {
+    display: grid;
+    min-width: 0;
+  }
+
   /**
    * Out of flow rather than gone: a screen at `display: none` measures nought,
    * which would put the planet stage's width at nought, drop its view out of the

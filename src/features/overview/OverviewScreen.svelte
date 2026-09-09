@@ -17,7 +17,6 @@
   import PlanetDetail from './PlanetDetail.svelte';
   import BehindLedger from './BehindLedger.svelte';
   import AheadGrid from './AheadGrid.svelte';
-  import HarvestLedger from './HarvestLedger.svelte';
   import { selection } from './selection.svelte';
   import { FirstHarvestScreen } from '$features/harvest';
   import { PrestigeScreen } from '$features/prestige';
@@ -47,11 +46,6 @@
       <div class="detail">
         {#if progression.isRevealed('overview.active')}
           <PlanetDetail id={selected} />
-        {/if}
-
-        <!-- Only while the Behind band cannot carry the rates itself. -->
-        {#if isReporting && !PlanetManager.behind.length}
-          <HarvestLedger />
         {/if}
       </div>
 
@@ -118,16 +112,24 @@
 
 <style>
   /* The ground the hidden body is positioned out of flow against, while the
-     harvest holds the screen. */
+     harvest holds the screen. A grid for the same reason `.screens` is one:
+     exactly one child is ever in flow, and it should take the whole height
+     rather than its own. */
   .stack {
+    display: grid;
     position: relative;
+    min-width: 0;
   }
 
   /* Same two halves BehindLedger's rows use — planet+name, then time+yield —
      so Active+Ahead's split lines up with the ledger below via subgrid. */
+  /* `start`, not the grid default: this column now stands full height, and left
+     to stretch its bands would each take a share of the slack and drift apart.
+     The bands stack from the top and the slack falls below them. */
   .axis {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    align-content: start;
     column-gap: var(--sp-3);
     min-width: 0;
   }
@@ -155,5 +157,13 @@
     flex-direction: column;
     border-right: var(--rule-card);
     min-width: 0;
+  }
+
+  /* The end of the chain. `PlanetDetail`'s root is this section, so the slack
+     has to be handed across the component seam before its verb can be pushed to
+     the foot with `margin-top: auto`. */
+  .detail > :global(.section) {
+    flex: 1;
+    min-height: 0;
   }
 </style>
