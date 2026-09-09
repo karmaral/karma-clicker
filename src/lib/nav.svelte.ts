@@ -25,9 +25,10 @@ const active = $derived(isAvailable(requested) ? requested : 'overview');
 
 /**
  * The first harvest is a **takeover**, not a fourth tab — but of the screen it
- * is reached from rather than of the frame. The navbar stays, so the tab above
- * it stays lit and there is a way back out; a screen with nothing lit over it
- * is a room with no door, which is also why it is not a tab of its own.
+ * is reached from rather than of the frame. The navbar collapses with the rail,
+ * so exactly one verb is on screen and the takeover's own escape is the door;
+ * what keeps it from being a room with no walls is the header, which never
+ * goes.
  *
  * It lives here rather than in the Overview because **which screen hosts it is
  * not settled** — Overview holds it today, Details is the live alternative, and

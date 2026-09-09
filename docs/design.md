@@ -1,7 +1,13 @@
 # Karma Clicker — Design
 
-**v6** · 2026-09-05 · supersedes CONTEXT v3
+**v6.1** · 2026-09-08 · supersedes CONTEXT v3
 
+> **v6.1** — §17 refitted to the frame that shipped: the screen tabs left the
+>  header for a bottom action bar, the rail stopped truncating, the separate
+>  harvest ledger is gone, the planet verbs went back to the columns they act
+>  on, and prestige became a second takeover. **No economy figure moved** — §1–16
+>  and §18–20 are untouched apart from §19's board. One new open question: where
+>  the end-run verb belongs.
 > **v6** — coverage saturates and the level moves off it: §9 rewritten. Upgrades
 >  push an uncapped `reach`; `coverage = reach / (1 + reach)` approaches 1.0 and
 >  never crosses it, so no ladder total can overshoot the milestone the way the
@@ -1699,6 +1705,14 @@ the selection — Harvest on the world you are on, Reach on one ahead, nothing o
 one behind. **The row that names a world is the row that reports it**; there is
 no separate ledger re-listing the same names in a second column.
 
+**A verb sits at the foot of the column it acts on**, not in a bar the screen
+shares. The travelling verb used to be a slot in the frame's strip, which put
+Harvest and Reach the same distance from every world and made the selection the
+only thing saying which one they meant. Pushed to the bottom of the selected
+world's own column, the button is under the picture it is about. The separate
+harvest ledger this section already argued against is now actually deleted —
+the Behind rows carry their own rates.
+
 A picture on every row, and **size is the only thing separating the bands** —
 Ahead's are the biggest, because **an unreached world is a place you know nothing
 else about and the silhouette is the only thing you have to want it by.**
@@ -1720,24 +1734,44 @@ order the decision is made. Dragging the split pulls the souls staying with the
 world in against its surface and pushes the ones leaving out past their orbits —
 **the cost is seen before it is read.**
 
-`Not yet` stays on this screen even though the tabs above already offer a way
-out: **it is the only thing on the screen that says leaving is free.**
+`Not yet` is now the **only** way out, and that is a change. It used to be kept
+as the one thing on the screen saying leaving is free, with the tabs still lit
+above it as the real door. The tabs now collapse for the duration — see below —
+so the word carries the exit on its own.
+
+### A takeover keeps the header and drops everything else
+
+Two screens take a body over: the **first harvest** and the **end of a run**.
+Both hide the upgrade rail and collapse the tab strip, and both draw their own
+verb across the whole card.
+
+**Exactly one verb on screen at a time** is what the collapse buys. A takeover
+asks one question, and a tab strip beside it offers three other places to be
+while it is asking.
+
+**The header is what stops this being a room with no walls.** That objection —
+*a screen reached by one verb and left by one word, with nothing lit over it* —
+was the argument for keeping the tabs, and the header answers it better: your
+totals stay on screen throughout, so the takeover reads as a panel over the game
+rather than as somewhere the game went. **Making it a fourth tab** stays
+rejected for the reason it always was: it is one world's decision, not a place
+you live.
 
 ### Unsettled: which screen the harvest belongs to
 
-It takes the **Overview's body** today. **Details is the live alternative** —
-the world being left is the one Details is about — which is why the flag that
-opens it belongs to neither screen.
+**The verb is now on both screens; the room is still the Overview's.** Details
+carries a Harvest at the foot of its world column, the Overview carries one at
+the foot of the selected world's, and both open the same takeover over the
+Overview's body.
 
-The argument for the Overview: harvesting is about *where you are and where you
-go next*, which is what that screen is for. The argument for Details: the
-decision is about *this world and your souls on it*, which is what that screen is
-for. Both are real. It has not been decided.
-
-Two things already rejected: **hiding the whole frame** (a screen reached by one
-verb and left by one word, with nothing lit above it, is a room with no walls)
-and **making it a fourth tab** (it is one world's decision, not a place you live,
-and it would sit in a strip beside three screens that are).
+That is a defensible end state rather than a half-move — the door is wherever
+you are looking at the world, and the room is one place. But it was reached by
+putting the verb where each column wanted it, not by deciding, so the question
+stands: **the takeover's host is still unpicked.** The argument for the
+Overview is that harvesting is about *where you are and where you go next*; for
+Details, that the decision is about *this world and your souls on it*. Both are
+real. The flag that opens it belongs to neither screen, which is what keeps the
+choice cheap.
 
 ### One layout rule worth stating as design
 
@@ -1746,10 +1780,24 @@ screen's upgrades plus the global ones — because a chip lights its target on t
 screen below it, and a chip whose target lives two tabs away could only ever
 light nothing.
 
-What the rail stops showing, the header says: each tab carries **a count of what
-is buyable behind it right now** — affordable, not merely available, since an
+**It shows all of them.** The rail is a tall column rather than a wide strip, so
+there is no cut-off and no *N more* chip standing in for what did not fit; the
+queue scrolls past the fold and an escape opens the full window. The only thing
+the rail withholds is now the only thing it should: other screens' upgrades.
+
+What the rail withholds, **the tabs** say — each carries **a count of what is
+buyable behind it right now**, affordable rather than merely available, since an
 upgrade you have unlocked and cannot pay for is a standing fact and a tab marked
 at all times is not a mark.
+
+**The tabs sit in a strip along the bottom of the card, not in the header.** The
+header is a register of readings, and a reading is something you consult while a
+tab is something you press — putting the two in one band asked one row to be
+both. Along the bottom the tabs measure the body they switch: a tab is the width
+of half the planet column, so the seam after the second one lands on the rule
+that column already draws. Beside them sits the one verb that is about the run
+rather than about a world (§18), which is the only thing left in the strip now
+that the planet verbs went back to their columns.
 
 And: **a continuous quantity may colour a thing in place, but it may not decide
 where the thing sits.** Sorting the rail on affordability made chips reshuffle
@@ -1910,8 +1958,16 @@ the fifth run interesting, not the second.
 **Prestige is chosen, not forced**, and this is settled. The crawl into the outer
 worlds is structural — income grows about `t^2.3` and only the outer wheel ends it
 — so waiting for the system to finish itself would be waiting for a wall rather
-than arriving at a decision. The verb sits on the Overview's axis from the moment
-the run would bank a whole wisdom, which is long before every world is reached.
+than arriving at a decision. The verb appears from the moment the run would bank
+a whole wisdom, which is long before every world is reached.
+
+**Where that verb sits is open.** This section used to say *on the Overview's
+axis*, beside the worlds. What shipped puts it in the bottom strip beside the
+tabs, shown only while the Overview is up (§17) — because ending a run is about
+the run and not about any one world, and the axis is a list of worlds. The
+counter-argument is that the strip is a navigation control cluster, and the one
+verb in the game that discards everything should not sit two centimetres from
+the buttons you press to change screens. **Undecided; the strip is live.**
 
 ### Framing
 
@@ -1945,7 +2001,8 @@ authored well enough to run that test against — see §1.
 
 | Question | Where it bites |
 |---|---|
-| **Which screen hosts the harvest** | §17 — Overview today, Details is live |
+| **Which screen hosts the harvest** | §17 — the verb is now on **both** columns; the takeover is still the Overview's body and its host is still unpicked |
+| **Where the end-run verb sits** | §17, §18 — the bottom strip beside the tabs today; §18 argued for the Overview's axis and the strip shipped without the argument being settled |
 | **Even's experience bonus: ×1.5, ×2, or ×3** | §14 — ×3 is live; the "×3 dominates" reading was taken while `K` was worth zero and must be re-measured |
 | **Whether the Burden/Comfort sink asymmetry is right** | §3, §8 — five upgrades now price in `karma_negative`; whether that is the *shape* of the answer or just the stopgap before commerce is still open |
 | **Whether commerce is a system or a framing** | §18 — the rates worsening may be enough without a market screen |
@@ -2055,6 +2112,10 @@ the slot counts together** — no one of them is meaningful alone.
 - **Whether holding now reads as worth it** — §15 makes departure income an axis,
   and nobody has yet harvested one world twice to feel the difference.
 - **Whether the idle count on the split lever reads as a cost or as a bug.**
+- **Whether a takeover with the tabs collapsed reads as focus or as being
+  trapped** — the header stays and `Not yet` is the only door (§17). The old
+  arrangement kept the tabs lit as a second way out and nobody has played
+  without them.
 - **Whether `riders_1` reads as a purchase**, given nothing rides before it.
 - **Worlds 3, 4 and 5.** No run has ever finished the third world, which is where
   the rebalance's whole argument gets tested.
