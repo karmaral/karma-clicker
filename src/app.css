@@ -22,34 +22,74 @@
   --res-red:#9e2b25;
   --res-yellow:#9a7b21;
   --res-blue:#33407a;
+  /* Drawn as a field inside a ring of the same hue rather than as a solid chip,
+     so experience and the bought grades read as made things beside the
+     refinery's flat Crimson. Ochre and Indigo lighten their hue for the field and
+     keep the hue itself as the ring. Experience runs the pair the other way — a
+     field brighter and cleaner than its base, over a ring cut just below it —
+     because green carries most of its luminance in the green channel, so a green
+     pale enough to sit with the other two stops reading as green at all. The base
+     hue is untouched either way, and stays what a button, a chart line or any
+     other non-badge use wants. */
+  --res-xp-fill:#38b26a;
+  --res-xp-edge:#267346;
+  --res-yellow-fill:#dabe62;
+  --res-blue-fill:#7482c3;
   /* Above the ladder rather than on it: wisdom is the only mark that crosses a
      run, so it shares its hue with nothing. Desaturated rose-plum — pink enough
      to part from crimson at a glance, same flatness and chroma as the four
      below it. */
   --res-wisdom:#b0628c;
+  /* Wisdom takes the same outlined badge from the other end: it already sits
+     lighter than the ladder, so it keeps its hue as the field and rings it in
+     the same step run *downward* rather than being lightened again. */
+  --res-wisdom-edge:#52223c;
 
   --status-gain:#2f7d4f;
   --status-loss:#9e2b25;
 
   --hatch-pos:repeating-linear-gradient(-45deg, #ffffff 1px, #ffffff 4px, #bdbdbd 4px, #bdbdbd 5px);
   --hatch-neg:repeating-linear-gradient(45deg, #111111 1px, #111111 4px, #5a5a5a 4px, #5a5a5a 5px);
+  /* Shared: it rings the hatched bars and the solid badge alike, and is what
+     stops a near-white field dissolving into the page. */
   --hatch-pos-edge:inset 0 0 0 1px var(--line-300);
 
-  /* Three hatch scales, each cut for the size it is drawn at: 3/4 in a 9px
-     badge, 4/5 in a short meter, 7/9 in the header's bars where a finer stripe
-     would fizz into grey. Same stops throughout, so all three read as one mark. */
+  /* The karma badge, drawn solid rather than hatched, and ringed harder than the
+     bars are: 9px of field has no room to establish itself, so the edge is what
+     the eye actually reads. Each side takes its own hatch's stripe as one of the
+     two and the field as the other — positive light on lighter, negative the
+     same pair inverted, so it sits as a mark on the page rather than a hole
+     punched through it. Positive's fill carries a trace of grey because pure
+     white on a white surface left a ring with nothing inside it. */
+  --karma-pos-fill:#ededed;
+  --karma-pos-edge:inset 0 0 0 1px #bdbdbd;
+  --karma-neg-fill:#5a5a5a;
+  --karma-neg-edge:inset 0 0 0 1px var(--ink-900);
+
+  /* Two hatch scales, each cut for the size it is drawn at: 4/5 in a short
+     meter, 7/9 in the header's bars where a finer stripe would fizz into grey.
+     Same stops throughout, so both read as one mark. The badge is drawn solid
+     instead — at 9px any stripe greyed out and cost the two sides their
+     difference, which is the whole job of the mark. */
   --hatch-pos-bar:repeating-linear-gradient(-45deg, #ffffff 1px, #ffffff 7px, #bdbdbd 7px, #bdbdbd 9px);
   --hatch-neg-bar:repeating-linear-gradient(45deg, #111111 1px, #111111 7px, #5a5a5a 7px, #5a5a5a 9px);
 
-  --hatch-pos-badge:repeating-linear-gradient(-90deg, #ffffff 1px, #ffffff 3px, #bdbdbd 3px, #bdbdbd 4px);
-  --hatch-neg-badge:repeating-linear-gradient(0deg, #111111 1px, #111111 3px, #5a5a5a 3px, #5a5a5a 4px);
+  /* Red is the one token that exists polarised, and it carries the polarity the
+     way karma does — in the field, under a ring one step darker than it. Three
+     reds used as two overlapping pairs: light over the hue for positive, the hue
+     over dark for negative. A ring shared between the sides had to be lighter
+     than one field and darker than the other, and the side it inverted on
+     stopped reading. */
+  --red-pos-fill:#d98b82;
+  --red-pos-edge:inset 0 0 0 1px var(--res-red);
+  --red-neg-fill:var(--res-red);
+  --red-neg-edge:inset 0 0 0 1px #5c1815;
 
-  /* Red is the one token that exists polarised. Same angles and same structure
-     as karma's two, with --res-red as the shared stripe so both sides still read
-     as one resource and only the field carries the polarity. */
-  --hatch-red-pos-badge:repeating-linear-gradient(-90deg, #d98b82 1px, #d98b82 3px, #9e2b25 3px, #9e2b25 4px);
-  --hatch-red-neg-badge:repeating-linear-gradient(0deg, #5c1815 1px, #5c1815 3px, #9e2b25 3px, #9e2b25 4px);
-  --hatch-red-edge:inset 0 0 0 1px var(--res-red);
+  /* Unrouted Crimson sits between the two sides rather than beside them: each of
+     these is the midpoint of the corresponding pair above. Any value nearer one
+     side would read as that side badged wrong. */
+  --red-fill:#cc4d42;
+  --red-edge:inset 0 0 0 1px #7d211d;
 
   --badge-size:9px;
   --badge-radius:1.5px;
@@ -126,6 +166,8 @@
 
   --t-fast:.12s ease;
   --t-med:.15s ease;
+  /* For a reading that drifts rather than a control that answers a press. */
+  --t-slow:.35s ease-out;
 
   --toastBtnFont: inherit;
   --toastContainerTop: auto;

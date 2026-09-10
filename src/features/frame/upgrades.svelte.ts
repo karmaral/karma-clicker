@@ -5,7 +5,8 @@
  */
 import { untrack } from 'svelte';
 import { ResourceManager, UpgradeManager } from '$lib/managers';
-import type { ResourceType, UpgradeData, UpgradeScope } from '$types';
+import { modifiersFor } from '$lib/upgrade-effects';
+import type { Modifier, ResourceType, UpgradeData, UpgradeScope } from '$types';
 import type { ChipStatus } from '$ui';
 import { pulse } from '$lib/loop';
 import { SCREENS, type ScreenName } from '$lib/labels';
@@ -36,6 +37,14 @@ export interface Upgrade {
   id: string;
   label: string;
   scope: string;
+  /** The scope's own two halves, parsed once here so no consumer re-splits the key. */
+  kind: UpgradeScope['kind'];
+  entity?: string;
+  /**
+   * What it would add, were it bought. Empty for a verb — an unlock or a clerk
+   * changes what exists, not what a figure reads, so a preview has nothing to price.
+   */
+  modifiers: Modifier[];
   /** The tab that acts on it — `undefined` is global, which every tab shows. */
   screen?: ScreenName;
   costs?: Partial<Record<ResourceType, number>>;
@@ -80,6 +89,9 @@ function upgradeFor(target: string, id: string): Upgrade | undefined {
     id,
     label: text?.title ?? id,
     scope: entity ?? kind,
+    kind,
+    entity,
+    modifiers: modifiersFor(item),
     screen: SCREEN_BY_KIND[kind],
     costs: item.costs,
     cost,

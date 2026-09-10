@@ -107,6 +107,8 @@
   /** The one gap between the row and its panel, and where the arrow lives. */
   const ROW_GAP = 8;
 
+  const TOOLTIP_PANEL_EXTRA = 32;
+
   /**
    * Everything from the row's right edge to the rail's: the screens' own gutter,
    * then the whole rail. The gutter is measured off the two edges rather than
@@ -119,7 +121,7 @@
 
     const gutter = docked.getBoundingClientRect().left - rowElem.getBoundingClientRect().right;
 
-    return gutter + dock!.width - ROW_GAP;
+    return gutter + dock!.width - ROW_GAP + TOOLTIP_PANEL_EXTRA;
   });
 
   /**
@@ -160,7 +162,7 @@
    */
   const dockedOptions: Partial<TippyProps> = {
     ...shared,
-    placement: 'right-start',
+    placement: 'left-start',
     offset: [0, ROW_GAP],
     duration: [300, HIDE_MS],
     arrow: true,
@@ -196,7 +198,6 @@
   tabindex={canSend ? 0 : undefined}
   onclick={onRowClick}
   onkeydown={onRowKeydown}
-  {@attach tooltip({ content: tooltipElem, options: tooltipOptions })}
 >
 
   <div class="ident">
@@ -250,16 +251,21 @@
        Its click opts out of the row's own send — you read the derivation where
        you decide to pay for it, and buying is never also sending. -->
   <div class="purchase-container" role="group">
-    <PurchaseButton
-      kind={badgeFor(cohort.data.cost_type!)}
-      amount={formatCost(cost)}
-      {affordable}
-      onclick={() => onpurchase?.(quantity)}
-      onmouseenter={startPreview}
-      onmouseleave={endPreview}
-      oncycle={oncyclemode}
-      {quantity}
-    />
+    <div 
+      class="purchase-button-wrapper"
+      {@attach tooltip({ content: tooltipElem, options: tooltipOptions })}
+    >
+      <PurchaseButton
+        kind={badgeFor(cohort.data.cost_type!)}
+        amount={formatCost(cost)}
+        {affordable}
+        onclick={() => onpurchase?.(quantity)}
+        onmouseenter={startPreview}
+        onmouseleave={endPreview}
+        oncycle={oncyclemode}
+        {quantity}
+      />
+    </div>
 
     <!-- Both, because `Tooltip`'s own `--tooltip-max` would otherwise clamp the
          panel to 320px and the dock's width would be a number that does nothing. -->
@@ -355,6 +361,13 @@
   }
   .row.compact .purchase-container {
     margin-block: -7px -13px;
+  }
+
+  .purchase-button-wrapper {
+    display: flex;
+    width: 16ch;
+    height: 100%;
+    margin-left: auto;
   }
 
   .ident {

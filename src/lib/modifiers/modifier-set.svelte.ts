@@ -32,9 +32,14 @@ export default class ModifierSet {
   /**
    * Every bucket combines order-independently, so removing one lands exactly
    * where it would be had it never applied.
+   *
+   * `extra` is held for this call alone — what the set *would* read with one
+   * more modifier on it. The order-independence is why a projection can be a
+   * concatenation and nothing more.
    */
-  apply(base: number, stat: ModifierStat, target?: YieldType) {
-    const applicable = this.#modifiers.filter((mod) => this.#isApplicable(mod, stat, target));
+  apply(base: number, stat: ModifierStat, target?: YieldType, extra: Modifier[] = []) {
+    const held = extra.length ? [...this.#modifiers, ...extra] : this.#modifiers;
+    const applicable = held.filter((mod) => this.#isApplicable(mod, stat, target));
     const values = (op: ModifierOp) => applicable
       .filter((mod) => mod.op === op)
       .map((mod) => mod.value);

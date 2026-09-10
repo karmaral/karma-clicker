@@ -1,6 +1,7 @@
 import { ResourceManager } from '$lib/managers';
 import { ResourceEmitter } from '$lib/emission';
 import { getExcess } from '$lib/excess';
+import { getWaveBias } from '$lib/wave';
 import { FIRST_HARVEST_CONDITIONS } from '$lib/labels';
 import balance from '$data/balance';
 import { resolveHarvestDuration, resolveHarvestYields } from './harvest';
@@ -255,7 +256,9 @@ export default class Planet {
   });
 
   bias(positive: boolean) {
-    return this.isDense === positive ? balance.wave.biasAgainst : balance.wave.biasWith;
+    const { biasWith, biasAgainst } = getWaveBias();
+
+    return this.isDense === positive ? biasAgainst : biasWith;
   }
 
   /**
@@ -283,7 +286,7 @@ export default class Planet {
     if (!(span > 0)) return this.bias(positive);
 
     const denseShare = (this.#denseMsBefore(toLived) - this.#denseMsBefore(fromLived)) / span;
-    const { biasWith, biasAgainst } = balance.wave;
+    const { biasWith, biasAgainst } = getWaveBias();
 
     return positive
       ? (1 - denseShare) * biasWith + denseShare * biasAgainst

@@ -11,7 +11,7 @@
    */
   import { Tooltip, tooltip } from '$ui';
   import { f } from '$lib/utils';
-  import balance from '$data/balance';
+  import { getWaveBias } from '$lib/wave';
   import { buildWavePath, H as WAVE_H, markerY as markerYAt } from './wave-math';
   import type { Phase } from './types';
 
@@ -19,9 +19,17 @@
     phases: Phase[];
     current: number;
     position: number;
+    /**
+     * Where the live re-aim penalty runs out, on this strip's own 0…1 axis. The
+     * penalty is priced in phases, so the phase clock is where it is drawn.
+     * Already normalised by the screen: the strip knows no planets.
+     */
+    settleAt?: number;
+    /** The same mark for an aim not yet confirmed — where it *would* run out. */
+    draftAt?: number;
   }
 
-  let { phases, current, position }: Props = $props();
+  let { phases, current, position, settleAt, draftAt }: Props = $props();
 
   const H = 40;
   const scaleY = H / WAVE_H;
@@ -32,10 +40,15 @@
   const path = $derived(buildWavePath(phases.length, W, 1));
   const markerY = $derived(markerYAt(phases.length, position, 1) * scaleY);
 
-  const MULTIPLIER = {
-    light: `positive ×${f(balance.wave.biasWith, 2)}, negative ×${f(balance.wave.biasAgainst, 2)}`,
-    dense: `negative ×${f(balance.wave.biasWith, 2)}, positive ×${f(balance.wave.biasAgainst, 2)}`,
-  };
+  /** Live, not authored — excess widens the pair, so the legend moves with it. */
+  const MULTIPLIER = $derived.by(() => {
+    const { biasWith, biasAgainst } = getWaveBias();
+
+    return {
+      light: `positive ×${f(biasWith, 2)}, negative ×${f(biasAgainst, 2)}`,
+      dense: `negative ×${f(biasWith, 2)}, positive ×${f(biasAgainst, 2)}`,
+    };
+  });
 
   const currentPhase = $derived(phases[current]);
 
@@ -74,6 +87,23 @@
       stroke="var(--ink-300)" stroke-width="1" stroke-dasharray="2 3"
       vector-effect="non-scaling-stroke"
     />
+
+    <!-- Both solid: the playhead owns the dash, and a second dashed line would
+         read as another now rather than as a deadline. Weight says which is
+         which — the committed one takes the ink. -->
+    {#if draftAt !== undefined}
+      <line
+        x1={draftAt * W} y1="0" x2={draftAt * W} y2={H}
+        stroke="var(--ink-300)" stroke-width="1" vector-effect="non-scaling-stroke"
+      />
+    {/if}
+
+    {#if settleAt !== undefined}
+      <line
+        x1={settleAt * W} y1="0" x2={settleAt * W} y2={H}
+        stroke="var(--ink-900)" stroke-width="1" vector-effect="non-scaling-stroke"
+      />
+    {/if}
 
     {#each phases as _, i (i)}
       <rect

@@ -34,7 +34,7 @@
   const SCORE_WIDTH = '275px';
 
   /** One figure, so it takes only what a figure needs — the slack is the refinery's. */
-  const LEGACY_WIDTH = '145px';
+  const LEGACY_WIDTH = '120px';
 
   /**
    * Karma is the widest reading in the band — two figures, two rates and the

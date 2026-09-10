@@ -424,32 +424,43 @@ first cohort last**, which is the AdCap shape and the correct one.
 
 ### Clerks — the game is clicking several things before it is clicking one
 
-**Every cohort starts manual, cohort 1 included, and every cohort has a clerk to
-buy.** You click its row to send one batch of souls out. A **clerk** costs
-`250 × cost(n)` and thereafter the cohort runs itself, forever.
+**Every cohort past the first starts manual and has a clerk to buy.** You click
+its row to send one batch of souls out. A **clerk** costs `250 × cost(n)` and
+thereafter the cohort runs itself, forever.
 
 ⚠ **`clerk` is a placeholder — the word is unsettled.** It reads as an office the
 retired word `manager` already ruled out, and nothing tried in its place (ledger
 words, mechanical ones, managerial ones, continuous-process ones) has landed. See
 §19.
 
-**Cohort 1 is not exempt.** An earlier draft of this section gave it no clerk to
-buy, on the reasoning that the first soul is something that happens to you and
-should stay that way. That reasoning does not survive contact with §5's own arc —
-*many hands, then fewer, then none* — since a row that can never be automated is
-a row the arc cannot reach. What the first-soul beat actually wants is that the
-row has to have been sent by hand **at least once** before the option exists,
-which the uniform rule already gives it: cohort 1's first copy is free and
-manual, same as every cohort's first copy is manual, and its clerk is bought like
-any other's. There is a placeholder log line near the first-soul idea (§1) and it
-should not be taken as the copy; the beat needs writing.
+**Cohort 1 is the exception, and it is autonomous from its first copy.** A middle
+draft of this section argued the opposite — that a row which can never be
+automated is a row the *many hands, then fewer, then none* arc cannot reach — and
+that argument is answered rather than accepted. The arc is about the hand being
+outgrown, and cohort 1 is the row the hand is *already* holding: by the time a
+second row exists there is nothing left for clicking cohort 1 to teach, and a
+clerk chip on it prices busywork you would buy on sight. So autonomy rides along
+with the free first copy, on the same grant, and the row is never manual.
+
+What this costs is one rung of practice: the first clerk anyone pays for is
+cohort 2's, at ten times a price nobody was ever charged. That is a **pacing**
+problem and it is answered by pacing rather than by reinstating a purchase on
+cohort 1 — the reveal multiplier under *Entry* now puts cohort 2's row and
+cohort 2's clerk a full ladder apart, so the price is met after the row has been
+run by hand and not on sight.
+
+What it buys is that the first-soul beat stays a thing that happens to you. There
+is a placeholder log line near that idea (§1) and it should not be taken as the
+copy; the beat needs writing.
 
 This restores the dropped `autonomous` flag, which was coded and then pinned open,
 and it earns three things:
 
-- **The early game has more than one verb.** Before the first clerk the run is a
-  small floor of ledgers being worked by hand, which is the register the game
-  wants and the shape the press alone cannot make.
+- **The early game has more than one verb.** From the second row to the last
+  clerk the run is a small floor of ledgers being worked by hand, which is the
+  register the game wants and the shape the press alone cannot make. Cohort 1
+  running itself underneath that floor is the point, not an exception to it —
+  it is the one row the hand has already finished with.
 - **Manual batching makes the wave a lever rather than a readout.** You can hold a
   batch through a dense phase and release it into a light one. That is a polarity
   decision with no authored numbers behind it at all, and it is what the
@@ -468,19 +479,38 @@ the log itself is placeholder and no line of it is load-bearing.
 
 ### Entry
 
-- **Cohort 1's first copy is free**, and it is gated at **30 lifetime karma+**.
-  That preserves §4's press-count argument, which is load-bearing exactly once —
-  on the first cohort — and the first-soul beat, which is something that happens
-  to you rather than a chip you find.
-- **Every cohort past the first is revealed at `5 × cost(n)` experience** and has
-  no separate entry price. The first copy *is* the entry. One reveal rule, no
+- **Cohort 1 is one chip that does three things**: it unlocks the row, hands you
+  the first copy, and clerks it. Revealed at **50 lifetime experience** and
+  priced at **100 experience** — about a hundred presses, since the press pays 1
+  xp flat before `str_1`. The first soul is still a thing that happens to you
+  rather than a chip you go looking for; it is the pressing itself that gates it,
+  which is §4's press-count argument surviving in experience rather than in
+  karma+. An earlier draft of this section said *free, at 30 lifetime karma+*;
+  the experience pair is what ships and what is meant.
+- **Every cohort past the first is revealed at `25 × cost(n)` experience** and
+  has no separate entry price. The first copy *is* the entry. One reveal rule, no
   table.
-  - **Corrected from `0.5×` this session**: at `0.5×cost(2)` cohort 2 unlocked
-    before cohort 1 did — the 30 clicks the karma+ gate demands already pay
-    more lifetime xp than that (5 xp a click, flat). `5×` sits past what
-    reaching that gate by clicking alone earns, so the second cohort's row
-    takes actually running the first one, not just pressing the same button
-    thirty more times.
+  - **`25×`, and it is `250 × cost(n−1)` wearing a different hat.** A cohort
+    costs ten times the one below it, so `reveal(n+1)` and `clerk(n)` are the
+    same figure: **a row appears at the exact moment the row below it can be
+    automated.** Run it, clerk it, next row. The two multipliers are one knob and
+    the code derives one from the other so they cannot drift.
+  - **Corrected from `5×` this session, which was itself a correction of `0.5×`.**
+    Held against a row's own ladder, in units of `10^(n−1)`: the current row's
+    tier I costs 507 all-in, its tier II costs 2,949, its clerk costs 3,750. At
+    `5×` the next row landed at **750** — past tier I, four times short of tier
+    II. So width was permanently the cheaper buy, depth never had a reason, and
+    you could stand two rows clear of your first purchased clerk. At `25×` it
+    lands at 3,750 and the ladder is walked instead of skipped.
+  - **The clerk's `250×` was never the fault** and did not move. It sits just
+    past the row's own tier II, which is the right price for selling your
+    timing away — cheapening it would put automation before tier II and take
+    the manual-batching lever §6 leans on out of the game.
+  - ⚠ **The cost lands entirely in the first ten minutes.** Income is nearly
+    flat while there is one row and a button, so a 5× threshold is close to a 5×
+    wait: the second row moves from roughly two or three minutes to five or
+    eight. After that income compounds and the delay stops being felt. **Not
+    measured against a clock** — see *Open*.
 
 ### What this deletes
 
@@ -520,8 +550,10 @@ never stall, and the cap that the retune installed is not needed and is gone.
   whether cohort 5 arrives at the right minute of the run has not been measured.
 - **`priceFactor` is unauthored** and is now the single pacing knob on every
   level in the game.
-- **The clerk multiplier of 250×** is lifted straight from AdCap's manager ratio
-  and has not been checked against this economy.
+- **The clerk multiplier of 250×** was lifted straight from AdCap's manager
+  ratio, and it has now been checked against this economy and holds: it prices a
+  clerk just past the row's own tier II, which is the right moment to sell your
+  timing. **The reveal multiplier is the one that does not hold** — see *Entry*.
 - **Cohorts are `cohort_1`…`cohort_8` in code and `Cohort n` in the UI —
   placeholders, not names.** The four inherited names — Impulse, Steady, Chaos,
   Zealot — were named for yield shapes that no longer exist and are gone from
@@ -562,9 +594,13 @@ extremity        = |detent| / 2
 karmaYieldFactor = (1 + extremity × (extremityMultiplier − 1)) × (1 − reaimPenalty)
 ```
 
-`extremityMultiplier: 3`, global. **Extremity is the whole reward for
-committing:** at Even you take ×1, at a hard detent ×3, and the middle detents sit
-at ×2. Running a side pays; the game never says which side.
+`extremityMultiplier: 2`, global. **Extremity is the whole reward for
+committing:** at Even you take ×1, at a hard detent ×2, and the middle detents sit
+at ×1.5. Running a side pays; the game never says which side.
+
+It was 3, and at 3 the middle detents fed the refinery exactly as well as Even —
+tilting to ±1 was a free lunch and nobody had a reason to sit anywhere else. At 2
+it is a trade: **+50% karma for −25% refinery at ±1, +100% for −80% at ±2.**
 
 ### The dial had a cliff, and it was a wisdom kill switch
 
@@ -618,10 +654,32 @@ for**, and it is legible without a needle diagram.
 ### The phase bias
 
 `biasWith: 1.5` / `biasAgainst: 0.5`. A phase pays the polarity running with it
-×1.5 and the one running against it ×0.5.
+×1.5 and the one running against it ×0.5 — **at even. Excess widens the pair.**
 
-It is a **square wave**: a rate sits flat for a whole phase and then jumps by a
-factor of 3 on the flip. Making it continuous over the phase position is still a
+```
+spread      = 0.5 + excessSpread × |excess|
+biasWith    = 1 + spread
+biasAgainst = 1 − spread
+```
+
+`excessSpread: 0.4`, placeholder. At |excess| 1.0 the pair is ×1.9 / ×0.1. It is
+**mean-preserving** — the two always sum to 2.0, so this is not a tax and a tilted
+run earns the same karma per cycle as it did before. Phase durations are untouched,
+so §9's cycle mean and §13's age arithmetic never see it. `excessSpread` must stay
+under 0.5: a phase paying literally nothing is a different mechanic. Before both
+piles exist the reading is undefined (§8) and the authored pair stands — undefined
+is *unknown*, not even.
+
+**This is the first thing excess does other than say no.** It only ever gated a
+door. Now a deep tilt is audible: correction is fast in one phase and near-stalled
+in the other, so digging out is *wait for the phase, then aim* rather than holding
+a dial for a hundred seconds. It also makes three things observable that the design
+already leaned on — the re-aim penalty is priced in phases, so *when* you pay it
+now matters; the short-vs-long cohort identity below; and the manual batch as a
+lever.
+
+It is a **square wave**: a rate sits flat for a whole phase and then jumps on the
+flip — by a factor of 3 at even, and up to 19 at a full tilt. Making it continuous over the phase position is still a
 real option, but it changes the average bias across a phase and the excess reading
 is a function of income — so it is a **balance change, not a display one**. Open.
 
@@ -633,7 +691,19 @@ That is an argument *for* the square wave that did not exist before.
 ### The re-aim penalty
 
 Changing the detent costs you. `reaimPenalty: 0.65` — a 65% cut to karma —
-decaying linearly to nothing over `reaimPhases: 2`.
+decaying linearly to nothing over `reaimPhases: 1`.
+
+**The dial is drafted, then confirmed.** Pointing it is free; one verb in the
+Aim panel's aside buys the change. It used to commit the instant the detent
+moved, which made a drag across the track pay the penalty once per detent it
+crossed — the cost of a decision depended on how you happened to make it. The
+draft is not saved: a pending aim surviving a reload is a decision nobody made.
+
+**The wave draws where it ends.** A solid line on the phase strip marks the
+phase the penalty runs out at, and a fainter one previews where it would land if
+you confirmed a pending draft now. A cost priced in phases belongs on the phase
+clock, so *wait for the phase, then aim* is a thing you can see rather than a
+thing you have to count.
 
 **It is priced in phases, not seconds.** That matters and is a rule worth keeping:
 phases are a clock nothing can buy (§7), so a penalty priced in phases is a fixed,
@@ -1522,8 +1592,8 @@ larger income.
 being paid for.
 
 **Karma is phase-averaged, never read off the instant.** The wave swings karma
-income ×3 (`biasWith` 1.5 / `biasAgainst` 0.5), so an instantaneous reading would
-pay triple for the accident of leaving on a dense phase and make the wave a thing
+income by at least ×3 (§6's bias pair, wider the deeper the tilt), so an
+instantaneous reading would overpay for the accident of leaving on a dense phase and make the wave a thing
 you time a *permanent* reward against. The bias is divided back out of the live
 figure rather than recomputed, so the two cannot drift. Experience needs no such
 treatment — the bias lives only in the karma split.
@@ -1686,7 +1756,7 @@ milestone only says something happened.
 | `first_reserve` | any soul held back |
 | `first_token` | any Crimson exists |
 | `deep_excess` | \|excess\| ≥ 0.6 — twice beat 8's threshold |
-| `first_clerk` | any cohort running itself |
+| `first_clerk` | any clerk **bought** — cohort 1 is autonomous from its first copy (§5) and must not fire this |
 
 ---
 
@@ -2077,8 +2147,13 @@ the slot counts together** — no one of them is meaningful alone.
   against the refinery's placeholders either.
 - **`priceFactor`**, now a single number and the pacing knob on every level in
   the game.
-- **The clerk multiplier**, 250× a cohort's base cost, lifted from AdCap and never
-  checked against this economy.
+- ~~**The clerk multiplier**, 250× a cohort's base cost, lifted from AdCap and
+  never checked against this economy.~~ **Checked and kept** — it prices a clerk
+  just past the row's own tier II, which is where selling your timing should
+  cost. The reveal multiplier was the one out of place and moved 5× → 25×, which
+  makes the two the same figure one rung apart. What is still unmeasured is the
+  **wall clock**: the second row now wants roughly five to eight minutes instead
+  of two or three, and nobody has sat through it. See §5, *Entry*.
 - **`W` and the +2% per wisdom** — `firstWisdomAt` was fitted against karma moved
   at one coverage and has not been re-measured now that it reads crimson
   produced through the v6 ratio split. `P` is still unwritten because nothing

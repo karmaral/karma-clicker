@@ -5005,6 +5005,68 @@ fraction that *predicts* a count is not the one that *reaches* it — the bisect
 still has to happen against counts. `findMergeFloorForShare` only converts, with a
 `ceil`, so the split that reaches the toll is never a soul short.
 
+## Reveals were outrunning depth
+
+Reported from play: rows unlock before the row below them has had its upgrades
+bought, and the first clerk anyone pays for is cohort 2's at 37,500 against a
+cohort 1 clerk of 3,750 that is never charged, so it reads as a free extra zero.
+
+**The clerk was not the fault.** Held against a row's own ladder, in units of
+`10^(n−1)`: 10 copies plus the tier I rung is 507, 25 copies plus tier II is
+2,949, the clerk is 3,750. So `250 × cost(n)` lands just past that row's own
+tier II, which is exactly where selling your timing should cost. Cheapening it
+would put automation *before* tier II and take the manual-batching lever out of
+the early game entirely — the same lever the press gave up its cooldown to
+protect, above.
+
+**The reveal was.** `5 × cost(n)` put the next row at 750 in those units — past
+tier I, four times short of tier II, and one fiftieth of the current row's
+clerk. Since income compounds and each reveal is only 10× the last, you cleared
+the *next* reveal long before the current clerk. Width was permanently the
+cheaper buy: at the moment cohort 2 appeared, one copy at 150 paid a third of
+everything you had, against 300 for a tier rung. Nothing was mistuned; the two
+multiples were sited against different things.
+
+**Fixed by making them one knob.** `REVEAL_FACTOR = 25`, `CLERK_FACTOR = 10 ×
+REVEAL_FACTOR`, both in `data/buildings.ts` beside `COHORT_RAMP`. A cohort costs
+ten times the one below it, so that identity makes `reveal(n+1)` and `clerk(n)`
+the same figure: **a row appears at the moment the row below it can be
+automated.** Derived rather than written twice so the pair cannot drift.
+
+**Cohort 1 keeps its free clerk, and design.md was wrong, not the code.** §5 had
+argued at length that cohort 1 is not exempt, on the grounds that a row which can
+never be automated is a row the *many hands, then fewer, then none* arc cannot
+reach. Answered rather than accepted: cohort 1 is the row the hand has already
+finished with, and a clerk chip on it prices busywork you would buy on sight. The
+one chip unlocks the row, grants the copy and clerks it. §5 and the `first_clerk`
+milestone were rewritten to match; the milestone must not fire on cohort 1.
+
+Also settled the same way: §5's *free at 30 lifetime karma+* for the first copy
+was stale prose, and the shipped 50 xp reveal / 100 xp price is the rule. §4's
+press-count argument survives in experience, since the press pays 1 xp flat
+before `str_1`.
+
+**What is not measured is the wall clock.** The second row moves from roughly two
+or three minutes to five or eight, and the delay falls entirely in the stretch
+where income is flattest — one row and a button. `sim/run.ts` is the instrument;
+nobody has run it against this.
+
+## Aiming is drafted, and the wave shows the bill
+
+The dial committed on touch, so a drag across the track paid the re-aim penalty
+once per detent it crossed and the price of a decision depended on the gesture
+that made it. Pointing is free now; the Aim panel's aside carries the one verb
+that buys, and the draft is deliberately absent from the save.
+
+The settle line follows from *the wave is a clock*. The penalty is priced in
+phases precisely so nothing can buy it off, and the strip is the only place that
+clock is drawn — so where it ends is a mark on the wave, not a sentence about it.
+The draft's preview line is the same mark asked as a question, which is what makes
+*wait for the phase, then aim* visible instead of counted.
+
+Both lines are solid and separated by weight. The playhead owns the dash, so a
+second dashed line would have read as another now.
+
 ## Naming
 
 `detail` (the design docs' "close-up") shows the planet's proper noun, so code

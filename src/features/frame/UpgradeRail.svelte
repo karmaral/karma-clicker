@@ -2,6 +2,8 @@
   import { Badge, Chip, ChipQueue, Label } from '$ui';
   import { formatCost } from '$lib/utils';
   import { badgeFor } from '$features/details/badge';
+  import CohortTooltip from '$features/details/CohortTooltip.svelte';
+  import { BuildingManager } from '$lib/managers';
   import { getEffectLabel, getScopeLabel } from '$lib/labels';
   import { iconFor } from './upgrade-icon';
   import { nav } from '$lib/nav.svelte';
@@ -26,6 +28,19 @@
   function buy(upgrade: Upgrade) {
     catalogue.buy(upgrade);
   }
+
+  /**
+   * The row a chip's second panel would be about — the cohort it names, and only
+   * where there is something to price. A verb carries no modifiers, so an unlock
+   * never opens a panel of zeroes for a row that does not exist yet; a fan-out
+   * names no one row and falls out on the scope.
+   */
+  function cohortFor(upgrade: Upgrade) {
+    if (upgrade.kind !== 'cohort' || !upgrade.entity) return;
+    if (!upgrade.modifiers.length) return;
+
+    return BuildingManager.getBuilding(upgrade.entity);
+  }
 </script>
 
 <div class="rail-upgrades">
@@ -35,6 +50,17 @@
   </div>
   <ChipQueue>
     {#each here as upgrade (upgrade.target + upgrade.id)}
+      {@const cohort = cohortFor(upgrade)}
+
+      <!-- What the chip's own panel cannot say: the row it lands on, priced as if
+           it were already bought. The same panel the roster draws, so the figure
+           promised here is the figure the row will read. Declared out here and
+           passed by name — a snippet inside the tag is a prop whether or not
+           there is a row for it, and the chip opens a second box for one. -->
+      {#snippet asidePanel()}
+        <CohortTooltip cohort={cohort!} extra={upgrade.modifiers} />
+      {/snippet}
+
       <Chip
         label={getScopeLabel(upgrade.target)}
         icon={iconFor(upgrade)}
@@ -42,6 +68,7 @@
         onclick={() => buy(upgrade)}
         onmouseenter={() => spotlight.point(upgrade.target)}
         onmouseleave={() => spotlight.clear()}
+        asideContent={cohort ? asidePanel : undefined}
       >
         {#snippet tooltipContent()}
           <div class="item-header">

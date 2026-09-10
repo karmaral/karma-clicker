@@ -76,6 +76,9 @@ const PLANET_FIELDS: FieldSpec[] = [
 ];
 
 const GLOBAL_FIELDS: FieldSpec[] = [
+  // One slider, two prices: it reveals a row and it clerks the row below. The
+  // arrival table is the readout for it — see `balance.cohorts`.
+  { field: 'cohorts.revealFactor', label: 'reveal / clerk', range: fixed(1, 200, 1) },
   { field: 'excess.evenBand', label: 'even band', range: fixed(0, 0.5, 0.005) },
   { field: 'refinery.coveragePerWorker', label: 'coverage / worker', range: fixed(0, 0.01, 0.00005) },
   { field: 'refinery.interval', label: 'interval ms', range: fixed(100, 30_000, 100) },
@@ -89,6 +92,7 @@ const GLOBAL_FIELDS: FieldSpec[] = [
   { field: 'aim.shortPileFloor', label: 'short pile floor', range: fixed(0, 0.5, 0.01) },
   { field: 'wave.biasWith', label: 'with the wave', range: fixed(0, 4, 0.05) },
   { field: 'wave.biasAgainst', label: 'against it', range: fixed(0, 4, 0.05) },
+  { field: 'wave.excessSpread', label: 'excess spread', range: fixed(0, 1, 0.05) },
   { field: 'harvest.evenExperienceBonus', label: 'even xp bonus', range: fixed(0, 3, 0.05) },
   { field: 'harvest.mergeHalving', label: 'merge halving', range: fixed(0, 1, 0.01) },
   { field: 'harvest.maxMergeSpeed', label: 'max speed', range: fixed(1, 32, 0.5) },

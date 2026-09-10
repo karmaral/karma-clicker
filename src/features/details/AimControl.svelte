@@ -3,11 +3,17 @@
   import { aim, DETENTS, type Detent } from '$lib/aim';
 
   interface Props {
+    /** The committed aim — what the cohorts are actually doing. */
     value: number;
+    /** Pointed at but not paid for. The bar follows this; `value` keeps a ghost. */
+    draft?: number;
     onaim?: (value: number) => void;
   }
 
-  let { value, onaim }: Props = $props();
+  let { value, draft, onaim }: Props = $props();
+
+  /** The control follows your hand, so everything it draws reads off the draft. */
+  const pointed = $derived(draft ?? value);
 
   /** Karma's own badges: the aim splits the karma pile, so it labels in karma. */
   const MARKS: Record<Detent, BadgeKind[]> = {
@@ -32,7 +38,7 @@
   const at = (i: number) => `${(i / LAST) * 100}%`;
 
   function detentAt(clientX: number) {
-    if (!track) return value;
+    if (!track) return pointed;
     const i = Math.round(((clientX - track.left) / track.width) * LAST);
 
     return DETENTS[Math.max(0, Math.min(LAST, i))];
@@ -57,7 +63,7 @@
       captured = true;
     }
     const detent = detentAt(e.clientX);
-    if (detent !== value) onaim?.(detent);
+    if (detent !== pointed) onaim?.(detent);
   }
 
   function onpointerup(e: PointerEvent) {
@@ -91,17 +97,23 @@
     {#each DETENTS as detent, i (detent)}
       <span class="tick" style:left={at(i)}></span>
     {/each}
-    <span class="bar" style:left={at(DETENTS.indexOf(value as Detent))}></span>
+    <!-- The aim still being run, while the solid bar is off being chosen. One
+         hairline, so the pair reads as *here, going there* rather than as two
+         dials. Gone the moment there is nothing pending. -->
+    {#if draft !== undefined}
+      <span class="bar held" style:left={at(DETENTS.indexOf(value as Detent))}></span>
+    {/if}
+    <span class="bar" style:left={at(DETENTS.indexOf(pointed as Detent))}></span>
   </div>
 
   <div class="marks">
     {#each DETENTS as detent, i (detent)}
       <button
         type="button"
-        class={['mark', { first: i === 0, last: i === LAST, on: detent === value }]}
+        class={['mark', { first: i === 0, last: i === LAST, on: detent === pointed }]}
         style:left={at(i)}
         aria-label={aim.detentLabel(detent)}
-        aria-pressed={detent === value}
+        aria-pressed={detent === pointed}
         onclick={() => onaim?.(detent)}
       >
         {#each MARKS[detent] as kind, n (n)}
@@ -154,6 +166,13 @@
     background: var(--ink-900);
     transform: translateX(-50%);
     transition: left var(--t-fast);
+  }
+
+  /* Holds still, so it does not read as a second thing being moved. */
+  .bar.held {
+    width: 1px;
+    background: var(--ink-300);
+    transition: none;
   }
 
   .marks {

@@ -23,16 +23,24 @@ export const LEVEL_GATES = [10, 25, 50, 100, 150, 200, 250, 300, 350, 400];
 
 export const COHORT_RAMP = 1.07;
 
+/**
+ * What a cohort multiplies by per index. Named because it is load-bearing twice
+ * over: cost and yield both ride it, and it is what makes a clerk and the next
+ * row's reveal the same figure — see `balance.cohorts.revealFactor`.
+ */
+export const COHORT_DECADE = 10;
+
 export function cohortId(n: number) {
   return `cohort_${n}`;
 }
 
 function cohortData(n: number) {
-  const yieldXp = 1 * 10 ** (n - 1);
+  const decade = COHORT_DECADE ** (n - 1);
+  const yieldXp = 1 * decade;
 
   return {
     upgrade_threshold: LEVEL_GATES,
-    cost: 15 * 10 ** (n - 1),
+    cost: 15 * decade,
     cost_type: 'experience' as const,
     cost_multiplier: COHORT_RAMP,
     yields: {

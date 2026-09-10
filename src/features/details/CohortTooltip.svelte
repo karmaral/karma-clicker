@@ -2,8 +2,12 @@
   /**
    * The row's whole derivation, base to paid — everything `CohortRow` used to
    * hover-gate into a 200px cell, now the entire content of its tooltip instead.
-   * Priced at the table's current purchase mode, so the panel needs no button
-   * hover of its own to be complete.
+   *
+   * It holds two readings and shows what moved between them. What the second one
+   * prices depends on who is asking: a row prices its own purchase mode, and an
+   * upgrade chip passes the modifiers it would add instead. Only the chip's
+   * reading marks up the lines — a purchase says what it adds in the rate
+   * figures, the way it always has.
    */
   import { Badge } from '$ui';
   import { PlanetManager } from '$lib/managers';
@@ -13,52 +17,43 @@
   import texts from '$data/buildings-texts';
   import balance from '$data/balance';
   import type Building from '$lib/buildings/base.svelte';
-  import type { YieldType } from '$types';
+  import type { Modifier } from '$types';
   import type { PurchaseMode } from './types';
   import RateFigure from './RateFigure.svelte';
-  import { badgeFor, byRateOrder } from './badge';
+  import AfterFigure from './AfterFigure.svelte';
+  import { badgeFor } from './badge';
+  import { gainOf, readCohort } from './derivation';
   import { resolvePurchasable } from './purchase';
 
   interface Props {
     cohort: Building;
-    purchaseMode: PurchaseMode;
+    /** The row's own mode. Absent from a chip, which prices no purchase. */
+    purchaseMode?: PurchaseMode;
+    /** Modifiers not held, priced as if they were — an upgrade being hovered. */
+    extra?: Modifier[];
   }
 
-  let { cohort, purchaseMode }: Props = $props();
+  let { cohort, purchaseMode, extra }: Props = $props();
 
   const text = $derived(texts[cohort.id]);
   const isSplit = $derived(progression.runs('negKarma'));
   const aimed = $derived(aim.resolve());
   const planet = $derived(PlanetManager.getActive());
 
-  const quantity = $derived(resolvePurchasable(cohort, purchaseMode));
+  const quantity = $derived(purchaseMode ? resolvePurchasable(cohort, purchaseMode) : 0);
 
-  const activeCount = $derived(cohort.activeAt(cohort.count));
-  const heldBack = $derived(cohort.count - activeCount);
+  /** An upgrade's reading marks up the lines; a purchase's stays in the figures. */
+  const projecting = $derived(Boolean(extra?.length));
 
-  const yields = $derived(
-    (Object.keys(cohort.production) as YieldType[]).sort(byRateOrder),
-  );
+  const now = $derived(readCohort(cohort));
+  const preview = $derived(projecting
+    ? readCohort(cohort, { extra })
+    : readCohort(cohort, { count: cohort.count + quantity }));
 
-  /** One line per figure — the row's old preview logic, now always on. */
-  function ratesAt(count: number) {
-    return yields.flatMap((type) => {
-      if (type !== 'karma') return [{ type, value: cohort.perSecond(type, count) }];
+  /** Undefined rather than the same figure, so `AfterFigure` draws nothing. */
+  const moved = (value: number | undefined) => (projecting ? value : undefined);
 
-      const now = cohort.karmaPerSecond(count);
-      if (!isSplit) return [{ type, value: now.positive }];
-
-      return [
-        { type: 'karma_negative' as YieldType, value: now.negative },
-        { type: 'karma_positive' as YieldType, value: now.positive },
-      ];
-    });
-  }
-
-  const now = $derived(ratesAt(cohort.count));
-  const after = $derived(ratesAt(cohort.count + quantity));
-
-  const showChain = $derived(isSplit && yields.includes('karma'));
+  const showChain = $derived(isSplit && now.yields.includes('karma'));
 
   const positivePercent = $derived(Math.round(aimed.positiveShare * 100));
 
@@ -76,24 +71,35 @@
 </script>
 
 <div class="cohort-tooltip">
+  <div class="title">{text?.title ?? cohort.id}</div>
+
   {#if text?.description}
     <div class="description">{text.description}</div>
   {/if}
 
   <div class="base">
-    {#each yields as type (type)}
+    {#each now.yields as type (type)}
       <div class="line">
+        <!-- One inline run after the badge, not more flex items: the words
+             between the figures are words, and the label's own `gap` would
+             space them like columns. -->
         <span class="label">
           <Badge kind={badgeFor(type)} />
-          {f(cohort.production[type] ?? 0)} each · {f(cohort.duration / 1000)}s
-          {#if heldBack > 0}· ×{f(activeCount)}{/if}
+          <span>
+            <AfterFigure value={now.production[type] ?? 0} after={moved(preview.production[type])} />
+            each ·
+            <AfterFigure value={now.duration / 1000} after={moved(preview.duration / 1000)} suffix="s" />
+            {#if now.heldBack > 0}· ×{f(now.activeCount)}{/if}
+          </span>
         </span>
-        <span class="num">{f(cohort.payout(type))} total</span>
+        <span class="num">
+          <AfterFigure value={now.payout[type] ?? 0} after={moved(preview.payout[type])} /> total
+        </span>
       </div>
     {/each}
   </div>
 
-  {#if showChain || cohort.yieldScale !== 1 || heldBack > 0}
+  {#if showChain || now.yieldScale !== 1 || now.heldBack > 0}
     <hr class="rule" />
 
     {#if showChain}
@@ -126,17 +132,17 @@
       {/if}
     {/if}
 
-    {#if cohort.yieldScale !== 1}
+    {#if now.yieldScale !== 1}
       <div class="line">
         <span class="label">harness</span>
-        <span class="num">×{f(cohort.yieldScale, 2)}</span>
+        <span class="num">×{f(now.yieldScale, 2)}</span>
       </div>
     {/if}
 
-    {#if heldBack > 0}
+    {#if now.heldBack > 0}
       <div class="line">
         <span class="label">held back</span>
-        <span class="num">{f(heldBack)}</span>
+        <span class="num">{f(now.heldBack)}</span>
       </div>
     {/if}
   {/if}
@@ -144,12 +150,8 @@
   <hr class="rule" />
 
   <div class="paid">
-    {#each now as rate (rate.type)}
-      <RateFigure
-        type={rate.type}
-        value={rate.value}
-        delta={(after.find((r) => r.type === rate.type)?.value ?? rate.value) - rate.value}
-      />
+    {#each now.rates as rate (rate.type)}
+      <RateFigure type={rate.type} value={rate.value} delta={gainOf(now, preview, rate.type)} />
     {/each}
   </div>
 </div>
@@ -161,6 +163,16 @@
     display: flex;
     flex-direction: column;
     gap: var(--sp-1);
+  }
+
+  /* Which row this is about. The roster's own panel is anchored to the row that
+     already says it, but the chip's aside floats a rail away from it — and the
+     same panel saying the same thing in both places is worth more than the one
+     line it costs the row. Same register as `Tooltip`'s own title. */
+  .title {
+    font-weight: 600;
+    font-size: var(--fs-sm);
+    color: var(--ink-900);
   }
 
   .description {

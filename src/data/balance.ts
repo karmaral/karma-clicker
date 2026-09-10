@@ -30,6 +30,29 @@ export default {
   },
 
   /**
+   * The one multiple that paces the cohort ladder. It buys two prices, not one:
+   * a row is revealed at `revealFactor × cost(n)` lifetime experience, and its
+   * clerk costs `revealFactor × COHORT_DECADE × cost(n)`. Since a cohort costs a
+   * decade more than the one below it, those are the same figure one rung apart
+   * — **a row appears exactly when the row below it can be automated**, and the
+   * rhythm reads *run it, clerk it, next row*. Derived rather than authored
+   * twice so the pair cannot drift.
+   *
+   * `25`, not the `5` the reveal was. Held against a row's own ladder in units
+   * of `10^(n−1)`: tier I costs 507 all-in, tier II 2,949, the clerk 3,750. At 5
+   * the next row landed at 750 — past tier I, four times short of tier II — so
+   * width was permanently cheaper than depth and depth never happened. The
+   * clerk's side of it was always sited right; only the reveal moved.
+   *
+   * ⚠ Unmeasured against a clock: the second row now wants roughly five to
+   * eight minutes rather than two or three, and all of that delay lands where
+   * income is flattest. This is the knob the bench exists to sweep.
+   */
+  cohorts: {
+    revealFactor: 25,
+  },
+
+  /**
    * Excess is unpaired karma over held karma — a share, with no figure to set.
    * All that is left to author is how close to paired counts as paired.
    */
@@ -111,10 +134,17 @@ export default {
     shortPileFloor: 0.05,
   },
 
-  /** What the wave pays a polarity running with it, and against it. */
+  /**
+   * What the wave pays a polarity running with it, and against it — at even.
+   * `excessSpread` widens the pair from there as excess deepens, mean-preserving,
+   * so the against-phase at a full ±1 tilt pays ×0.1 and never literally nothing.
+   * Raising it past 0.5 would, and a phase paying zero is a different mechanic.
+   * See `lib/wave.ts`. Placeholder, untuned.
+   */
   wave: {
     biasWith: 1.5,
     biasAgainst: 0.5,
+    excessSpread: 0.4,
   },
 
   /**

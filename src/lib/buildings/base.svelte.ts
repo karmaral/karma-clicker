@@ -25,20 +25,30 @@ export default class Building {
    * Base and modifiers, and nothing else. A level is a purchase now, so its
    * multiplier arrives here as a `mult` modifier like any other — see
    * `cohort-levels.ts`. Nothing about production reads the count.
+   *
+   * `extra` is the projection channel every readout below carries: modifiers
+   * not held, priced as if they were. Nothing is added or removed to answer it.
    */
-  #production = $derived.by(() => {
+  productionWith(extra: Modifier[] = []) {
     const production: Partial<Record<YieldType, number>> = {};
 
     Object.keys(this.#baseProduction).forEach((type: YieldType) => {
-      production[type] = this.#modifiers.apply(this.#baseProduction[type], 'yield', type);
+      production[type] = this.#modifiers.apply(this.#baseProduction[type], 'yield', type, extra);
     });
 
     return production;
-  });
+  }
+
+  durationWith(extra: Modifier[] = []) {
+    return this.#modifiers.apply(this.#data.duration ?? 0, 'duration', undefined, extra);
+  }
+
+  /** The no-projection case, and the only one anything reads every frame. */
+  #production = $derived.by(() => this.productionWith());
 
   // `.by`, not the expression form: a field initializer runs before the
   // constructor, and `#data` is not assigned until it does.
-  #duration = $derived.by(() => this.#modifiers.apply(this.#data.duration ?? 0, 'duration'));
+  #duration = $derived.by(() => this.durationWith());
 
   #listeners: Record<string, Listener[]> = {
     count: [],
@@ -174,12 +184,16 @@ export default class Building {
     return planet.biasBetween(this.#lifeStartedAt, planet.lived, positive);
   }
 
-  /** The life a purchase or a rate figure is pricing — starting now, not lived yet. */
-  #upcomingBias(positive: boolean) {
+  /**
+   * The life a purchase or a rate figure is pricing — starting now, not lived
+   * yet. `duration` is passed rather than read, because a projected life is a
+   * different span of wave to average over.
+   */
+  #upcomingBias(positive: boolean, duration: number) {
     const planet = PlanetManager.getActive();
     if (!planet) return 1;
 
-    return planet.biasBetween(planet.lived, planet.lived + this.duration, positive);
+    return planet.biasBetween(planet.lived, planet.lived + duration, positive);
   }
 
   #payKarma(value: number) {
@@ -194,9 +208,19 @@ export default class Building {
     }
   }
 
-  /** Both piles per second. `count` prices a purchase you have not made. */
-  karmaPerSecond(count?: number) {
-    return this.#splitKarma(this.perSecond('karma', count), aim.resolve(), (p) => this.#upcomingBias(p));
+  /**
+   * Both piles per second. `count` prices a purchase you have not made, `extra`
+   * an upgrade you have not bought — the projected duration reaches the bias
+   * too, since a halved life is averaged over half the wave.
+   */
+  karmaPerSecond(count?: number, extra: Modifier[] = []) {
+    const duration = extra.length ? this.durationWith(extra) : this.duration;
+
+    return this.#splitKarma(
+      this.perSecond('karma', count, extra),
+      aim.resolve(),
+      (p) => this.#upcomingBias(p, duration),
+    );
   }
 
   toggleAutonomy(toggle?: boolean) {
@@ -282,13 +306,17 @@ export default class Building {
    * and its modifiers and stops short of `yieldScale`, which is the half that
    * moves under the harness; anything printing a payout wants this instead.
    */
-  payout(type: YieldType, count = this.#count) {
-    return (this.#production[type] ?? 0) * this.activeAt(count) * this.yieldScale;
+  payout(type: YieldType, count = this.#count, extra: Modifier[] = []) {
+    const production = extra.length ? this.productionWith(extra) : this.#production;
+
+    return (production[type] ?? 0) * this.activeAt(count) * this.yieldScale;
   }
 
-  perSecond(type: YieldType, count = this.#count) {
-    const yielded = this.#production[type] ?? 0;
-    return yielded * this.activeAt(count) * this.yieldScale / ((this.duration || 1000) / 1000);
+  perSecond(type: YieldType, count = this.#count, extra: Modifier[] = []) {
+    const yielded = this.payout(type, count, extra);
+    const duration = extra.length ? this.durationWith(extra) : this.duration;
+
+    return yielded / ((duration || 1000) / 1000);
   }
 
   get duration() { return this.#duration; }

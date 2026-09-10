@@ -1,6 +1,14 @@
 import type { ResourceType, UpgradeData, UpgradeScope } from '$types';
 import { levelUpgrades } from './cohort-levels';
-import buildingData, { cohortId, COHORT_COUNT } from './buildings';
+import buildingData, { cohortId, COHORT_COUNT, COHORT_DECADE } from './buildings';
+import balance from './balance';
+
+/**
+ * Read once, at module load, which is also when the lab's overrides have landed
+ * — see `sim/worker.ts` on the import-order contract.
+ */
+const { revealFactor: REVEAL_FACTOR } = balance.cohorts;
+const CLERK_FACTOR = REVEAL_FACTOR * COHORT_DECADE;
 
 const ENTITY_KINDS = ['cohort', 'building', 'planet'] as const;
 
@@ -236,24 +244,21 @@ const data: Record<string, UpgradeData[]> = {
     },
   ],
   /**
-   * Generated off the index — see `docs/design.md` §5, *Entry*. Cohort 1's
-   * first copy is free and gated on the press-count argument (`karma_positive`
-   * is what the click pays flat, untouched by `str_*`); every cohort past it is
-   * only *revealed* at `5 × cost(n)` experience — the first copy is bought
-   * from the row at its own price, so there is no second table.
-   *
-   * `5×`, not the `0.5×` §5 first wrote: at `0.5×cost(2)` cohort 2 unlocked
-   * before cohort 1 did — the 30 clicks the karma+ gate demands already earn
-   * more lifetime xp than that. `5×` sits past what clicking to that gate
-   * alone pays, so a second cohort takes actually running the first one.
+   * Generated off the index — see `docs/design.md` §5, *Entry*. Cohort 1 buys
+   * its row, its first copy and its clerk on one chip; every cohort past it is
+   * only *revealed* at `REVEAL_FACTOR × cost(n)` experience — the first copy is
+   * bought from the row at its own price, so there is no second table.
    *
    * `clerk` is every other cohort's own to buy — a row that could never be
    * automated would fight the arc the doc states (*many hands, then fewer,
    * then none*). Cohort 1 is the exception: by the time a second row exists,
    * clicking the first is busywork with nothing left to teach, so it grants
-   * itself alongside the free first soul rather than waiting on a purchase.
-   * Priced at `250 × cost(n)`, the same ratio §5 lifted from AdCap's manager
-   * rung. The label is a placeholder — `clerk` is unsettled, see §19.
+   * itself alongside the first soul rather than waiting on a purchase.
+   *
+   * Reveal and clerk are one knob — see `CLERK_FACTOR` — so `reveal(n+1)` and
+   * `clerk(n)` are the same figure and a row arrives exactly as the row below
+   * it can be automated. The label is a placeholder — `clerk` is unsettled,
+   * see §19.
    */
   ...Object.fromEntries(
     Array.from({ length: COHORT_COUNT }, (_, i) => {
@@ -263,10 +268,11 @@ const data: Record<string, UpgradeData[]> = {
 
       const first: UpgradeData = n === 1
         ? {
-          // The one that stays costless, so `acquireUnpriced` still grants it:
-          // this is the `first_soul` beat, and the first soul is something
-          // that happens to you, not a chip you find. Autonomy rides along —
-          // see the block comment above.
+          // One grant doing three jobs: the row, the copy, and the clerk. This
+          // is the `first_soul` beat, so autonomy rides along rather than being
+          // sold back — see the block comment above and §5, *Entry*. Priced,
+          // despite §5 still calling the first copy free at 30 karma+: that
+          // divergence is live and flagged there, not settled here.
           id: 'first',
           effect: ['unlock', 'acquire', 'autonomy'],
           unlocks_at: { experience: 50 },
@@ -276,9 +282,13 @@ const data: Record<string, UpgradeData[]> = {
           // Unlocks the row only — no free copy. The first copy is bought at
           // `getCost(1)`, which is `cost` above, so the entry price lives in
           // exactly one place.
+          //
+          // The reveal and the clerk are one figure a rung apart, so this row
+          // arrives exactly as the row below it becomes affordable to automate.
+          // See `balance.cohorts.revealFactor` and §5, *Entry*.
           id: 'first',
           effect: 'unlock',
-          unlocks_at: { experience: 5 * cost },
+          unlocks_at: { experience: REVEAL_FACTOR * cost },
         };
 
       // Cohort 1 already has autonomy for free — see `first` above.
@@ -286,7 +296,7 @@ const data: Record<string, UpgradeData[]> = {
         id: 'clerk',
         effect: 'autonomy',
         unlocks_at: { count: 1 },
-        costs: { [costType]: 250 * cost } as Partial<Record<ResourceType, number>>,
+        costs: { [costType]: CLERK_FACTOR * cost } as Partial<Record<ResourceType, number>>,
       }];
 
       return [`cohort:${id}`, [first, ...levelUpgrades(id), ...clerk]];

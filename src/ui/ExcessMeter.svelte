@@ -257,11 +257,19 @@
     background: var(--line-100);
   }
 
+  /* Both edges, and slower than a control's own answer: the slug is a reading
+     drifting under you, not a response to a press. The figure below still snaps —
+     it is the number of record, and it must not wait for the bar. */
   .slug {
     position: absolute;
     top: 0;
     bottom: 0;
     display: block;
+    transition: left var(--t-slow), right var(--t-slow);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .slug { transition: none; }
   }
 
   /* Under the slug on purpose. One side is hatched near-black and the other

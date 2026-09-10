@@ -7,6 +7,7 @@
   import type { Listener } from '$lib/emission';
   import type Building from '$lib/buildings/base.svelte';
 
+  import { aim } from '$lib/aim';
   import { harness } from '$lib/harness.svelte';
   import harnessVisuals from '$data/harness-visuals';
   import planetTexts from '$data/planets-texts';
@@ -108,6 +109,30 @@
     })) ?? [],
   );
 
+  /**
+   * The re-aim penalty in the strip's own units. `progress` counts phases from
+   * arrival and the strip draws one age, so the age's own start is the offset.
+   * A mark past the right edge wraps to the left rather than hiding: the next
+   * age runs the same phases in the same order, so the wrapped x is the phase
+   * the penalty really ends in. Hiding it made aiming late in an age show
+   * nothing at all, which is when the deadline matters most.
+   */
+  const ageStart = $derived(planet ? planet.agesLived * planet.phasesPerAge : 0);
+
+  const settleAt = $derived.by(() => {
+    const end = aim.reaimEndsAt;
+    if (!planet || end === undefined) return undefined;
+
+    return ((end - ageStart) / planet.phasesPerAge) % 1;
+  });
+
+  /** Off the playhead rather than off `progress`, so the two step together. */
+  const draftAt = $derived.by(() => {
+    if (!planet || !aim.isPending) return undefined;
+
+    return (planet.position + aim.reaimPhases / planet.phasesPerAge) % 1;
+  });
+
   /** Instant, always — the press has no clock of its own. See `buildings.ts`. */
   function onclickaction() {
     click?.queueAction();
@@ -186,7 +211,7 @@
     {/if}
 
     {#if progression.isRevealed('details.wave') && planet}
-      <WaveStrip {phases} current={planet.phase} position={planet.position} />
+      <WaveStrip {phases} current={planet.phase} position={planet.position} {settleAt} {draftAt} />
     {/if}
   {/snippet}
 

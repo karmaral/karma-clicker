@@ -38,11 +38,35 @@ class Aim {
   #detent = $state<Detent>(0);
   #reaimedAtPhase = $state<number | undefined>(undefined);
 
+  /**
+   * Where the dial is pointed but not yet committed. `undefined` is *no
+   * decision pending*, not Even — the two are different, and only one costs.
+   * Never saved: a draft surviving a reload is a decision nobody made.
+   */
+  #draft = $state<Detent | undefined>(undefined);
+
+  /** Commits. Dragging a slider through this is what the draft exists to stop. */
   set(detent: Detent) {
     if (detent === this.#detent) return;
 
     this.#detent = detent;
     this.#reaimedAtPhase = PlanetManager.getActive()?.progress ?? 0;
+  }
+
+  /** Points the dial. Free — the penalty is bought by `confirm`, once. */
+  aimAt(detent: Detent) {
+    this.#draft = detent === this.#detent ? undefined : detent;
+  }
+
+  confirm() {
+    if (this.#draft === undefined) return;
+
+    this.set(this.#draft);
+    this.#draft = undefined;
+  }
+
+  cancel() {
+    this.#draft = undefined;
   }
 
   /**
@@ -96,6 +120,7 @@ class Aim {
   restore({ detent, reaimedAtPhase }: AimSnapshot) {
     this.#detent = detent;
     this.#reaimedAtPhase = reaimedAtPhase;
+    this.#draft = undefined;
   }
 
   snapshot(): AimSnapshot {
@@ -103,7 +128,20 @@ class Aim {
   }
 
   get detent() { return this.#detent; }
+  get draft() { return this.#draft; }
+  get isPending() { return this.#draft !== undefined; }
   get reaimPenalty() { return this.#reaimPenalty; }
+  get reaimPhases() { return balance.aim.reaimPhases; }
+
+  /**
+   * When the penalty runs out, in the world's progress units — what the wave
+   * draws its settle line at. `undefined` once there is nothing left to owe.
+   */
+  get reaimEndsAt() {
+    if (this.#reaimedAtPhase === undefined || this.#reaimPenalty === 0) return undefined;
+
+    return this.#reaimedAtPhase + balance.aim.reaimPhases;
+  }
 
   get phasesOwed() {
     const { reaimPhases } = balance.aim;

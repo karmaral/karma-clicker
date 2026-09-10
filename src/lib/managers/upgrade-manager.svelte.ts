@@ -2,6 +2,7 @@ import { tick } from 'svelte';
 import type { Effect, Modifier, ResourceType, UnlockType, UpgradeData } from '$types';
 import data, { parseScope } from '$data/upgrades';
 import texts from '$data/upgrades-texts';
+import { effectsOf, modifierFor } from '$lib/upgrade-effects';
 import { refinery } from '$lib/refinery.svelte';
 import { harness } from '$lib/harness.svelte';
 import {
@@ -121,7 +122,7 @@ class UpgradeManager {
     if (!item) return;
 
     const { kind, entity } = parseScope(target);
-    const effects = Array.isArray(item.effect) ? item.effect : [item.effect];
+    const effects = effectsOf(item);
 
     // Symmetric with `#processEffect`: whatever held it gives it back. A fan-out
     // was added to every cohort, so it comes off every cohort.
@@ -183,7 +184,7 @@ class UpgradeManager {
         const item = upgradeMap[target]?.[id];
         if (!item?.effect) return;
 
-        const effects = Array.isArray(item.effect) ? item.effect : [item.effect];
+        const effects = effectsOf(item);
 
         effects.forEach((effect, index) => {
           if (typeof effect === 'string') return;
@@ -195,7 +196,7 @@ class UpgradeManager {
   }
 
   async #handleEffect(target: string, item: UpgradeData) {
-    const effects = Array.isArray(item.effect) ? item.effect : [item.effect];
+    const effects = effectsOf(item);
 
     for (const [index, entry] of effects.entries()) {
       this.#processEffect(target, item, entry, index);
@@ -215,7 +216,7 @@ class UpgradeManager {
 
       const target = kind === 'refinery' ? refinery : harness;
 
-      return target.addModifier(this.#toModifier(item, effect, index));
+      return target.addModifier(modifierFor(item, effect, index));
     }
 
     // Names no entity because it names all of them. Same reasoning as above: a
@@ -243,7 +244,7 @@ class UpgradeManager {
       }
     }
 
-    BuildingManager.getBuilding(entity)?.addModifier(this.#toModifier(item, effect, index));
+    BuildingManager.getBuilding(entity)?.addModifier(modifierFor(item, effect, index));
   }
 
   /**
@@ -252,7 +253,7 @@ class UpgradeManager {
    */
   #fanOut(item: UpgradeData, effect: Omit<Modifier, 'id'>, index: number) {
     BuildingManager.cohorts.forEach((id) => {
-      BuildingManager.getBuilding(id)?.addModifier(this.#toModifier(item, effect, index));
+      BuildingManager.getBuilding(id)?.addModifier(modifierFor(item, effect, index));
     });
   }
 
@@ -268,7 +269,7 @@ class UpgradeManager {
       const item = upgradeMap['cohorts'][id];
       if (!item?.effect) return;
 
-      const effects = Array.isArray(item.effect) ? item.effect : [item.effect];
+      const effects = effectsOf(item);
 
       effects.forEach((effect, index) => {
         if (typeof effect === 'string') return;
@@ -276,15 +277,6 @@ class UpgradeManager {
         this.#fanOut(item, effect, index);
       });
     });
-  }
-
-  /**
-   * One modifier out of one effect entry, for whoever will hold it. `index`
-   * keeps an upgrade's several effects individually removable, and `effect`
-   * spreads last so its own `target` beats the upgrade's `effect_target`.
-   */
-  #toModifier(item: UpgradeData, effect: Omit<Modifier, 'id'>, index: number): Modifier {
-    return { id: `${item.id}:${index}`, target: item.effect_target, ...effect };
   }
 
   get upgrades() {

@@ -24,6 +24,13 @@
       getFirstHarvestConditionLabel(condition, planet?.data.firstHarvest[condition] ?? 0),
     ),
   );
+
+  // temporary patch
+  function onclick() {
+    nav.to('overview');
+    nav.openHarvest();
+
+  }
 </script>
 
 {#if progression.isRevealed('overview.firstHarvest') && isOffered}
@@ -31,6 +38,6 @@
     label="Harvest {name}"
     sub={blockers.length ? `Needs ${blockers.join(' · ')}` : 'Ready'}
     disabled={!progression.isLive('overview.firstHarvest') || !planet.isFirstHarvestReady}
-    onclick={() => nav.openHarvest()}
+    {onclick}
   />
 {/if}

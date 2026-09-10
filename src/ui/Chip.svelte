@@ -16,6 +16,8 @@
     onmouseenter?: () => void;
     onmouseleave?: () => void;
     tooltipContent?: Snippet;
+    /** A second panel, opening to the left of the first. Both or neither. */
+    asideContent?: Snippet;
   }
 
   let {
@@ -27,20 +29,43 @@
     onmouseenter,
     onmouseleave,
     tooltipContent,
+    asideContent,
   }: Props = $props();
 
   let tooltipElem: HTMLElement | undefined = $state();
+  let asideElem: HTMLElement | undefined = $state();
+
+  const DELAY = 450;
+  const GAP = 12;
+
+  /** Fixed, not a ceiling, once there is an aside — see `.chip-tooltip`. */
+  const PANEL_WIDTH = 250;
+  const ASIDE_WIDTH = 320;
+
   const tooltipOptions: Partial<TippyProps> = {
     // Anchored to the chip's top-left, not below it — the rail sits at the
     // screen's own right edge, so the panel opens into the room the rail
     // doesn't have. flip disabled outright: there's no width to flip into
     // on the right, so a fallback there would only run under the rail.
     placement: 'left-start',
-    delay: [450, 0],
-    offset: [0, 12],
+    delay: [DELAY, 0],
+    offset: [0, GAP],
     interactive: false,
     arrow: true,
     popperOptions: { modifiers: [{ name: 'flip', enabled: false }] },
+  };
+
+  /**
+   * The same corner, one panel further out: the first box's own distance, then
+   * the whole of it, then a gap. A constant and not a measurement, which is what
+   * the fixed `--tooltip-width` below buys — the box tippy would have to be
+   * measured through does not exist until it is already open.
+   */
+  const asideOptions: Partial<TippyProps> = {
+    placement: 'left-start',
+    delay: [DELAY, 0],
+    offset: [0, GAP + PANEL_WIDTH + GAP],
+    interactive: false,
   };
 
 </script>
@@ -54,6 +79,7 @@
     {onmouseenter}
     {onmouseleave}
     {@attach tooltip({content: tooltipElem, options: tooltipOptions })}
+    {@attach tooltip({content: asideElem, options: asideOptions, layer: 'aside' })}
   >
     {#if icon}
       <Icon src={icon} size="1.5em" />
@@ -65,11 +91,31 @@
        `.tooltip` after the node is moved into the popper — inheriting from the
        chip would not, since the box ends up under `<body>`. -->
   {#if tooltipContent}
-    <div class="chip-tooltip" bind:this={tooltipElem}>
+    <!-- Held at its ceiling rather than shrinking, once there is a second panel
+         to sit beside: the aside's offset is that width plus a gap, and a box
+         narrower than the figure it is offset by would leave a hole. -->
+    <div
+      class="chip-tooltip"
+      bind:this={tooltipElem}
+      style:--tooltip-width={asideContent ? `${PANEL_WIDTH}px` : undefined}
+    >
       <Tooltip>
         <div class="tooltip-content">
           {@render tooltipContent()}
         </div>
+      </Tooltip>
+    </div>
+  {/if}
+
+  {#if asideContent}
+    <div
+      class="chip-aside"
+      bind:this={asideElem}
+      style:--tooltip-width="{ASIDE_WIDTH}px"
+      style:--tooltip-max="{ASIDE_WIDTH}px"
+    >
+      <Tooltip>
+        {@render asideContent()}
       </Tooltip>
     </div>
   {/if}
