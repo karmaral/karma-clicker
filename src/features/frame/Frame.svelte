@@ -2,15 +2,16 @@
   /**
    * The header is a reading now, not the navigation — the tabs moved to the
    * action bar below the body. Value blocks left to right: a score, Karma, the
-   * refinery reading, and Legacy once a run can end — Overview names itself on
-   * the navbar and takes no cell.
+   * tokens, and Legacy once a run can end — Overview names itself on the navbar
+   * and takes no cell.
    *
    * The division the layout rests on is **bars are quantities, the meter is
    * state**. Two lengths under Details say how big each karma pile is and which
    * is bigger; the meter beside them says how far that difference has carried
-   * you and where the door is. Nothing is drawn twice.
+   * you and where the door is. Nothing is drawn twice — excess is read in the
+   * Karma cell and nowhere else in the band.
    */
-  import { Cell, ExcessMeter, HeaderBand, Label, Reading, Tooltip, Value, tooltip } from '$ui';
+  import { Cell, ExcessMeter, HeaderBand, Label, Reading, Tooltip, Value, formatExcess, tooltip } from '$ui';
   import type { Props as TippyProps } from 'tippy.js';
   import { BuildingManager, PlanetManager, ResourceManager } from '$lib/managers';
   import { getExcess } from '$lib/excess';
@@ -56,7 +57,15 @@
 
   const HEADER_SCREENS: HeaderScreen[] = ['details', 'refinery'];
 
-  const visible = $derived(HEADER_SCREENS.filter((screen) => nav.state(screen) !== 'absent'));
+  /** The third cell is the tokens or it is nothing: excess used to stand in it
+      until they arrived, and it is read in the Karma cell now. */
+  const isRefineryTab = $derived(progression.isRevealed('reading.tokens'));
+
+  const visible = $derived(
+    HEADER_SCREENS.filter(
+      (screen) => nav.state(screen) !== 'absent' && (screen !== 'refinery' || isRefineryTab),
+    ),
+  );
 
   /**
    * Wisdom held, not this run's take — what survived is a standing reading, and
@@ -99,17 +108,9 @@
    * every pulse, so the two piles are equal by construction and the header was
    * printing the same number twice; only an inversion can part them. So the
    * reading is what pairs — which is also the only crimson Ochre can be bought
-   * with — and the surplus rides beside it as a smaller figure, badged with the
-   * side holding it. Unsigned, like the excess: the badge says which side, so
-   * the figure is a distance.
+   * with.
    */
   const matchedRed = $derived(Math.min(negRed, posRed));
-  const unmatchedRed = $derived(Math.abs(negRed - posRed));
-
-  /** Which pile is over. Only read when there is a surplus, so parity picks nothing. */
-  const unmatchedSideLabel = $derived(
-    negRed > posRed ? READING_LABELS.karmaNegative : READING_LABELS.karmaPositive,
-  );
 
   const redRate = $derived(formatRate(refinery.crimsonPerSecond));
   const yellow = $derived(ResourceManager.getAmount('yellow'));
@@ -161,21 +162,20 @@
   const reading = $derived(getExcess());
 
   /**
-   * Until tokens arrive the third section is named for the reading it carries, not
-   * for the tab it becomes at beat 11 (CONTEXT v3 §3.2).
+   * Two reveals, one reading. From beat 8 it is a bare figure: how far off centre
+   * the piles sit, and that is all there is to know. At beat 9 a second world
+   * exists, the figure gets the scale and the door drawn on it, and the same
+   * number becomes a distance from somewhere.
    */
-  const isRefineryTab = $derived(progression.isRevealed('reading.tokens'));
+  const showExcess = $derived(reading !== undefined && progression.isRevealed('reading.excess'));
+  const showScale = $derived(showExcess && progression.isRevealed('reading.excessScale'));
 
   const planet = $derived(PlanetManager.getActive());
 
   const excessGate = $derived(planet?.data.firstHarvest.excessGate);
 
-
   function getSectionLabel(screen: HeaderScreen) {
-    if (screen === 'details') return 'Karma';
-    if (!isRefineryTab) return 'Excess';
-
-    return 'Learning tokens';
+    return screen === 'details' ? 'Karma' : 'Learning tokens';
   }
 </script>
 
@@ -189,16 +189,17 @@
 
   {#each visible as screen (screen)}
     <Cell label={getSectionLabel(screen)} banded>
-      <!-- The meter's title, hoisted onto the cell's own label line and set as an
-           aside: it names a block inside Karma, not a cell beside it. Width-matched
-           to the meter below so it starts exactly where the track does.
+      <!-- The excess block's title, hoisted onto the cell's own label line and set
+           as an aside: it names a block inside Karma, not a cell beside it. Once
+           the scale is revealed it is width-matched to the track below, so it
+           starts exactly where the track does.
 
-           The title and nothing else: the meter below now names its own two
-           ends and prints the figure between them, so a reading up here would
-           be the third place the same number appears. -->
+           The title and nothing else: the block below prints the figure — between
+           its own two end words once it is a meter — so a reading up here would
+           be the same number twice in one cell. -->
       {#snippet header()}
-        {#if screen === 'details' && reading !== undefined}
-          <span class="excess-title">
+        {#if screen === 'details' && showExcess}
+          <span class={['excess-title', { tracked: showScale }]}>
             <Label text="Excess" muted />
           </span>
         {/if}
@@ -218,17 +219,26 @@
               <Value kind="pos" value={f(posAmount)} rate={showRates ? posKarmaRate : undefined} />
             </Reading>
           {/if}
-          {#if reading !== undefined}
+          {#if showExcess}
             <!-- A subcell inside the cell: the two bars are Karma, and this is
-                 how far off centre they leave you. Its title and its side are
-                 both up on the label line; the meter draws, it does not name. -->
-            <span class="meter">
-              <ExcessMeter value={reading} gate={excessGate} sides={EXCESS_SIDES} />
+                 how far off centre they leave you. Its title is up on the label
+                 line either way; what changes is whether the figure has a scale
+                 under it. Unsigned in both states — the side is the badge's hue
+                 or the lit end word, never a minus on the number. -->
+            <span class="excess">
+              {#if showScale}
+                <ExcessMeter value={reading} gate={excessGate} sides={EXCESS_SIDES} />
+              {:else}
+                <Value
+                  kind={reading === 0 ? 'both' : reading > 0 ? 'pos' : 'neg'}
+                  value={formatExcess(reading)}
+                />
+              {/if}
             </span>
           {/if}
         </span>
 
-      {:else if isRefineryTab}
+      {:else}
         <!-- The rungs above crimson arrive as they are bought. Crimson is the
              cell's reason to exist and the beat that reveals the cell is the
              beat that pays it, so it is unconditional; Ochre and Indigo are
@@ -236,24 +246,6 @@
              they exist. -->
         <span class="tokens">
           <Reading label={`matched ${READING_LABELS.red}`}>
-            <!-- The surplus reads on the caption rail, not beside the figure.
-                 On the line it had to compete with a 12-character number for
-                 room and lost; down here it is a qualifier on the word Crimson,
-                 which is what it always was. Absent at parity — there is no
-                 surplus to name, and only an inversion can create one.
-                 `12 Negative`, not `Negative 12`: the figure leads because it is
-                 a count, and the side is where it happens to sit. -->
-
-            {#snippet note()}
-              {#if unmatchedRed}
-                <span class="surplus">
-                  <span class="sep" aria-hidden="true">·</span>
-                  <span class="num">{f(unmatchedRed)}</span>
-                  <Label text={unmatchedSideLabel} size="caption" />
-                </span>
-              {/if}
-            {/snippet}
-
             <Value
               kind="red-both"
               value={f(matchedRed)}
@@ -273,14 +265,6 @@
             </Reading>
           {/if}
         </span>
-
-      {:else}
-        <!-- Unsigned: which side it sits on is the badge and the note, so the
-             figure is a distance and never carries a minus of its own. -->
-        <Value
-          kind={reading === undefined ? 'both' : reading > 0 ? 'pos' : 'neg'}
-          value={reading === undefined ? '—' : `${Math.abs(Math.round(reading * 100))}%`}
-        />
       {/if}
     </Cell>
   {/each}
@@ -345,39 +329,16 @@
     min-width: 0;
   }
 
-  /* Figure first, then the side it sits on — `12 Negative`, read as a quantity
-     that happens to be over there. The meter's readout runs the other way round
-     because a side is a place and a percentage is how far into it you are; a
-     surplus is a count first. No sign: the word is the side, so the number stays
-     a magnitude, the same rule the excess figure follows. */
-  .surplus {
-    display: flex;
-    align-items: baseline;
-    gap: 5px;
-    flex: none;
-  }
-
-  /* The whole note sits at the caption's own ink. Full black made a surplus of
-     twelve shout as loudly as the trillions above it, and it is a footnote on
-     the word Crimson — the separator is what says so. */
-  .surplus .num,
-  .surplus .sep {
-    font-size: var(--fs-caption);
-    font-weight: 600;
-    font-stretch: var(--wd-figure);
-    line-height: 1;
-    color: var(--ink-200);
-  }
-
   /* A block within the cell. The two bars are quantities and this is state, so
      it takes the band's own divider rather than sitting in the row as a third
      figure — but its title went up to the cell's label line, which is what makes
      the divider read as a seam rather than as a caption's underline.
 
      No bottom padding and nothing pinned: the meter's readout is in flow now, so
-     the row's own end-alignment is what lands it on the caption rail. Its 18ch
-     sets the width, so it takes no share of the slack. */
-  .meter {
+     the row's own end-alignment is what lands it on the caption rail. It sizes to
+     what is in it — 18ch of track once the scale is revealed, a figure's width
+     before that — so it takes no share of the slack either way. */
+  .excess {
     display: flex;
     flex-direction: column;
     flex: none;
@@ -414,18 +375,26 @@
     color: var(--ink-300);
   }
 
-  /* One box the width of the track, pushed to the end of the label row, so its
-     left edge *is* the track's left edge. It used to be the seam's width with
-     the seam's padding added back — two numbers that had to cancel, and any
-     mismatch between them came out as the title standing a gap in from the bar
-     it names. Nothing to cancel now: both sides read `--meter-track` and only
-     that. Neither box can see the other, so the token is the whole agreement —
-     if this drifts again the fix is containment, not a second number. */
+  /* Pushed to the end of the label row, where the reading it names also ends.
+     Before the scale there is no track to line up with, so the box is its own
+     text and the two right edges are what agree.
+
+     With the scale, one box the width of the track, so its left edge *is* the
+     track's left edge. It used to be the seam's width with the seam's padding
+     added back — two numbers that had to cancel, and any mismatch between them
+     came out as the title standing a gap in from the bar it names. Nothing to
+     cancel now: both sides read `--meter-track` and only that. Neither box can
+     see the other, so the token is the whole agreement — if this drifts again
+     the fix is containment, not a second number. */
   .excess-title {
     display: flex;
     align-items: baseline;
     gap: 5px;
     margin-left: auto;
+    width: fit-content;
+  }
+
+  .excess-title.tracked {
     width: var(--meter-track);
   }
 

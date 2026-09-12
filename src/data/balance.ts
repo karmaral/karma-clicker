@@ -91,6 +91,13 @@ export default {
     ratioBase: 0.25,
     /** Levels to raise the ratio by 1 — level 28 is where it crosses even. */
     levelHalving: 36,
+    /**
+     * Its own ladder, not the harness's. Granularity is a harness axis now, so
+     * the refining lever can no longer ride the one the harness bought — a
+     * shared ladder would have made every anchor upgrade a refinery upgrade.
+     * Same rungs to start with; the two are free to diverge.
+     */
+    splitSteps: [0.25, 0.15, 0.1, 0.05, 0.025],
   },
 
   /**
@@ -100,18 +107,32 @@ export default {
    * press takes off the job — a deliberate trickle, so a hand can open a world
    * alone but stops mattering once souls arrive.
    *
-   * `slots` and `riders` are bases, not placeholders to fill by upgrade — an
-   * anchoring phase must be workable and the finished harness must pay its
-   * bonus the moment either is reached, so the capacity that used to be free
-   * `slots_0`/`riders_0` grants is authored here instead.
+   * `slots`, `riders` and `anchors` are bases, not placeholders to fill by
+   * upgrade — an anchoring job must be workable and the finished harness must
+   * pay its bonus the moment either is reached, so the capacity that used to be
+   * free `slots_0`/`riders_0` grants is authored here instead.
    */
   harness: {
     slots: 6,
     riders: 200,
+    /**
+     * Anchor slots you can fill, before upgrades. A world offers its own
+     * ceiling and this is capped against it, so one is "you can anchor any
+     * world a little" rather than "you can anchor the second world".
+     */
+    anchors: 1,
     perWorker: 0.2,
     clickMs: 250,
     /** Finer every rung — a `step` upgrade that coarsened the lever would be a downgrade. */
     splitSteps: [0.25, 0.15, 0.1, 0.05, 0.025],
+    /**
+     * What a cohort line costs, in **each** crimson pile, and how much steeper
+     * every line gets. Geometric like the inversion price and for the same
+     * reason: a line is permanent capacity, so the tenth must not cost what the
+     * first did. Placeholder figures.
+     */
+    lineBase: 400,
+    lineGrowth: 1.6,
   },
 
   aim: {

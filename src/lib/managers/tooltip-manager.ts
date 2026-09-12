@@ -43,6 +43,10 @@ export class TooltipManager {
         // empty room; a tooltip that says nothing about it keeps tippy's own.
         'duration',
         'hideOnClick',
+        // What the box points at, which is not always what you hovered — a
+        // reference that only triggers can borrow another's rect, so two cells
+        // of the same row open one panel in one place.
+        'getReferenceClientRect',
       ],
       // The singleton never hides between rows during a drag — it retargets
       // the same box via setProps(), which is gated behind tippy's own

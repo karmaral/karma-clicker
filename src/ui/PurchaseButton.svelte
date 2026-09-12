@@ -52,22 +52,26 @@
 </button>
 
 <style>
+  /**
+   * The button fills the cell it is given, out to that cell's far edge — every
+   * table that sells anything hands it one, and the cell's own hairline is the
+   * whole separation. No frame of its own: a box in --ink-300 competed with the
+   * row rules it sat between, and the figure alone says the price well enough.
+   * The trailing 12px is the row's gutter, so the figure lands on the content
+   * edge rather than on the card's.
+   */
   .purchase {
     display: flex;
     align-items: center;
     justify-content: end;
     gap: var(--badge-gap);
-    min-width: 0;
+    width: 100%;
     height: 100%;
-    padding: var(--sp-1) var(--sp-2);
-    margin-left: auto;
-    margin-right: calc(var(--sp-2) * -1);
-    border: 1px solid;
+    min-width: 0;
+    margin: 0;
+    padding: var(--sp-1) 12px var(--sp-1) var(--sp-2);
+    border: none;
     background: transparent;
-    /* Quiet frame until there's something to press — a full-height box in
-       --ink-300 would compete with the row's own rule; only an affordable
-       button earns the loud border. */
-    border-color: var(--line-300);
     color: var(--ink-300);
     white-space: nowrap;
   }
@@ -84,7 +88,6 @@
   }
 
   .purchase.affordable {
-    border-color: currentColor;
     color: var(--ink-900);
 
     &:hover {

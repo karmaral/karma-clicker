@@ -20,6 +20,13 @@ export interface Departure {
   mergedShare: number;
   alignment: Polarity;
   rates: HarvestRates;
+  /**
+   * What the anchors were worth, read on the way out and kept forever. The
+   * anchors stay on the world; the riders leave with you — so this is the
+   * nominal per-anchor sum with no coverage cut, unlike the living multiplier.
+   * 1 on a world you never anchored.
+   */
+  anchorBonus: number;
 }
 
 /** Everything a world holds that the data file does not. What a save writes. */
@@ -27,6 +34,7 @@ export interface PlanetSnapshot extends Departure {
   livedMs: number;
   isHarvested: boolean;
   placedMs: number;
+  isAnchorJobActive: boolean;
 }
 
 /** The wave's marker steps once per this many ms of world time — a second hand. */
@@ -44,12 +52,23 @@ export default class Planet {
   #alignment = $state<Polarity>(0);
   #rates = $state<HarvestRates>({});
   #emitter = $state<ResourceEmitter>();
+  #anchorBonusAtDeparture = $state(1);
   /**
    * Milliseconds of the anchoring job done, across every anchor. One accumulator
    * rather than one per anchor: they fill in order, which is what "next anchor
    * in" means, and each meter is a slice of this.
    */
   #placedMs = $state(0);
+
+  /**
+   * Whether you took this world's offer. Anchoring is opt-in, so a world with
+   * slots is not a world being anchored — `Harness` reads this before it places
+   * anything, and cancelling puts it back with the job.
+   *
+   * **Active, not running.** `Harness` has an `isRunning` of its own, meaning the
+   * system's clock is on from the beat; this is per-world and means you chose it.
+   */
+  #isAnchorJobActive = $state(false);
 
   constructor(id: string, initData: PlanetData) {
     this.#id = id;
@@ -104,7 +123,7 @@ export default class Planet {
    * both readings taken on the way out — the alignment and the income — lock
    * what the recurring harvest pays, forever.
    */
-  completeFirstHarvest({ merged, mergedShare, alignment, rates }: Departure) {
+  completeFirstHarvest({ merged, mergedShare, alignment, rates, anchorBonus }: Departure) {
     if (this.#isHarvested) return;
 
     this.#isHarvested = true;
@@ -112,6 +131,7 @@ export default class Planet {
     this.#mergedShare = Math.max(0, Math.min(1, mergedShare));
     this.#alignment = alignment;
     this.#rates = rates;
+    this.#anchorBonusAtDeparture = Math.max(1, anchorBonus);
 
     this.#armHarvest();
   }
@@ -139,7 +159,9 @@ export default class Planet {
       mergedShare: this.#mergedShare,
       alignment: this.#alignment,
       rates: $state.snapshot(this.#rates),
+      anchorBonus: this.#anchorBonusAtDeparture,
       placedMs: this.#placedMs,
+      isAnchorJobActive: this.#isAnchorJobActive,
     };
   }
 
@@ -151,7 +173,9 @@ export default class Planet {
     this.#mergedShare = state.mergedShare;
     this.#alignment = state.alignment;
     this.#rates = state.rates;
+    this.#anchorBonusAtDeparture = state.anchorBonus;
     this.#placedMs = state.placedMs;
+    this.#isAnchorJobActive = state.isAnchorJobActive;
 
     if (this.#isHarvested) this.#armHarvest();
   }
@@ -169,7 +193,12 @@ export default class Planet {
   }
 
   #harvestYields = $derived.by(() => {
-    return resolveHarvestYields(this.#data.harvest?.yields ?? {}, this.#alignment, this.#rates);
+    return resolveHarvestYields(
+      this.#data.harvest?.yields ?? {},
+      this.#alignment,
+      this.#rates,
+      this.#anchorBonusAtDeparture,
+    );
   });
 
   #harvestDuration = $derived.by(() => {
@@ -183,33 +212,31 @@ export default class Planet {
    * `Harness` — so a split dragged mid-anchor moves the countdown and never the
    * fill: work done is work done.
    */
-  place(ms: number) {
-    if (ms <= 0 || this.#isHarvested) return;
+  place(ms: number, jobMs: number) {
+    if (ms <= 0 || this.#isHarvested || !this.#isAnchorJobActive) return;
 
-    this.#placedMs = Math.min(this.#anchorJob, this.#placedMs + ms);
+    this.#placedMs = Math.min(jobMs, this.#placedMs + ms);
+  }
+
+  /** Taking the world up on its offer. Costless — what it costs is the souls it holds. */
+  beginAnchorJob() {
+    if (this.#isHarvested || !this.anchorSlots) return;
+
+    this.#isAnchorJobActive = true;
+  }
+
+  /**
+   * And giving it back. Everything placed is forfeit: the anchors come out with
+   * the harness, so there is no half-anchored world to bank. A job resumed from
+   * a saved fraction would make cancelling free, which is the one thing it must
+   * not be.
+   */
+  cancelAnchorJob() {
+    this.#isAnchorJobActive = false;
+    this.#placedMs = 0;
   }
 
   #anchoring = $derived.by(() => this.#data.anchoring);
-
-  /** The whole job, in ms. 0 on a world that asks for no anchors. */
-  #anchorJob = $derived.by(() => {
-    const anchoring = this.#anchoring;
-
-    return anchoring ? anchoring.anchors * anchoring.duration : 0;
-  });
-
-  #anchorsPlaced = $derived.by(() => {
-    const anchoring = this.#anchoring;
-
-    return anchoring ? Math.floor(this.#placedMs / anchoring.duration) : 0;
-  });
-
-  /** One flag per anchor the world asks for — what `Anchors` draws. */
-  #anchored = $derived.by(() => {
-    const asked = this.#anchoring?.anchors ?? 0;
-
-    return Array.from({ length: asked }, (_, i) => i < this.#anchorsPlaced);
-  });
 
   #phasesPerAge = $derived.by(() => this.#data.cycles_per_age * 2);
 
@@ -306,29 +333,21 @@ export default class Planet {
   get harvestDuration() { return this.#harvestDuration; }
 
   /**
-   * The anchoring readout, all of it in job-ms. `anchorRemaining` is what is
-   * left of the one in progress — the harness divides it by its speed to get a
-   * countdown, because only the harness knows how fast the job is running.
+   * The world's whole offer, and nothing about what you can take of it. How many
+   * slots you actually fill is capped by the rig, so the arithmetic — placed,
+   * fill, remaining, whether the job is done — lives on `Harness`, which is the
+   * only thing that knows both halves.
    */
-  get anchorsAsked() { return this.#anchoring?.anchors ?? 0; }
-  get anchorsPlaced() { return Math.min(this.#anchorsPlaced, this.anchorsAsked); }
+  get anchorSlots() { return this.#anchoring?.anchors ?? 0; }
   get anchorDuration() { return this.#anchoring?.duration ?? 0; }
   get anchorBonus() { return this.#anchoring?.bonusPerAnchor ?? 0; }
-  get anchored() { return this.#anchored; }
 
-  /** How far into the one being placed, 0…1. Full once the last one is in. */
-  get anchorFill() {
-    if (!this.anchorDuration) return 1;
-    if (this.#placedMs >= this.#anchorJob) return 1;
+  /** Job-ms done, for the harness to slice into anchors. */
+  get placedMs() { return this.#placedMs; }
+  get isAnchorJobActive() { return this.#isAnchorJobActive; }
 
-    return (this.#placedMs % this.anchorDuration) / this.anchorDuration;
-  }
-
-  get anchorRemaining() { return this.anchorDuration * (1 - this.anchorFill); }
-
-  /** A world with nothing to anchor is never anchoring, and never anchored. */
-  get isAnchoring() { return !this.#isHarvested && this.anchorsPlaced < this.anchorsAsked; }
-  get isAnchored() { return this.anchorsAsked > 0 && this.anchorsPlaced >= this.anchorsAsked; }
+  /** What the anchors were worth when you left. 1 until you do. */
+  get anchorBonusAtDeparture() { return this.#anchorBonusAtDeparture; }
 
   /** The conditions still standing in the way, for the UI to name. */
   get unmetFirstHarvestConditions() { return this.#unmet; }

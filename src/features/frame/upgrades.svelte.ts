@@ -27,7 +27,7 @@ const SCREEN_BY_KIND: Record<UpgradeScope['kind'], ScreenName | undefined> = {
   building: 'details',
   cohort: 'details',
   cohorts: 'details',
-  harness: 'details',
+  harness: 'harness',
   planet: 'overview',
   refinery: 'refinery',
 };
@@ -48,9 +48,14 @@ export interface Upgrade {
   /** The tab that acts on it — `undefined` is global, which every tab shows. */
   screen?: ScreenName;
   costs?: Partial<Record<ResourceType, number>>;
-  /** The first (only) cost entry's amount. Undefined for an unpriced arrival. */
+  /**
+   * Every entry of `costs`, parsed once. A price may name more than one pile —
+   * the harness is bought in both crimsons — and all of them are charged.
+   */
+  costEntries: [ResourceType, number][];
+  /** The first cost entry's amount. Undefined for an unpriced arrival. */
   cost?: number;
-  /** What you currently hold of the cost's resource — 0 for an unpriced entry. */
+  /** What you currently hold of the first cost's resource — 0 for an unpriced entry. */
   held: number;
   effect?: UpgradeData['effect'];
   effectTarget?: UpgradeData['effect_target'];
@@ -69,16 +74,26 @@ function upgradeFor(target: string, id: string): Upgrade | undefined {
   const acquired = Boolean(UpgradeManager.isAcquired(target, id));
   const locked = Boolean(UpgradeManager.isLocked(target, id));
 
-  const costEntry = item.costs ? Object.entries(item.costs)[0] as [ResourceType, number] : undefined;
+  const costEntries = item.costs ? Object.entries(item.costs) as [ResourceType, number][] : [];
+  const costEntry = costEntries[0];
   const cost = costEntry?.[1];
   const held = costEntry ? ResourceManager.getAmount(costEntry[0]) : 0;
+
+  /**
+   * Every pile short of its price, summed. A two-pile upgrade is as far away as
+   * both halves are, so a chip that reads affordable is one every pile can pay —
+   * and one you are close on in one pile alone does not climb the rail for it.
+   */
+  const shortfall = costEntries.reduce((sum, [type, amount]) => {
+    return sum + Math.max(0, amount - ResourceManager.getAmount(type));
+  }, 0);
 
   let status: ChipStatus = 'unlocked';
   if (locked) {
     status = 'approaching';
   } else if (cost === undefined) {
     status = 'arriving';
-  } else if (held >= cost) {
+  } else if (shortfall <= 0) {
     status = 'affordable';
   }
 
@@ -94,13 +109,14 @@ function upgradeFor(target: string, id: string): Upgrade | undefined {
     modifiers: modifiersFor(item),
     screen: SCREEN_BY_KIND[kind],
     costs: item.costs,
+    costEntries,
     cost,
     held,
     effect: item.effect,
     effectTarget: item.effect_target,
     acquired,
     status,
-    distanceToAffordable: cost === undefined ? Infinity : cost - held,
+    distanceToAffordable: cost === undefined ? Infinity : shortfall,
     textData: { ...text },
   };
 }

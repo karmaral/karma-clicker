@@ -298,15 +298,25 @@ export interface PlanetVisual {
    * `scaleInk` brings it up on a push-in, where `veilHatchWidth` is deliberately
    * left alone.
    *
+   * `coreHatchReach` is how far in from the limb the ruling comes, as a share of
+   * the disc, and the width above is its weight **at the rim** — the middle is
+   * bare and thickens outward from wherever this starts it. Flat strokes across
+   * the whole disc read as a ruled plate the size of the core; a weight that
+   * answers the silhouette reads as curvature, which is the one thing a mark
+   * with no shading of its own cannot otherwise say. Past 1 the middle keeps a
+   * share of the weight rather than none, which is the old flat ruling
+   * approached rather than restored.
+   *
    * `coreSeed` is how much of that radius is drawn before a single soul has
-   * arrived, as a share of it — the rest is grown by the merge. See
-   * `coreFillOf`, which is where the growth actually is.
+   * arrived, as a share of it — and so also how much travel the split is left.
+   * See `coreFillOf`, which is where the growth and the reasons are.
    */
   core: number;
   coreSeed: number;
   coreFeather: number;
   coreHatchDensity: number;
   coreHatchWidth: number;
+  coreHatchReach: number;
 
   /**
    * A second surface, above the first. It is a cloud deck at one tuning and an
@@ -599,6 +609,8 @@ export const VISUAL_PARAMS: VisualParam[] = [
   { key: 'coreFeather', label: 'Core feather', group: 'Core', min: 0, max: 8, step: 0.05 },
   { key: 'coreHatchDensity', label: 'Core hatch density', group: 'Core', min: 2, max: 40, step: 0.5 },
   { key: 'coreHatchWidth', label: 'Core hatch px', group: 'Core', min: 0, max: 6, step: 0.25 },
+  // Past 1 the middle is thinned rather than emptied — see the field's note.
+  { key: 'coreHatchReach', label: 'Core hatch reach', group: 'Core', min: 0.05, max: 2, step: 0.01 },
 
   // Not one `shape` in the group, and that is the point: the shell borrows the
   // body's geometry and its field lives in the fragment, so every slider here
@@ -706,13 +718,14 @@ export const DEFAULT_VISUAL: PlanetVisual = {
    * draws either until a view hands the world an alignment to put in the core.
    */
   clarity: 1,
-  clarityGamma: 1.6,
+  clarityGamma: 1.35,
   claritySteps: 4,
   core: 0.8,
-  coreSeed: 0.18,
+  coreSeed: 0.72,
   coreFeather: 0.2,
   coreHatchDensity: 18,
   coreHatchWidth: 2.25,
+  coreHatchReach: 0.98,
 
   /** Off, and the numbers below are the cloud reading the slider opens onto. */
   veil: 0,
@@ -774,16 +787,27 @@ export function cloneVisual(visual: PlanetVisual): PlanetVisual {
  * given to it. The mark is built out of what has arrived, so it has a size only
  * once something has.
  *
- * **The cube root is not a curve chosen for its shape.** The berths fill from
- * the middle outward by volume and the outermost occupied one sits at exactly
- * `cbrt(share)` of the radius — see `berthOf` — so this is the sphere that
- * wraps what has landed. A radius growing linearly would spend most of the drag
- * *inside* its own souls, which is not a slower version of this but a wrong one.
+ * **The cube root is a floor, not the curve.** The berths fill from the middle
+ * outward by volume and the outermost occupied one sits at exactly `cbrt(share)`
+ * of the radius — see `berthOf` — so that is the sphere that wraps what has
+ * landed, and the drawn one may never go under it or the core is inside its own
+ * souls. It is a *bound*, and the whole of what it has to say.
  *
- * Which also means the growth is front-loaded, and truthfully so: a fifth of
- * the swarm is more than half the ball. `seed` is only a floor under it — a core
- * at nothing is a reading nobody can take, and the lean is the whole of what
- * this mark says.
+ * Above it the shape is free, and it is a **straight line** from the seed. The
+ * root was the curve for a while and read as a lurch: its slope at nothing is
+ * infinite, so the first hair of the slider was worth more of the ball than the
+ * whole back half of it, and the mark jumped rather than grew. At the seeds
+ * shipping now the line clears the bound everywhere — they meet only at a full
+ * harvest, where both are the whole radius — so the `max` below never fires. It
+ * is there for a seed dragged low in the lab, which is the one case where the
+ * wrap is the larger of the two and has to win.
+ *
+ * `seed` is a floor under all of it — a core at nothing is a reading nobody can
+ * take, and the lean is the whole of what this mark says. It is also the one
+ * knob on **how much the split moves this mark at all**: the travel is whatever
+ * is left above it, so a high seed is a core mostly already there that answers
+ * the slider with a nudge. It reaches the sphere alone — the window has its own
+ * floor in `CLARITY_SHUT`, and the two are kept apart on purpose.
  *
  * The berths themselves are packed against the **full** radius and never move.
  * This grows over them.
@@ -792,7 +816,46 @@ export function coreFillOf(share: number, seed: number) {
   const at = Math.max(0, Math.min(1, share));
   const floor = Math.max(0, Math.min(1, seed));
 
-  return floor + (1 - floor) * Math.cbrt(at);
+  return Math.max(floor + (1 - floor) * at, Math.cbrt(at));
+}
+
+/**
+ * How much tighter the window is shut with **nothing** merged, as a multiple of
+ * the authored falloff. One number for every world: the window is the core's
+ * other half and the core's inks are fixed for the same reason — this is a
+ * reading of the harvest, not a world's character. Worlds may still differ in
+ * how open they get, which is what `clarityGamma` itself is.
+ *
+ * The full multiple is only seen at a split of nothing, which a tolled harvest
+ * does not offer — at the lightest toll shipping, the window starts a little
+ * inside it and opens from there.
+ */
+export const CLARITY_SHUT = 3.6;
+
+/**
+ * The window's falloff at a given merge, from a world's authored one. Authored
+ * is the **open** end — the lab judges a full harvest — and the split walks the
+ * rim in from there toward a clearing dead centre.
+ *
+ * Straight in the split, and on nothing of the core's. It was briefly driven off
+ * the core's drawn radius, on the reading that a front should only dissolve as
+ * far as there is a sphere behind it — and that put both marks on `coreSeed`,
+ * where every move to settle one of them dragged the other off. How big the core
+ * is and how far open the window goes are two authorial wants, so they get a
+ * knob each: `coreSeed` for the sphere, `CLARITY_SHUT` for the window. Nothing
+ * is left here that wants a cube root: that curve is the berths' and it is the
+ * berths' alone.
+ *
+ * Spent as a *power* rather than a lerp because gamma is an exponent — halving
+ * it and doubling it have to be the same size of move. Which is also what makes
+ * the ends carry: a straight walk through an exponent is an even-feeling one,
+ * so the whole of the multiple is spent on the whole of the slider instead of
+ * being used up in the first inch.
+ */
+export function clarityGammaOf(gamma: number, share: number) {
+  const at = Math.max(0, Math.min(1, share));
+
+  return gamma * CLARITY_SHUT ** (1 - at);
 }
 
 /**

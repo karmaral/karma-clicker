@@ -23,17 +23,22 @@ export interface HarvestSource {
  * `declared` is **seconds of production**, so one delivery is worth that many
  * seconds of the income you left with. Nothing here is an absolute, which is
  * what keeps a world authored once through a ladder change.
+ *
+ * `anchorBonus` is what the anchors left standing on the world are worth, read
+ * once on the way out — so anchoring a world you mean to leave is an investment
+ * in its take rather than only in the time you spend there. 1 is unanchored.
  */
 export function resolveHarvestYields(
   declared: Partial<Record<YieldType, number>>,
   alignment: Polarity,
   rates: HarvestRates,
+  anchorBonus = 1,
 ): Partial<Record<ResourceType, number>> {
   const isEven = alignment === 0;
   const paid: Partial<Record<ResourceType, number>> = {};
 
   Object.keys(declared).forEach((type: YieldType) => {
-    const amount = (declared[type] ?? 0) * (rates[type] ?? 0);
+    const amount = (declared[type] ?? 0) * (rates[type] ?? 0) * anchorBonus;
 
     if (type === 'karma') {
       if (isEven) return;

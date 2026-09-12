@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, type ComponentType } from 'svelte';
   import { SvelteToast, toast } from '@zerodevx/svelte-toast';
   import { Card, Label, Rail, Value } from '$ui';
   import {
@@ -20,6 +20,7 @@
   import { catalogue } from '$features/frame/upgrades.svelte';
   import { DetailsScreen } from '$features/details';
   import { OverviewScreen } from '$features/overview';
+  import { HarnessScreen } from '$features/harness';
   import { RefineryScreen } from '$features/refinery';
   import DevPanel from '$features/dev/DevPanel.svelte';
   import Log from '$features/Log.svelte';
@@ -51,7 +52,10 @@
   NotificationManager.use(({ title, description }) => {
     toast.push({
       component: {
-        src: Notification,
+        // svelte-toast 0.9's JSDoc still types `src` as Svelte 4's class
+        // `ComponentType`, while a Svelte 5 component is a function. Its
+        // `<svelte:component>` takes either, so only the type is behind.
+        src: Notification as unknown as ComponentType,
         props: { title, description },
         sendIdTo: 'toastId',
       },
@@ -140,6 +144,10 @@
           <OverviewScreen />
         </Screen>
 
+        <Screen active={nav.active === 'harness'}>
+          <HarnessScreen />
+        </Screen>
+
         <Screen active={nav.active === 'refinery'}>
           <RefineryScreen />
         </Screen>
@@ -155,15 +163,18 @@
     {#if progression.isRevealed('frame.header')}
       <ActionBar railed={hasRail} />
     {/if}
+
+    <!-- The prelude's log only. Its home is the action bar, which the header
+         brings four beats after the log itself lands — until then there is no
+         bar to sit in, so it floats in the corner the bar will hand it. -->
+    {#if progression.isRevealed('shared.log') && !progression.isRevealed('frame.header')}
+      <Log floating />
+    {/if}
   </Card>
 </main>
 
 {#if import.meta.env.DEV}
   <DevPanel />
-{/if}
-
-{#if progression.isRevealed('shared.log')}
-  <Log />
 {/if}
 
 {#if catalogue.isOpen}
@@ -179,7 +190,11 @@
     height: 100%;
   }
 
+  /* Positioned so the prelude's floating log can peg itself to the card's own
+     bottom-right rather than the viewport's — the card is centered under 1440px
+     and the viewport's corner is nowhere near the content on a wide window. */
   main > :global(.card) {
+    position: relative;
     width: 100%;
     max-width: 1440px;
   }

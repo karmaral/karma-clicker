@@ -56,6 +56,8 @@ export {
   Value,
 };
 
+export { formatExcess } from './format';
+
 export { dragScroll } from './actions/dragScroll';
 export { tooltip } from './actions/tooltip';
 

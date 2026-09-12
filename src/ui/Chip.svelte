@@ -18,6 +18,8 @@
     tooltipContent?: Snippet;
     /** A second panel, opening to the left of the first. Both or neither. */
     asideContent?: Snippet;
+    /** Held at the far edge, where the row keeps its price. */
+    trailing?: Snippet;
   }
 
   let {
@@ -30,6 +32,7 @@
     onmouseleave,
     tooltipContent,
     asideContent,
+    trailing,
   }: Props = $props();
 
   let tooltipElem: HTMLElement | undefined = $state();
@@ -85,6 +88,9 @@
       <Icon src={icon} size="1.5em" />
     {/if}
     <span class="name">{label}</span>
+    {#if trailing}
+      <span class="trailing">{@render trailing()}</span>
+    {/if}
   </button>
 
   <!-- The wrapper is what tippy takes, so `--tooltip-max` set here reaches
@@ -146,6 +152,8 @@
     border: 1px solid var(--line-300);
     white-space: nowrap;
     transition: border-color var(--t-fast), color var(--t-fast);
+    --badge-size: 7px;
+    --badge-gap: var(--sp-1);
   }
 
   .chip :global(svg) {
@@ -157,6 +165,20 @@
     color: var(--ink-300);
     font-size: 9px;
     text-transform: uppercase;
+    font-weight: 600;
+    min-width: 0;
+  }
+
+  /* Pushed to the far edge and never squeezed — the label ellipses first. Left
+     to inherit the chip's colour, so a price dims with the status around it. */
+  .trailing {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    flex: none;
+    margin-left: auto;
+    padding-left: var(--sp-2);
+    font-size: var(--fs-xs);
     font-weight: 600;
   }
 

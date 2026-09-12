@@ -25,6 +25,8 @@
     harness?: HarnessVisual;
     /** How many souls the finished harness carries. See `SoulSwarm`. */
     riders?: number;
+    /** And how many are placing the anchor going down. See `PlanetScene`. */
+    working?: number;
     /** What a press is worth while it is placing anchors. See `PlanetView`. */
     pressValue?: number;
     pressFormat?: (value: number) => string;
@@ -44,6 +46,7 @@
     anchored,
     harness,
     riders,
+    working,
     pressValue,
     pressFormat,
   }: Props = $props();
@@ -86,6 +89,7 @@
       {anchored}
       {harness}
       {riders}
+      {working}
       {pressValue}
       {pressFormat}
     />

@@ -1,9 +1,14 @@
 <script lang="ts">
   /**
-   * The anchoring field. It stands where the cohort roster stands, because while
-   * a world is being anchored the roster is not the decision — the split is, and
-   * the press. Every figure here is a time or a count of anchors; nothing on this
-   * panel is bought.
+   * The anchoring field, drawn while a job you began is going down. It stands
+   * where the cohort roster stands, because for as long as it is up the roster is
+   * not the decision — the split is, and the press. Every figure here is a time
+   * or a count of anchors; nothing on this panel is bought, and what the rig
+   * *could* do is the Harness tab's reading rather than this one's.
+   *
+   * How many anchors are asked for and how far in they are comes off `harness`,
+   * not the world: the world offers slots and the rig decides how many of them
+   * it can fill.
    */
   import { AnchorGlyph, Label, Meter, Section } from '$ui';
   import { BuildingManager } from '$lib/managers';
@@ -31,10 +36,12 @@
 
   /** Placed ones read full, the one in progress reads live, the rest read empty. */
   const rows = $derived.by(() => {
-    return Array.from({ length: planet.anchorsAsked }, (_, i) => ({
+    const placed = harness.anchorsPlaced;
+
+    return Array.from({ length: harness.anchorsAsked }, (_, i) => ({
       index: i,
-      fill: i < planet.anchorsPlaced ? 1 : i === planet.anchorsPlaced ? planet.anchorFill : 0,
-      isPlaced: i < planet.anchorsPlaced,
+      fill: i < placed ? 1 : i === placed ? harness.anchorFill : 0,
+      isPlaced: i < placed,
     }));
   });
 
@@ -42,18 +49,40 @@
   const bonus = $derived(`+${Math.round(planet.anchorBonus * 100)}%`);
 
   /**
-   * What the placed ones actually pay. Below the nominal sum whenever the harness
-   * carries fewer souls than are out, which is what the `Carried` row explains.
+   * What the placed ones actually pay, across the cohorts that hold a line. The
+   * multiplier is per cohort now, so the panel's one figure is the average the
+   * rig is paying — weighted by what each lined cohort has out, which is the
+   * same weighting the riders are shared by.
    */
-  const multiplier = $derived(harness.multiplierFor(incarnating));
-  const carried = $derived(Math.min(harness.riders, incarnating));
+  const carried = $derived.by(() => {
+    return harness.linedCohorts.reduce((sum: number, id: string) => {
+      const active = BuildingManager.getBuilding(id)?.active ?? 0;
+
+      return sum + harness.ridersFor(id, active);
+    }, 0);
+  });
+
+  const multiplier = $derived.by(() => {
+    let weighted = 0;
+    let out = 0;
+
+    for (const id of harness.linedCohorts) {
+      const active = BuildingManager.getBuilding(id)?.active ?? 0;
+      if (active <= 0) continue;
+
+      weighted += harness.multiplierFor(id, active) * active;
+      out += active;
+    }
+
+    return out > 0 ? weighted / out : 1;
+  });
 
   /**
    * Real time, not job time — the job is what the world asks, the countdown is
    * what the souls on it have made of that. Unstaffed there is no answer to give.
    */
   const countdown = $derived(
-    harness.speed > 0 ? formatSpan(planet.anchorRemaining / harness.speed) : '—',
+    harness.speed > 0 ? formatSpan(harness.anchorRemaining / harness.speed) : '—',
   );
 </script>
 
@@ -93,7 +122,7 @@
   <dl>
     <div class="stat">
       <Label text="Anchors" />
-      <span class="num">{f(planet.anchorsPlaced)} of {f(planet.anchorsAsked)}</span>
+      <span class="num">{f(harness.anchorsPlaced)} of {f(harness.anchorsAsked)}</span>
     </div>
     <div class="stat">
       <Label text="Anchor bonus" />
@@ -114,7 +143,8 @@
   <p class="note">
     Held souls place the harness instead of incarnating, and the press buys time
     on it instead of experience. Every anchor down pays the souls that do
-    incarnate — but only as many of them as it can carry.
+    incarnate — but only the cohorts on a line, and only as many of them as the
+    harness can carry. Cancel and all of it comes out.
   </p>
 </Section>
 

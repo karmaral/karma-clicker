@@ -11,19 +11,22 @@ import type {
   Effect, EffectVerb, FirstHarvestCondition, HarvestBoon, ModifierStat, Polarity, YieldType,
 } from '$types';
 
-export type ScreenName = 'overview' | 'details' | 'refinery';
+export type ScreenName = 'overview' | 'details' | 'harness' | 'refinery';
 
 /**
  * Header order, left to right. Details leads because the minute you are living in
  * leads; Overview arrives between two cells that already exist rather than at an
- * end, which is what it costs to keep experience out of the tabs.
+ * end, which is what it costs to keep experience out of the tabs. Harness sits
+ * third for the same reason — and it reveals a beat before Refinery does, so in
+ * play it appends to the strip rather than pushing anything along.
  */
-export const SCREENS: ScreenName[] = ['details', 'overview', 'refinery'];
+export const SCREENS: ScreenName[] = ['details', 'overview', 'harness', 'refinery'];
 
 export const SCREEN_LABELS: Record<ScreenName, string> = {
   overview: 'Overview',
   refinery: 'Refinery',
   details: 'Details',
+  harness: 'Harness',
 };
 
 /**
@@ -132,10 +135,20 @@ const BOON_TARGET_LABELS: Record<string, string> = {
  */
 const RATE_STATS: ModifierStat[] = ['carry'];
 
+/**
+ * Stats authored in milliseconds. A `flat` on one of these adds a span, so it
+ * prints as seconds — the press buys +0.5s of the job, never "+500" of nothing.
+ */
+const MS_STATS: ModifierStat[] = ['press'];
+
 /** The change itself, in the shortest form that stays true to the operator. */
 export function getModifierFigure({ op, value, stat }: HarvestBoon['effect']) {
   if (op === 'flat' && stat && RATE_STATS.includes(stat)) {
     return `${value < 0 ? '−' : '+'}${Math.abs(Math.round(value * 1000) / 10)}%`;
+  }
+
+  if (op === 'flat' && stat && MS_STATS.includes(stat)) {
+    return `${value < 0 ? '−' : '+'}${Math.abs(value / 1000)}s`;
   }
 
   switch (op) {
@@ -191,6 +204,9 @@ const STAT_NOUNS: Partial<Record<ModifierStat, string>> = {
   duration: 'return time',
   step: 'allocation steps',
   carry: 'per soul riding',
+  anchors: 'anchors placeable',
+  work: 'placing speed',
+  press: 'per press',
 };
 
 /** `karma_positive` → `positive karma` — the order every other reading already takes. */

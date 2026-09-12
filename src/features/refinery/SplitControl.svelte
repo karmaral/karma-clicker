@@ -4,10 +4,12 @@
    * refinery draws the refining one, which is why it stays here rather than
    * moving to either — the same lever, named by the job that consumes it.
    *
-   * The detents come from the harness: coarse at first, so the allocation is a
-   * decision with a cost and not a number to nudge into place. What overshoots
-   * the slots is idle, and the aside says so — that overshoot is what the
-   * granularity upgrades buy back.
+   * The detents come from the job's own machine — the harness for anchoring, the
+   * refinery for refining — and are coarse at first, so the allocation is a
+   * decision with a cost and not a number to nudge into place. Two ladders, not
+   * one: granularity is a harness upgrade axis, and a shared reading would have
+   * made every anchor purchase buy this lever too. What overshoots the slots is
+   * idle, and the aside says so.
    */
   import { SliderBar, Section } from '$ui';
   import { BuildingManager } from '$lib/managers';
@@ -39,6 +41,8 @@
   const working = $derived(isAnchoring ? harness.workers : refinery.workers);
   const idle = $derived(Math.max(0, held - working));
 
+  const step = $derived(isAnchoring ? harness.step : refinery.step);
+
   const label = $derived(isAnchoring ? 'Anchoring split' : 'Refining split');
 </script>
 
@@ -53,7 +57,7 @@
   <SliderBar
     value={reserve.shareOf(job)}
     ceiling={reserve.ceilingFor(job)}
-    step={harness.step}
+    {step}
     {label}
     onchange={(share) => reserve.set(job, share)}
   />

@@ -94,8 +94,12 @@ class Refinery {
    */
   #samples = $state.raw<{ at: number; refined: number }[]>([]);
 
-  /** A base plus whatever is bought. Reserved souls fill them — neither on its own refines anything. */
-  #slots = $derived(this.#modifiers.apply(balance.refinery.slots, 'slots'));
+  /**
+   * A base plus whatever is bought. Reserved souls fill them — neither on its own
+   * refines anything. Floored: a slot is something one soul stands in, so half of
+   * one is not staffable and must not read as capacity.
+   */
+  #slots = $derived(Math.floor(this.#modifiers.apply(balance.refinery.slots, 'slots')));
 
   /**
    * The refining share, capped by the slots. Its own lever, not a remainder: the
@@ -106,6 +110,13 @@ class Refinery {
 
   /** What one worker at efficiency x1 is worth — a channel on the same stack as reach upgrades. */
   #efficiency = $derived(this.#modifiers.apply(1, 'yield'));
+
+  /**
+   * Rungs down *this* lever's ladder. Its own, not the harness's: granularity is
+   * a harness upgrade axis now, and a shared reading would have made every
+   * anchor purchase quietly buy the refining lever too.
+   */
+  #precision = $derived(this.#modifiers.apply(0, 'step'));
 
   /** Bought only — see `docs/design.md` §9. Uncapped; `coverage` is a saturating view over it. */
   #reach = $derived(
@@ -280,6 +291,13 @@ class Refinery {
 
   get slots() { return this.#slots; }
   get workers() { return this.#workers; }
+
+  /** The finest the refining split can be set to. Coarse until upgrades buy it down. */
+  get step() {
+    const steps = balance.refinery.splitSteps;
+
+    return steps[Math.min(Math.round(this.#precision), steps.length - 1)];
+  }
   get batch() { return this.#batch; }
   get interval() { return this.#interval; }
   get level() { return this.#level; }

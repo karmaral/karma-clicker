@@ -159,6 +159,25 @@ export interface SwarmVisual {
   berthWobble: number;
 
   /**
+   * The souls placing an anchor. They leave their orbits for a ring standing on
+   * the pole going down, circling it rather than orbiting the world: this is a
+   * job and not a trajectory, so it keeps a rate of its own instead of carrying
+   * the soul's.
+   *
+   * A worker is fully on the ring, the way a rider is fully on its line, and for
+   * that same reason: the straight line from an orbit to a pole on the far side
+   * is a chord through the world.
+   *
+   * `workRadius` is the ring, in body radii, and 0 is the whole thing off.
+   * `workLift` is how far over the anchor's tip its plane sits, `workSpread` how
+   * far off it a soul stands, and `workSpeed` radians a second.
+   */
+  workRadius: number;
+  workLift: number;
+  workSpread: number;
+  workSpeed: number;
+
+  /**
    * Two inks, one per place a soul can be *seen*: off the body and in front of
    * it. The far half is hidden. A pale third ink was tried for it and cut —
    * motion already says the path closes, and a dot that is neither in front nor
@@ -288,6 +307,8 @@ export interface Soul {
   size: number;
   wobble: number;
   wobbleRate: number;
+  /** One random per soul, 0…1, for scatter that wants no sequence of its own. */
+  spread: number;
   /** Its place in the dealing order — the soul with place 0 rides first. */
   place: number;
   /**
@@ -477,6 +498,7 @@ export function createSouls(visual: SwarmVisual, counts: number[]): Soul[] {
         size: Math.max(0.002, visual.dot + strayBy(random, visual.dotScatter)),
         wobble: visual.wobble * random(),
         wobbleRate: visual.wobbleRate * (0.5 + random()),
+        spread: random(),
         place: 0,
         band: index,
       };
@@ -640,6 +662,101 @@ export function settleScale(soul: Soul, travel: number, visual: SwarmVisual) {
   return visual.strayTo + (held - visual.strayTo) * travel;
 }
 
+/**
+ * The anchor a crew is standing on: where it points, and how far up its own
+ * direction the tip is. `AnchorPlacement` already is one — structural rather
+ * than imported, so the swarm still never learns what an anchor costs.
+ */
+export interface WorkSite {
+  x: number;
+  y: number;
+  z: number;
+  peak: number;
+}
+
+/** The ring's own frame: its centre, its axis, and two unit vectors across it. */
+export interface WorkFrame {
+  cx: number; cy: number; cz: number;
+  ax: number; ay: number; az: number;
+  ux: number; uy: number; uz: number;
+  vx: number; vy: number; vz: number;
+}
+
+export function createWorkFrame(): WorkFrame {
+  return {
+    cx: 0, cy: 0, cz: 0,
+    ax: 0, ay: 1, az: 0,
+    ux: 1, uy: 0, uz: 0,
+    vx: 0, vy: 0, vz: 1,
+  };
+}
+
+/**
+ * The frame for one site, worked out once a frame rather than once a soul. The
+ * reference is swapped near the poles so the cross never vanishes, which is the
+ * only case a basis built this way has.
+ */
+export function workFrameOf(site: WorkSite, visual: SwarmVisual, out: WorkFrame) {
+  const length = Math.hypot(site.x, site.y, site.z) || 1;
+
+  out.ax = site.x / length;
+  out.ay = site.y / length;
+  out.az = site.z / length;
+
+  const at = site.peak + visual.workLift;
+
+  out.cx = out.ax * at;
+  out.cy = out.ay * at;
+  out.cz = out.az * at;
+
+  const isPolar = Math.abs(out.ay) > 0.9;
+  const rx = isPolar ? 1 : 0;
+  const ry = isPolar ? 0 : 1;
+
+  const ux = ry * out.az;
+  const uy = -rx * out.az;
+  const uz = rx * out.ay - ry * out.ax;
+  const across = Math.hypot(ux, uy, uz) || 1;
+
+  out.ux = ux / across;
+  out.uy = uy / across;
+  out.uz = uz / across;
+
+  out.vx = out.ay * out.uz - out.az * out.uy;
+  out.vy = out.az * out.ux - out.ax * out.uz;
+  out.vz = out.ax * out.uy - out.ay * out.ux;
+}
+
+/**
+ * Where a worker stands at `elapsed`. Its own `spread` sets how far out on the
+ * ring it is and its own wobble carries it up and down the axis, so a crew
+ * mills around the pole instead of turning as one wheel.
+ *
+ * Still in the body's frame, like the harness itself. The caller puts it back
+ * where the spin has since carried it, exactly as a rider is put back.
+ */
+export function placeWorker(
+  soul: Soul,
+  elapsed: number,
+  frame: WorkFrame,
+  visual: SwarmVisual,
+  out: { x: number; y: number; z: number },
+) {
+  const angle = soul.phase + elapsed * visual.workSpeed;
+  const radius = Math.max(
+    0,
+    visual.workRadius + visual.workSpread * (soul.spread * 2 - 1),
+  );
+
+  const along = Math.cos(angle) * radius;
+  const across = Math.sin(angle) * radius;
+  const rise = visual.workSpread * Math.sin(elapsed * soul.wobbleRate + soul.phase * 2);
+
+  out.x = frame.cx + frame.ux * along + frame.vx * across + frame.ax * rise;
+  out.y = frame.cy + frame.uy * along + frame.vy * across + frame.ay * rise;
+  out.z = frame.cz + frame.uz * along + frame.vz * across + frame.az * rise;
+}
+
 /** Where a soul is at `elapsed`. Writes into `out`, so the loop allocates nothing. */
 export function placeSoul(
   soul: Soul,
@@ -669,7 +786,7 @@ export function phaseOf(soul: Soul, elapsed: number) {
   return turns - Math.floor(turns);
 }
 
-export type SwarmGroup = 'Orbits' | 'Scatter' | 'Souls' | 'Spawn' | 'Bolt';
+export type SwarmGroup = 'Orbits' | 'Scatter' | 'Souls' | 'Work' | 'Spawn' | 'Bolt';
 
 export interface SwarmParam {
   key: keyof SwarmVisual;
@@ -680,7 +797,9 @@ export interface SwarmParam {
   step: number;
 }
 
-export const SWARM_GROUPS: SwarmGroup[] = ['Orbits', 'Scatter', 'Souls', 'Spawn', 'Bolt'];
+export const SWARM_GROUPS: SwarmGroup[] = [
+  'Orbits', 'Scatter', 'Souls', 'Work', 'Spawn', 'Bolt',
+];
 
 /** Shaped like `VISUAL_PARAMS`, so wiring a panel onto it is mechanical. */
 export const SWARM_PARAMS: SwarmParam[] = [
@@ -710,6 +829,13 @@ export const SWARM_PARAMS: SwarmParam[] = [
   { key: 'ring', label: 'Ring', group: 'Souls', min: 0, max: 0.8, step: 0.02 },
   { key: 'outTone', label: 'Tone outside', group: 'Souls', min: 0, max: 6, step: 1 },
   { key: 'frontTone', label: 'Tone in front', group: 'Souls', min: 0, max: 6, step: 1 },
+
+  // 0 is the crew off — nobody stands on the pole, however many are working.
+  { key: 'workRadius', label: 'Ring', group: 'Work', min: 0, max: 0.8, step: 0.01 },
+  // Negative sinks the ring toward the foot of the anchor rather than its cap.
+  { key: 'workLift', label: 'Lift', group: 'Work', min: -0.25, max: 0.5, step: 0.01 },
+  { key: 'workSpread', label: 'Spread', group: 'Work', min: 0, max: 0.3, step: 0.005 },
+  { key: 'workSpeed', label: 'Speed', group: 'Work', min: 0, max: 4, step: 0.05 },
 
   // 0 is the flare off.
   { key: 'spawnSize', label: 'Size', group: 'Spawn', min: 0, max: 0.2, step: 0.002 },
@@ -767,6 +893,10 @@ export const DEFAULT_SWARM: SwarmVisual = {
   mergeLag: 0.25,
   berthEnter: 0.75,
   berthWobble: 1,
+  workRadius: 0.31,
+  workLift: 0.03,
+  workSpread: 0.03,
+  workSpeed: 1.45,
   ring: 0.3,
   outTone: 6,
   frontTone: 0,

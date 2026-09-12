@@ -14,11 +14,15 @@
    * `Streaming` is how many of the inner bands have collapsed into a rate; it
    * is the only way to see what `Bolt` does to a band that no longer strikes on
    * its payouts, since nothing in the lab is earning.
+   *
+   * `Working` is the crew on the anchor going down, which only the Anchors
+   * section has a ghost to stand them on.
    */
   const counts = [
     { key: 'bands', label: 'Cohorts', min: 1, max: 8 },
     { key: 'per', label: 'Souls each', min: 0, max: 100 },
     { key: 'streams', label: 'Streaming', min: 0, max: 8 },
+    { key: 'working', label: 'Working', min: 0, max: 60 },
   ] as const;
 
   /**

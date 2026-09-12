@@ -40,10 +40,12 @@
 
   /**
    * No per-cohort lean column any more — aim is one global dial. See §6.
-   * 64px on the count track: wide enough that the foot's total — a sum, so
-   * the widest figure in the column — doesn't bleed into the rates beside it.
+   * Two soul tracks: what is incarnating and what the levers hold back. Both are
+   * the same width, since either can end up carrying the roster — and both are
+   * wide enough for the foot's total, which is a sum and so the widest figure in
+   * its column.
    */
-  const columns = 'minmax(0, .75fr) 4ch .75fr';
+  const columns = 'minmax(0, .75fr) 6ch 5ch .75fr';
 
   /** Which row is hovering its purchase button, if any. */
   let previewId: string | undefined = $state();
@@ -82,8 +84,12 @@
     return [...totals].sort(([a], [b]) => byRateOrder(a, b));
   }
 
-  /** Total souls held across every cohort — the count the label is naming. */
-  const totalSouls = $derived(cohorts.reduce((sum, cohort) => sum + cohort.count, 0));
+  /**
+   * The foot is the sum of the column above it, so it counts what is incarnating
+   * and not what is owned — the held souls have their own column and are summed
+   * nowhere, because the levers already say what they took.
+   */
+  const totalIncarnating = $derived(cohorts.reduce((sum, cohort) => sum + cohort.active, 0));
 
   const totals = $derived(totalsAt(undefined));
   const preview = $derived(new Map(previewId ? totalsAt(previewId) : []));
@@ -95,14 +101,16 @@
   }
 </script>
 
-<Section label="Incarnations" {title}>
+<Section label="Soul cohorts" {title}>
   <div class="table" style:--cohort-cols={columns}>
 
     <div class="head">
 
-      <span><Label text="Cohort" size="sm" /></span>
+      <span><Label text="Name" size="sm" /></span>
 
-      <span class="count right"><Label text="Souls" size="sm" /></span>
+      <span class="count"><Label text="Incarnating" size="sm" /></span>
+
+      <span class="count"><Label text="Held" size="sm" /></span>
 
       <!-- The head cell is the switcher: the words are a read-out of where the
            cycle is, and clicking anywhere in the cell advances it. -->
@@ -126,7 +134,11 @@
       <div class="foot">
         <span><Label text="Total" size="sm" muted /></span>
 
-        <span class="count num">{f(totalSouls)}</span>
+        <span class="count num">{f(totalIncarnating)}</span>
+
+        <!-- The held column has no total. The levers already said what they took,
+             and a sum here would read as a second population. -->
+        <span></span>
 
         <span class="rates">
           {#each totals as [type, value] (type)}
@@ -150,10 +162,6 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
-  }
-
-  .table :global(.count) {
-    padding-right: var(--sp-2);
   }
 
   .foot {
@@ -197,8 +205,24 @@
   .head .right {
     justify-content: flex-end;
   }
+
+  /* Both soul labels are wider than the tracks they name, and widening the
+     tracks to fit a word would cost the roster and the rates real room. So the
+     label is taken out of flow and pinned by its right edge: a shrink-to-fit box
+     anchored that way grows leftward, into the name column's slack, which is
+     empty past the four letters of its own heading.
+     Out of flow rather than merely right-aligned, because an in-flow cell is
+     still a box the next column has to sit after — however it aligns its text,
+     it cannot be allowed to be wider than its track. */
   .head .count {
-    padding-right: var(--sp-2);
+    position: relative;
+  }
+
+  .head .count :global(.label) {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    white-space: nowrap;
   }
 
   .cost {

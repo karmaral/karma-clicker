@@ -9,7 +9,7 @@
 
   import { aim } from '$lib/aim';
   import { harness } from '$lib/harness.svelte';
-  import harnessVisuals from '$data/harness-visuals';
+  import { rig } from '$lib/harness-visuals.svelte';
   import planetTexts from '$data/planets-texts';
 
   import { Section } from '$ui';
@@ -20,6 +20,7 @@
   import CohortTable from './CohortTable.svelte';
   import AimSection from './AimSection.svelte';
   import AnchorPanel from './AnchorPanel.svelte';
+  import AnchorVerb from './AnchorVerb.svelte';
   import WaveStrip from './WaveStrip.svelte';
   import type { Phase, PurchaseMode } from './types';
 
@@ -201,10 +202,11 @@
         {onclickaction}
         {yields}
         yieldValue={isAnchoring ? 0 : clickYield}
-        anchors={hasField ? harnessVisuals.anchors : undefined}
-        anchored={hasField ? planet.anchored : undefined}
-        harness={hasField ? harnessVisuals.harness : undefined}
+        anchors={hasField ? rig.anchors : undefined}
+        anchored={hasField ? harness.anchored : undefined}
+        harness={hasField ? rig.harness : undefined}
         riders={hasField ? harness.riders : undefined}
+        working={hasField ? harness.workers : undefined}
         pressValue={isAnchoring ? harness.clickMs : undefined}
         pressFormat={seconds}
       />
@@ -227,12 +229,17 @@
           <span>{waveLabel}</span>
         {/snippet}
 
-        {@render planetBody()}
+        <!-- The anchor rides the viewport's own corner: the offer is made by
+             the world you are looking at, so it is drawn on it. -->
+        <div class="staged">
+          {@render planetBody()}
+          <AnchorVerb />
+        </div>
 
-        <!-- This world's one door out, at the foot of the world it opens.
-             Inside the section so it takes the same padding the stage does, and
-             in its own box so it can be pushed down rather than left to trail
-             the wave strip by a gap. -->
+        <!-- The door out, at the foot of the world it leads away from. Inside
+             the section so it takes the same padding the stage does, and in its
+             own box so it can be pushed down rather than left to trail the wave
+             strip by a gap. -->
         <div class="action">
           <HarvestVerb id={PlanetManager.selected} />
         </div>
@@ -305,7 +312,19 @@
     min-height: 0;
   }
 
+  /* The stage and its strip, boxed so the anchor verb has a corner to pin to.
+     Carries the Section's own gap, which it took over by wrapping them. */
+  .staged {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    min-width: 0;
+  }
+
   .action {
+    display: flex;
+    flex-direction: column;
     margin-top: auto;
   }
 

@@ -19,6 +19,9 @@ export default class Cohort extends Building {
     return harness.isPlacing ? reserve.countHeld(count, 'anchoring') : 0;
   }
 
+  /** What the rig carries of this cohort. Zero without a line — see `Harness`. */
+  #riding = $derived(harness.ridersFor(this.id, this.active));
+
   #heldAt(count: number) {
     return Math.min(count, this.#anchoringAt(count) + reserve.countHeld(count, 'refining'));
   }
@@ -49,10 +52,12 @@ export default class Cohort extends Building {
   get yieldScale() {
     if (!PlanetManager.getActive()) return 0;
 
-    return harness.multiplierFor(this.active) * prestige.yieldMultiplier;
+    return harness.multiplierFor(this.id, this.active) * prestige.yieldMultiplier;
   }
 
   get anchoring() { return this.#anchoring; }
   get refining() { return this.#refining; }
   get reserved() { return this.#reserved; }
+  get riding() { return this.#riding; }
+  get isLined() { return harness.linedCohorts.includes(this.id); }
 }

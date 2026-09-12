@@ -20,8 +20,11 @@ function createSwarmLab() {
    * `streams` is the inner bands, because that is the order the game collapses
    * them in: the shortest lives are the first to stop being lives. 0 is a world
    * where every band still has a clock, which is where a run starts.
+   *
+   * `working` is the crew on the anchor going down, and game state for the same
+   * reason the riders' count is: the ring is authored, who stands on it is not.
    */
-  const size = $state({ bands: 4, per: 12, streams: 0 });
+  const size = $state({ bands: 4, per: 12, streams: 0, working: 0 });
 
   /**
    * The share staying, on the same footing as the counts and for the same
@@ -83,7 +86,7 @@ function createSwarmLab() {
       : Math.max(1, Math.round(value));
   }
 
-  function resize(key: 'bands' | 'per' | 'streams', value: number) {
+  function resize(key: 'bands' | 'per' | 'streams' | 'working', value: number) {
     if (!Number.isFinite(value)) return;
 
     size[key] = Math.max(key === 'bands' ? 1 : 0, Math.round(value));

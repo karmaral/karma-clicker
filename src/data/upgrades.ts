@@ -115,13 +115,21 @@ const data: Record<string, UpgradeData[]> = {
     },
   ],
   /**
-   * Two capacities and a precision. Work slots decide how many reserved souls
-   * can place at once, so the split gets an optimum instead of "always max";
-   * rider slots cap how many souls the finished harness pays the anchor bonus
-   * to. `step` is a rung down the split ladder, not a fraction — see
-   * `balance.harness.splitSteps`. Both capacities start with a base — see
-   * `balance.harness` — so the harness can do its job the moment it is
-   * revealed; every row here only adds to that base. Placeholder figures.
+   * The rig's axes. Work slots decide how many reserved souls can place at once,
+   * so the split gets an optimum instead of "always max"; rider slots cap how
+   * many souls the finished harness pays the anchor bonus to; `anchors` is how
+   * many of a world's slots you can fill at all; `work` and `press` are how fast
+   * souls and the hand place them. `step` is a rung down the harness's own split
+   * ladder, not a fraction — see `balance.harness.splitSteps`.
+   *
+   * Every capacity starts with a base — see `balance.harness` — so the rig can do
+   * its job the moment it is revealed; every row here only adds to that base.
+   *
+   * **Priced in both crimsons.** A harness is strung by souls of both kinds, and
+   * a rig bought entirely out of one pile would be a way to run a single polarity
+   * without paying the refinery's matching for it. `lines` unlocks here and is
+   * then bought on the Harness tab, repeatedly and at a climbing price — the one
+   * capacity that is not a modifier. Placeholder figures.
    */
   'harness': [
     {
@@ -131,28 +139,70 @@ const data: Record<string, UpgradeData[]> = {
       costs: { experience: 500_000 },
     },
     {
+      id: 'anchors_1',
+      effect: { op: 'flat', value: 1, stat: 'anchors' },
+      unlocks_at: { red_positive: 400 },
+      costs: { red_positive: 900, red_negative: 900 },
+    },
+    {
+      id: 'lines',
+      effect: 'unlock',
+      unlocks_at: { red_positive: 600 },
+      costs: { red_positive: 1200, red_negative: 1200 },
+    },
+    {
       id: 'slots_1',
       effect: { op: 'flat', value: 24, stat: 'slots' },
       unlocks_at: { red_positive: 1000 },
-      costs: { red_positive: 2500 },
+      costs: { red_positive: 2500, red_negative: 2500 },
+    },
+    {
+      id: 'work_1',
+      effect: { op: 'boost', value: 0.5, stat: 'work' },
+      unlocks_at: { red_positive: 2000 },
+      costs: { red_positive: 3500, red_negative: 3500 },
     },
     {
       id: 'split_2',
       effect: { op: 'flat', value: 1, stat: 'step' },
       unlocks_at: { red_positive: 4000 },
-      costs: { red_positive: 5000 },
+      costs: { red_positive: 5000, red_negative: 5000 },
+    },
+    {
+      id: 'press_1',
+      effect: { op: 'flat', value: 500, stat: 'press' },
+      unlocks_at: { red_positive: 6000 },
+      costs: { red_positive: 7500, red_negative: 7500 },
+    },
+    {
+      id: 'anchors_2',
+      effect: { op: 'flat', value: 2, stat: 'anchors' },
+      unlocks_at: { red_positive: 8000 },
+      costs: { red_positive: 9000, red_negative: 9000 },
     },
     {
       id: 'riders_1',
       effect: { op: 'flat', value: 2000, stat: 'riders' },
       unlocks_at: { red_positive: 10_000 },
-      costs: { red_positive: 12_000 },
+      costs: { red_positive: 12_000, red_negative: 12_000 },
+    },
+    {
+      id: 'work_2',
+      effect: { op: 'boost', value: 1, stat: 'work' },
+      unlocks_at: { yellow: 200 },
+      costs: { yellow: 400 },
     },
     {
       id: 'split_3',
       effect: { op: 'flat', value: 1, stat: 'step' },
       unlocks_at: { yellow: 500 },
       costs: { yellow: 750 },
+    },
+    {
+      id: 'anchors_3',
+      effect: { op: 'flat', value: 4, stat: 'anchors' },
+      unlocks_at: { yellow: 900 },
+      costs: { yellow: 1400 },
     },
   ],
   /**

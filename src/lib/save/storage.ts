@@ -9,7 +9,8 @@
  * module graph is the reset, and a reload is the only way to get one.
  */
 
-import { isSaveState, summarize, type SaveState, type SaveSummary } from './state';
+import { summarize, type SaveState, type SaveSummary } from './state';
+import { migrate } from './migrate';
 
 const PREFIX = 'karma-clicker:save:';
 const PENDING_KEY = 'karma-clicker:pending';
@@ -19,15 +20,22 @@ export interface SaveEntry {
   summary: SaveSummary;
 }
 
-/** A save is only ever read back through this, so a foreign or stale key is skipped. */
+/**
+ * A save is only ever read back through this, so a foreign or stale key is
+ * skipped — and so migration has exactly one place to happen. The listing, the
+ * existence check and the boot's pending load all come through here, which is
+ * why an old save reads as loadable in the panel rather than only failing once
+ * you pick it.
+ *
+ * The raise is not written back. A migrated save is only rewritten when the
+ * player next saves over it, so opening the panel never edits anything on disk.
+ */
 function readState(name: string): SaveState | undefined {
   try {
     const raw = localStorage.getItem(PREFIX + name);
     if (!raw) return;
 
-    const parsed = JSON.parse(raw);
-
-    return isSaveState(parsed) ? parsed : undefined;
+    return migrate(JSON.parse(raw));
   } catch {
     return;
   }

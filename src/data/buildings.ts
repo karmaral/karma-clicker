@@ -45,9 +45,9 @@ function cohortData(n: number) {
     cost_multiplier: COHORT_RAMP,
     yields: {
       experience: yieldXp,
-      karma: 0.25 * yieldXp,
+      karma: 2 * yieldXp,
     },
-    duration: 1000 * 2 ** (n - 1),
+    duration: 2000 * 2 ** (n - 1),
   };
 }
 

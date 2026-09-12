@@ -82,12 +82,13 @@ class UpgradeManager {
     const item = upgradeMap[target][id];
     if (!item) return;
 
-    const costEntry = item.costs ? Object.entries(item.costs)[0] as [ResourceType, number] : undefined;
-    if (!costEntry) return;
-    const [cost_type, cost] = costEntry;
-    if (ResourceManager.getAmount(cost_type) < cost) return;
+    // Every entry, and all of them checked before any is taken — a price in two
+    // piles that could half-charge you would be a way to lose crimson for nothing.
+    const costs = item.costs ? Object.entries(item.costs) as [ResourceType, number][] : [];
+    if (!costs.length) return;
+    if (costs.some(([type, cost]) => ResourceManager.getAmount(type) < cost)) return;
 
-    ResourceManager.remove(cost_type, cost);
+    costs.forEach(([type, cost]) => ResourceManager.remove(type, cost));
     this.acquire(target, id);
 
     return true;
@@ -209,10 +210,16 @@ class UpgradeManager {
 
     const { kind, entity } = parseScope(target);
 
-    // The scopes with a singleton behind them. Verbs act on entities, so these
-    // upgrades are always modifiers and never verbs.
+    // The scopes with a singleton behind them. A verb usually needs an entity to
+    // act on, so these are modifiers — with one exception: the harness's `unlock`
+    // opens cohort lines, which are then *bought* rather than granted, so the
+    // verb has the singleton itself to act on and nothing else.
     if (kind === 'refinery' || kind === 'harness') {
-      if (typeof effect === 'string') return;
+      if (typeof effect === 'string') {
+        if (kind === 'harness' && effect === 'unlock') harness.unlockLines();
+
+        return;
+      }
 
       const target = kind === 'refinery' ? refinery : harness;
 

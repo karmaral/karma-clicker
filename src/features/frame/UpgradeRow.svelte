@@ -1,10 +1,8 @@
 <script lang="ts">
-  import { Badge, Label } from '$ui';
-  import { formatCost } from '$lib/utils';
-  import { badgeFor } from '$features/details/badge';
+  import { Label } from '$ui';
   import { getUpgradeReading } from '$lib/labels';
   import { spotlight } from '$lib/spotlight.svelte';
-  import type { ResourceType } from '$types';
+  import CostFigures from './CostFigures.svelte';
   import type { Upgrade } from './upgrades.svelte';
 
   interface Props {
@@ -19,9 +17,6 @@
   const reading = $derived(getUpgradeReading(upgrade.target, upgrade.effect, upgrade.effectTarget));
   const scope = $derived(reading.scope);
   const effect = $derived(reading.effect);
-  const costEntry = $derived(
-    upgrade.costs ? Object.entries(upgrade.costs)[0] as [ResourceType, number] : undefined,
-  );
 </script>
 
 {#snippet body()}
@@ -30,12 +25,13 @@
     <span class="name">{upgrade.label}</span>
     {#if effect}<span class="effect">{effect}</span>{/if}
   </span>
+  <!-- Every entry, because a price may name more than one pile and all of them
+       are charged. The rail's chip reads the same list the same way. -->
   <span class="cost">
     {#if upgrade.acquired}
       <span class="dash">—</span>
-    {:else if costEntry}
-      <span class="num">{formatCost(costEntry[1])}</span>
-      <Badge kind={badgeFor(costEntry[0])} />
+    {:else if upgrade.costEntries.length}
+      <CostFigures entries={upgrade.costEntries} />
     {:else}
       <span class="arrives">arrives</span>
     {/if}
@@ -99,7 +95,7 @@
   .cost {
     display: flex;
     align-items: center;
-    gap: var(--badge-gap);
+    gap: var(--sp-3);
     justify-self: end;
     font-size: var(--fs-sm);
     font-weight: 600;

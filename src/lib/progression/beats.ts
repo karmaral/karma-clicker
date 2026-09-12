@@ -109,6 +109,8 @@ export const beats: Beat[] = [
     floor: 186_000,
     runs: ['excess'],
     reveals: {
+      // The figure alone. A scale would be drawn around a door that does not
+      // exist yet — see `discovery` below, which is where it opens.
       'reading.excess': 'live',
       // A reading with no screen behind it. Becomes a tab at beat 11.
       'nav.refinery': 'inert',
@@ -121,6 +123,10 @@ export const beats: Beat[] = [
     when: (ctx) => ctx.planetsUnlocked >= 2,
     floor: 430_000,
     reveals: {
+      // The excess figure gets its scale here, and with it the gate: the beat
+      // that makes leaving a thing you can want is the beat that turns the
+      // reading into a distance from a door.
+      'reading.excessScale': 'live',
       'nav.overview': 'live',
       'overview.active': 'live',
       'overview.ahead': 'live',
@@ -143,7 +149,9 @@ export const beats: Beat[] = [
     },
   },
 
-  // The last decision, felt in the first minute — not read about.
+  // A world will carry a harness, and you may fit one. The tab arrives with the
+  // offer rather than after it: what the rig *can* do is the decision, and there
+  // is nowhere else to read it.
   {
     id: 'anchor',
     eventOnly: true,
@@ -152,6 +160,7 @@ export const beats: Beat[] = [
     reveals: {
       'details.field': 'live',
       'details.split': 'live',
+      'nav.harness': 'live',
       'overview.behind': 'live',
     },
   },

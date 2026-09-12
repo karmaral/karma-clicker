@@ -150,7 +150,9 @@ export default class Building {
    */
   #generateResources(lives = 1) {
     Object.keys(this.#production).forEach((type: YieldType) => {
-      const value = this.#production[type] * this.active * this.yieldScale * lives;
+      // `payout` and not the expression it wraps: it is where the figure is
+      // rounded, and a batch has to pay exactly what its lives were each worth.
+      const value = this.payout(type) * lives;
 
       if (type === 'karma') {
         this.#payKarma(value);
@@ -261,13 +263,19 @@ export default class Building {
     return this.#cumulativePrice(n);
   }
 
+  /**
+   * Each copy rounded before it is added, never the sum after: a price is a
+   * whole number of experience, and the copy you are buying has to cost the same
+   * whether you take it alone or as the tail of a batch. Rounding the total
+   * instead would make ten singles and one ten disagree by a few.
+   */
   #cumulativePrice(n: number) {
     let sum = 0;
     const currentCount = this.#count;
     const targetCount = this.#count + n;
     const { cost_multiplier: mult, cost } = this.#data;
     for (let i = currentCount + 1; i <= targetCount; i++) {
-      sum += cost * Math.pow(mult, i) / mult;
+      sum += Math.round(cost * Math.pow(mult, i) / mult);
     }
 
     return sum;
@@ -305,11 +313,16 @@ export default class Building {
    * spends, so a readout cannot drift from the ledger. `production` is the base
    * and its modifiers and stops short of `yieldScale`, which is the half that
    * moves under the harness; anything printing a payout wants this instead.
+   *
+   * Whole numbers. The authored ladder is integral and every yield modifier is
+   * a x2, so the only thing that ever put a decimal in a payout was `yieldScale`
+   * — the anchor coverage and wisdom's percent. Rounded here, once, rather than
+   * at each of the surfaces that print it.
    */
   payout(type: YieldType, count = this.#count, extra: Modifier[] = []) {
     const production = extra.length ? this.productionWith(extra) : this.#production;
 
-    return (production[type] ?? 0) * this.activeAt(count) * this.yieldScale;
+    return Math.round((production[type] ?? 0) * this.activeAt(count) * this.yieldScale);
   }
 
   perSecond(type: YieldType, count = this.#count, extra: Modifier[] = []) {

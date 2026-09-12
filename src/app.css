@@ -13,10 +13,12 @@
   --canvas:#f4f4f2;
   --ink-inverse:#ffffff;
 
-  --cursor-rest: url("/cursors/rest.svg") 2 2, auto;
-  --cursor-press: url("/cursors/press.svg") 2 2, auto;
-  --cursor-grab-rest: url("/cursors/grab-rest.svg") 2 2, auto;
-  --cursor-grab-drag: url("/cursors/grab-drag.svg") 2 2, auto;
+  /* The paper-dart cursors are off: the four roles resolve to their native
+     equivalents. Restore the url() values to turn the set back on. */
+  --cursor-rest: pointer;
+  --cursor-press: pointer;
+  --cursor-grab-rest: grab;
+  --cursor-grab-drag: grabbing;
 
   --res-xp:#2f7d4f;
   --res-red:#9e2b25;
@@ -201,7 +203,7 @@ body {
   line-height: 1.5;
   font-weight: 400;
   color: var(--ink-900);
-  cursor: var(--cursor-rest);
+  cursor: default;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -269,4 +271,38 @@ button {
   padding: var(--sp-5) var(--sp-4);
   padding-top: var(--sp-1);
   gap: var(--sp-4);
+}
+
+/* The cell *is* the button. Every table that sells something ends in one of
+   these: it takes the row's full height, bleeds out to the card's edge, and
+   carries a hairline as its only separation.
+
+   Global because three tables draw it and it has to be the same mark in all
+   three — and because the cohort row queries it by name to keep a buy from
+   also being a send.
+
+   Two numbers stay at the call site on purpose. `margin-block` is the negation
+   of that row's own `padding-block`, so the pair has to be read together; and
+   the width is a column decision, not a shared one. */
+.purchase-container {
+  display: flex;
+  align-self: stretch;
+  flex: none;
+  position: relative;
+  margin-right: -12px;
+}
+
+/* Drawn short rather than as a full-height border: the rules above and below
+   already box the cell, so a mark that ran into them would read as a corner.
+   The inset is the constant, not the length — rows differ in height, and what
+   the eye reads down the column is the gap to the row rule. */
+.purchase-container::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  translate: -1px -50%;
+  height: calc(100% - var(--rule-inset, var(--sp-4)));
+  border-left: var(--rule-card);
+  pointer-events: none;
 }

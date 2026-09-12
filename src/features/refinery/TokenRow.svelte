@@ -60,18 +60,24 @@
       <span class="or">or</span>
     {/if}
 
-    {#if isLocked}
-      <button type="button" class="locked-button" disabled>Locked</button>
-    {:else}
-      <PurchaseButton
-        kind={costKind}
-        amount={formatCost(cost!)}
-        {quantity}
-        {affordable}
-        onclick={onpurchased}
-        oncycle={oncyclemode}
-      />
-    {/if}
+    <!-- The cell *is* the button, the way the cohort and line rows have it: it
+         takes back the row's padding, runs out to the card's edge, and carries a
+         hairline as its only separation. A locked rung keeps the cell so the
+         column's edge holds down the table. -->
+    <div class="purchase-container">
+      {#if isLocked}
+        <button type="button" class="locked-button" disabled>Locked</button>
+      {:else}
+        <PurchaseButton
+          kind={costKind}
+          amount={formatCost(cost!)}
+          {quantity}
+          {affordable}
+          onclick={onpurchased}
+          oncycle={oncyclemode}
+        />
+      {/if}
+    </div>
   </div>
 </div>
 
@@ -129,12 +135,18 @@
     line-height: 1.3;
   }
 
+  /* Left, against the badge — the badge leads the figure, so ranging the column
+     right hung four marks at four different x's and the ladder stopped reading
+     as a column of grades. The numbers are short and of a kind; the mark is what
+     the eye runs down. */
   .held {
     display: flex;
-    justify-content: flex-end;
+    justify-content: flex-start;
     align-self: baseline;
   }
 
+  /* Reclaims the row's own block padding, so the buy inside it stretches the
+     full row height. The bleed to the card's edge is the cell's own. */
   .cost {
     display: flex;
     align-items: center;
@@ -142,9 +154,14 @@
     gap: var(--sp-2);
     min-width: 0;
     align-self: stretch;
-    /* Reclaims the row's own block padding, short 4px — same inset CohortRow
-       gives its purchase cell, so the two row families read as one system. */
-    margin-block: calc((var(--sp-4) - 4px) * -1);
+    margin-block: calc(var(--sp-4) * -1);
+  }
+
+  /* A fixed width, not the button's own: the hairline is a column edge, and it
+     has to hold still down four rows priced in four different figures. The rest
+     is the global `.purchase-container`. */
+  .purchase-container {
+    width: 15ch;
   }
 
   /* Information, not a control: what the refinery pays for the same thing. */
@@ -162,18 +179,18 @@
     color: var(--ink-300);
   }
   
-  .cost :global(.purchase) {
-    margin-left: unset;
-  }
-
+  /* The empty cell wears what the button would have — see `PurchaseButton`. */
   .locked-button {
-    padding: var(--sp-1) var(--sp-2);
-    border: 1px solid var(--line-200);
+    width: 100%;
+    margin: 0;
+    border: none;
+    padding-inline: var(--sp-2) 12px;
     background: transparent;
     color: var(--ink-300);
     font-size: var(--fs-sm);
     font-weight: 600;
     line-height: 1;
+    text-align: right;
     white-space: nowrap;
   }
 </style>

@@ -66,6 +66,9 @@
     send();
   }
 
+  /** Held back from incarnating by the levers — still yours, just not earning. */
+  const held = $derived(cohort.count - cohort.active);
+
   /** Lit while an upgrade that would change this cohort is being hovered. */
   const isLit = $derived(spotlight.isLit('cohort', cohort.id));
 
@@ -189,6 +192,20 @@
   };
 
   const tooltipOptions = $derived(docked ? dockedOptions : besideOptions);
+
+  let purchaseElem: HTMLElement | undefined = $state();
+
+  /**
+   * The name is the other half of the trigger: you read a row from the left, so
+   * the panel has to be reachable from there and not only from the cell you buy
+   * in. Its own instance, because the singleton maps a trigger to a reference
+   * one-to-one — but it borrows the purchase cell's rect, so whichever end of
+   * the row you come in from, the panel opens in the same place.
+   */
+  const identOptions = $derived({
+    ...tooltipOptions,
+    getReferenceClientRect: () => purchaseElem!.getBoundingClientRect(),
+  });
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -- role turns interactive with canSend; the linter can't see the ternary. -->
@@ -200,7 +217,7 @@
   onkeydown={onRowKeydown}
 >
 
-  <div class="ident">
+  <div class="ident" {@attach tooltip({ content: tooltipElem, options: identOptions })}>
 
     <div class="header">
       <span class="name">
@@ -245,14 +262,22 @@
 
   </div>
 
-  <div class="count num">{f(cohort.count)}</div>
+  <!-- The bold figure is what is actually incarnating, since that is the number
+       every rate on the row is computed from. Held souls are still yours, so they
+       get a column of their own rather than being dropped — quieter than the one
+       beside it, and blank rather than 0 when the levers are down, so an unheld
+       roster shows an empty column instead of a wall of zeroes. -->
+  <div class="count num">{f(cohort.active)}</div>
+
+  <div class="held num">{held ? f(held) : ''}</div>
 
   <!-- The button fills this cell, so hovering the cell is hovering the button.
        Its click opts out of the row's own send — you read the derivation where
        you decide to pay for it, and buying is never also sending. -->
   <div class="purchase-container" role="group">
-    <div 
+    <div
       class="purchase-button-wrapper"
+      bind:this={purchaseElem}
       {@attach tooltip({ content: tooltipElem, options: tooltipOptions })}
     >
       <PurchaseButton
@@ -352,22 +377,25 @@
     to { background-position: 200% 0; }
   }
 
-  /* The button fills the cell height, then reclaims the row's own padding on
-     top of that — short 4px, so it reads as the row's one control without
-     crowding the rule above it or the duration line below. */
+  /* Stretch, bleed and hairline come from the global `.purchase-container` in
+     app.css. What's left here is this row's own: the block margins negate the
+     `.row` padding above, and the width narrows the cell by inset rather than
+     by a narrower track — the head and the foot share that track, so shrinking
+     it would walk the souls column and crowd the totals. The leading space is
+     left empty instead. */
   .purchase-container {
-    align-self: stretch;
-    margin-block: calc((var(--sp-3) - 4px) * -1) -22px;
+    width: 16ch;
+    margin-left: auto;
+    margin-block: calc(var(--sp-3) * -1) -26px;
   }
   .row.compact .purchase-container {
-    margin-block: -7px -13px;
+    margin-block: -11px -17px;
   }
 
   .purchase-button-wrapper {
     display: flex;
-    width: 16ch;
+    width: 100%;
     height: 100%;
-    margin-left: auto;
   }
 
   .ident {
@@ -432,7 +460,18 @@
     font-size: var(--fs-sm);
     font-weight: 600;
     text-align: right;
+  }
+
+  /* A column now, and deliberately the quieter of the two figures: what is
+     incarnating is what every rate on the row is computed from, and what is held
+     is only the standing cost of the levers. Same track and alignment as the
+     count, lighter ink and no bold. */
+  .held {
+    font-size: var(--fs-sm);
+    font-weight: 500;
+    text-align: right;
     padding-right: var(--sp-2);
+    color: var(--ink-300);
   }
 
   .duration {
@@ -479,8 +518,8 @@
 
     & .description { display: none; }
 
-    & .count { 
-      font-size: var(--fs-sm); 
+    & .count, & .held {
+      font-size: var(--fs-sm);
       line-height: 1;
       align-self: end;
     }

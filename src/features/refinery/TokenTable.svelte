@@ -15,7 +15,12 @@
   import TokenRow from './TokenRow.svelte';
   import { resolvePurchasable, resolveQuantity, type TokenPurchaseMode } from './purchase';
 
-  const COLUMNS = 'minmax(0, 1fr) 72px 190px';
+  /**
+   * Held runs left off its badge, so the track has to hold the whole figure
+   * rather than let a long one hang back into the gap. The last one holds the
+   * passive reading *and* the buy cell, so it is wide.
+   */
+  const COLUMNS = 'minmax(0, 1fr) 88px 208px';
 
   const PURCHASE_MODES: readonly TokenPurchaseMode[] = ['1', '10', '100', 'Max'];
 
@@ -62,7 +67,7 @@
 
     <div class="head">
       <span><Label text="Grade" size="sm" /></span>
-      <span class="right"><Label text="Held" size="sm" /></span>
+      <span><Label text="Held" size="sm" /></span>
 
       <button type="button" class="cost right" onclick={cyclePurchaseMode}>
         <Label text="Cost ×" size="sm" />

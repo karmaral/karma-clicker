@@ -28,8 +28,15 @@ export type ModifierOp = 'flat' | 'boost' | 'mult' | 'pow' | 'final';
  * `carry` is what one soul riding the harness is worth to *you* — it is held by
  * the hand and only reads the harness for the count. A share per soul, so its
  * `flat` value is a rate and prints as a percent.
+ *
+ * `anchors` is how many of a world's anchor slots you can fill, `work` is
+ * job-ms placed per real ms per worker, and `press` is what one press pays into
+ * the job. Cohort lines are **not** here: a line is bought repeatedly at a
+ * climbing price, so it is a counter on `Harness` rather than a modifier.
  */
-export type ModifierStat = 'yield' | 'duration' | 'slots' | 'riders' | 'step' | 'carry';
+export type ModifierStat =
+  | 'yield' | 'duration' | 'slots' | 'riders' | 'step' | 'carry'
+  | 'anchors' | 'work' | 'press';
 
 export interface Modifier {
   id: string;
@@ -72,7 +79,11 @@ export interface UpgradeData {
   effect_target?: YieldType | 'all';
   /** Single-entry table: `{ karma_positive: 15 }`. Only the first entry is read. */
   unlocks_at: Partial<Record<UnlockType, number>>;
-  /** Single-entry table: `{ karma_positive: 15 }`. Only the first entry is read. */
+  /**
+   * **Every** entry is charged: `{ red_positive: 2500, red_negative: 2500 }` is
+   * a price in both piles, and it is affordable only when both are met. A
+   * single-entry table is the common case, not the rule.
+   */
   costs?: Partial<Record<ResourceType, number>>;
 }
 /**
@@ -156,16 +167,22 @@ export interface HarvestBoon {
 }
 
 /**
- * What a world asks before it will let its souls incarnate. Authored per world
- * rather than fixed globally, for the same reason `harvest` is: a late world
- * should ask more anchors and pay less for each.
+ * What a world *offers* — not what it demands. Anchoring is opt-in: the world
+ * declares how many anchor slots its surface has, and the harness decides how
+ * many of them you can fill (see `ModifierStat`'s `anchors`). Authored per world
+ * for the same reason `harvest` is: a late world should offer more slots and pay
+ * less for each.
  */
 export interface PlanetAnchoring {
-  /** How many the world asks for, 1…`ANCHOR_MAX`. */
+  /**
+   * The **ceiling**, 1…`ANCHOR_MAX`. What you actually place is this capped
+   * against what the harness can carry, so a world past your rig is a world you
+   * anchor partway.
+   */
   anchors: number;
   /** What one anchor takes, in ms of the job. Souls set how fast that job runs. */
   duration: number;
-  /** What each placed anchor adds to a carried soul's yields. */
+  /** What each placed anchor adds to a carried soul's yields, and to the harvest. */
   bonusPerAnchor: number;
 }
 

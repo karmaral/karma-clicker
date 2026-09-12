@@ -10,9 +10,14 @@ export type RevealKey =
   | 'frame.header'
   | 'frame.rail'
 
-  // Exactly three, permanently — the header is the navigation.
+  // A tab is a place you *configure* a system you own; a takeover is a decision
+  // that ends something. That is the whole test, and it is what the "exactly
+  // three, permanently" note here used to assert instead. The harness is a
+  // system with capacities to buy and a rig to look at, so it is a tab; the
+  // first harvest and the end of a run are doors, so they are takeovers.
   | 'nav.overview'
   | 'nav.details'
+  | 'nav.harness'
   | 'nav.refinery'
 
   // `reading.*`, not `header.*` — these predate the header and the frame
@@ -21,6 +26,11 @@ export type RevealKey =
   | 'reading.posKarma'
   | 'reading.negKarma'
   | 'reading.excess'
+  // The same reading twice over, and the second is not a second surface of it:
+  // `reading.excess` is the figure, this is the scale it stands on and the door
+  // drawn on it. Split because the door is not on the table until a second world
+  // is, and a gate you cannot walk through is a mark with nothing to measure.
+  | 'reading.excessScale'
   | 'reading.tokens'
 
   // Rendered on more than one screen. See LAYOUT.
@@ -44,20 +54,21 @@ export type RevealKey =
   | 'overview.firstHarvest'
   | 'overview.harvest'
 
-  // A takeover, not a fourth tab — and one key, because it arrives whole. Four
+  // A takeover and not a tab: leaving a world for good is a decision, not a
+  // panel you keep coming back to. One key, because it arrives whole — four
   // keys revealed in one beat, all `live`, were three of them pretending to be
   // a sequence. `overview.firstHarvest` is the gate that does have two states.
   | 'harvest.screen'
 
-  // A takeover, not a fifth `{#if}`: five reveal keys were revealed `live` in
-  // the same beat, in the same object literal, with no state where one was
-  // true and another false — see `harvest.screen` above. One key, and the
-  // screen has no internal guard.
+  // Not a fifth `{#if}`: five reveal keys were revealed `live` in the same beat,
+  // in the same object literal, with no state where one was true and another
+  // false — see `harvest.screen` above. One key, and the screen has no internal
+  // guard. The *tab* it lives under is `nav.refinery`.
   | 'refinery.screen'
 
-  // Also a takeover, and for the same reason `harvest.screen` is one — the nav
-  // keys above are exactly three, permanently. Nothing simulates behind it, so
-  // it has no `SystemKey`.
+  // A takeover, and by the test above: ending a run is a door, not somewhere
+  // you configure anything. Nothing simulates behind it, so it has no
+  // `SystemKey`.
   | 'prestige.screen';
 
 export type SystemKey =
@@ -81,9 +92,9 @@ export const SYSTEM_SURFACES: Record<SystemKey, RevealKey[]> = {
   cohort: ['details.cohortTable'],
   wave: ['details.wave'],
   aim: ['details.aimGlobal'],
-  excess: ['reading.excess'],
+  excess: ['reading.excess', 'reading.excessScale'],
   harvest: ['harvest.screen'],
-  anchoring: ['details.field'],
+  anchoring: ['details.field', 'nav.harness'],
   refining: ['refinery.screen', 'reading.tokens'],
   // `overview.harvest` is deliberately absent: the ledger is drawn empty from
   // beat 8 and only fills at beat 10, so it precedes the system it reports on.

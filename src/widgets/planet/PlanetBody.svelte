@@ -54,6 +54,12 @@
      */
     core?: number;
     /**
+     * And how far open the window over it goes, as a falloff — the authored one
+     * with the merge already spent on it, the scene's to work out for the reason
+     * `core` is. Absent opens it as authored. See `clarityGammaOf`.
+     */
+    clarityGamma?: number;
+    /**
      * Drawn inside the body's hold but outside its spin — orbits and markers
      * share the world's axis without being dragged round by its surface.
      */
@@ -66,7 +72,8 @@
   }
 
   let {
-    visual, zoom, spinAngle = 0, veilAngle = 0, alignment, core, pulse, pulses, children, standing,
+    visual, zoom, spinAngle = 0, veilAngle = 0, alignment, core, clarityGamma, pulse, pulses,
+    children, standing,
   }: Props = $props();
 
   /**
@@ -77,6 +84,9 @@
   const hasCore = $derived(alignment !== undefined && visual.core > 0);
 
   const radius = $derived(Math.max(0, core ?? visual.core));
+
+  /** Both surfaces are cut from one rim, so the window is worked out once. */
+  const gamma = $derived(Math.max(0.01, clarityGamma ?? visual.clarityGamma));
 
   const { invalidate } = useThrelte();
   const ramp = readInkRamp();
@@ -94,7 +104,7 @@
 
   $effect(() => {
     geometry;
-    syncSurfaceUniforms(surface, visual, hasCore ? visual.clarity : 0);
+    syncSurfaceUniforms(surface, visual, hasCore ? visual.clarity : 0, gamma);
     syncOutlineUniforms(outline, visual, ramp, zoom);
 
     if (pulse) syncBurstUniforms(burst, outline, pulse, ramp, zoom);
@@ -130,7 +140,7 @@
   $effect(() => {
     if (!veilMaterial) return;
 
-    syncVeilUniforms(veilMaterial, visual, hasCore ? visual.clarity : 0);
+    syncVeilUniforms(veilMaterial, visual, hasCore ? visual.clarity : 0, gamma);
     invalidate();
   });
 

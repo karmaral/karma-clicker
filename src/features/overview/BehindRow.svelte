@@ -40,7 +40,12 @@
     return formatClock(nextAt - now);
   });
 
-  /** Read once — a reactive resume would re-seed the sweep on every tick. */
+  /**
+   * Read once — a reactive resume would re-seed the sweep on every tick. Safe
+   * because the ledger keys its rows by id, so a row's `planet` is one instance
+   * for the row's whole life.
+   */
+  // svelte-ignore state_referenced_locally
   const resume = { duration: planet.harvestDuration, remaining: (planet.emitter?.nextAt ?? 0) - Date.now() };
 
   const subscribe: (fn: Listener) => () => void = (fn) => {

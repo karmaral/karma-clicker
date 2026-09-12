@@ -20,10 +20,13 @@
 
 <dl class="requirements">
 
+  <!-- What the world offers, not what you could fill of it — this is a place you
+       have not reached, so the rig's half of that answer belongs on the Harness
+       tab rather than in a row about somewhere else. -->
   <div class="row">
-    <dt>Anchors</dt>
+    <dt>Anchor slots</dt>
     <dd>
-      <span class="strong">{planet.anchorsAsked || '—'}</span>
+      <span class="strong">{planet.anchorSlots || '—'}</span>
     </dd>
   </div>
 

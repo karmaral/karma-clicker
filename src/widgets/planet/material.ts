@@ -236,11 +236,16 @@ const clarityOpen = /* glsl */ `
  * others is the light one — and it is the strongest signal on the screen
  * because it is the one thing a glance has to get right.
  *
- * Each ruled end hatches **one step in from its own ground**, which is why the
- * two are not simply the ramp's ends against its darkest ink: a hatch far from
- * its ground is a second mark sitting on the core, and a hatch one step off it
- * is the ground itself, worked. Even is bare — no ruling at all, because neither
- * side was taken.
+ * Each reading hatches **one step in from its own ground**, which is why the
+ * ends are not simply the ramp's against its darkest ink: a hatch far from its
+ * ground is a second mark sitting on the core, and a hatch one step off it is
+ * the ground itself, worked. Even takes that step *inward*, toward the ink, for
+ * the only reason there is at the middle of a ramp: a lighter grey on grey is a
+ * smudge, a darker one is a stroke.
+ *
+ * Even is ruled **level** — the lean between the two, which is what a lean of 0
+ * already draws. A bare middle read as a core the shader had failed to draw, and
+ * the one thing the middle must not read as is missing.
  *
  * The souls get **two** numbers per reading rather than borrowing the hatch's,
  * because a dot has to *carry* at a few pixels where a stroke only has to be
@@ -256,7 +261,7 @@ const clarityOpen = /* glsl */ `
  * landed on — because out there the dot is over the world, not over a reading.
  */
 const CORE_TONES = {
-  even: { ground: 2, hatch: 2, soul: 1, ring: 4 },
+  even: { ground: 2, hatch: 3, soul: 1, ring: 4 },
   light: { ground: 0, hatch: 1, soul: 0, ring: 6 },
   dark: { ground: 6, hatch: 5, soul: 6, ring: 0 },
 };
@@ -798,7 +803,7 @@ const spawnFragment = /* glsl */ `
 /**
  * The core: what the window is a window onto. A solid at the middle of the
  * world, carrying the harvest's alignment as a ruling that leans one way on the
- * negative and the other on the positive, and is simply absent on even.
+ * negative and the other on the positive, and rules level on even.
  *
  * Ruled in **view space**, off the fragment's offset from the body's centre —
  * the depth idiom five shaders above already use, spent here on a direction
@@ -832,6 +837,7 @@ const coreFragment = /* glsl */ `
   uniform float uLean;
   uniform float uDensity;
   uniform float uWidth;
+  uniform float uReach;
   uniform float uFeather;
 
   varying vec3 vRel;
@@ -847,10 +853,11 @@ const coreFragment = /* glsl */ `
     ${CORE_TONES.dark.hatch}.0, ${CORE_TONES.even.hatch}.0, ${CORE_TONES.light.hatch}.0
   );
 
-  void main() {
+  // One ruling, at one lean, at a width the caller has already weighed.
+  float ruleAt(float lean, float width) {
     // Normalised, so the two leans are mirror images at the same spacing rather
     // than one being the diagonal of a rectangle the other is not.
-    vec2 axis = normalize(vec2(1.0, uLean));
+    vec2 axis = normalize(vec2(1.0, lean));
 
     // Perpendicular to the lean, so the strokes run *along* it.
     float q = dot(vRel.xy, vec2(-axis.y, axis.x)) * uDensity;
@@ -859,12 +866,28 @@ const coreFragment = /* glsl */ `
     // discontinuous and a derivative of it spikes at every seam, which would
     // draw a heavy stroke down each one — contourAt's argument, in its simplest
     // form.
-    float perPixel = fwidth(q);
+    return strokeAt(fract(q), 0.5, width, fwidth(q));
+  }
 
-    // Even has no lean and so has no ruling: the ground tone is the whole
-    // picture, which is the reading. Cut on the lean rather than on the width,
-    // so a world can author its strokes and still show a bare core.
-    float stroke = strokeAt(fract(q), 0.5, uWidth, perPixel) * step(0.5, abs(uLean));
+  void main() {
+    // Screen-radial: 0 at the middle of the disc, 1 at its limb. The mesh is a
+    // uniform sphere, so the view normal is vRel's own direction and its xy
+    // length *is* that reading — the vector the feather takes its z from, spent
+    // the other way. Normalised, so it holds as the core grows.
+    float edge = length(normalize(vRel).xy);
+
+    // The ruling thickens outward: nothing at the middle, a hairline where it
+    // first takes, full weight at the limb. Flat strokes across the whole disc
+    // read as a *surface* — a ruled plate the size of the core — where a weight
+    // that answers the silhouette reads as curvature, which is the one thing the
+    // core has no shading to say. uWidth stays the weight at the rim, so a world
+    // authors the heaviest stroke it draws and this decides where.
+    float width = uWidth * smoothstep(1.0 - uReach, 1.0, edge);
+
+    // Every reading rules at its own lean and there is no third case: −1 and +1
+    // tilt against each other, and 0 comes out level, which is the picture even
+    // wanted anyway. The reading is a spirit level.
+    float stroke = ruleAt(uLean, width);
 
     // Which of the three readings this is, as a selector rather than a branch:
     // uLean is -1, 0 or +1, so the three components pick themselves out and the
@@ -2315,6 +2338,7 @@ export function createCoreMaterial() {
       uLean: { value: 0 },
       uDensity: { value: 12 },
       uWidth: { value: 1.5 },
+      uReach: { value: 1 },
       uFeather: { value: 0 },
     },
   });
@@ -3049,16 +3073,21 @@ function originOf(seed: number) {
  * a property of the world on its own — it is half of one mark, and the other
  * half is the core, and a core is only drawn where there is an alignment to put
  * in it. A view with none passes 0 and the body is the solid it always was.
+ *
+ * `gamma` arrives the same way and for the same reason: the split walks the
+ * window's rim in, so how far open it reaches is game state too. Absent is the
+ * authored one — see `clarityGammaOf`.
  */
 export function syncSurfaceUniforms(
   material: THREE.ShaderMaterial,
   visual: PlanetVisual,
   clarity: number,
+  gamma = visual.clarityGamma,
 ) {
   const u = material.uniforms;
 
   u.uClarity.value = Math.max(0, Math.min(1, clarity));
-  u.uClarityGamma.value = Math.max(0.01, visual.clarityGamma);
+  u.uClarityGamma.value = Math.max(0.01, gamma);
   u.uClaritySteps.value = Math.max(2, Math.round(visual.claritySteps));
 
   u.uRim.value = visual.rim;
@@ -3107,19 +3136,27 @@ export function syncCoreUniforms(
   u.uLean.value = Math.sign(Math.round(lean));
   u.uDensity.value = Math.max(0.1, visual.coreHatchDensity);
   u.uWidth.value = Math.max(0, visual.coreHatchWidth);
+
+  // Floored off zero: the mask is a smoothstep and its two edges may not meet.
+  u.uReach.value = Math.max(0.01, visual.coreHatchReach);
   u.uFeather.value = Math.max(0, visual.coreFeather);
 }
 
-/** `clarity` reaches the veil for the reason it reaches the body — see `syncSurfaceUniforms`. */
+/**
+ * `clarity` and `gamma` reach the veil for the reason they reach the body — see
+ * `syncSurfaceUniforms`. Both, or the weather over a half-open front is cut to a
+ * different rim than the front is.
+ */
 export function syncVeilUniforms(
   material: THREE.ShaderMaterial,
   visual: PlanetVisual,
   clarity: number,
+  gamma = visual.clarityGamma,
 ) {
   const u = material.uniforms;
 
   u.uClarity.value = Math.max(0, Math.min(1, clarity));
-  u.uClarityGamma.value = Math.max(0.01, visual.clarityGamma);
+  u.uClarityGamma.value = Math.max(0.01, gamma);
   u.uClaritySteps.value = Math.max(2, Math.round(visual.claritySteps));
 
   u.uVeil.value = Math.max(0, visual.veil);

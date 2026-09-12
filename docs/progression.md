@@ -4331,6 +4331,11 @@ not a rendering one. The game design is deliberately unsettled; what follows is
 the shape the primitives take, so that retuning is a data edit and not a
 restructure.
 
+> **Superseded in part.** The forced phase below became an opt-in job, and the
+> harness got a tab. See *Anchoring becomes a choice* at the end of this section
+> for what changed and why; everything about the job-ms denomination, the split
+> and the press still holds exactly as written.
+
 ### The phase
 
 Arriving at a world past the first puts you in a **forced** anchoring phase.
@@ -4452,12 +4457,14 @@ and why the ladder stays authorable data.
 
 ### What was deferred, and why
 
-- **Per-world anchor and harness visuals.** `harness-visuals.ts` is one record
-  seeded from the widget defaults. `harness-lab.svelte.ts` already notes a pair's
-  family comes from the pair alone; the lab's copy button prints a literal when
-  a second is worth authoring.
-- **Anchor-slot upgrades** toward `ANCHOR_MAX = 8`. Work slots and rider slots
-  are the two capacities chosen; a third is speculative.
+- **Per-world anchor and harness visuals.** ~~`harness-visuals.ts` is one record
+  seeded from the widget defaults.~~ It is now `lib/harness-visuals.svelte.ts`,
+  and the defaults are the *starting* values each upgrade axis moves up from.
+  Per-*world* variation is still unauthored: `harness-lab.svelte.ts` notes a
+  pair's family comes from the pair alone, and the lab's copy button prints a
+  literal when a second is worth authoring.
+- ~~**Anchor-slot upgrades** toward `ANCHOR_MAX = 8`.~~ **Shipped** — see
+  *Anchoring becomes a choice* below for why the deferral was reversed.
 
 ### A rider is a count, not a share
 
@@ -4474,10 +4481,12 @@ and not a visual field**, the separation `counts` and `merge` already keep — g
 state is passed in, look is authored. The lab is untouched.
 
 Riders appear as the lines do, not when the last anchor lands: `loops` is built
-from the *placed* nodes alone, so the swarm populates a growing harness. Nothing
-rides until `riders_1` is bought, since `balance.harness.riders` is 0 — that is
-the upgrade's whole content, and it is worth checking it reads as a purchase
-rather than as a bug.
+from the *placed* nodes alone, so the swarm populates a growing harness.
+
+`balance.harness.riders` is **200**, not 0 — the base was baked in so a revealed
+harness pays the moment it is revealed, and `riders_1` adds to it. What gates
+riding now is the **cohort line**: a cohort without one rides nothing however many
+riders are bought, which is the reading `LineTable` exists to give.
 
 ### A spark is where a soul landed
 
@@ -4632,6 +4641,193 @@ both. One edit stops the ledger and the readout together, and the header's `/s`
 figures fall back to `sumHarvestRates` over the worlds behind you with no change
 in `Frame.svelte` at all. Zero rather than a stopped emitter: the cohorts are
 still there, still bought, still the thing the next world will run on.
+
+### Anchoring becomes a choice
+
+The forced phase was a tax with no door. A world past the first opened by taking
+your souls and your press for as long as it took, and the only decision in it was
+how fast to pay. That is a toll, and a toll is not a mechanic — it is a wait with
+a lever attached.
+
+So the world now **offers** slots and you decide whether to take them. Three
+things had to follow from that, and each is the answer to *why would anyone say
+yes*:
+
+**The payoff had to outlive the world.** A bonus that dies when you harvest is a
+bonus on time you were going to spend anyway. The anchors stay on the world, so
+the first harvest reads them the way it reads the alignment and the income — once,
+on the way out — and every delivery afterwards carries it forever. Anchoring is
+now the only thing you can still change about what a finished world pays.
+
+The departure figure is **nominal, with no coverage cut**, and that is not an
+oversight. The living multiplier scales by the carried share because riders are
+souls standing on the world; after you go the world is empty and the anchors
+remain, so what is left is the anchors alone.
+
+**Cancelling had to hurt.** Placed job-ms goes back to zero and the anchors come
+out. A job that resumed from a saved fraction would make cancelling free, and a
+free cancel turns the whole decision into *begin it and see* — which is the forced
+phase again, wearing a button.
+
+**The world's figure had to become a ceiling.** `anchoring.anchors` used to be
+what a world demanded; it is what a world offers, and `min(rig, offer)` decides.
+That single change is what made the deferred anchor-count axis stop being
+speculative: without something to buy toward a late world's five slots, the
+ceiling is decoration. §12's *a third capacity is speculative* is reversed, and
+the reasoning is on the record above it.
+
+The state split follows the same line. `Planet` keeps the offer and the job-ms;
+every derived figure over the job — asked, placed, fill, remaining, done — moved
+to `Harness`, which is the only thing that knows both halves. A world that never
+learns what a rig is cannot disagree with one, and `place(ms, jobMs)` takes the
+cap as an argument for exactly that reason.
+
+### The Harness tab, and the invariant it broke
+
+`keys.ts` asserted the nav keys were *exactly three, permanently*, and asserted it
+without an argument. Four tabs needed a rule rather than a count:
+
+> A tab is where you **configure a system you own**. A takeover is a **decision
+> that ends something**.
+
+The harness has capacities to buy and a rig to look at and you return to it all
+run — a tab. The first harvest ends a world, the terminus ends a run — takeovers.
+Three was the count that happened to satisfy the rule, never the rule.
+
+It costs the strip nothing: `--tab` is a fixed width, so a fourth tab continues
+past the seam at the same width the third already did.
+
+**The job is not run from the tab.** Anchoring is begun, watched and cancelled on
+Details, because Details is the world it acts on. The tab is the rig — which is
+why its picture is a flat, nameless body with every anchor drawn placed. Equipment
+is not a world, the deformation is zeroed because deformation reads as *size*, and
+what it shows is what the rig can put down rather than how far along a job is.
+
+### Cohort lines are bought, not granted
+
+A fixed ladder of `lines_1`, `lines_2` has to guess how many cohorts you will
+have. A curve does not — so a line is opened by an upgrade and then bought on its
+own, repeatedly, at a climbing price, the shape the refinery's inversions already
+use. It is the one harness capacity that is not a `ModifierStat`, and the only
+one the save has to store: every other axis rebuilds from the held modifiers.
+
+Two rules here are the simplest thing that works and neither is argued: lines go
+to the first *n* cohorts of the roster, and the rider cap splits among them in
+proportion to what each has out. Both are one function; swap them when play says
+to. They are on `design.md`'s open list.
+
+The knock-on is that `multiplierFor` is now asked per cohort. `AnchorPanel`'s one
+bonus figure became a weighted average over the lined cohorts — weighted by active
+count, the same weighting the riders are shared by, so the panel and the ledger
+cannot disagree.
+
+### Two split ladders
+
+Granularity became a harness axis, so the refinery grew a `step` of its own off
+its own `ModifierSet`. Shared, every anchor purchase would have quietly bought the
+refining lever too — the sort of coupling that is invisible until someone wonders
+why the refinery got finer for free.
+
+### Saves migrate now
+
+*An older save is refused, not patched* was cheap while nothing was worth keeping.
+A run is long enough now that throwing one away to add a field is the wrong trade,
+so `save/migrate.ts` holds one step per version, each raising a save by exactly
+one and each responsible only for the fields its own version added. They compose,
+so no step ever has to know what the shape was two versions ago.
+
+It lives behind `storage.readState`, the single funnel every read already went
+through — so an old save reads as loadable in the panel rather than failing only
+once you pick it. The raise is **not written back**: opening the panel never edits
+anything on disk.
+
+v3 → v4 reads `placedMs > 0` as consent. A v3 world part-way through an anchor had
+no say in it, and the alternative silently abandons work the player already paid
+souls for.
+
+### Upgrades are priced in both crimsons
+
+`UpgradeData.costs` was documented as a single-entry table and three places read
+only the first entry. All three widen: the purchase checks every entry before
+taking any — a price in two piles that could half-charge you would be a way to
+lose crimson for nothing — and `distanceToAffordable` became the summed shortfall,
+so a chip you are close on in one pile alone does not climb the rail for it.
+
+The reason to price the rig in both is not symmetry. A harness bought out of one
+pile would be a way to run a single polarity without paying the refinery's
+matching for it, which is the one thing §9's whole argument exists to prevent.
+
+### The rig's picture is a pure function, so the ladder can be looked at
+
+The visual maps shipped reading the live harness directly, which made them
+unanswerable: an axis whose ceiling is too far off buys a number and no picture,
+and the only way to catch that was to play to the rung and remember what the last
+one looked like — hours apart, from memory. Every ceiling in there is a guess, so
+this was the one question the coupling most needed asked.
+
+Split in two. `lib/rig.ts` holds `RigAxes`, `readAxes(modifiers, lines)` and
+`rigVisualsAt(axes)`, and imports nothing but `balance` and the widget defaults.
+`lib/harness-visuals.svelte.ts` is now four lines: the same map held over
+`harness.axes`. `Harness` reads its own capacities through `readAxes` rather than
+five separate `apply` calls, so there is **one** definition of what the rig is
+and a preview cannot drift off the thing it previews.
+
+The leaf matters as much as the purity. The lab must not mount `PlanetManager`
+and `BuildingManager` to draw a picture, and `harness.svelte.ts` drags both.
+
+`widgets/harness-stages.ts` then replays `$data/upgrades`'s `harness` bucket
+through a throwaway `ModifierSet`, cumulatively, and `?widgets` → **Rig ladder**
+draws one cell per row. It is the real data in the real order, so retuning a row
+moves the strip; nothing is hand-sequenced. Lines get their own strip, since they
+are bought repeatedly rather than sitting on the ladder at all.
+
+### The rig stands on an authored body
+
+The Harness tab drew `DEFAULT_VISUAL` with `amplitude: 0` inline — the only thing
+in the game drawn from a literal rather than from `planet-visuals`, and so the
+only picture that could not be authored. It is a `harness` record there now,
+shipping those exact numbers so nothing changed, and selectable in the planet lab
+like the nine worlds.
+
+It is not a world and the file says so. Flat because deformation reads as size,
+and nameless because the tab is your equipment rather than somewhere you are.
+
+### The crew stands on the pole it is placing
+
+The split lever moved a countdown and nothing else. Souls were withheld from
+their cohorts, the anchor went down faster, and the world looked exactly as it
+had — so the one decision the phase offers was invisible on the only screen it is
+taken from.
+
+`workRadius`, `workLift`, `workSpread` and `workSpeed` are a fifth swarm group,
+**Work**. `harness.workers` souls leave their orbits for a ring standing on the
+first unplaced anchor and circle it. The ring keeps a rate of its own rather than
+carrying the soul's, which is the one place this deliberately departs from the
+riders: a rider is continuing its orbit on a shorter path and its speed is
+rescaled to say so, and a worker is not travelling at all.
+
+Three things fall out of the riders' own rules and are kept:
+
+- **Whole souls, no travel.** A worker is fully on the ring the way a rider is
+  fully on its line. The chord argument is the same one: the straight line from
+  an orbit to a pole on the far side passes through the world. Spiralling in
+  would want a start time carried per soul, and the swarm is a pure function of
+  `elapsed`.
+- **Ahead of the riders in the deal, not after.** That is the order the economy
+  takes them in — an anchoring soul is withheld from `active`, and `#seats` is
+  cut from what is left. Dealt the other way round, `riders`' base of 200
+  swallowed the whole swarm the moment the first anchor landed and the crew
+  vanished for every anchor after it.
+- **No bolts.** A worker earns nothing, so a strike thrown from the ring would be
+  a payout nobody was paid.
+
+`Soul` gains one field for it, `spread` — a unit random per soul, so the crew
+mills on the ring instead of turning as one wheel. The frame the ring is built on
+is worked out once a frame in `workFrameOf`, not once a soul.
+
+The scene picks the site rather than the caller: `placements[placing]` is already
+what the press pays into and what the readout is pinned to, and a caller allowed
+to name a second anchor is a caller allowed to name a different one.
 
 ## The wave is a clock
 
@@ -5066,6 +5262,27 @@ The draft's preview line is the same mark asked as a question, which is what mak
 
 Both lines are solid and separated by weight. The playhead owns the dash, so a
 second dashed line would have read as another now.
+
+## Excess is read once, in two stages
+
+The band was printing excess twice: a bare percent in the third cell, which was
+named Excess until tokens took it over, and the meter's own readout inside Karma.
+The third cell is gone. It now appears only at beat 11 with the tokens it is for,
+and the reserved `1fr` column holds its place until then.
+
+Excess is read in the Karma cell and nowhere else, in two stages that are one
+reading: `reading.excess` at beat 8 is the figure alone, `reading.excessScale` at
+beat 9 puts the scale and the gate under it. The split is the door, not the
+number — a gate drawn before a second world exists marks a distance to nowhere.
+Both stages print through `formatExcess` in `$ui`, so the tenth of a percent near
+the gate is there from the first day and nothing shifts when the track arrives.
+
+`reading.excess` had no reader before this; the meter drew whenever both piles
+existed, which made beat 8 a beat that revealed nothing. It gates now.
+
+The scale rides on `discovery` rather than on a beat of its own. There was no
+trigger that wanted to be one — the condition is *somewhere else exists*, which is
+that beat — but if excess wants its own stretch of tutorial it splits out here.
 
 ## Naming
 

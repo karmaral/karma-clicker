@@ -1,4 +1,4 @@
-# Handoff — 2026-08-20
+# Handoff — 2026-09-11
 
 **Orientation only, and a board rather than an essay.** Three rules keep it that
 way:
@@ -24,8 +24,11 @@ argument, this is only the flag.
 - **`design.md` §18** — the minimum landed: wisdom is the run's residue, beat 14
   opens the Overview's *End the run*, and the reset is a reload. Knowledge,
   commerce and the structure shelf are still argument only.
-- **`design.md` §12's `perWorker` defect** — the anchoring phase runs ~10×
-  faster than the doc's own intent; not yet retuned.
+- **`design.md` §12's `perWorker` defect** — the anchoring job runs ~10× faster
+  than the doc's own intent; not yet retuned, and `work_1`/`work_2` now buy on
+  top of it.
+- **`design.md` §12's new figures** — the anchor, line, work and press prices are
+  all placeholders written this session and none has been simmed.
 - **`design.md` §16's nine beat floors** — fitted to the pre-rewrite cohort
   ladder, all wrong now that §5 is generated.
 
@@ -33,21 +36,37 @@ argument, this is only the flag.
 
 ## Tree
 
-Branch `dev-next`, last commit `d326157 rebuild checkpoint 24`. Uncommitted:
-**`design.md` §5 and §6 landed in code** — the generated cohort ladder, the
-global-only aim dial, and the span-averaged phase bias that replaces the cut
-per-cohort figures. `git status` and `git log` for the list.
+Branch `dev-next`, last commit `f769625 rebuild checkpoint 30`. Uncommitted:
+**anchoring became opt-in and the harness got a tab** — `design.md` §12 and §17
+rewritten to match. `git status` and `git log` for the list.
+
+The shape, in five lines:
+
+- A world **offers** anchor slots; `min(rig, offer)` decides. Begun and cancelled
+  from a verb under the planet on Details; cancelling forfeits everything.
+- The anchors also multiply that world's **recurring harvest**, locked at
+  departure, nominal with no coverage cut.
+- **Fourth tab**, `nav.harness`, revealed at beat 11. The invariant it broke had
+  no argument behind it; the replacement rule is in `keys.ts` and §17.
+- **Cohort lines** gate who rides. Unlocked by an upgrade, then bought
+  repeatedly on a geometric curve like the refinery's inversions.
+- Every harness axis moves a **visual** field. `lib/rig.ts` is the pure map
+  (`readAxes` + `rigVisualsAt`), `lib/harness-visuals.svelte.ts` the live getter
+  over it, and `widgets/harness-stages.ts` replays the ladder so `?widgets` draws
+  every rung at once. `data/harness-visuals.ts` is gone.
 
 `planet-visuals.ts` carries a **UTF-8 BOM**, and a new required field on
 `PlanetVisual` means editing all nine records.
 
 ## Verified, and how
 
-- `npm run check` → **917 FILES 1 ERROR 7 WARNINGS**, re-run this session. Only
-  #1 below is live — #2 (`UpgradeRail`) and #3 (`TokenRow`) are both fixed and
-  gone; the table used to say otherwise. The 7 warnings are unused-CSS
-  selectors in `Frame.svelte` and `Preview.svelte`, pre-existing and unrelated.
+- `npm run check` → **956 FILES 0 ERRORS 6 WARNINGS**, re-run this session. The
+  6 warnings are unused-CSS selectors in `ExcessMeter.svelte` and
+  `Preview.svelte`, all pre-existing.
 - `npx vite build` clean.
+- **Every new module transforms** under a throwaway dev server, `rig`'s
+  module-level deriveds included — the `planet-manager ↔ harness` cycle this
+  session introduces resolves lazily, but **nothing has been booted**.
 - **The probe** — `esbuild` the model modules into the scratchpad, run under
   node. Works only because `pulse` / `harness` / `anchor` / `orbit` / `visual` /
   `field` **never import three**. Keep it that way. Nine groups passing, plus
@@ -75,7 +94,8 @@ per-cohort figures. `git status` and `git log` for the list.
 6. **The mark's outline hairline** at 1× DPR. Fix if it reads is a tighter
    antialias on the fill's outer edge — **not** swapping the order.
 7. **The ghost over mid-grey.** An inversion has a fixed point at `--ink-400`.
-8. **Riders at a real speed.** `DEFAULT_HARNESS` still has `riders: 0`.
+8. **Riders at a real speed.** `DEFAULT_HARNESS` still has `riders: 0` — and the
+   game no longer reads it: `rig` derives the visual off what is bought.
 9. **`AnchorVisual.size` lifting the harness.** Intended coupling, never watched.
 10. **The detail screen at any other window width.** The 511:380 proportion was
     judged by sitting with it; nothing else about the placement was.
@@ -220,7 +240,13 @@ per-cohort figures. `git status` and `git log` for the list.
     per-row needle this entry was about to watch. `LeanMeter.svelte` is kept in
     the tree, unwired, against per-cohort aim coming back; nothing renders it.
 
-42. **The whole anchoring phase.** Nothing here has been rendered.
+42. **The whole anchoring job.** Nothing here has been rendered, and it is a
+    **choice** now — so 42–46 below describe the job once begun, and the first
+    thing to watch is the step before them: the outlined **Anchor ⟨world⟩** verb
+    under `Harvest`, what its sub reads, and whether anything about it says *this
+    is worth doing*. Then **Cancel anchoring** — two presses, the second reading
+    `Confirm cancel` — and that the bars empty, the roster returns and the press
+    pays experience again. The old text follows unchanged from the press onward.
     §*Anchoring — primitives built, design provisional*. Walk it in this order:
     beat 10 with a second world reached — roster gone, `AnchorPanel` in its
     place, **two** ghost anchors on the world, split still under it. Then press
@@ -233,10 +259,10 @@ per-cohort figures. `git status` and `git log` for the list.
     ghost fills, a line strings to it, the popup moves to the next ghost; on the
     last the roster returns, the press pays experience again, and every cohort's
     `/s` is up by `bonusPerAnchor × anchors`, capped by riders.
-43. **The split in detents.** `SliderBar` now snaps at `harness.step`, which
-    starts at 50% — so the Refinery's copy of the lever changed too, before any
-    anchoring exists. Watch whether a two-detent bar reads as broken rather than
-    as coarse; `split_1` buys quarters.
+43. **The split in detents.** `SliderBar` snaps at the job's own step — 25% to
+    start. The two levers now have **separate ladders**, so watch that buying
+    `split_1` leaves the Refinery's bar exactly where it was. Then whether a
+    four-detent bar reads as broken rather than as coarse.
 44. **The idle count in the split's aside.** It reads
     `96 out · 6 anchoring · 12 idle` now that a held soul does one job and
     anchoring draws before the refinery. The surplus is the point — but check
@@ -246,14 +272,43 @@ per-cohort figures. `git status` and `git log` for the list.
     `2 × 36_000` job-ms — roughly ten real minutes at the six slots `slots_1`
     buys, less if you press. `third` is `5 × 360_000`, roughly fifty at the
     thirty `slots_2` buys. Neither has been played.
-46. **Souls on the finished harness.** `harness.riders` now reaches the swarm as
-    a count, so buy `riders_1` (40) with anchors down and watch: 40 dots leave
-    their orbits for the lines, spread across the whole harness rather than
-    crowded onto the first pair. They appear **as the lines do**, one placed
-    anchor at a time — check that a half-strung harness with riders on it reads
-    as progress and not as a glitch. Nothing rides before `riders_1`, since
-    `balance.harness.riders` is 0; that is the upgrade's whole content.
+46. **Souls on the finished harness.** `harness.riders` reaches the swarm as a
+    count, so with anchors down watch dots leave their orbits for the lines,
+    spread across the whole harness rather than crowded onto the first pair. They
+    appear **as the lines do**, one placed anchor at a time — check a half-strung
+    harness with riders on it reads as progress and not as a glitch. The base is
+    **200**, not 0; what gates riding now is the cohort line.
     §*A rider is a count, not a share*.
+
+51. **The Harness tab, whole.** Four new modules, none rendered. Walk it: the rig
+    on its flat nameless body with every anchor placed; `JobStats`' two blocks and
+    that the second one disappears on a world with no slots; `LineTable` locked
+    until the `lines` upgrade, then the buy in its head and rows lighting one at a
+    time. The left column is **one panel** — stage and figures under one heading,
+    at the Overview ahead-panel's density — so the thing to check is that it fits
+    the viewport without scrolling. Watch the **tab strip at four** — the width is
+    unchanged by design, so judge whether the run verb still has room on Overview.
+52. **Every axis moving the picture.** The whole point of the coupling, and now
+    answerable without playing: `?widgets` → **Rig ladder** draws every rung of
+    the `harness` bucket at once, plus a line strip. **A rung that looks like the
+    one before it is the bug**; the maps are in `lib/rig.ts` and are all guesses.
+    Then confirm in-game that buying the row moves the tab the same way.
+53. **The anchor bonus on a harvest.** Anchor a world fully, harvest it, and read
+    its Behind row: it should pay `1 + bonusPerAnchor × placed` more than an
+    unanchored one. Then do the same with the job cancelled and confirm it pays
+    the plain figure. This is the reason to anchor at all and nothing tests it.
+54. **A v3 save, migrated.** `save/migrate.ts` is new and has never run on a real
+    save. Load one: the panel should list it rather than skip it, and a world that
+    was mid-anchor should come back with its job **active** and its progress
+    intact. §*Saves migrate now*.
+55. **Two-pile prices in the rail and the catalogue.** Harness upgrades cost both
+    crimsons, so both chips draw two figures and two badges. Watch a row whose
+    piles are lopsided — it must read unaffordable until **both** are met, and
+    it should not climb the rail on the near half alone.
+56. **The rig's own body, in the planet lab.** `planet-visuals` gained a
+    `harness` record — not a world, the ground the tab stands the rig on. It
+    ships as `DEFAULT_VISUAL` flattened, so it is unchanged until authored, but it
+    is now the tenth entry in the family strip and the stills grid. Author it.
 47. **The header between worlds.** Finish a first harvest and stop before
     reaching the next: every cohort `/s` is now 0 and the header shows only the
     worlds behind you. Check that this reads as *the souls have nowhere to go*
@@ -364,13 +419,15 @@ are still argument only; see *Ahead of the build*.
 - **`printVisual` and friends** emit every field at four decimals; paste
   indentation has drifted once.
 
-## The 1 `check` error
+## The 0 `check` errors
 
-| # | Where | What |
-|---|---|---|
-| 1 | `notification-manager.ts` | Svelte 5 `Component<Props>` in a legacy `SvelteComponent` slot. |
+`check` is clean. The last one was **not** in `notification-manager.ts` — that
+file went headless and the error moved with the toast call to `App.svelte`, where
+the table never followed it. Svelte 5's function component against
+svelte-toast 0.9's `ComponentType`, whose `<svelte:component>` takes either, so
+only the type was behind: cast at the one call site, with the reason above it.
 
-~~#2 `UpgradeRail.svelte` read `.effect` off `Upgrade`~~ and ~~#3 `TokenRow.svelte`
-was missing `quantity` on `PurchaseButton`~~ — both fixed before this session,
-before either was ever confirmed here. Re-run `npm run check` if this drifts
-again rather than trusting the table.
+Earlier entries — `UpgradeRail.svelte` reading `.effect` off `Upgrade`, and
+`TokenRow.svelte` missing `quantity` on `PurchaseButton` — were both fixed before
+they were ever confirmed here. **The table went stale three times out of three.**
+Re-run `npm run check` rather than trusting any list of errors in this file.

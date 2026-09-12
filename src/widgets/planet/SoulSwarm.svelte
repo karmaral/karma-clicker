@@ -6,8 +6,9 @@
   import { sampleLoop, type HarnessLoop } from './harness';
   import { createSoulMaterial, createSpawnMaterial, syncSoulUniforms, syncSpawnUniforms } from './material';
   import {
-    berthOf, berthRoom, createSouls, createSpawns, hatchOf, phaseOf, placeSoul, rankOf, ridersOf,
-    settleScale, swellOf, travelOf, SOUL_CAPACITY, SPAWN_CAPACITY, type SwarmVisual,
+    berthOf, berthRoom, createSouls, createSpawns, createWorkFrame, hatchOf, phaseOf, placeSoul,
+    placeWorker, rankOf, ridersOf, settleScale, swellOf, travelOf, workFrameOf,
+    SOUL_CAPACITY, SPAWN_CAPACITY, type SwarmVisual, type WorkSite,
   } from './orbit';
   import { lifeOf } from './pulse';
   import {
@@ -29,6 +30,18 @@
      * Absent falls back to the visual's authored share, which is the lab.
      */
     riders?: number;
+    /**
+     * How many souls are placing the anchor, and which anchor that is. Game
+     * state again, and a pair: a crew with nowhere to stand is idle, and a site
+     * nobody is working is just the next ghost.
+     *
+     * Taken off the front of the dealing order, ahead of the riders, because
+     * that is the order the economy takes them in: a soul held for the job is
+     * withheld from its cohort, and the harness seats whoever is left. The
+     * split reads that end last, so a worker is never also on its way out.
+     */
+    working?: number;
+    site?: WorkSite;
     /**
      * The world's clock, advanced by the scene and only read here. Not `$state`
      * and not a number: the drift is a frame's worth of geometry, and putting a
@@ -114,8 +127,8 @@
   }
 
   let {
-    visual, counts, zoom, loops, riders, clock, spinAngle = 0, size = 1, bleed = 0, merge,
-    core = 0, filled, lean = 0, bolts, yields, streaming,
+    visual, counts, zoom, loops, riders, working = 0, site, clock, spinAngle = 0, size = 1,
+    bleed = 0, merge, core = 0, filled, lean = 0, bolts, yields, streaming,
   }: Props = $props();
 
   /** The core as drawn, which is the only one an arrival is measured against. */
@@ -212,6 +225,9 @@
   /** The berth a soul is crossing to, reused for the same reason `dummy` is. */
   const berth = new THREE.Vector3();
 
+  /** The ring the crew stands on, rebuilt once a frame rather than once a soul. */
+  const crew = createWorkFrame();
+
   const AXIS = new THREE.Vector3(0, 1, 0);
 
   /**
@@ -268,7 +284,21 @@
     // time, and a soul part of the way onto its line would travel the chord
     // between two points on a sphere, which cuts through the world.
     const lines = loops ?? [];
-    const riding = lines.length ? ridersOf(visual, souls.length, riders) : 0;
+
+    // The crew, taken off the front of the dealing order — before the riders,
+    // because that is the order the economy takes them in: a soul held for the
+    // job is withheld from its cohort, and the harness seats whoever is left.
+    // A site with no ring authored on it staffs nobody, which is the one switch
+    // this needs.
+    const crewed = site && visual.workRadius > 0
+      ? Math.max(0, Math.min(souls.length, Math.floor(working)))
+      : 0;
+
+    if (crewed > 0 && site) workFrameOf(site, visual, crew);
+
+    const riding = lines.length
+      ? Math.min(ridersOf(visual, souls.length, riders), souls.length - crewed)
+      : 0;
 
     // Souls are spread across the whole harness rather than taking loops in
     // order: at eight anchors there are far more loops than souls, and modulo
@@ -309,8 +339,8 @@
     // per soul. A harvest is the interesting half: a world being *decided* is
     // not a world at work, so nothing is struck while a split is on the table —
     // and since the crossing below only runs when there is one, a striking soul
-    // is by construction never crossing or berthed. It is on its orbit or on a
-    // line, and those are all the places there are.
+    // is by construction never crossing or berthed. It is on its orbit, on a
+    // line or on the anchor's ring, and the last of those is cut below.
     const striking = merge === undefined && visual.boltEvery > 0 ? bolts : undefined;
 
     striking?.reset();
@@ -336,7 +366,15 @@
       // never anything else.
       stays.array[i] = 1;
 
-      if (soul.place < riding) {
+      /** Which branch below placed it, kept because the strike reads it too. */
+      const isWorking = soul.place < crewed;
+
+      if (isWorking) {
+        // On the job: the ring is drawn in the body's frame, like the anchor it
+        // stands on, so the spin is put back exactly as it is for a rider.
+        placeWorker(soul, elapsed, crew, visual, dummy.position);
+        dummy.position.applyAxisAngle(AXIS, spinAngle);
+      } else if (soul.place < crewed + riding) {
         const line = lines[Math.floor(i * stride) % lines.length];
 
         // A rider covers its whole loop in one turn of the orbit it left, and a
@@ -413,7 +451,10 @@
       // a wave sweeping round the world — asked of where the soul is standing,
       // not of which soul it is, so the front crosses the swarm rather than
       // sitting in the seed. A band that pulses rather than one that arrives.
-      if (striking) {
+      //
+      // And never from a soul on the job: a worker is withheld from its cohort's
+      // payouts, so a strike thrown from the ring would be a yield nobody earned.
+      if (striking && !isWorking) {
         let age;
 
         if (streaming?.[soul.band]) {

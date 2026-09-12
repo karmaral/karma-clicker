@@ -43,6 +43,8 @@
     harness?: HarnessVisual;
     /** How many souls the harness carries. See `SoulSwarm`. */
     riders?: number;
+    /** And how many are placing the anchor going down. See `PlanetScene`. */
+    working?: number;
     pulse?: PulseVisual;
     /**
      * The click's own duration, in ms — left `undefined` rather than defaulted
@@ -98,6 +100,7 @@
     anchored,
     harness,
     riders,
+    working,
     pulse,
     clickMs,
     clockKey,
@@ -253,6 +256,7 @@
         {anchored}
         {harness}
         {riders}
+        {working}
         {pulse}
         {clickMs}
         {clockKey}

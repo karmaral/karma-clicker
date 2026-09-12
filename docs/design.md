@@ -167,8 +167,10 @@ decided.**
 9. **Leave.** When the world's conditions hold, you take a **first harvest**:
    merge some share of your souls into the world, lock your alignment, and go.
    What you merge you lose; what you left keeps paying forever (§14, §15).
-10. **Arrive.** Every world past the first opens with a forced **anchoring**
-   phase — held souls place anchors, a harness goes up, and souls ride it (§12).
+10. **Arrive.** Every world past the first offers **anchor slots**. Taking the
+   offer is optional: held souls place anchors, a harness goes up, the cohorts on
+   a line ride it — and what you leave standing multiplies that world's harvest
+   forever (§12).
 
 11. **End the run.** A run walks every world of one system. What it moved becomes
     **wisdom**, which multiplies the next one or is spent to change what a run is
@@ -284,8 +286,9 @@ share of its yield for every soul riding the harness.
 Three figures, each somebody's job:
 
 - **`riders`** — the harness's cap on how many souls ride. Bought (§12).
-- **`riding`** — `min(riders, incarnating)`, and 0 until an anchor is down. Souls
-  held on the split are out: a soul *placing* the harness is not riding it.
+- **`riding`** — how many are actually up there, and 0 until an anchor is down.
+  Only cohorts holding a **line** count, and souls held on the split are out: a
+  soul *placing* the harness is not riding it.
 - **`carry`** — what one rider is worth to you. Held by the hand. `carry_1`
   grants 0.2% per soul, so at the 200-rider cap it is +40% and at 2,000 it is
   +400%.
@@ -298,11 +301,11 @@ having: buying riders now pays twice.
 
 `carry_1` is gated past `riders_1`. With nobody up there it buys nothing.
 
-### During anchoring, the press pays differently
+### While an anchoring job runs, the press pays differently
 
-While a world is being anchored, the press buys **job-time instead of
-experience**, not as well as it (§12). One verb with one payoff at a time, so the
-trade the phase imposes is legible.
+With a job open, the press buys **job-time instead of experience**, not as well as
+it (§12). One verb with one payoff at a time, so the trade is legible — and since
+the job is now one you chose to begin, it is a trade rather than a toll.
 
 ---
 
@@ -1141,9 +1144,9 @@ is what stands in the way. The harness takes its slots' worth; the refinery gets
 the remainder. A finished world hands every soul back rather than holding a crew
 for a job that is done.
 
-**The anchoring share only bites while a world is going down.** Off-phase it
-releases and those souls incarnate, so a lever left set between worlds costs
-nothing.
+**The anchoring share only bites while a job you began is going down.** With no
+job open it releases and those souls incarnate, so a lever left set between
+worlds — or on a world whose offer you declined — costs nothing.
 
 ### Overshoot is the cost
 
@@ -1159,6 +1162,11 @@ Those twelve are what the split is overspending.
 finer — a `step` upgrade that coarsened the lever would be a downgrade sold as a
 reward. Three `split_*` upgrades buy rungs down it (§12).
 
+**Two ladders, one shape.** Granularity is a *harness* upgrade axis, so the
+refinery keeps a ladder of its own — identical to start with, and free to
+diverge. Shared, every anchor purchase would have quietly bought the refining
+lever too.
+
 **Watch for:** a bar that cannot help reading *idle* at every position past the
 first detent may read as a mistake rather than as a cost. The surplus is the
 point, but the point has to land.
@@ -1167,15 +1175,38 @@ point, but the point has to land.
 
 ## 12. Anchoring and the harness
 
-Arriving at a world **past the first** puts you in a forced anchoring phase. A
-world declares whether it has one; the first world has none, which is why the
-phase is first met on the second world.
+A world **past the first** *offers* anchor slots. A world declares how many its
+surface has; the first world has none, which is why anchoring is first met on the
+second world.
 
-**It is a tax, not a gate.** Souls still incarnate throughout. The cost of
-anchoring is the held souls not earning, not a stopped world.
+> **Anchoring is opt-in.** A world with slots is not a world being anchored.
 
-The **hand is the exception**: while placing, the press buys job-time *instead*
-of experience, not as well as it. One verb with one payoff at a time.
+It used to be a forced phase from the moment you arrived, and the only thing you
+decided was how fast to pay for it. It is now a **trade you may decline**: begun
+from a verb under the planet on Details, cancelled from the same verb, and worth
+taking because the anchors pay twice — while you live there, and forever after
+you leave.
+
+**Cancelling forfeits everything.** Placed job-ms goes back to zero and the
+anchors come out. A job resumed from a saved fraction would make cancelling free,
+which is the one thing it must not be.
+
+**The cost, once begun, is what it always was.** Souls still incarnate
+throughout; what anchoring costs is the held souls not earning. And the **hand is
+the exception**: while placing, the press buys job-time *instead* of experience,
+not as well as it. One verb with one payoff at a time.
+
+### The world offers, the rig answers
+
+Two numbers decide how many anchors go down:
+
+```
+anchorsAsked = min(harness anchors, world's anchor slots)
+```
+
+The world's figure is a **ceiling**, not a demand. A late world offering five
+slots to a rig that can fill two is a world you anchor partway — and a reason to
+come back to the Harness tab.
 
 ### Progress is a time
 
@@ -1208,13 +1239,15 @@ lever wants.
 | `clickMs` | 250 job-ms per press | placeholder |
 | `slots` base | 6 | the harness must be workable the moment it is revealed |
 | `riders` base | 200 | the finished harness must pay the moment it is revealed |
+| `anchors` base | 1 | every world is anchorable a little; none is anchorable whole |
+| `lineBase` / `lineGrowth` | 400 each pile, ×1.6 | what a cohort line costs, and how fast |
 
 Both bases used to be free grants (`slots_0`, `riders_0`) gated on an unrelated
 karma total, so a harness could sit revealed and inert until that total
 happened to be crossed. Baked in as bases instead — `slots_1`/`riders_1` below
 now add to them rather than to zero.
 
-| World | Anchors | Each | Total job | Bonus per anchor |
+| World | Slots offered | Each | Total job at full rig | Bonus per anchor |
 |---|---|---|---|---|
 | first | — | — | — | — |
 | second | 2 | 36,000 ms | 72,000 | +25% |
@@ -1228,17 +1261,25 @@ that set these durations assumed `perWorker` 0.02 and targeted ~10 minutes and
 job-ms figure is only meaningful beside the `perWorker` rate and the slot count
 that will be in hand — retune the three together.** See §19.
 
-### Two capacities, and a covered share
+### Who is carried
 
 **Work slots** cap how many reserved souls place at once, so the split has an
 optimum rather than *always max*. **Rider slots** cap how many souls the finished
-harness pays.
+harness pays. And a **cohort line** decides *which* cohorts are eligible at all.
 
-"Only riders get the bonus" resolves into one scalar rather than two soul
-populations:
+> **A line is permission; riders are capacity.** A cohort with no line rides
+> nothing and is paid nothing extra, however many anchors are down.
+
+Lines are held by the first *n* cohorts of the roster, and the rider cap is
+shared across them in proportion to what each has out — so a new line reaches
+further *and* spreads what you already have, which is the tension it is for.
+
+"Only riders get the bonus" resolves into one scalar per cohort rather than two
+soul populations:
 
 ```
-multiplier = 1 + bonusPerAnchor × placed × min(riders, souls) / souls
+multiplier(cohort) = 1 + bonusPerAnchor × placed × min(riders for cohort, souls) / souls
+                   = 1                              if the cohort holds no line
 ```
 
 The **covered share** scales it, which keeps a cohort's payout a single multiply
@@ -1247,23 +1288,81 @@ and keeps the cap honest at every count.
 **A rider is a count, not a share.** Riders appear as the lines do, not when the
 last anchor lands, so the swarm populates a growing harness.
 
+### And what a finished world keeps
+
+The anchors stay on the world when you leave. So the first harvest reads them the
+way it reads the alignment and the income — once, on the way out — and every
+delivery afterwards is multiplied by it, forever:
+
+```
+anchorBonus = 1 + bonusPerAnchor × placed          locked at departure
+```
+
+**Nominal, with no coverage cut.** The living multiplier is scaled by the carried
+share because riders are souls standing on the world; after departure the world is
+empty and the anchors remain, so what the harvest is worth is the anchors alone.
+
+This is the whole reason to take a world's offer. While you are there, anchoring
+costs you souls and presses and pays a multiplier back; once you have gone, it is
+the only thing you can still change about what a finished world pays.
+
 ### Upgrades
+
+Bought on the **Harness tab** (§17), and priced in **both crimsons** — a harness
+is strung by souls of both kinds, and a rig bought out of one pile would be a way
+to run a single polarity without paying the refinery's matching for it.
 
 | Upgrade | Effect | Unlocks at | Costs |
 |---|---|---|---|
-| `slots_1` | +6 work slots | 40,000 karma+ | 60,000 karma+ |
 | `split_1` | one rung finer | 80,000 karma+ | 500,000 xp |
-| `riders_1` | +200 riders | 50,000 karma− | 150,000 karma+ |
-| `slots_2` | +24 work slots (30 total) | 1,000 Crimson+ | 2,500 Crimson+ |
-| `split_2` | one rung finer | 4,000 Crimson+ | 5,000 Crimson+ |
-| `riders_2` | +2,000 riders | 10,000 Crimson+ | 12,000 Crimson+ |
+| `anchors_1` | +1 anchor placeable | 400 Crimson+ | 900 each Crimson |
+| `lines` | opens cohort lines | 600 Crimson+ | 1,200 each Crimson |
+| `slots_1` | +24 work slots | 1,000 Crimson+ | 2,500 each Crimson |
+| `work_1` | +50% placing speed | 2,000 Crimson+ | 3,500 each Crimson |
+| `split_2` | one rung finer | 4,000 Crimson+ | 5,000 each Crimson |
+| `press_1` | +0.5s per press | 6,000 Crimson+ | 7,500 each Crimson |
+| `anchors_2` | +2 anchors placeable | 8,000 Crimson+ | 9,000 each Crimson |
+| `riders_1` | +2,000 riders | 10,000 Crimson+ | 12,000 each Crimson |
+| `work_2` | +100% placing speed | 200 Ochre | 400 Ochre |
 | `split_3` | one rung finer | 500 Ochre | 750 Ochre |
+| `anchors_3` | +4 anchors placeable | 900 Ochre | 1,400 Ochre |
 
 Both rider caps are raw soul counts, so they took the army's ×5 with it — 40 out
 of a thousand incarnating would carry nobody worth counting.
 
-**Anchor-slot upgrades toward a higher anchor count are deferred.** Work slots
-and rider slots are the two capacities chosen; a third is speculative.
+**Anchor count is an upgrade axis now**, reversing §12's earlier deferral. It
+stopped being speculative when the world's figure became a ceiling: without a
+`anchors` axis there is nothing to buy toward the slots a late world offers, and
+the ceiling is decoration.
+
+**Lines are the one capacity that is not a modifier.** An upgrade opens them and
+then each is bought on its own, repeatedly, at a price that climbs — the shape
+the refinery's inversions already use. A fixed ladder of `lines_1`, `lines_2`
+would have to guess how many cohorts you will have; a curve does not.
+
+**Split granularity is the harness's alone.** The refinery keeps its own ladder
+(§11), or every anchor purchase would quietly buy the refining lever too.
+
+### Upgrades are visible
+
+Every axis above also moves a field of the rig's drawing — `slots` its anchors'
+size, `work` their facets, `press` their ink, `riders` the cage's density and
+levels, `lines` its span, `step` its twist. The `DEFAULT_ANCHOR` and
+`DEFAULT_HARNESS` literals are the **starting** values, not the target: each map
+runs from the default toward a ceiling and never below it, hyperbolically, so an
+axis bought in thousands keeps moving the picture instead of saturating.
+
+The Harness tab draws the rig on a flat, nameless body for this reason. It is
+equipment, not a world — the deformation is zeroed because deformation reads as
+*size*, and every anchor draws placed because what it shows is what the rig can
+put down, not how far along a job is. That body is the `harness` record in
+`planet-visuals`, authored in the lab like any other picture in the game.
+
+**An axis that moves no picture is a dead purchase**, and the ceilings that decide
+whether one does are all guesses. So the map is a pure function of the axes rather
+than a reading of the live rig, and `?widgets` → *Rig ladder* replays this bucket
+of `upgrades.ts` to draw every rung at once. A rung that looks like the one before
+it is a ceiling set too far off.
 
 ---
 
@@ -1567,10 +1666,13 @@ A harvested world pays **experience and karma into the piles**, forever, on a
 slow clock.
 
 ```
-perDelivery = yields[type] × departureRate[type]
+perDelivery = yields[type] × departureRate[type] × anchorBonus
 duration    = base / min(1 + mergedShare / mergeHalving, maxMergeSpeed)
 rate        = perDelivery ÷ duration
 ```
+
+`anchorBonus` is what the anchors you left standing are worth, read once on the
+way out like the alignment and the income (§12). 1 on a world you never anchored.
 
 ### Merging buys tempo. Holding buys size.
 
@@ -1698,7 +1800,7 @@ for the event — **those four have no floor by design and must not be given one
 | 8 | `excess` | \|excess\| ≥ 0.3 | 186,000 | excess | the excess reading, the Refinery tab (inert) |
 | 9 | `discovery` | 2 worlds known | 430,000 | — | the Overview tab and its bands, first-harvest gate (inert) |
 | 10 | `harvest` | the world's conditions hold | *event* | harvest | the first-harvest verb (live), the harvest screen |
-| 11 | `anchor` | 1 world finished | *event* | anchoring, harvest income | the anchor field, the split, the Behind band |
+| 11 | `anchor` | 1 world finished | *event* | anchoring, harvest income | the anchor field, the split, **the Harness tab**, the Behind band |
 | 12 | `refining` | souls held **and** both karma piles exist | *event* | refining | the Refinery tab (live), the token readings, the refinery screen |
 | 13 | `second_harvest` | 2 worlds finished | *event* | — | **nothing** |
 
@@ -1787,6 +1889,20 @@ A picture on every row, and **size is the only thing separating the bands** —
 Ahead's are the biggest, because **an unreached world is a place you know nothing
 else about and the silhouette is the only thing you have to want it by.**
 
+**Harness** — *what can the rig do, and who rides it?* The rig drawn on a flat,
+nameless body; under it what it can place, carry and how fast; and beside both the
+roster of cohorts with a line, which is bought here. It is the only screen about a
+thing you own rather than a place you are, which is why its picture is not a world.
+
+The left column is **one panel**, the way Details' is — the picture and its figures
+under a single heading, the figures at the weight the Overview's ahead panel uses.
+Two cards would have spent the column's height on a second heading and a second
+padding, and the stage already takes most of it.
+
+The **job is not run from here.** Anchoring is begun, watched and cancelled on the
+world it acts on, because that is what it acts on. This screen is what the
+harness *is*.
+
 **Refinery** — *what is the mix, and what do I make of it?* The intake (matched
 against unpaired), the ceiling (arriving against cleared), the grade ladder, and
 the split lever. The lever lives here because **the refinery is where the cost of
@@ -1823,9 +1939,26 @@ while it is asking.
 *a screen reached by one verb and left by one word, with nothing lit over it* —
 was the argument for keeping the tabs, and the header answers it better: your
 totals stay on screen throughout, so the takeover reads as a panel over the game
-rather than as somewhere the game went. **Making it a fourth tab** stays
+rather than as somewhere the game went. **Making the harvest a tab** stays
 rejected for the reason it always was: it is one world's decision, not a place
 you live.
+
+### The test, now that there are four
+
+The tabs used to be *exactly three, permanently* — an invariant asserted in
+`progression/keys.ts` and nowhere argued. The Harness tab broke it deliberately,
+so the rule it replaces has to be stated:
+
+> **A tab is where you configure a system you own. A takeover is a decision that
+> ends something.**
+
+The harness has capacities to buy and a rig to look at, and you come back to it
+for the rest of the run — a tab. The first harvest ends a world and the terminus
+ends a run — takeovers. Three was never the principle; it was the count that
+happened to satisfy it.
+
+A fourth tab costs the strip nothing: a tab is a fixed width, so the strip is
+simply one tab wider and the run verb beside it keeps what is left.
 
 ### Unsettled: which screen the harvest belongs to
 
@@ -1865,9 +1998,10 @@ header is a register of readings, and a reading is something you consult while a
 tab is something you press — putting the two in one band asked one row to be
 both. Along the bottom the tabs measure the body they switch: a tab is the width
 of half the planet column, so the seam after the second one lands on the rule
-that column already draws. Beside them sits the one verb that is about the run
-rather than about a world (§18), which is the only thing left in the strip now
-that the planet verbs went back to their columns.
+that column already draws, and every tab after it continues at the same width.
+Beside them sits the one verb that is about the run rather than about a world
+(§18), which is the only thing left in the strip now that the planet verbs went
+back to their columns.
 
 And: **a continuous quantity may colour a thing in place, but it may not decide
 where the thing sits.** Sorting the rail on affordability made chips reshuffle
@@ -2083,7 +2217,8 @@ authored well enough to run that test against — see §1.
 | **How many worlds a system has** | §13 — 5 is authored, not derived |
 | **Per-cohort aiming** | §6 — parked, and further away now that cohorts have no aim figures. `LeanMeter` is kept in the tree, unwired, against this coming back |
 | **`clerk`'s own name** | §5, §20 — the mechanic shipped, the word did not; ledger, mechanical and managerial candidates all tried and set aside |
-| **Whether the anchor count should be an upgrade axis** | §12 — deferred as speculative |
+| **Whether anchoring should cost anything to begin** | §12 — it is free, and the cost is entirely the souls and presses it consumes once open. Whether a world should charge for the offer is unasked |
+| **Which cohorts hold the lines** | §12 — the first *n* of the roster, and riders split among them by active count. Both are the simplest rule, neither is argued |
 | **The worlds' identity, and the cohorts'** | §1 — the largest fiction hole, now with an index to hang on |
 | **The entire log** | §1 — placeholder throughout; the register is settled and no line is |
 | **Whether `reaimPhases` should be a share of the world** | §6, §13 — two phases is a quarter of world 1 and a twenty-fourth of world 5 |
@@ -2181,7 +2316,11 @@ the slot counts together** — no one of them is meaningful alone.
   press**, which removes the throttle every one of those gates was paced behind.
   Beats 1–4 and the second world's unstaffed anchoring both come at the player's
   click rate; §4 marks the hazard.
-- **The whole anchoring phase.** Nothing about it has been played.
+- **The whole anchoring job.** Nothing about it has been played, and it is now a
+  choice rather than a phase — so what is unplayed includes *whether anyone would
+  take the offer*, which is the question the whole rework turns on.
+- **The Harness tab**, its line purchases, and whether the rig's drawing visibly
+  changes enough per axis to be worth the coupling.
 - **The whole Refinery screen.**
 - **Whether the second world at its current length is the right second world.**
 - **Whether holding now reads as worth it** — §15 makes departure income an axis,

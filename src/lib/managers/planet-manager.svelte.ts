@@ -1,6 +1,11 @@
 import Planet, { type PlanetSnapshot } from '$lib/planets/base.svelte';
 import { getFirstHarvestAlignment } from '$lib/excess';
 import { BuildingManager, UpgradeManager } from '.';
+// The singleton directly and not through a barrel, the way `Cohort` reaches it:
+// only `harness` knows how many of a world's slots were actually filled, and it
+// is read inside a method, so the cycle back through this file never resolves
+// during module evaluation.
+import { harness } from '$lib/harness.svelte';
 import { clock } from '$lib/clock';
 import data from '$data/planets';
 
@@ -88,13 +93,17 @@ class PlanetManager {
       karma: BuildingManager.countKarmaPerSecondAveraged(),
     };
 
+    // Read with the rates and for the same reason: the anchors are worth what
+    // they were worth on the way out, and the merge must not be able to move it.
+    const anchorBonus = harness.harvestBonus;
+
     const merged = BuildingManager.mergeSouls(mergeFraction);
 
     // After the souls go, so the levels the merge drops you below go with them —
     // and only those. What the rebuild costs is the other half of what the slider
     // weighs; see *Levels become purchases*.
     UpgradeManager.releaseUnheld();
-    planet.completeFirstHarvest({ merged, mergedShare: share, alignment, rates });
+    planet.completeFirstHarvest({ merged, mergedShare: share, alignment, rates, anchorBonus });
     this.#grantBoons(planet);
     this.#selected = '';
 

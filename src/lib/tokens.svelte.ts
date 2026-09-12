@@ -54,13 +54,14 @@ class Tokens {
    * Cumulative over the counter, the same shape `Building.#cumulativePrice`
    * uses. Deliberately a second loop rather than a shared helper: that curve
    * prices a building and this one prices a confession, and they are allowed to
-   * diverge.
+   * diverge. Each step rounded before it is added, like that one — a price is a
+   * whole number, and one at a time must total what the batch charges.
    */
   inversionCost(n = 1) {
     let sum = 0;
 
     for (let i = 0; i < n; i++) {
-      sum += INVERSION_BASE * INVERSION_GROWTH ** (this.#inversions + i);
+      sum += Math.round(INVERSION_BASE * INVERSION_GROWTH ** (this.#inversions + i));
     }
 
     return sum;

@@ -5,6 +5,7 @@ import { SCREEN_LABELS, type ScreenName } from '$lib/labels';
 const NAV_KEY: Record<ScreenName, RevealKey> = {
   overview: 'nav.overview',
   details: 'nav.details',
+  harness: 'nav.harness',
   refinery: 'nav.refinery',
 };
 

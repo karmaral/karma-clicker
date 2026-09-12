@@ -22,7 +22,7 @@
     type PulseVisual, type Spot,
   } from './pulse';
   import { createSoulBolts } from './soul-bolt';
-  import { coreFillOf, type PlanetVisual } from './visual';
+  import { clarityGammaOf, coreFillOf, type PlanetVisual } from './visual';
 
   interface Props {
     visual: PlanetVisual;
@@ -79,6 +79,12 @@
     harness?: HarnessVisual;
     /** How many souls the harness carries. See `SoulSwarm`. */
     riders?: number;
+    /**
+     * And how many are placing the anchor going down. The anchor itself is not
+     * passed with it — the scene already knows which one that is, and a caller
+     * naming a second one could name a different one. See `SoulSwarm`.
+     */
+    working?: number;
     /** What a click leaves behind. Absent means the world does not answer one. */
     pulse?: PulseVisual;
     /**
@@ -150,6 +156,7 @@
     anchored,
     harness,
     riders,
+    working,
     pulse,
     clockKey,
     flashes = 0,
@@ -212,6 +219,13 @@
    * that predates this.
    */
   const filled = $derived(core * coreFillOf(merge ?? 1, visual.coreSeed));
+
+  /**
+   * And how far the window over it is open — off the split itself, on its own
+   * floor rather than the core's. See `clarityGammaOf`, where why they are
+   * apart is. A view with no split opens it as authored.
+   */
+  const opened = $derived(clarityGammaOf(visual.clarityGamma, merge ?? 1));
 
   /**
    * The anchors as this world wears them. Adjusted here rather than inside
@@ -555,6 +569,13 @@
   const placing = $derived(placements.findIndex((node) => !node.isPlaced));
 
   /**
+   * And the pole itself, which is where the crew stands. The same node the
+   * press pays into and the readout is pinned to — one anchor is going down at
+   * a time, so there is one answer to all three.
+   */
+  const site = $derived(placements[placing]);
+
+  /**
    * Reported per frame rather than on demand, because the world turns under it
    * and a caller outside the canvas has no way to ask. Cheap — one rotation and
    * a projection, and only on a world that is being anchored at all.
@@ -600,7 +621,17 @@
 
 <T.OrthographicCamera makeDefault position={[0, offsetY, 5]} {zoom} />
 
-<PlanetBody {visual} {zoom} {spinAngle} {veilAngle} {alignment} core={filled} {pulse} {pulses}>
+<PlanetBody
+  {visual}
+  {zoom}
+  {spinAngle}
+  {veilAngle}
+  {alignment}
+  core={filled}
+  clarityGamma={opened}
+  {pulse}
+  {pulses}
+>
   {#snippet standing()}
     {#if harness && loops}
       <Harness visual={harness} {loops} {zoom} {rim} size={worldSize} />
@@ -623,6 +654,8 @@
       {zoom}
       {loops}
       {riders}
+      {working}
+      {site}
       {clock}
       {spinAngle}
       {bleed}

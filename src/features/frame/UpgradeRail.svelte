@@ -1,14 +1,12 @@
 <script lang="ts">
-  import { Badge, Chip, ChipQueue, Label } from '$ui';
-  import { formatCost } from '$lib/utils';
-  import { badgeFor } from '$features/details/badge';
+  import { Chip, ChipQueue, Label } from '$ui';
   import CohortTooltip from '$features/details/CohortTooltip.svelte';
   import { BuildingManager } from '$lib/managers';
   import { getEffectLabel, getScopeLabel } from '$lib/labels';
   import { iconFor } from './upgrade-icon';
   import { nav } from '$lib/nav.svelte';
   import { spotlight } from '$lib/spotlight.svelte';
-  import type { YieldType } from '$types';
+  import CostFigures from './CostFigures.svelte';
   import { catalogue, type Upgrade } from './upgrades.svelte';
 
   /**
@@ -61,6 +59,13 @@
         <CohortTooltip cohort={cohort!} extra={upgrade.modifiers} />
       {/snippet}
 
+      <!-- The price on the chip's own face, read the way the row reads it. Kept
+           off an unpriced arrival: the dashed border already says it is coming
+           rather than for sale, and an empty slot would still hold its gap. -->
+      {#snippet price()}
+        <CostFigures entries={upgrade.costEntries} />
+      {/snippet}
+
       <Chip
         label={getScopeLabel(upgrade.target)}
         icon={iconFor(upgrade)}
@@ -69,18 +74,14 @@
         onmouseenter={() => spotlight.point(upgrade.target)}
         onmouseleave={() => spotlight.clear()}
         asideContent={cohort ? asidePanel : undefined}
+        trailing={upgrade.costEntries.length ? price : undefined}
       >
         {#snippet tooltipContent()}
           <div class="item-header">
             <span class="title">{upgrade.textData.title}</span>
 
             <span class="cost num">
-              {#if upgrade.costs}
-                {#each Object.entries(upgrade.costs) as [costType, costVal]}
-                  <span>{formatCost(costVal)}</span>
-                  <Badge kind={badgeFor(costType as YieldType)} />
-                {/each}
-              {/if}
+              <CostFigures entries={upgrade.costEntries} />
             </span>
           </div>
 
@@ -148,6 +149,9 @@
   /* Its own margin rather than `space-between`, so it stays right-aligned on the
      wrapped line too, where it is the only thing on it. A price never breaks. */
   .cost {
+    display: flex;
+    align-items: baseline;
+    gap: var(--sp-2);
     font-weight: 600;
     margin-left: auto;
     white-space: nowrap;

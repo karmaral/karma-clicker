@@ -11,6 +11,8 @@
   } from './planet';
   import { anchorLab } from './anchor-lab.svelte';
   import { harnessLab } from './harness-lab.svelte';
+  import { RIG_LADDER, RIG_LINES } from './harness-stages';
+  import planetVisuals from '$data/planet-visuals';
   import { planetLab } from './planet-lab.svelte';
   import { pulseLab } from './pulse-lab.svelte';
   import { swarmLab } from './swarm-lab.svelte';
@@ -104,8 +106,26 @@
     { id: 'souls', label: 'Souls' },
     { id: 'anchors', label: 'Anchors' },
     { id: 'harness', label: 'Harness' },
+    { id: 'rig', label: 'Rig ladder' },
     { id: 'pulse', label: 'Pulse' },
   ];
+
+  /**
+   * The rig strip's cell size and framing. Wider than the other strips' small
+   * cells because what is being compared is a *shape*, and 160px loses the
+   * chamfer the work axis buys.
+   */
+  const RIG_PX = 200;
+
+  const RIG_FRAME = 3.4;
+
+  /** The Harness tab's own body, so the ladder is previewed where it will land. */
+  const rigBody = planetVisuals.harness;
+
+  /** Job-ms per real second at full staffing, which is what the axis reads as. */
+  function placingRate(perWorker: number, slots: number) {
+    return Math.round(perWorker * slots * 1000);
+  }
 </script>
 
 <svelte:head>
@@ -304,7 +324,15 @@
       window came out as confetti rather than as thin. The fresnel goes through an
       <b>S</b> before the clarity is spent on it, so <code>Clarity falloff</code> moves a
       rim rather than stretching a wash — a falloff spread over the whole disc reads as
-      haze over the world instead of an opening in it. <code>Clarity bands</code> then
+      haze over the world instead of an opening in it. What is authored here is the
+      <b>open</b> end, and the split walks that rim in from there — straight in the split,
+      so the whole of the travel is spent across the whole of the slider rather than in
+      its first inch. A world with no split to show opens as set. It has its own floor and
+      does <i>not</i> share the core's: the window was briefly cut from the drawn sphere,
+      which is the truer reading and made the two marks one knob — and then every move to
+      settle the core dragged the window off with it. How big the ball is and how far open
+      the front goes are two wants, so <code>Core seed</code> sizes the sphere and the
+      window's own shut end sizes the window. <code>Clarity bands</code> then
       quantises what is left, so the window is a set of concentric <b>plates</b> at fixed
       opacities rather than a fade: the ramp's own argument, reaching the one quantity
       here that had a continuum in it. <b>The veil opens with it</b>, on
@@ -321,7 +349,14 @@
       way round, shutting the core's own limb — at 0 it is a coin lying on the world, and
       up from there the edge gives itself back to the ink. Souls staying with the world
       cross into it from <code>Berth from</code> on and take a <b>berth</b> apiece, packed
-      centre-outward so the core fills rather than crusts. In it they take the core's
+      centre-outward so the core fills rather than crusts — and that packing is the only
+      thing the sphere's growth answers to. The outermost taken berth sits at the
+      <b>cube root</b> of the share, so the drawn radius may never fall under it or the
+      core is inside its own souls. It is a <i>bound</i>, not the curve: above it the
+      radius runs straight up from <code>Core seed</code>, because the root as a curve
+      has an infinite slope at nothing and the mark lurched off the first hair of the
+      slider. At the seeds shipping the line clears the bound the whole way, and they
+      meet only at a full harvest. In it they take the core's
       <b>own ground</b> and a ring in the ramp's far end — an arrived soul is a bubble the
       colour of the thing it went into, seen by its rim — and even keeps the shape but
       spends its contrast inside the ramp, a step lighter than its ground and rimmed two
@@ -378,6 +413,17 @@
       <code>field.sampleRadius</code>, so an anchor stands on the terrain rather than on
       the sphere the terrain was displaced from.
     </p>
+    <p class="note">
+      <b>Working</b> is the crew placing one: the souls staffing the job leave their orbits
+      for a ring standing on the <i>first unplaced</i> pole, circling it on a rate of their
+      own rather than carrying their orbit's — this is a job, not a trajectory. A worker is
+      fully on the ring the way a rider is fully on its line, and for the same reason: the
+      straight line from an orbit to a pole on the far side is a chord through the world.
+      They are taken <i>ahead</i> of the riders, which is the order the economy takes them
+      in — a soul held for the job is withheld from its cohort, and the harness seats
+      whoever is left — and they throw <b>no bolts</b> — a worker is withheld from its
+      cohort's payouts, so a strike off the ring would be a yield nobody earned.
+    </p>
     <div class="canvas strip">
       <div class="member">
         <PlanetView
@@ -393,14 +439,17 @@
       <div class="member">
         <PlanetView
           visual={planetLab.current}
-          widthPx={200}
+          widthPx={420}
           frame={swarmFrame}
           anchors={anchorLab.current}
           {anchored}
           swarm={swarmLab.current}
           {cohorts}
+          working={swarmLab.size.working}
         />
-        <span class="spec">with souls</span>
+        <span class="spec">
+          with souls{#if swarmLab.size.working}· {swarmLab.size.working} working{/if}
+        </span>
       </div>
     </div>
     <div class="canvas strip">
@@ -520,6 +569,76 @@
             harness={harnessLab.current}
           />
           <span class="spec">{px}px</span>
+        </div>
+      {/each}
+    </div>
+  </section>
+
+  <section id="rig">
+    <h2>Rig — the upgrade ladder</h2>
+    <p class="note">
+      <b>Not authored here.</b> Every cell is what <code>$lib/rig</code> makes of one rung
+      of <code>$data/upgrades</code>'s <code>harness</code> bucket, replayed cumulatively
+      through a throwaway modifier set — the same map the Harness tab reads live. Change a
+      row's numbers and this strip moves with it; the sliders in the left rail do not touch
+      it. The body is the <code>harness</code> record in <code>planet-visuals</code>, which
+      is the ground the real tab stands the rig on.
+    </p>
+    <p class="note">
+      What to look for: <b>every rung must differ from the one before it</b>. A capacity
+      that buys no visible change is an axis whose ceiling in <code>rigVisualsAt</code> is
+      too far off, and the purchase will read as a number going up on a panel. Work slots
+      grow the solid, work efficiency adds sides and chamfer, press efficiency thickens the
+      edge, riders fill the cage, granularity twists it — and <code>anchors</code> moves the
+      count itself, which is the one axis that changes the figure rather than the shape.
+    </p>
+    <div class="canvas strip">
+      {#each RIG_LADDER as stage (stage.id)}
+        <div class="member rig-cell">
+          <PlanetView
+            visual={rigBody}
+            widthPx={RIG_PX}
+            frame={RIG_FRAME}
+            backgroundToken="--surface"
+            anchors={stage.visuals.anchors}
+            anchored={Array.from({ length: stage.visuals.count }, () => true)}
+            harness={stage.visuals.harness}
+          />
+          <span class="spec name">{stage.id}</span>
+          <span class="spec">{stage.note}</span>
+          <span class="spec">
+            {stage.visuals.count} anchors · {Math.round(stage.axes.slots)} slots ·
+            {Math.round(stage.axes.riders)} riders
+          </span>
+          <span class="spec">
+            {placingRate(stage.axes.perWorker, stage.axes.slots)} job-ms/s ·
+            {(stage.axes.clickMs / 1000).toFixed(2)}s a press ·
+            step {Math.round(stage.axes.step * 1000) / 10}%
+          </span>
+        </div>
+      {/each}
+    </div>
+
+    <p class="note">
+      And the <b>lines</b>, which are not on that ladder: an upgrade unlocks them and each
+      one after that is bought at a climbing price, so they move on their own clock. A line
+      is another cohort strung onto the rig, so it spends <code>span</code> — the strip below
+      holds the whole ladder bought and varies nothing else.
+    </p>
+    <div class="canvas strip">
+      {#each RIG_LINES as stage (stage.id)}
+        <div class="member rig-cell">
+          <PlanetView
+            visual={rigBody}
+            widthPx={RIG_PX}
+            frame={RIG_FRAME}
+            backgroundToken="--surface"
+            anchors={stage.visuals.anchors}
+            anchored={Array.from({ length: stage.visuals.count }, () => true)}
+            harness={stage.visuals.harness}
+          />
+          <span class="spec name">{stage.id}</span>
+          <span class="spec">span {stage.visuals.harness.span.toFixed(2)}</span>
         </div>
       {/each}
     </div>
@@ -739,6 +858,19 @@
     font-size: var(--fs-xs);
     color: var(--ink-300);
     font-variant-numeric: tabular-nums;
+  }
+
+  /* A rung's own name, over the readings it produced. */
+  .member .name {
+    color: var(--ink-900);
+    font-weight: 600;
+  }
+
+  /* Four readings under one picture read as a block, not as four loose items. */
+  .rig-cell {
+    gap: var(--sp-1);
+    width: 200px;
+    text-align: center;
   }
 
   .frame-pick {

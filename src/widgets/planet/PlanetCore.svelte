@@ -2,7 +2,7 @@
   /**
    * What the body's window is a window onto: a solid at the middle of the world,
    * carrying the harvest's alignment as a ruling that leans one way on the
-   * negative and the other on the positive, and is bare on even.
+   * negative and the other on the positive, and rules level on even.
    *
    * A true sphere and not the body's geometry. The body's is a *lump* — the
    * terrain, baked — and a core cut from it would carry the world's mountains at
@@ -21,7 +21,7 @@
 
   interface Props {
     visual: PlanetVisual;
-    /** The harvest's alignment: −1, 0 or +1. 0 draws the ground tone alone. */
+    /** The harvest's alignment: −1, 0 or +1, and also the ruling's own lean. */
     lean: number;
     /**
      * How big, in body radii — the authored radius grown by the merge, worked

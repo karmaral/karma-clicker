@@ -50,21 +50,50 @@ const data: Record<string, Record<string, ItemTextData>> = {
       title: 'A finer hand',
       description: 'Set the allocation in quarters instead of halves.',
     },
+    'anchors_1': {
+      title: 'A second pole',
+      description: 'One more of a world\'s slots is yours to fill.',
+    },
+    'lines': {
+      title: 'Something to string',
+      description: 'The harness will take a line. Buy one per cohort you want carried.',
+      effect: 'cohort lines opened',
+    },
     'slots_1': {
       title: 'The whole crew',
       description: 'Twenty-four more slots.',
+    },
+    'work_1': {
+      title: 'They have done it before',
+      description: 'Every soul on the lines places half again as fast.',
     },
     'split_2': {
       title: 'Finer still',
       description: 'Set the allocation in tenths.',
     },
+    'press_1': {
+      title: 'Your own weight on it',
+      description: 'A press drives three quarters of a second into the job instead of a quarter.',
+    },
+    'anchors_2': {
+      title: 'Around the waist',
+      description: 'Two more slots, and a world starts to be worth anchoring whole.',
+    },
     'riders_1': {
       title: 'Room for the rest',
       description: 'Two thousand souls ride instead of two hundred.',
     },
+    'work_2': {
+      title: 'Nothing wasted',
+      description: 'Twice again what a soul places. The long worlds stop being long.',
+    },
     'split_3': {
       title: 'To the soul',
       description: 'Set the allocation in twentieths.',
+    },
+    'anchors_3': {
+      title: 'The full cage',
+      description: 'Four more slots — enough for the last worlds, if they will give them.',
     },
   },
   'planet:second': {

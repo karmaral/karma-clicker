@@ -281,7 +281,7 @@ export async function run(
       beat: progression.beat,
       souls: BuildingManager.countSouls(),
       reserved: BuildingManager.countReserved(),
-      anchorsPlaced: PlanetManager.getActive()?.anchorsPlaced ?? 0,
+      anchorsPlaced: harness.anchorsPlaced,
       excess: getExcess(),
       karmaPerSecond: BuildingManager.countKarmaPerSecond(),
       experiencePerSecond: BuildingManager.countExperiencePerSecond(),
@@ -318,6 +318,11 @@ export async function run(
 
     if (progression.runs('refining')) refinery.start();
     if (progression.runs('anchoring')) harness.start();
+
+    /* Anchoring is opt-in, so the bench has to opt in — the policy it measures is
+       "anchor every world you can", which is the ceiling the old forced phase was.
+       Idempotent, and a no-op on a world offering nothing. */
+    if (harness.isAnchorable) harness.beginJob();
 
     workManualCohorts();
     buyUpgrades();

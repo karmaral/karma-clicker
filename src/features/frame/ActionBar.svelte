@@ -8,12 +8,16 @@
    * the row is ground, so the bar reads as a control cluster at one end of the
    * card instead of a fourth register spanning it.
    *
-   * The row collapses during a takeover: that screen draws its own verb over
-   * the whole card and there must be exactly one on screen, and the takeover
-   * carries its own "Not yet" door out, so the tabs go with it.
+   * The row empties during a takeover: that screen draws its own verb over the
+   * whole card and there must be exactly one on screen, and the takeover
+   * carries its own "Not yet" door out, so the tabs go with it. The log stays —
+   * it is about the run and not about the screen, and a takeover is the moment
+   * you most want to read back.
    */
   import { nav } from '$lib/nav.svelte';
+  import { progression } from '$lib/progression';
   import { EndRunVerb } from '$features/prestige';
+  import Log from '$features/Log.svelte';
   import Navbar from './Navbar.svelte';
 
   interface Props {
@@ -24,9 +28,9 @@
 </script>
 
 <div class="action-bar">
-  {#if !nav.isTakeover}
-    <div class="strip" class:railed>
-      <div class="content">
+  <div class="strip" class:railed>
+    <div class="content">
+      {#if !nav.isTakeover}
         <Navbar />
 
         <div class="run">
@@ -34,9 +38,13 @@
             <EndRunVerb />
           {/if}
         </div>
-      </div>
+      {/if}
     </div>
-  {/if}
+
+    {#if progression.isRevealed('shared.log')}
+      <div class="log"><Log /></div>
+    {/if}
+  </div>
 </div>
 
 <style>
@@ -58,6 +66,7 @@
      screen stands on. The rail's track is here to be empty — it is what makes
      the first one the right width. */
   .strip {
+    position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     height: 100%;
@@ -96,5 +105,18 @@
     gap: var(--sp-4);
     padding-inline: var(--sp-4);
     min-width: 0;
+  }
+
+  /* The far edge, which is the rail's when there is one: out of flow and pegged
+     to the strip rather than pushed to the end of `.content`, since that box
+     stops at the seam. The strip is the gutter-reduced width, so `--sp-4` here
+     is the same inset a screen's own content sits at. */
+  .log {
+    position: absolute;
+    right: var(--sp-4);
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
   }
 </style>
