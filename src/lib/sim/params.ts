@@ -45,13 +45,13 @@ function fixed(min: number, max: number, step: number) {
 }
 
 /**
- * No per-cohort aim or level fields any more — a level's worth and price both
- * fall out of `cost`/`cost_multiplier`/`upgrade_threshold` in `cohort-levels.ts`,
- * and aim is one global dial (`GLOBAL_FIELDS` below). See `docs/design.md` §5/§6.
+ * No per-cohort aim or level fields any more — a level has no price at all, and
+ * its worth falls out of `upgrade_threshold` in `cohort-levels.ts`. Aim is one
+ * global dial (`GLOBAL_FIELDS` below). See `docs/design.md` §5/§6.
  */
 const COHORT_FIELDS: FieldSpec[] = [
   { field: 'cost', label: 'cost', range: scaled(20) },
-  // The ramp is one number for the whole ladder now — see `buildings.ts`.
+  // Authored per cohort by `rampFor` — this sweeps one row off that curve.
   { field: 'cost_multiplier', label: 'cost ramp', range: fixed(1.005, 1.5, 0.001) },
   { field: 'duration', label: 'duration ms', range: fixed(0, 20_000, 100) },
   { field: 'yields.karma', label: 'karma', range: scaled(20) },

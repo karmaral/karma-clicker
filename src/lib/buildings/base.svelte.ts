@@ -3,6 +3,7 @@ import { ResourceManager, PlanetManager } from '$lib/managers';
 import { ResourceEmitter, EMITTER_EVENTS } from '$lib/emission';
 import { ModifierSet } from '$lib/modifiers';
 import { aim, type ResolvedAim } from '$lib/aim';
+import balance from '$data/balance';
 
 type Listener = (detail?: Record<string, unknown>) => void;
 
@@ -29,18 +30,50 @@ export default class Building {
    * `extra` is the projection channel every readout below carries: modifiers
    * not held, priced as if they were. Nothing is added or removed to answer it.
    */
+  /**
+   * Where a life stops getting shorter and starts paying more instead. Duration
+   * is folded normally, then held at `emission.streamUnder`; whatever shortening
+   * the floor refused comes back as `overflow`, a multiplier on every yield.
+   *
+   * **Income-neutral by construction.** Rate is yield over duration, so
+   * `(y × floor/raw) / floor` is `y / raw` — the same figure, spent on the other
+   * axis. That is the whole justification: a rung that would push a life below
+   * the floor is not thrown away, it doubles the payout instead, and nothing
+   * authored has to know which of the two it will turn out to be.
+   *
+   * Live, not derived from an index. A cohort converts at the rung where *its*
+   * clock actually reaches the floor, counting every source — its own levels,
+   * the all-cohort milestones, and the `boost` shortenings — rather than at a
+   * rung guessed from its position on the ladder.
+   *
+   * ⚠ A `boost` source makes `overflow` fractional, and `payout` rounds. On
+   * cohort 1, whose yield is 2, a 6% shortening past the floor rounds away
+   * entirely. It is 6% of the smallest income in the game and is left alone;
+   * every row above has yields large enough that the rounding is noise.
+   */
+  #clampDuration(extra: Modifier[] = []) {
+    const raw = this.#modifiers.apply(this.#data.duration ?? 0, 'duration', undefined, extra);
+    const floor = balance.emission.streamUnder;
+
+    if (raw <= 0 || raw >= floor) return { duration: raw, overflow: 1 };
+
+    return { duration: floor, overflow: floor / raw };
+  }
+
   productionWith(extra: Modifier[] = []) {
     const production: Partial<Record<YieldType, number>> = {};
+    const { overflow } = this.#clampDuration(extra);
 
     Object.keys(this.#baseProduction).forEach((type: YieldType) => {
-      production[type] = this.#modifiers.apply(this.#baseProduction[type], 'yield', type, extra);
+      production[type] = this.#modifiers.apply(this.#baseProduction[type], 'yield', type, extra)
+        * overflow;
     });
 
     return production;
   }
 
   durationWith(extra: Modifier[] = []) {
-    return this.#modifiers.apply(this.#data.duration ?? 0, 'duration', undefined, extra);
+    return this.#clampDuration(extra).duration;
   }
 
   /** The no-projection case, and the only one anything reads every frame. */
@@ -208,6 +241,10 @@ export default class Building {
     if (negative > 0) {
       ResourceManager.add('karma_negative', negative);
     }
+
+    // The world keeps its own tally of what it was fed, which is what its demand
+    // is paid against — the piles cannot answer that, since they outlive it.
+    PlanetManager.getActive()?.recordKarma(positive, negative);
   }
 
   /**
@@ -225,10 +262,15 @@ export default class Building {
     );
   }
 
+  /**
+   * A send already in flight keeps its clock. Queueing here would restart the
+   * wait at zero, so buying a clerk mid-life would cost the life — `emit`
+   * requeues on its own once the flag is on, which is the whole handover.
+   */
   toggleAutonomy(toggle?: boolean) {
     this.#emitter.toggleAutonomy(toggle);
 
-    if (toggle && this.#count) {
+    if (toggle && this.#count && !this.#emitter.isInProgress) {
       this.queueAction();
     }
   }
@@ -315,9 +357,10 @@ export default class Building {
    * moves under the harness; anything printing a payout wants this instead.
    *
    * Whole numbers. The authored ladder is integral and every yield modifier is
-   * a x2, so the only thing that ever put a decimal in a payout was `yieldScale`
-   * — the anchor coverage and wisdom's percent. Rounded here, once, rather than
-   * at each of the surfaces that print it.
+   * a x2, so what puts a decimal in a payout is `yieldScale` — the anchor
+   * coverage and wisdom's percent — and `#clampDuration`'s `overflow`, which is
+   * an exact power of two unless a `boost` shortening is held. Rounded here,
+   * once, rather than at each of the surfaces that print it.
    */
   payout(type: YieldType, count = this.#count, extra: Modifier[] = []) {
     const production = extra.length ? this.productionWith(extra) : this.#production;

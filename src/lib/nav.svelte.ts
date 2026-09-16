@@ -25,15 +25,15 @@ function isAvailable(screen: ScreenName) {
 const active = $derived(isAvailable(requested) ? requested : 'overview');
 
 /**
- * The first harvest is a **takeover**, not a fourth tab — but of the screen it
- * is reached from rather than of the frame. The navbar collapses with the rail,
- * so exactly one verb is on screen and the takeover's own escape is the door;
- * what keeps it from being a room with no walls is the header, which never
- * goes.
+ * The first harvest is a **takeover**, not a fifth tab: it is offered under the
+ * world on Details and on Overview alike and takes the frame's body from
+ * either. The navbar collapses with the rail, so exactly one verb is on screen
+ * and the takeover's own escape is the door; what keeps it from being a room
+ * with no walls is the header, which never goes.
  *
- * It lives here rather than in the Overview because **which screen hosts it is
- * not settled** — Overview holds it today, Details is the live alternative, and
- * a flag on `nav` is the one place either can read.
+ * A flag and not a screen because **leaving must cost nothing**: `requested` is
+ * never touched here, so the tab you opened it from is still the one underneath
+ * and cancelling is one `false` rather than a return trip to remember.
  *
  * Asked for by a verb, and derived rather than stored outright so it closes
  * itself: the moment the world stops being one you could leave, there is
@@ -41,13 +41,22 @@ const active = $derived(isAvailable(requested) ? requested : 'overview');
  */
 let asked = $state(false);
 
-const isHarvesting = $derived.by(() => {
-  if (!asked || !progression.isRevealed('harvest.screen')) return false;
+/**
+ * Whether the takeover is there to be reached at all: a world that still has a
+ * departure to decide, on a run that has been shown the screen. Said apart from
+ * `asked` because it is also what **warms** the screen — its world is WebGL, and
+ * a takeover built at the moment it is opened flashes white while it compiles.
+ * See `Screen`'s `warm`.
+ */
+const isHarvestOffered = $derived.by(() => {
+  if (!progression.isRevealed('harvest.screen')) return false;
 
   const planet = PlanetManager.getActive();
 
   return Boolean(planet) && !planet.isHarvested;
 });
+
+const isHarvesting = $derived(asked && isHarvestOffered);
 
 /**
  * The end of the run, taking the same screen the same way and for the same
@@ -66,6 +75,7 @@ const isPrestiging = $derived(askedPrestige && progression.isRevealed('prestige.
 export const nav = {
   get active() { return active; },
   get isHarvesting() { return isHarvesting; },
+  get isHarvestOffered() { return isHarvestOffered; },
   get isPrestiging() { return isPrestiging; },
   /** Either takeover: the one condition that hides the rail and the verb row. */
   get isTakeover() { return isHarvesting || isPrestiging; },

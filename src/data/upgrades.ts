@@ -1,6 +1,6 @@
 import type { ResourceType, UpgradeData, UpgradeScope } from '$types';
 import { levelUpgrades } from './cohort-levels';
-import buildingData, { cohortId, COHORT_COUNT, COHORT_DECADE } from './buildings';
+import buildingData, { cohortId, COHORT_COUNT, COST_DECADE, LEVEL_GATES } from './buildings';
 import balance from './balance';
 
 /**
@@ -8,7 +8,7 @@ import balance from './balance';
  * — see `sim/worker.ts` on the import-order contract.
  */
 const { revealFactor: REVEAL_FACTOR } = balance.cohorts;
-const CLERK_FACTOR = REVEAL_FACTOR * COHORT_DECADE;
+const CLERK_FACTOR = REVEAL_FACTOR * COST_DECADE;
 
 const ENTITY_KINDS = ['cohort', 'building', 'planet'] as const;
 
@@ -241,10 +241,11 @@ const data: Record<string, UpgradeData[]> = {
   ],
   /**
    * The rail's opening act, and the only bucket that has to be *paced* rather
-   * than priced. `str_1`'s gate is the one the `rail` beat opens on, so the rail
-   * arrives holding exactly this chip and the ladder is walked a rung at a time
-   * — it used to unlock into no rail at all and then land as a wall on the beat
-   * that finally drew one. `str_1` alone is the tutorial; the rest interleave
+   * than priced. The `rail` beat opens on cohort 1's gate of 50 and `str_1` on
+   * the 100 that chip costs, so the rail is drawn holding one chip and gains the
+   * second as the first is bought — the ladder is walked a rung at a time. It
+   * used to unlock into no rail at all and then land as a wall on the beat that
+   * finally drew one. `str_1` alone is the tutorial; the rest interleave
    * with the cohort ladder and the two globals. Read the gates in order, not the ids.
    *
    * One axis, not two: the press is instant from the start, so the `speed_*`
@@ -366,6 +367,26 @@ const data: Record<string, UpgradeData[]> = {
    * them unreachable while nothing routed them; those parking values are gone.
    */
   'cohorts': [
+    /**
+     * **The gate pays twice.** Twenty-five of one cohort levels that cohort;
+     * twenty-five of *every* cohort levels the whole ladder again. Same counts,
+     * so there is one number to learn and the second reward needs no second
+     * gate — and since a cohort that is not unlocked counts as none, the top of
+     * the ladder gatekeeps all six rungs by itself.
+     *
+     * Free, like a level, and for the same reason: reaching it was the price.
+     * `unlocks_at` is the trigger and `acquireUnpriced` pulls it off the loop.
+     *
+     * Every rung halves the life — no yield rung is authored here, because
+     * `Building.#clampDuration` converts one to the other the moment a cohort's
+     * clock reaches `emission.streamUnder`. Which rung that happens on differs
+     * per cohort and per run, which is exactly why it cannot be authored.
+     */
+    ...LEVEL_GATES.map((gate, index) => ({
+      id: `milestone_${index + 1}`,
+      effect: { op: 'mult' as const, value: 0.5, stat: 'duration' as const },
+      unlocks_at: { count: gate },
+    })),
     {
       // Priced in negative karma, and the two of them are the bulk of that
       // pile's sink. Spending lives faster for throughput is the register

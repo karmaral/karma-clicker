@@ -15,6 +15,7 @@
  */
 
 import { SAVE_VERSION, isSaveState, type SaveState } from './state';
+import balance from '$data/balance';
 
 /** The oldest shape a step exists for. Anything below is refused, not guessed at. */
 export const OLDEST_VERSION = 3;
@@ -50,9 +51,71 @@ function toFour(state: Raw): Raw {
   };
 }
 
+/**
+ * v4 → v5. Re-aiming is priced by how far the dial moved, so the aim carries
+ * what its last commit bought rather than reading one constant for every move.
+ *
+ * A v4 save took the flat figure, so that is what it is still owed — the unit,
+ * which is also what the shortest move costs now.
+ */
+function toFive(state: Raw): Raw {
+  const aim = (state.aim ?? {}) as Raw;
+
+  return {
+    ...state,
+    version: 5,
+    aim: { ...aim, reaimSpan: balance.aim.reaimPhases },
+  };
+}
+
+/**
+ * v5 → v6. A world pays for the pole it wants, read off a running share of the
+ * karma earned on it.
+ *
+ * Nothing can invent that share for a save written before it was counted, and a
+ * guess would either hand a finished world a bonus it never earned or dock one
+ * it might have. Both tallies start at zero, which reads as the neutral share,
+ * and every v5 world — finished or still being stood on — takes `demandBonus` 1.
+ */
+function toSix(state: Raw): Raw {
+  const planets = state.planets as Raw | undefined;
+  const states = (planets?.states ?? {}) as Record<string, Raw>;
+
+  Object.values(states).forEach((planet) => {
+    planet.demandedKarma = 0;
+    planet.earnedKarma = 0;
+    planet.demandBonus = 1;
+  });
+
+  return { ...state, version: 6 };
+}
+
+/**
+ * v6 → v7. An anchoring job is spent when its last anchor lands, so a world
+ * carries the job-ms a *closed* one banked — the floor a cancel returns to
+ * rather than zero.
+ *
+ * Zero on every v6 world, and correct on all of them: a job still in flight has
+ * banked nothing by definition, and one that had already finished banks itself
+ * on the harness's first tick, which closes it.
+ */
+function toSeven(state: Raw): Raw {
+  const planets = state.planets as Raw | undefined;
+  const states = (planets?.states ?? {}) as Record<string, Raw>;
+
+  Object.values(states).forEach((planet) => {
+    planet.bankedMs = 0;
+  });
+
+  return { ...state, version: 7 };
+}
+
 /** Keyed by the version each step raises *from*. */
 const STEPS: Record<number, (state: Raw) => Raw> = {
   3: toFour,
+  4: toFive,
+  5: toSix,
+  6: toSeven,
 };
 
 /**

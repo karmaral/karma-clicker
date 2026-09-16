@@ -6,6 +6,9 @@ import { BuildingManager, UpgradeManager } from '.';
 // is read inside a method, so the cycle back through this file never resolves
 // during module evaluation.
 import { harness } from '$lib/harness.svelte';
+// Same rule as `harness` above, and the cycle is the same one: `aim` reads the
+// active world every time it resolves, and this reaches it only inside `reach`.
+import { aim } from '$lib/aim';
 import { clock } from '$lib/clock';
 import data from '$data/planets';
 
@@ -58,13 +61,20 @@ class PlanetManager {
     this.#selected = id;
   }
 
-  /** A world is left for good, so an unharvested one cannot be left at all. */
+  /**
+   * A world is left for good, so an unharvested one cannot be left at all.
+   *
+   * Arriving resets the dial. Not `select`, which is only the boot picking the
+   * first world, and not `restore`, which is a run resuming exactly where it
+   * was — this is the one place a *new* world begins.
+   */
   reach(id: string) {
     if (!this.canReach) return;
     if (!Boolean(id in this.#planets)) return;
     if (this.#planets[id].isHarvested) return;
 
     this.#selected = id;
+    aim.reset();
   }
 
   /**

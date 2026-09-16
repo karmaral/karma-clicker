@@ -8,12 +8,14 @@
   import Halo from './Halo.svelte';
   import Harness from './Harness.svelte';
   import PlanetBody from './PlanetBody.svelte';
+  import OrbitRing from './OrbitRing.svelte';
   import SoulBolt from './SoulBolt.svelte';
   import SoulSwarm from './SoulSwarm.svelte';
   import Sparks from './Sparks.svelte';
   import { placeAnchors, type AnchorPlacement, type AnchorVisual } from './anchor';
   import { advanceClock, getClock } from './clock';
   import { createSurfaceField } from './field';
+  import { createSlew, frameOn, shortAngle, slewTo, type Framing } from './framing';
   import { buildLoops, trimLoopCache, type HarnessVisual } from './harness';
   import { readToken } from './ink';
   import { ridersOf, type SwarmVisual } from './orbit';
@@ -63,6 +65,24 @@
      * lives, so it is struck on a fixed rhythm instead — see `SoulSwarm`.
      */
     streaming?: boolean[];
+    /**
+     * Which of them are being pointed at, same rows once more. Each draws its own
+     * line and grows its dots — see `OrbitRing`. Absent is a world nobody is
+     * asking about, which is every caller that has no roster beside it.
+     */
+    lit?: boolean[];
+    /**
+     * A running count of souls bought per cohort, same rows again. Each rise
+     * flashes that band's ring — see `OrbitRing`. Counts and not times, for the
+     * reason `paid` is one.
+     */
+    bought?: number[];
+    /**
+     * And how long one of each cohort's lives takes, in seconds, same rows once
+     * more. A quick cohort orbits quickly — see `rateOf`. Absent leaves the
+     * swarm on its authored doubling, which is the lab.
+     */
+    pace?: number[];
     /** The share of the swarm staying with the world. See `SoulSwarm`. */
     merge?: number;
     /**
@@ -75,6 +95,14 @@
     anchors?: AnchorVisual;
     /** One flag per anchor. Empty draws no harness, the way `cohorts` does. */
     anchored?: boolean[];
+    /**
+     * Whether the world turns to present the anchor going down. The world comes
+     * to rest with the site facing the camera, swings to the next one as each
+     * lands, and is let back onto its own spin when there is nothing left to
+     * place — see `framing.ts`. Off by default, so a lab tuning ghosts keeps the
+     * world it is tuning against.
+     */
+    facesSite?: boolean;
     /** The lines between the anchors. Absent draws poles and nothing strung. */
     harness?: HarnessVisual;
     /** How many souls the harness carries. See `SoulSwarm`. */
@@ -150,10 +178,14 @@
     cohorts,
     paid,
     streaming,
+    lit,
+    bought,
+    pace,
     merge,
     alignment,
     anchors,
     anchored,
+    facesSite = false,
     harness,
     riders,
     working,
@@ -343,6 +375,23 @@
   let spinAngle = $state(0);
   let veilAngle = $state(0);
 
+  /**
+   * And how far the whole world is swung off its held angles to present a site.
+   * Written once a frame by the slew below, beside `spinAngle` because it is the
+   * same kind of quantity: an angle the scene owns and the body is told.
+   */
+  let faceTilt = $state(0);
+  let faceTurn = $state(0);
+
+  /**
+   * Where the world is actually held, swing and all. Every mark placed against
+   * the body reads these rather than the authored pair — a spark, a strike or a
+   * projected point taken off `visual` alone would sit on a world that had since
+   * turned, which is the one way the framing can go wrong.
+   */
+  const heldTilt = $derived(visual.tilt + faceTilt);
+  const heldTurn = $derived(visual.turn + faceTurn);
+
   useTask(() => {
     // A world that neither turns nor carries souls has no clock to keep, and one
     // nobody is looking at keeps its own where it left it.
@@ -407,7 +456,7 @@
       // hold and the roll answer to the world at the moment of the press, not
       // to whatever frame the effect happens to flush on.
       const { held, share, standing, anchoring } = untrack(() => ({
-        held: { lean: visual.lean, tilt: visual.tilt, turn: visual.turn, spin: spinAngle },
+        held: { lean: visual.lean, tilt: heldTilt, turn: heldTurn, spin: spinAngle },
         share: ridden,
         standing: strung,
         anchoring: placements[placing],
@@ -532,7 +581,7 @@
       // the world is held is read *at* the yield, not answered to on every
       // frame the spin advances.
       const { held, share, standing } = untrack(() => ({
-        held: { lean: visual.lean, tilt: visual.tilt, turn: visual.turn, spin: spinAngle },
+        held: { lean: visual.lean, tilt: heldTilt, turn: heldTurn, spin: spinAngle },
         share: ridden,
         standing: strung,
       }));
@@ -576,6 +625,40 @@
   const site = $derived(placements[placing]);
 
   /**
+   * The swing itself, in offsets from where the world is held already. Worked
+   * out every frame because the spin it has to cancel advances every frame —
+   * holding a site still is a counter-turn, not a pose. `undefined` on a world
+   * with nothing going down, which is what lets it back onto its own turn.
+   */
+  function framingOnSite(): Framing | undefined {
+    if (!facesSite || !site) return undefined;
+
+    const onto = frameOn(site);
+
+    return {
+      tilt: onto.tilt - visual.tilt,
+      turn: shortAngle(onto.turn - (visual.turn + spinAngle)),
+    };
+  }
+
+  const slew = createSlew();
+
+  /**
+   * After the clock's task in the file and so in the frame, so the swing cancels
+   * the spin this frame carries rather than the one before it.
+   */
+  useTask((delta) => {
+    if (isPaused) return;
+
+    const moved = slewTo(slew, framingOnSite(), visual.turn + spinAngle, delta);
+
+    faceTilt = slew.tilt;
+    faceTurn = slew.turn;
+
+    if (moved) invalidate();
+  });
+
+  /**
    * Reported per frame rather than on demand, because the world turns under it
    * and a caller outside the canvas has no way to ask. Cheap — one rotation and
    * a projection, and only on a world that is being anchored at all.
@@ -591,7 +674,7 @@
 
     const world = sparkWorldPosition(
       { x: node.x, y: node.y, z: node.z, r: node.peak },
-      { lean: visual.lean, tilt: visual.tilt, turn: visual.turn, spin: spinAngle },
+      { lean: visual.lean, tilt: heldTilt, turn: heldTurn, spin: spinAngle },
     );
 
     onplacing(projectToScreen(world.x, world.y));
@@ -626,6 +709,8 @@
   {zoom}
   {spinAngle}
   {veilAngle}
+  {faceTilt}
+  {faceTurn}
   {alignment}
   core={filled}
   clarityGamma={opened}
@@ -647,6 +732,12 @@
     {/if}
   {/snippet}
 
+  <!-- Before the swarm in the markup as it is below it in the stack: the line is
+       what the dots ride, so they are drawn onto it. -->
+  {#if swarm && cohorts?.length && lit?.length}
+    <OrbitRing visual={swarm} {lit} {bought} {clock} {zoom} size={worldSize} {rim} />
+  {/if}
+
   {#if swarm && cohorts?.length}
     <SoulSwarm
       visual={swarm}
@@ -667,6 +758,8 @@
       bolts={soulBolts}
       yields={paid}
       {streaming}
+      {lit}
+      {pace}
     />
   {/if}
 </PlanetBody>
@@ -680,8 +773,8 @@
     bolts={soulBolts}
     {zoom}
     lean={visual.lean}
-    tilt={visual.tilt}
-    turn={visual.turn}
+    tilt={heldTilt}
+    turn={heldTurn}
     {rim}
   />
 {/if}
@@ -700,8 +793,8 @@
     isInstant={(clickMs ?? 0) <= 0}
     getCursor={getCursorWorld}
     lean={visual.lean}
-    tilt={visual.tilt}
-    turn={visual.turn}
+    tilt={heldTilt}
+    turn={heldTurn}
     {spinAngle}
   />
 {/if}

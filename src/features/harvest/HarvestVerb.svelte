@@ -25,11 +25,9 @@
     ),
   );
 
-  // temporary patch
+  /** The takeover is the frame's, so the verb leaves the screen where it is. */
   function onclick() {
-    nav.to('overview');
     nav.openHarvest();
-
   }
 </script>
 

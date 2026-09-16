@@ -32,11 +32,27 @@ export interface ResolvedAim {
 export interface AimSnapshot {
   detent: Detent;
   reaimedAtPhase: number | undefined;
+  reaimSpan: number;
+}
+
+/**
+ * What a move costs, in phases. Distance, never destination: making ±2
+ * expensive to *enter* would price the emergency brake, and hard aim with the
+ * refinery idled is the only correction fast enough to clear a deep tilt.
+ *
+ * Halved and rounded up, so a full swing is two phases and everything shorter
+ * is one — `|Δ|` outright puts a swing at half of world 1.
+ */
+function phasesFor(from: Detent, to: Detent) {
+  return balance.aim.reaimPhases * Math.ceil(Math.abs(to - from) / 2);
 }
 
 class Aim {
   #detent = $state<Detent>(0);
   #reaimedAtPhase = $state<number | undefined>(undefined);
+
+  /** What the last commit bought, kept because the detent it moved from is gone. */
+  #reaimSpan = $state(0);
 
   /**
    * Where the dial is pointed but not yet committed. `undefined` is *no
@@ -49,6 +65,9 @@ class Aim {
   set(detent: Detent) {
     if (detent === this.#detent) return;
 
+    // Priced before the move, off the distance. A re-aim mid-penalty replaces
+    // what is owed rather than adding to it — one decision, one bill.
+    this.#reaimSpan = phasesFor(this.#detent, detent);
     this.#detent = detent;
     this.#reaimedAtPhase = PlanetManager.getActive()?.progress ?? 0;
   }
@@ -70,6 +89,24 @@ class Aim {
   }
 
   /**
+   * Back to Even, free, on reaching a new world. Not a decision you made, so it
+   * cannot cost a phase — and there would be nothing to charge against anyway:
+   * the mark is kept in the *active world's* progress units, so a penalty owed
+   * on the world behind you reads against a clock that has just restarted at
+   * zero and would hang at full depth until the new world caught up.
+   *
+   * It is also what makes a world's demand start neutral. A hard tilt carried
+   * across would begin filling the next world's `matchShare` — against a pole it
+   * alternates — before the screen had said a word about it. See §14.
+   */
+  reset() {
+    this.#detent = 0;
+    this.#reaimedAtPhase = undefined;
+    this.#reaimSpan = 0;
+    this.#draft = undefined;
+  }
+
+  /**
    * The wave is the clock, not elapsed time: an experience-based penalty must
    * not slow the experience that ends it.
    */
@@ -79,12 +116,13 @@ class Aim {
     return Math.max(0, (PlanetManager.getActive()?.progress ?? 0) - this.#reaimedAtPhase);
   });
 
+  /** Depth is flat; only the duration moves — a variable depth is invisible. */
   #reaimPenalty = $derived.by(() => {
-    const { reaimPenalty, reaimPhases } = balance.aim;
+    const span = this.#reaimSpan;
     const lived = this.#phasesSinceReaim;
-    if (lived === undefined || lived >= reaimPhases) return 0;
+    if (lived === undefined || span <= 0 || lived >= span) return 0;
 
-    return reaimPenalty * (1 - lived / reaimPhases);
+    return balance.aim.reaimPenalty * (1 - lived / span);
   });
 
   /**
@@ -117,21 +155,30 @@ class Aim {
   }
 
   /** Past `set`, which would stamp the mark with *now* and re-owe the penalty. */
-  restore({ detent, reaimedAtPhase }: AimSnapshot) {
+  restore({ detent, reaimedAtPhase, reaimSpan }: AimSnapshot) {
     this.#detent = detent;
     this.#reaimedAtPhase = reaimedAtPhase;
+    this.#reaimSpan = reaimSpan;
     this.#draft = undefined;
   }
 
   snapshot(): AimSnapshot {
-    return { detent: this.#detent, reaimedAtPhase: this.#reaimedAtPhase };
+    return {
+      detent: this.#detent,
+      reaimedAtPhase: this.#reaimedAtPhase,
+      reaimSpan: this.#reaimSpan,
+    };
   }
 
   get detent() { return this.#detent; }
   get draft() { return this.#draft; }
   get isPending() { return this.#draft !== undefined; }
   get reaimPenalty() { return this.#reaimPenalty; }
-  get reaimPhases() { return balance.aim.reaimPhases; }
+
+  /** What the pending move would buy. 0 with nothing drafted — nothing is owed. */
+  get draftPhases() {
+    return this.#draft === undefined ? 0 : phasesFor(this.#detent, this.#draft);
+  }
 
   /**
    * When the penalty runs out, in the world's progress units — what the wave
@@ -140,15 +187,15 @@ class Aim {
   get reaimEndsAt() {
     if (this.#reaimedAtPhase === undefined || this.#reaimPenalty === 0) return undefined;
 
-    return this.#reaimedAtPhase + balance.aim.reaimPhases;
+    return this.#reaimedAtPhase + this.#reaimSpan;
   }
 
   get phasesOwed() {
-    const { reaimPhases } = balance.aim;
+    const span = this.#reaimSpan;
     const lived = this.#phasesSinceReaim;
-    if (lived === undefined || lived >= reaimPhases) return 0;
+    if (lived === undefined || span <= 0 || lived >= span) return 0;
 
-    return reaimPhases - lived;
+    return span - lived;
   }
 }
 

@@ -39,6 +39,14 @@
      */
     veilAngle?: number;
     /**
+     * How far the world is turned off its own held angles to present something
+     * on it — see `framing.ts`. Added to `tilt` and `turn` rather than replacing
+     * them, so the authored hold stays the hold and this is only a swing off it.
+     * Kept by the scene for `spinAngle`'s reason: the marks read it too.
+     */
+    faceTilt?: number;
+    faceTurn?: number;
+    /**
      * The harvest's alignment, −1, 0 or +1. It is what the **core** says, and so
      * it is also what decides there is one: absent, no core is mounted and the
      * body's window stays shut, because a window onto nothing is a hole.
@@ -72,8 +80,8 @@
   }
 
   let {
-    visual, zoom, spinAngle = 0, veilAngle = 0, alignment, core, clarityGamma, pulse, pulses,
-    children, standing,
+    visual, zoom, spinAngle = 0, veilAngle = 0, faceTilt = 0, faceTurn = 0,
+    alignment, core, clarityGamma, pulse, pulses, children, standing,
   }: Props = $props();
 
   /**
@@ -172,8 +180,8 @@
      about the world's own axis however it is held. Negated because `lean` is
      authored to the right and +Z takes the pole left. -->
 <T.Group rotation.z={-visual.lean}>
-  <T.Group rotation.x={visual.tilt}>
-    <T.Group rotation.y={visual.turn}>
+  <T.Group rotation.x={visual.tilt + faceTilt}>
+    <T.Group rotation.y={visual.turn + faceTurn}>
       <T.Group rotation.y={spinAngle}>
         <!-- Inside the spin like the terrain it is a hull of: a silhouette
              taken from a world that has since turned is the wrong shape. -->

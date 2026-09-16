@@ -27,7 +27,7 @@ import type { ResourceSnapshot } from '$lib/resources/base.svelte';
  * `migrate` rather than thrown away — see `migrate.ts` for how far back that
  * reaches and what each step fills in.
  */
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 7;
 
 export interface SaveState {
   version: number;

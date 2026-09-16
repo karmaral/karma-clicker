@@ -13,6 +13,12 @@
     paid?: number[];
     /** Which of those cohorts pay by the tick, same rows. See `PlanetScene`. */
     streaming?: boolean[];
+    /** And which are hovered, same rows again — their orbit is drawn. See `OrbitRing`. */
+    lit?: boolean[];
+    /** A running count of souls bought per cohort — each rise flashes that ring. */
+    bought?: number[];
+    /** Seconds a life takes in each cohort — a quick one orbits quickly. See `rateOf`. */
+    pace?: number[];
     clickActionVerb?: string;
     clickActionSub?: string;
     onclickaction?: () => void;
@@ -22,6 +28,8 @@
     /** The harness this world wears, and how much of it is down. See `PlanetScene`. */
     anchors?: AnchorVisual;
     anchored?: boolean[];
+    /** Whether the world turns to present the anchor going down. See `PlanetScene`. */
+    facesSite?: boolean;
     harness?: HarnessVisual;
     /** How many souls the finished harness carries. See `SoulSwarm`. */
     riders?: number;
@@ -37,6 +45,9 @@
     cohorts = [],
     paid,
     streaming,
+    lit,
+    bought,
+    pace,
     clickActionVerb = 'Incarnate',
     clickActionSub,
     onclickaction,
@@ -44,6 +55,7 @@
     yieldValue = 0,
     anchors,
     anchored,
+    facesSite = false,
     harness,
     riders,
     working,
@@ -78,6 +90,9 @@
       {cohorts}
       {paid}
       {streaming}
+      {lit}
+      {bought}
+      {pace}
       pulse={DEFAULT_PULSE}
       clickMs={0}
       clockKey={id}
@@ -87,6 +102,7 @@
       {yieldValue}
       {anchors}
       {anchored}
+      {facesSite}
       {harness}
       {riders}
       {working}

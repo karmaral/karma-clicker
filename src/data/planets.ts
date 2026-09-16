@@ -10,6 +10,10 @@ import type { PlanetData } from '$lib/types';
  * `ages × cycles_per_age × 2 × phase_duration = 240 s × 2^(p−1)`.
  * `cycles_per_age` holds at 4 everywhere so the wave reads the same on every
  * world; `phase_duration` doubles once, and `ages` carries the rest.
+ *
+ * `demand` alternates − / + / − / + / − across the system. The swing is forced
+ * economically and never by a lock: a player who wants to eat the penalty and
+ * run one pole forever still can, which is the toll's own rule one level up.
  */
 const data: Record<string, PlanetData> = {
   'first': {
@@ -25,6 +29,8 @@ const data: Record<string, PlanetData> = {
       agesLived: 1,
       mergeMinimum: 0.15,
     },
+    // The first world teaches the swing by paying for it. No tutorial says so.
+    demand: { wants: -1 },
     harvest: {
       // Seconds of income, not amounts. At the toll (×2 speed) this pays back
       // 0.5× your experience and 1.5× your averaged karma, every second, forever.
@@ -49,6 +55,7 @@ const data: Record<string, PlanetData> = {
       agesLived: 2,
       mergeMinimum: 0.25,
     },
+    demand: { wants: 1 },
     anchoring: { anchors: 2, duration: 36_000, bonusPerAnchor: 0.25 },
     harvest: {
       yields: { experience: 30, karma: 90 },
@@ -70,6 +77,7 @@ const data: Record<string, PlanetData> = {
       agesLived: 2,
       mergeMinimum: 0.35,
     },
+    demand: { wants: -1 },
     anchoring: {
       anchors: 3,
       duration: 180_000,
@@ -94,6 +102,7 @@ const data: Record<string, PlanetData> = {
       agesLived: 4,
       mergeMinimum: 0.45,
     },
+    demand: { wants: 1 },
     anchoring: {
       anchors: 4,
       duration: 240_000,
@@ -119,6 +128,7 @@ const data: Record<string, PlanetData> = {
       agesLived: 8,
       mergeMinimum: 0.5,
     },
+    demand: { wants: -1 },
     anchoring: {
       anchors: 5,
       duration: 300_000,

@@ -7,9 +7,13 @@
    * The track is deliberately not to scale — see `BOW`. Lengths here are not
    * comparable to each other, which is the price of making the gate legible;
    * the figure under the track is the number of record, the slug only a place.
+   *
+   * Every mark is placed in device pixels rather than percentages — see
+   * `createPixelGrid` for why a hairline cannot be left on a fraction of one.
    */
   import Label from './Label.svelte';
   import { formatExcess } from './format';
+  import { createPixelGrid } from './pixel-grid.svelte';
 
   interface Props {
     /** Signed excess, 1 = nothing held pairs. Negative is Burden. */
@@ -39,6 +43,9 @@
    * What sets the ceiling is `TICKS`, not the curve: past about 25 the outer
    * marks slide into the track's end and the ruler stops being readable there.
    * Bow harder than this and the 75% tick should go with it.
+   *
+   * The harvest's alignment track does *not* bow — it spans the gate rather than
+   * ±100%, so its distances are legible as themselves. See `AlignmentPanel`.
    */
   const BOW = 25;
 
@@ -46,14 +53,25 @@
   const bow = (u: number) => Math.log1p(BOW * u) / Math.log1p(BOW);
 
   /**
-   * Position on the track, in percent. Bowed on the magnitude and mirrored, so
-   * the two sides stay each other's reflection and zero stays dead centre.
+   * Position on the track, 0…1. Bowed on the magnitude and mirrored, so the two
+   * sides stay each other's reflection and zero stays dead centre.
    */
-  const at = (x: number) => {
+  const fraction = (x: number) => {
     const clamped = Math.max(-SPAN, Math.min(SPAN, x)) / SPAN;
 
-    return `${(0.5 + Math.sign(clamped) * bow(Math.abs(clamped)) * 0.5) * 100}%`;
+    return 0.5 + Math.sign(clamped) * bow(Math.abs(clamped)) * 0.5;
   };
+
+  /**
+   * The device pixel grid the track stands on — see `createPixelGrid`. Marks are
+   * placed in pixels rather than percentages because a hairline on a fraction of
+   * a device pixel is painted as a soft double line, and at 125% or 150% display
+   * scaling a percentage lands on one more often than not.
+   */
+  const grid = createPixelGrid();
+
+  /** Where a reading sits, as a snapped pixel offset into the track. */
+  const at = (x: number) => grid.snap(fraction(x) * grid.width);
 
   /**
    * Where the ruler is marked, as magnitudes mirrored onto both sides. Round
@@ -77,25 +95,29 @@
 <div class="excess">
   <!-- Carries the figures' own strut, so the track can sit on their baseline. -->
   <div class="band">
-    <div class="track">
+    <!-- Nothing is drawn until the box has been measured: every mark is a pixel
+         offset into it, and at a width of nought they would all stack on the
+         left edge for one frame. -->
+    <div class="track" {@attach grid.measure} style:--hair="{grid.hair}px">
+    {#if grid.width > 0}
     <!-- First, so everything else draws over them: the ruler is ground, not a
          mark on the reading. -->
     {#each TICKS as tick (tick)}
-      <span class="tick" style:left={at(-tick)}></span>
-      <span class="tick" style:left={at(tick)}></span>
+      <span class="tick" style:left="{at(-tick)}px"></span>
+      <span class="tick" style:left="{at(tick)}px"></span>
     {/each}
 
     <span
       class={['slug', isComfort ? 'pos' : 'neg']}
-      style:left={slugFrom}
-      style:right="calc(100% - {slugTo})"
+      style:left="{slugFrom}px"
+      style:right="{grid.width - slugTo}px"
     ></span>
 
     <!-- The gate is |excess| under a threshold, so it is a doorway spanning
          both sides, never one tick on one side. One hairline fork above the
          track: the span is the opening, the legs are its posts. -->
     {#if gate !== undefined}
-      <span class="fork" style:left={at(-gate)} style:right="calc(100% - {at(gate)})"></span>
+      <span class="fork" style:left="{at(-gate)}px" style:right="{grid.width - at(gate)}px"></span>
 
       <!-- Sat on top of its own fork, not on the rail below: the gate is a mark
            on the scale, and naming it where it is drawn keeps the line under the
@@ -107,9 +129,8 @@
       </span>
     {/if}
 
-    <span class="zero" style:left={at(0)}></span>
-    <!-- <span class="wall start"></span>
-    <span class="wall end"></span> -->
+    <span class="zero" style:left="{at(0)}px"></span>
+    {/if}
     </div>
   </div>
 
@@ -274,7 +295,7 @@
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 1px;
+    width: var(--hair);
     background: var(--line-300);
   }
 
@@ -302,21 +323,21 @@
     top: -7px;
     height: 4px;
     box-sizing: border-box;
-    border: 1px solid var(--ink-300);
+    border: var(--hair) solid var(--ink-300);
     border-bottom: 0;
   }
 
   .zero {
     top: -4px;
     bottom: -4px;
-    width: 1px;
+    width: var(--hair);
     background: var(--ink-900);
   }
 
   .wall {
     top: -4px;
     bottom: -4px;
-    width: 2px;
+    width: calc(var(--hair) * 2);
     background: var(--ink-900);
   }
 

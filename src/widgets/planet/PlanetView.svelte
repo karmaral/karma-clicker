@@ -34,12 +34,20 @@
     paid?: number[];
     /** Which of those cohorts pay by the tick. See `PlanetScene`. */
     streaming?: boolean[];
+    /** And which are being pointed at, so their orbit is drawn. See `OrbitRing`. */
+    lit?: boolean[];
+    /** A running count of souls bought per cohort — each rise flashes that ring. */
+    bought?: number[];
+    /** Seconds a life takes in each cohort — a quick one orbits quickly. See `rateOf`. */
+    pace?: number[];
     /** The share of the swarm staying with the world. See `SoulSwarm`. */
     merge?: number;
     /** The harvest's alignment, and the whole switch for the core. See `PlanetScene`. */
     alignment?: number;
     anchors?: AnchorVisual;
     anchored?: boolean[];
+    /** Whether the world turns to present the anchor going down. See `PlanetScene`. */
+    facesSite?: boolean;
     harness?: HarnessVisual;
     /** How many souls the harness carries. See `SoulSwarm`. */
     riders?: number;
@@ -94,10 +102,14 @@
     cohorts,
     paid,
     streaming,
+    lit,
+    bought,
+    pace,
     merge,
     alignment,
     anchors,
     anchored,
+    facesSite = false,
     harness,
     riders,
     working,
@@ -250,10 +262,14 @@
         {cohorts}
         {paid}
         {streaming}
+        {lit}
+        {bought}
+        {pace}
         {merge}
         {alignment}
         {anchors}
         {anchored}
+        {facesSite}
         {harness}
         {riders}
         {working}

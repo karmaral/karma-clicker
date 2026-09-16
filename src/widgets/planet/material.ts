@@ -973,6 +973,7 @@ const harnessFragment = /* glsl */ `
   uniform float uBackFade;
   uniform float uBackHide;
   uniform float uLevelFade;
+  uniform float uAlpha;
 
   varying float vLevel;
   varying vec3 vRel;
@@ -1000,7 +1001,7 @@ const harnessFragment = /* glsl */ `
     float tone = mix(uOutTone, uInTone, over);
     tone += (back * uBackFade + vLevel * uLevelFade) * sign(3.0 - tone);
 
-    gl_FragColor = vec4(readRamp(tone), 1.0);
+    gl_FragColor = vec4(readRamp(tone), uAlpha);
 
     #include <colorspace_fragment>
   }
@@ -2543,11 +2544,14 @@ export function createHarnessMaterial() {
     // A ribbon's winding follows whichever way its segment happens to run, so
     // there is no consistent front to cull.
     side: THREE.DoubleSide,
-    // Transparent, though every fragment it writes is alpha 1. Three draws the
-    // whole opaque pass before the transparent one and honours `renderOrder`
+    // Transparent, and the harness itself writes alpha 1 throughout. Three draws
+    // the whole opaque pass before the transparent one and honours `renderOrder`
     // only *within* a pass, so once the body blends nothing opaque can sit
     // above it — an opaque harness is painted over by the world it crosses,
     // front loops and all. Costs one blend of a fully opaque source.
+    //
+    // Which is also what lets the orbit ring borrow this shader at half strength
+    // — see `syncOrbitRingUniforms`. The blend was already being paid for.
     transparent: true,
     // The lines behind the planet stay visible and pale rather than
     // disappearing, so the depth buffer must not have an opinion about them.
@@ -2563,6 +2567,9 @@ export function createHarnessMaterial() {
       uBackFade: { value: 2 },
       uBackHide: { value: 0 },
       uLevelFade: { value: 1 },
+      // The harness never writes this — a cage is drawn or it is not. It is here
+      // for the ring, which is the one caller that wants less than the whole ink.
+      uAlpha: { value: 1 },
     },
   });
 }
@@ -2915,6 +2922,57 @@ export function syncHarnessUniforms(
   u.uBackFade.value = Math.round(visual.backFade);
   u.uBackHide.value = Math.round(visual.backHide);
   u.uLevelFade.value = Math.round(visual.levelFade);
+}
+
+/**
+ * The hovered cohort's own line, on the harness's material and so on the
+ * harness's ink rule — two tones by place, cut at the body's drawn edge. It is
+ * the same reading the dots that ride it already go by, which is the whole
+ * reason the ring borrows that shader instead of owning one.
+ *
+ * Fixed rather than authored. A ring exists only under a pointer, so there is no
+ * world it could look wrong on and nothing for a slider to be dragged against.
+ *
+ * Its weight and its strength are one decision spent in two places: a hairline at
+ * full ink is a wire, and this is a lane. So the stroke keeps a width it can
+ * actually be seen to have and gives the *ink* away instead — which is also what
+ * keeps a circle drawn through a clump of dots from reading as brighter than the
+ * dots it is naming. The strength itself is `OrbitRing`'s, because there it moves.
+ */
+const RING_WIDTH = 1.5;
+const RING_FLOOR = 1;
+
+export function syncOrbitRingUniforms(
+  material: THREE.ShaderMaterial,
+  zoom: number,
+  size: number,
+  rim: number,
+) {
+  const u = material.uniforms;
+  const px = weightOf(RING_WIDTH, size, RING_FLOOR);
+
+  u.uWidth.value = zoom > 0 ? px / zoom : 0;
+  u.uRim.value = rim;
+
+  // The souls' own pair, so the line is the ink of the dots it names.
+  u.uInTone.value = 0;
+  u.uOutTone.value = 6;
+
+  // Hidden where it passes behind the world, as the souls are — a full circle
+  // laid over the body would read as a flat mark on it rather than an orbit
+  // around it. Which leaves nothing for the fade to do.
+  u.uBackHide.value = 1;
+  u.uBackFade.value = 0;
+
+  // One line, so there is no family for a level to sink into.
+  u.uLevelFade.value = 0;
+
+  // Butt caps, which every other stroke here would be wrong to use. A square cap
+  // pushes each span past its own endpoint, and at 128 of them a closed circle
+  // would overlap itself at every joint — invisible at full ink, and at half a
+  // string of 128 darker beads. The turn between spans is under three degrees,
+  // so what the cap was filling is a nick far finer than the stroke.
+  u.uCap.value = 0;
 }
 
 export function syncAnchorUniforms(material: THREE.ShaderMaterial, visual: AnchorVisual) {

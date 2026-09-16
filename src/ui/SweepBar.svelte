@@ -43,11 +43,16 @@
      * already served rather than snapping back to empty.
      */
     const draw = (duration: number, remaining: number) => {
-      if (!duration || remaining <= 0 || !bar) return;
+      if (!bar) return;
+
+      // Cancelled before anything is read, so a cycle called off — a `halt`,
+      // which arrives as a wait of no length — takes the sweep down with it
+      // rather than letting it run on to a landing that is not coming.
+      bar.getAnimations().forEach((animation) => animation.cancel());
+      if (!duration || remaining <= 0) return;
 
       const from = Math.max(0, Math.min(1, 1 - remaining / duration));
 
-      bar.getAnimations().forEach((animation) => animation.cancel());
       bar.animate(
         [{ transform: `scaleX(${from})` }, { transform: 'scaleX(1)' }],
         { duration: remaining, easing: 'linear' },

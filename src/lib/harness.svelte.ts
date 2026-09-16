@@ -2,7 +2,9 @@
  * The rig, and the job it does. A world past the first *offers* anchor slots;
  * taking the offer is a choice, and while it is open the split stops being an
  * idle tax and becomes the only lever: reserved souls place the anchors, and the
- * hand helps.
+ * hand helps. The offer is spent when the last anchor lands — buying capacity
+ * later re-offers the world rather than reopening the job, so the choice is
+ * made once per set of slots and never on your behalf.
  *
  * Progress is denominated in milliseconds of the *job*, never in an abstract
  * work unit — so every figure the panel prints is a time, and a press has a time
@@ -17,6 +19,7 @@ import { ModifierSet } from '$lib/modifiers';
 import { BuildingManager, PlanetManager, ResourceManager } from '$lib/managers';
 import { clock } from '$lib/clock';
 import { readAxes } from '$lib/rig';
+import { reserve } from '$lib/reserve.svelte';
 import balance from '$data/balance';
 import type { Modifier, ResourceType } from '$types';
 
@@ -147,6 +150,17 @@ class Harness {
     return Math.min(this.#anchorsAsked, Math.floor(planet.placedMs / planet.anchorDuration));
   });
 
+  /**
+   * Of those, the ones a closed job paid for. A cancel keeps them, so the two
+   * readings are what the confirm has to be able to tell apart.
+   */
+  #anchorsBanked = $derived.by(() => {
+    const planet = PlanetManager.getActive();
+    if (!planet?.anchorDuration) return 0;
+
+    return Math.min(this.#anchorsAsked, Math.floor(planet.bankedMs / planet.anchorDuration));
+  });
+
   /** One flag per slot the rig is filling — what `Anchors` draws. */
   #anchored = $derived.by(() => {
     return Array.from({ length: this.#anchorsAsked }, (unused, i) => i < this.#anchorsPlaced);
@@ -191,6 +205,13 @@ class Harness {
    */
   tick() {
     if (!this.#isRunning) return;
+
+    // Read before the clock moves, so a job finished last session closes on the
+    // first tick rather than waiting for something to place. Capacity bought
+    // afterwards re-offers the world; it never resumes it.
+    if (this.isAnchored) {
+      PlanetManager.getActive()?.closeAnchorJob();
+    }
 
     const now = clock.now();
     const elapsed = now - (this.#lastAt ?? now);
@@ -306,6 +327,12 @@ class Harness {
 
   addModifier(modifier: Modifier) {
     this.#modifiers.add(modifier);
+
+    // A finer lever leaves the share sitting between slots — put it on the one
+    // below rather than let it read a setting it can no longer be set to.
+    if (modifier.stat === 'step') {
+      reserve.snapTo('anchoring', this.step);
+    }
   }
 
   /** The lines are bought, so nothing rederives them — a save stores both raw. */
@@ -342,6 +369,10 @@ class Harness {
   get anchorsAsked() { return this.#anchorsAsked; }
   get anchorsPlaced() { return this.#anchorsPlaced; }
   get anchored() { return this.#anchored; }
+
+  /** Anchors a cancel would keep, and the ones it would pull. */
+  get anchorsBanked() { return this.#anchorsBanked; }
+  get anchorsAtRisk() { return Math.max(0, this.#anchorsPlaced - this.#anchorsBanked); }
 
   /** How far into the one being placed, 0…1. Full once the last one is in. */
   get anchorFill() {

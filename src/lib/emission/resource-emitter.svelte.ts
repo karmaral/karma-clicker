@@ -3,8 +3,13 @@ import balance from '$data/balance';
 
 export type Listener = (detail?: Record<string, unknown>) => void;
 
-/** Events the emitter owns. Anything composing one routes these through to it. */
-export const EMITTER_EVENTS = ['queue', 'action'];
+/**
+ * Events the emitter owns. Anything composing one routes these through to it.
+ * `halt` is the cycle in flight being called off — its own event and not a
+ * `queue` of no length, so a listener that stamps something when a cycle begins
+ * is not handed a beginning that never happened.
+ */
+export const EMITTER_EVENTS = ['queue', 'action', 'halt'];
 
 /** The clock half of a producer. The payout is injected. */
 export default class ResourceEmitter {
@@ -21,6 +26,13 @@ export default class ResourceEmitter {
   #isAutonomous = $state(false);
   #isInProgress = $state(false);
   #nextAt = $state(0);
+
+  /**
+   * Stopped by its owner rather than between cycles. Autonomy is untouched by
+   * it — the emitter is still one that requeues, it just has nothing running —
+   * so `isStreaming` has to read this or a halted stream still draws as one.
+   */
+  #isHalted = $state(false);
 
   /** What the queued payout covers, in cycles. Set by `queue`, spent by `emit`. */
   #batch = 1;
@@ -44,12 +56,14 @@ export default class ResourceEmitter {
    * no rate, and an infinite one has no batch to work out.
    */
   #isStreaming = $derived(
-    this.#isAutonomous && this.#duration > 0 && this.#duration <= balance.emission.streamUnder,
+    this.#isAutonomous && !this.#isHalted
+    && this.#duration > 0 && this.#duration <= balance.emission.streamUnder,
   );
 
   #listeners: Record<string, Listener[]> = {
     queue: [],
     action: [],
+    halt: [],
   };
 
   constructor(
@@ -62,6 +76,27 @@ export default class ResourceEmitter {
 
   queue() {
     this.#arm(0);
+  }
+
+  /**
+   * The cycle in flight, called off. The epoch retires it, so the timer still
+   * pending lands on nothing and nothing is paid for a wait that was cut short.
+   *
+   * Not `toggleAutonomy(false)`, which stops the *next* cycle and lets this one
+   * land — and nothing is kept of the wait served: `queue` starts a fresh one,
+   * which is the honest reading when what halted it was the payout becoming
+   * nothing. Idempotent, so an owner may call it every tick.
+   */
+  halt() {
+    if (!this.#isInProgress) return;
+
+    this.#epoch += 1;
+    this.#queuedWait = 0;
+    this.#nextAt = 0;
+    this.#isInProgress = false;
+    this.#isHalted = true;
+
+    this.#runCallbacks('halt');
   }
 
   /**
@@ -87,6 +122,7 @@ export default class ResourceEmitter {
    */
   #arm(progress: number) {
     this.#isInProgress = true;
+    this.#isHalted = false;
 
     const duration = this.#duration;
     const isStreaming = this.#isStreaming;
@@ -159,6 +195,9 @@ export default class ResourceEmitter {
 
   get isAutonomous() { return this.#isAutonomous; }
   get isInProgress() { return this.#isInProgress; }
+
+  /** Stopped by its owner, with autonomy still on. `queue` is what undoes it. */
+  get isHalted() { return this.#isHalted; }
 
   /** Paying by the tick rather than by the life. Anything drawing a clock wants it. */
   get isStreaming() { return this.#isStreaming; }

@@ -7,6 +7,9 @@
  * can take from the other: a share is set against what the other leaves, and what
  * neither claims incarnates. A share larger than its slots is simply idle, which
  * is what a coarse step costs and what the granularity upgrades buy back.
+ *
+ * The step itself lives on the job's machine, not here — the two ladders are
+ * allowed to diverge. This stays a leaf, and `snapTo` is pushed in.
  */
 
 export type SplitJob = 'anchoring' | 'refining';
@@ -33,6 +36,24 @@ class Reserve {
     if (job) return Math.round(count * this.shareOf(job));
 
     return Math.min(count, this.countHeld(count, 'anchoring') + this.countHeld(count, 'refining'));
+  }
+
+  /**
+   * Onto the nearest slot at or below where it sits — called by the job's own
+   * machine when a granularity upgrade lands and the share stops being a
+   * setting the lever can express. Down, never up: a finer grain must not
+   * quietly reserve souls nobody asked for.
+   *
+   * The epsilon is against the division, not the share: `0.3 / 0.1` is a hair
+   * under 3 in binary, and flooring it would drop a whole slot on a lever that
+   * was already exactly on one.
+   */
+  snapTo(job: SplitJob, step: number) {
+    if (step <= 0) return;
+
+    const slots = Math.floor(this.shareOf(job) / step + 1e-9);
+
+    this.set(job, Number((slots * step).toFixed(6)));
   }
 
   shareOf(job: SplitJob) {

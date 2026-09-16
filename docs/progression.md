@@ -4871,7 +4871,7 @@ What that buys, beyond the fix:
 
 - **`agesLived` is a promise you can read.** 4 / 8 / 16 / 32 / 64 minutes across
   the five worlds, authored in `planets.ts` and printable in the UI.
-- **`reaimPhases: 2` means something fixed.** The re-aim penalty is priced in
+- **The re-aim penalty means something fixed.** It is priced in
   `progress`, so on the old third world it was a permanent debuff with no figure
   in `balance.ts` that could have changed that. Anything else phase-priced is
   fixed with it.
@@ -5263,6 +5263,78 @@ The draft's preview line is the same mark asked as a question, which is what mak
 Both lines are solid and separated by weight. The playhead owns the dash, so a
 second dashed line would have read as another now.
 
+**Reaching a world resets the dial**, and this closes a defect nobody had hit
+yet. `reaimedAtPhase` is stamped in the *active world's* progress units, so a
+penalty owed on the world you just left read against a clock that had restarted
+at zero: `phasesSinceReaim` clamped to 0 and the full 65% cut hung over the new
+world until it reached a phase number the old one had already passed. The reset
+makes that unreachable rather than patching the subtraction.
+
+It lives on `reach` and not on `select` or `restore` — `select` is only the boot
+picking the first world, and `restore` is a run resuming where it was. `reach` is
+the one place a new world begins. `PlanetManager` reaches the singleton directly
+and inside the method, which is the same cycle-avoidance rule already written
+above it for `harness`.
+
+The reset is free. It is not a decision anyone made, so charging phases for it
+would be charging for arriving — and there is nothing to charge against anyway,
+since the new world has lived none.
+
+## A world wants a pole, and the demand is banked as it is earned
+
+A measured run harvested Burden by accident, then had to hard-aim positive to
+clear it, then harvested Comfort, then had to swing back. That was the first time
+the aim dial had work to do — and the diagnosis is not that karma should expire.
+It is one step earlier and much cheaper: **excess only ever names one target, and
+that target is zero.** Zero is where you already are if you never touch the dial,
+so Even wins by default and not because it is strong. `design.md` §14 is the fix.
+
+**The demand cannot be a reading taken at the harvest.** `excessGate` puts the
+excess inside ±0.12 at that instant by construction and ±0.03 by world 5, so the
+door and the demand would be fighting over one number with no room in it. The
+share is accumulated across the stay instead, in `Planet`, off every karma payout
+`Building.#payKarma` makes — which already has the positive/negative split in
+hand and so costs nothing to feed.
+
+Two sums travel and not the ratio: a world is saved mid-stay far more often than
+it is saved at the harvest, and a ratio cannot be added to. The bonus is then
+locked at departure beside the anchors', for the same reason — what the world
+pays for is what you did while you were standing on it.
+
+**Keying it on the locked alignment does not work**, and that is worth writing
+down because the first draft of §2 read that way. Cleaning up to pass the gate
+lands you in `evenBand`, which would wipe the demand the whole world was spent
+earning. Keyed on the running share the arc composes instead: tilt hard for most
+of the world, spend the last stretch clearing, and the cleanup costs nothing it
+already paid for. The three-row table in the design is the poles of one
+continuous curve, never three cases.
+
+`K × D^(2·matchShare − 1)` is mean-preserving in log space, which is the wave's
+bias pair's own idiom — nothing is added to the payout, the same `K` is
+redistributed across the poles. That is deliberate: `anchorBonus` already
+multiplies `perDelivery` and compounds across five worlds, and a second unbounded
+multiplier beside it is how a payout runs away.
+
+**Even is now the only lock a world can neither improve nor spoil**, since it pays
+no karma for `D` to move. That may be right — Even is the refusal of the offer —
+but it is not settled, and it lands on top of the standing question about Even's
+×3.
+
+**The demand reads what you produced, not what you hold.** The refinery consumes
+karma; `matchShare` is fed at the payout, so refining never moves it. A world's
+demand and the refinery's intake are separate readings on purpose.
+
+**Nor does a finished world's harvest count towards the world you are standing
+on.** It pays through the planet's own emitter rather than through a cohort, so
+it never reaches the tally — which is the right answer twice over: that karma is
+routed by an alignment locked long ago and nothing you do now can aim it, so
+counting it would let the worlds behind you fill or dilute the current world's
+demand for free.
+
+Unmeasured, and the two are one retune: the correction cost moves from once-a-run
+to once-a-world, and `excessGate` tightens while the demand asks for a deeper
+tilt. World 5 has not been shown to be passable under both.
+
 ## Excess is read once, in two stages
 
 The band was printing excess twice: a bare percent in the third cell, which was
@@ -5283,6 +5355,69 @@ existed, which made beat 8 a beat that revealed nothing. It gates now.
 The scale rides on `discovery` rather than on a beat of its own. There was no
 trigger that wanted to be one — the condition is *somewhere else exists*, which is
 that beat — but if excess wants its own stretch of tutorial it splits out here.
+
+## A level has no price
+
+r2 step 9 asked for a per-cohort cost ramp. It arrived, but not the way §1b
+argued, and the detour is the part worth keeping.
+
+**Step 9 as written forced a gate ladder per cohort.** The top gate was bound by
+`ramp^G = ladder total × X` — a steeper ramp has to stop sooner or its top rungs
+cost more than they are worth — so eight ramps meant eight tier rows. That was
+rejected on sight as a mess, and the counter-proposal was AdCap's ladder,
+25 / 50 / 100 / 200 / 300 / 400, shared by everyone.
+
+**Half of it ports and half of it does not, and separating the halves answered
+the whole thing.** Two things let AdCap do it and this game had neither:
+
+- **Its milestones are free.** No `priceFactor`, so no rung-versus-copy
+  comparison exists and nothing can be underwater. The whole solvency rule is a
+  statement about a *priced* rung.
+- **Its crossover is ~16 copies.** Cost ×12 a tier against rate ×4 gives
+  `ramp^k = 3`. Here the ratios are 7 and 5, `ramp^k = 1.4`, and k = 5. That
+  turns out not to matter for the *first* gate — 25 copies of cohort 1 is 949
+  experience and cohort 2 is not revealed until 2,625, so you cross it before
+  there is anywhere else to go. It matters for everything above.
+
+**So the price came off first.** A priced rung was never a decision: the gate
+cancels out of both sides of the comparison, leaving a rung worth exactly
+`1/priceFactor` copies at every gate on every cohort. At 1 it is an off switch;
+at anything lower it strictly dominates and you buy it on sight. There is no
+value at which it is a choice. r2 §1b diagnosed the ladder as *inert* and priced
+it to fix that; free is the other fix, and it deletes a knob rather than tuning
+one.
+
+**And free unblocked the thing it was holding shut.** With no rung price there
+is no solvency rule, so a per-cohort ramp no longer forces per-cohort gates — a
+steep row just reaches fewer of them, nothing is stranded because nothing was
+bought, and **AdCap's counts became legal to author.** They are what shipped:
+`[25, 50, 100, 200, 300, 400]`.
+
+⚠ **Legal is not the same as balanced, and this is the open half.** Six rungs is
+×64 where the packed ten-rung draft was ×1_024, over four times the span, so a
+levelled cohort 1 falls below cohort 8's first copy from about a hundred copies
+on and never returns. §5's *a fully-levelled cohort 1 still earns while you are
+buying cohort 8* is false at these figures and has been retired rather than
+restated. The gate counts are the authored thing here; **the ×2 is not**, and it
+is the cheaper of the two to change — six rungs of ×4 is ×4,096 and restores the
+crossing. That trades against *a rung halves the life*, which at six rungs only
+cohorts 1 and 2 can honour anyway. Nothing is measured; the bench decides.
+
+**Nothing was built for this.** `acquireUnpriced()` has granted priceless
+upgrades off the loop since the scopes pass, `releaseUnheld()` has taken back
+count-gated ones since the merge rule, and the rail has drawn an unpriced chip as
+`approaching` the whole time. Deleting `costs` from `levelUpgrades` was the
+entire code change; the rest of the commit is the ramp, the gates and the prose.
+
+⚠ **A gate every hundred copies makes a long run-up.** The hundred copies before
+gate 200 each pay back over days and only the gate copy is worth having, so a
+payback-ranked buyer stops well short. Whether that reads as a goal or as a wall
+is a bench question and desk arithmetic cannot settle it.
+
+⚠ **The ramp says less at six rungs than it did at ten.** Cohort 1 reaches all
+six and rows 3 through 7 all reach four, so the whole spread is three multiplier
+steps wide. It is *cohort 1 against the rest*, which is the Lemonade Stand's
+role and worth naming as that rather than as a spectrum.
 
 ## Naming
 

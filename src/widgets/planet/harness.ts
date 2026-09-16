@@ -619,13 +619,13 @@ export const HARNESS_PARAMS: HarnessParam[] = [
 ];
 
 export const DEFAULT_HARNESS: HarnessVisual = {
-  density: 0.45,
-  span: 1.5,
-  levels: 3,
-  inner: 0.4,
+  density: 0.65,
+  span: 1.65,
+  levels: 2,
+  inner: 0.115,
   outer: 0.5,
   twist: 0,
-  spread: 0.91,
+  spread: 0.11,
   reach: 0.2,
   inTone: 0,
   outTone: 1,

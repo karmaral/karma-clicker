@@ -1,6 +1,7 @@
 import type { ItemTextData } from '$types';
 import { levelTexts } from './cohort-levels';
-import { COHORT_COUNT, cohortId } from './buildings';
+import { COHORT_COUNT, cohortId, LEVEL_GATES } from './buildings';
+import { roman } from '$lib/utils';
 
 const data: Record<string, Record<string, ItemTextData>> = {
   'global': {
@@ -171,6 +172,13 @@ const data: Record<string, Record<string, ItemTextData>> = {
     }),
   ),
   'cohorts': {
+    ...Object.fromEntries(
+      LEVEL_GATES.map((gate, index) => [`milestone_${index + 1}`, {
+        title: `Generation ${roman(index + 1)}`,
+        description: `Placeholder. Every cohort ${gate} strong, all at once — the whole wheel turns twice as fast.`,
+        effect: 'every life halved',
+      }]),
+    ),
     'shorter_lives_1': {
       title: 'Shorter Lives I',
       description: 'Placeholder. Every cohort turns over a little faster.',

@@ -6,6 +6,8 @@
    */
   import { Section } from '$ui';
   import { aim, type Detent } from '$lib/aim';
+  import { PlanetManager } from '$lib/managers';
+  import { getDemandLabel } from '$lib/labels';
   import balance from '$data/balance';
   import { formatRounded } from '$lib/utils';
   import AimControl from './AimControl.svelte';
@@ -13,17 +15,46 @@
   const owed = $derived(aim.phasesOwed);
   const draft = $derived(aim.draft);
 
+  const planet = $derived(PlanetManager.getActive());
+
   /** What the verb will cost, not what is currently owed — nothing is owed yet. */
   const price = $derived(Math.round(balance.aim.reaimPenalty * 100));
+
+  /**
+   * The depth is flat and the *duration* is what the move buys, so the verb has
+   * to say both — otherwise a nudge and a full swing read identically right
+   * where the choice between them is made.
+   */
+  const span = $derived(aim.draftPhases);
+
+  /**
+   * The world's standing offer, and what it is paying so far. This is the one
+   * place in the game that names a target other than zero, and it belongs in the
+   * aside of the control that answers it — every other reading wants the piles
+   * paired, which is where you already are if you never touch the dial. §14.
+   */
+  const demand = $derived.by(() => {
+    const wants = getDemandLabel(planet?.demand);
+    if (!planet || !wants) return;
+
+    const served = Math.round(planet.matchShare * 100);
+    const paying = Math.round(planet.demandBonus * 100) / 100;
+
+    return `Wants ${wants} — ${served}% served, harvest karma ×${paying}`;
+  });
 
   const note = $derived(
     owed > 0
       ? `Settling in — ${formatRounded(owed, 1)} phases left, karma down ${Math.round(aim.reaimPenalty * 100)}%`
-      : 'Dense phases pay for negative, light for positive',
+      : demand ?? 'Dense phases pay for negative, light for positive',
   );
 </script>
 
-<Section label="Aim" reading={aim.detentLabel(aim.detent)}>
+<Section 
+  label="Aim" 
+  reading={aim.detentLabel(aim.detent)}
+  className="aim-control"
+>
   {#snippet aside()}
     <!-- The decision takes the aside while there is one; the standing note is
          what the panel says when nothing is pending. -->
@@ -33,7 +64,8 @@
       <span class="pending">
         <button type="button" class="verb quiet" onclick={() => aim.cancel()}>Cancel</button>
         <button type="button" class="verb commit" onclick={() => aim.confirm()}>
-          Aim {aim.detentLabel(draft).toLowerCase()} · −{price}%
+          Aim {aim.detentLabel(draft).toLowerCase()} · −{price}% for {span}
+          {span === 1 ? 'phase' : 'phases'}
         </button>
       </span>
     {:else}
@@ -45,6 +77,9 @@
 </Section>
 
 <style>
+  :global(.aim-control) {
+    margin-top: auto;
+  }
   .pending {
     display: flex;
     align-items: baseline;

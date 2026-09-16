@@ -107,7 +107,7 @@ export type SoulBolts = ReturnType<typeof createSoulBolts>;
 /**
  * How long between one soul's strikes, in seconds — **the authored rhythm, for
  * a swarm with no economy behind it.** Doubling per band, which is the game's
- * own `duration(n) = 1s × 2^(n-1)`, so the lab reads like the world without the
+ * own `duration(n) = 2s × 2^(n-1)`, so the lab reads like the world without the
  * lab having to be told anything about a cohort.
  *
  * A world that is actually paying out does not come through here at all: it

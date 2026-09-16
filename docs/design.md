@@ -1,7 +1,15 @@
 # Karma Clicker — Design
 
-**v6.1** · 2026-09-08 · supersedes CONTEXT v3
+**v6.3** · 2026-09-11 · supersedes CONTEXT v3
 
+> **v6.3** — the harness became a system with a screen: §12 rewritten around the
+>  world's offer as a *ceiling*, the rig's own visual ladder, cohort lines as a
+>  bought curve, and a twelve-row upgrade table priced in both crimsons. §17
+>  takes the fourth tab. §4's click table and §16's beat ladder are resynced to
+>  `upgrades.ts` and `beats.ts` — both had drifted a full rewrite behind, and
+>  neither figure moved by design, they were only mis-transcribed here.
+>  **`docs/design-v6.2-addendum.md` is still unspliced**, and its headline is
+>  spent: `extremityMultiplier` is 2 in `balance.ts` and §6 already reads 2.
 > **v6.1** — §17 refitted to the frame that shipped: the screen tabs left the
 >  header for a bottom action bar, the rail stopped truncating, the separate
 >  harvest ledger is gone, the planet verbs went back to the columns they act
@@ -254,19 +262,21 @@ are not the order they arrive in.** Read the gate column, not the name.
 
 | Upgrade | Effect | Unlocks at | Costs |
 |---|---|---|---|
-| `str_1` | ×1.5 experience | 40 xp | 30 xp |
-| `str_2` | ×2 experience | 2,500 xp | 1,800 xp |
-| `str_3` | ×3 experience | 400 karma+ | 300 karma+ |
+| `str_1` | ×2 experience | 100 xp | 200 xp |
+| `str_2` | ×2 experience | 2,500 xp | 5,000 xp |
+| `str_3` | ×2 experience | 250 karma+ | 500 karma+ |
 | `str_4` | ×9 experience | 2,000 karma+ | 1,500 karma+ |
-| `carry_1` | +0.2% per riding soul | 60,000 karma− | 200,000 karma+ |
+| `carry_1` | +0.2% per riding soul | 60,000 karma− | 200,000 karma− |
 
-`str_1` alone is the tutorial. Its gate of 40 is also the gate that opens the
-upgrade rail, deliberately, so the rail is never revealed empty and opens holding
-exactly one chip.
+`str_1` alone is the tutorial, but **it is not what opens the rail.** The rail
+opens at 50 experience on **cohort 1's chip** (§5), which is revealed at exactly
+that figure and priced at 100 — so the rail is never seen empty, and `str_1`
+unlocks at that 100 as the chip beside it is bought. Two chips a beat apart, not
+a wall of both at once.
 
-The strength ladder compounds to **×81** (1.5 × 2 × 3 × 9). `str_4` squares
-everything above it once, which is a retune hazard: moving `str_1`–`str_3` moves
-`str_4`'s meaning.
+The strength ladder compounds to **×72** (2 × 2 × 2 × 9). `str_4` is worth
+slightly more than the whole ladder above it — ×9 against ×8 — which is a retune
+hazard: moving `str_1`–`str_3` moves what `str_4` means.
 
 ⚠ **Retune hazard from the instant press.** Every early gate was paced against a
 press that started at one a second and only reached instant at 20,000 xp. It now
@@ -319,116 +329,299 @@ about it falls out of that index.
 ### Three constants and an index
 
 ```
-cost(n)     = 15  × 10^(n−1)        experience
-yield(n)    = 1   × 10^(n−1)        experience per soul
-duration(n) = 1s  × 2^(n−1)
-karma(n)    = 0.2 × yield(n)
-ramp        = 1.07                  every cohort, every copy
+cost(n)     = 15 × 7^(n−1)          experience
+yield(n)    = 2  × 13^(n−1)         experience per soul
+duration(n) = 2s × 2^(n−1)
+karma(n)    = 2  × yield(n)
+ramp(1)     = 1.07
+ramp(n)     = max(1.07, 1.17 − 0.01n)             n ≥ 2
 ```
 
-Two consequences fall straight out of that and both are worth memorising:
+**The ramp is the one figure that is not flat across the ladder**, and it is
+AdCap's shape: the first row is the cheap outlier, the second is the steepest,
+and it eases back to the floor by cohort 10. The level gates do not move with it
+— see *Levels*. What it changes is how far up them a row gets.
 
-> **rate = 5^(n−1) per second.** Each cohort is five times the throughput of the
-> one below it.
+**Price and production ride different ratios, and that is the whole of the
+pacing.** Cost multiplies by 7 a row; yield by 13 against a life that doubles, so
+throughput multiplies by 6.5. The gap between those two numbers is where the
+decision to move up lives.
+
+Two consequences fall straight out and both are worth memorising:
+
+> **rate = 1 × 6.5^(n−1) per second.** Cohort 1 is **one experience a second**,
+> and each cohort is six and a half times the throughput of the one below it.
 >
-> **payback = 15 × 2^(n−1) seconds.** Each cohort takes twice as long to repay
-> itself as the one below it.
-
-Later cohorts are deliberately *worse purchases* at base. That is the shape, not a
-flaw in it: they are bought for the ceiling they raise, and they only become good
-through their levels and through time.
+> **payback = 15 s × 1.077^(n−1).** Each cohort takes **1.077 times** as long to
+> repay itself as the one below it.
 
 | # | Base cost | Yield | Life | Rate/s | Payback |
 |---|---|---|---|---|---|
-| 1 | 15 | 1 | 1 s | 1 | 15 s |
-| 2 | 150 | 10 | 2 s | 5 | 30 s |
-| 3 | 1,500 | 100 | 4 s | 25 | 1 m |
-| 4 | 15,000 | 1,000 | 8 s | 125 | 2 m |
-| 5 | 150,000 | 10,000 | 16 s | 625 | 4 m |
-| 6 | 1.5M | 100,000 | 32 s | 3,125 | 8 m |
-| 7 | 15M | 1M | 64 s | 15,625 | 16 m |
-| 8 | 150M | 10M | 128 s | 78,125 | 32 m |
+| 1 | 15 | 2 | 2 s | 1 | 15 s |
+| 2 | 105 | 26 | 4 s | 6.5 | 16 s |
+| 3 | 735 | 338 | 8 s | 42.3 | 17 s |
+| 4 | 5,145 | 4,394 | 16 s | 274.6 | 19 s |
+| 5 | 36,015 | 57,122 | 32 s | 1,785 | 20 s |
+| 6 | 252,105 | 742,586 | 64 s | 11,603 | 22 s |
+| 7 | 1.76M | 9.65M | 128 s | 75,419 | 23 s |
+| 8 | 12.4M | 125M | 256 s | 490,223 | 25 s |
 
-**Cohort 12 exists the moment somebody writes `n = 12`.** Its payback is eight and
-a half hours, which is what the prestige multiplier is for (§18) and not a reason
-to leave it unauthored.
+**The base is 2 so that the bottom row is a unit.** A rate is the figure a
+player holds, and half of one is not a number anybody counts in. The yield axis
+carries it and not `duration` on purpose: a 1 s base would have moved every life
+on the ladder, and lives are what tell two cohorts apart (§6) and what every
+level rung spends itself on. Doubling the column touches neither —
+but it does halve payback, which is the second generosity step in a row and is
+part of what the ⚠ below is about.
 
-### The staircase is a single number, and it never moves
+### Why 13 and not 10
 
-The whole point of the geometric shape is that **the moment to move up the ladder
-is the same moment at every rung, forever**:
+A yield ratio of ten leaves every row's leading digit at 1. Eight rows reading
+1, 10, 100, 1_000 are **one digit with zeros appended** — the number never
+changes shape, only length — and since the K/M/B suffix flips every third
+decade, a suffix boundary lands exactly on a row boundary and eats it: you cross
+into cohort 7 and the readout says `1M`, which is what cohort 4 said.
+
+What moves the leading digits is the *fractional* part of `log10(ratio)`. It is
+0 at ten, 0.079 at twelve — AdCap's, which only scatters because their first
+jump is ×60 and knocks the sequence off-phase before the rigid ratio takes over
+— and 0.114 here. Over seven rungs that is eight tenths of a full turn, so off
+a base of 2 the mantissa walks **2 → 2.6 → 3.4 → 4.4 → 5.7 → 7.4 → 9.7 → 1.25**,
+the whole digit range once, and never doubles back. Every row has a face; 4,394
+is recognisably cohort 4 the way 4320 is recognisably Pizza Delivery.
+
+> ⚠ **This is not a cosmetic change and must not be read as one.** Payback
+> growth falls from ×1.4 a row to ×1.077 and the base halves, so cohort 8 repays
+> in 25 s where it wanted 316 s. Later cohorts were deliberately *worse
+> purchases* at base — bought for the ceiling they raise — and at 13 they have
+> stopped being worse by
+> any amount a player can feel. **All of the pacing now rests on the gates and
+> on multipliers the cohorts do not yet have** (§5, *Levels*, gives a row ×64
+> and nothing else does anything: `upgrades.ts`'s `cohorts` bucket is two
+> duration boosts totalling ×1.22 for the whole game). This is the trade the
+> change was made to buy, and it is the open question, not a settled figure.
+
+**Cohort 12 exists the moment somebody writes `n = 12`.** Its payback is 34
+seconds — and that flatness is now the ladder's problem rather than its
+terminator. The prestige multiplier (§18) was load-bearing for termination when
+the figure was eight and a half hours; nothing is load-bearing for it now.
+
+### The crossover is a diagnostic, not the pacing
+
+There is a moment where one more of cohort *n* and the first of cohort *n+1*
+are the same buy, and it is a ratio of ratios:
 
 ```
-1.07^n = 10   →   n ≈ 34
+ramp^k = costRatio ÷ rateRatio   →   ramp^k = 7 ÷ 6.5
 ```
 
-Your **34th** copy of cohort *n* costs exactly what the *first* copy of cohort
-*n+1* costs, and that first copy produces five times as much. Below 34 you are
-buying width; above it you are buying depth, and depth is only worth it once the
-levels are paying. There is no per-cohort crossover to tune, because there is
-only one crossover.
+That is **k ≈ 1** at cohort 1's 1.07 and **k ≈ 0.5** at cohort 2's 1.15 — below
+the first copy on every row, so the next row is the better buy from the instant
+it exists. At the old ×10 yield it read k ≈ 5 and k ≈ 2.4. An earlier draft made
+the single value of k the section's law — *the moment to move up is the same
+moment at every rung, forever* — and a per-cohort ramp ended that. It should not
+have been the law in the first place, and at 13 it has stopped being a reading
+at all:
+
+> **You cannot act on the crossover, because the next row does not exist yet.**
+> A row is revealed at `175 × cost(n)` of experience spent on the row below,
+> which is 24 to 38 copies depending on the ramp. The crossover is passed five
+> to fifteen times over before there is anything to move up *to*.
+
+So the reveal rule under *Entry* is the pacing, and it is the more stable of the
+two: it lands between a quarter and a third of the way up every row's ladder,
+whatever that row's ramp. **Read k to check the ladder is not inverted, not to
+schedule anything.**
+
+> ⚠ **Do not read the raw price-parity figure as the crossover either.**
+> `1.07^n = 7` gives n ≈ 29, which is where your *n*th copy costs what the next
+> row's first copy costs — but that ignores the ×6.5 the next row produces, so
+> it names a moment long past the one that matters. The earlier `n ≈ 34` was
+> this same mistake at the old cost decade.
+
+**What actually pulls you deeper is the gate**, and that is *Levels*.
 
 ### Levels — why anyone owns four hundred of anything
 
-Ten rungs, gated on **current count**, each granting **×2** to that cohort. Kept
+Six rungs, gated on **current count**, each granting **×2** to that cohort. Kept
 as `level`, not renamed to `milestone` — §16 already uses that word for a
 different thing, and §20 corrects the earlier call to rename this to it.
 
-**`[10, 25, 50, 100, 150, 200, 250, 300, 350, 400]`**
+**`[25, 50, 100, 200, 300, 400]`** — AdCap's ladder, taken as authored.
 
-A cohort at 400 with its ladder complete is `400 × 1,024` = **409,600×** its base
-rate, against 400× without. **That is the entire reason to go deep on a cohort you
-have already out-scaled** — a fully-levelled cohort 1 still earns while you are
-buying cohort 8, and nothing else in the economy does that.
+**A level has no price.** It is granted the moment the count clears its gate and
+taken back the moment a merge drops below it. That is the whole mechanic, and it
+is the reference's: AdCap's milestones are free too.
 
-The old six-rung ceiling was set by a real constraint — ten rungs of compounding
-speed took `chaos` to twenty milliseconds — and the constraint is now handled
-rather than avoided:
+A priced rung was tried first and was never a decision. Hold one against one
+more copy at gate `g`, where `M` is what a copy currently earns:
 
-> **A rung halves the life until the life reaches ~60 ms. Every rung past that
-> doubles the yield instead.** Both are ×2; only the shape of the ×2 changes.
+```
+rung at gate g:   costs  g · c · ramp^g · pf     gains  g · M
+one more copy:    costs      c · ramp^g          gains      M
+```
 
-So the split is derived, never authored: **halvings = min(10, n + 3)**, and the
-remainder are yield rungs.
+**The `g` cancels out of both sides**, so a rung came to exactly `1/pf` times the
+value of a copy at every gate, on every cohort, forever. At `pf = 1` the two are
+dead even and there is never a reason to prefer a rung; at any lower figure the
+rung strictly dominates and you buy it on sight. **There is no value of `pf` at
+which it is a choice** — only a tax, or an off switch. Free is the honest
+version, and it costs nothing to state.
 
-| Cohort | Halvings | Yield rungs | Life at rung 10 |
-|---|---|---|---|
-| 1 | 4 | 6 | 62 ms |
-| 2 | 5 | 5 | 62 ms |
-| 3 | 6 | 4 | 62 ms |
-| 4 | 7 | 3 | 62 ms |
-| 5 | 8 | 2 | 62 ms |
-| 6 | 9 | 1 | 62 ms |
-| 7+ | 10 | 0 | 62 ms and up |
+#### The gate is what pulls, and it grows teeth
 
-Millisecond lives are fine. The register is deadpan industrial and a life is a
-ledger entry; nothing in the fiction asks a soul to last a perceptible time.
+Free does not mean weightless. The copy that *crosses* a gate doubles the entire
+row, so it is worth wildly more than the copy before it — and the gap widens all
+the way up:
 
-**The price is the existing rule, applied to generated figures.** §5 already had
-it and it survives intact:
-
-> **how many you own at the gate** × **how much better it makes each one** ×
-> **what one more copy costs there** × `priceFactor`
-
-which for a ×2 rung is simply `gate × cost(n) × 1.07^gate × priceFactor`.
-`priceFactor` is now **one number for the whole game** instead of one per cohort.
-
-| Gate | Cohort 1 rung price | Cohort 1 copies owned cost |
+| Gate | payback of the copy before it | payback of the gate copy |
 |---|---|---|
-| 10 | 295 | 207 |
-| 25 | 2,035 | 949 |
-| 50 | 22,095 | 6,098 |
-| 100 | 1.30M | 185,722 |
-| 200 | 2.26G | 161M |
-| 400 | 3.4 × 10¹⁵ | 1.2 × 10¹⁴ |
+| 25 | 142 s | **5.9 s** |
+| 50 | 386 s | **8.1 s** |
+| 100 | 5,684 s | **60 s** |
+| 200 | 28 days | **3.6 hours** |
 
-Four hundred copies of cohort 1 is a genuine late-game purchase. **You finish the
-first cohort last**, which is the AdCap shape and the correct one.
+That is *three more to the milestone*, and it is the shape the priced rung was
+trying to buy. ⚠ **A gate every hundred copies makes the run-up long**: the
+approach to gate 200 is a hundred copies each paying back over days, with only
+the gate copy worth having. A payback-ranked buyer will stop well short. The
+pull is real but it is spread far thinner than a packed ladder spreads it, and
+the bench is what says whether the run-up reads as a goal or as a wall.
+
+#### Where the gates sit — AdCap's numbers, and what they cost here
+
+The counts are the reference's, taken as authored rather than rescaled. **The
+first gate is reached in ordinary play**: 25 copies of cohort 1 is 949
+experience, and cohort 2 is not revealed until 2,625, so you cross it before
+there is anywhere else to go. The last is not reached at all — **gate 400 costs
+121 trillion experience**, some ten thousand times cohort 8's entire opening
+price, and the practical ceiling at a 1.07 ramp is somewhere near 300.
+
+A cohort at 400 with **both** ladders complete is `400 × 4,096` = **1,638,400×**
+its base rate, against 400× with no rungs at all and 25,600× on its own six.
+
+⚠ **Its own six rungs do not make a low row stay worth owning.** Spending only
+on cohort 1 buys only the per-cohort tier — ×64 where ten rungs were ×1,024,
+over four times the span — and that arrives far too slowly to outrun
+`cost(n) = 15 × 7^(n−1)`:
+
+| Cohort 1 count | rungs | experience spent | rate | **rate per 1M xp** |
+|---|---|---|---|---|
+| 25 | 1 | 949 | 25/s | 26,344 |
+| 50 | 2 | 6,097 | 100/s | 16,402 |
+| **100** | **3** | **186k** | **400/s** | **2,154** |
+| 200 | 4 | 161M | 1,600/s | 10 |
+| 400 | 6 | 121T | 12,800/s | 0.1 |
+
+Cohort 8's first copy is **3,162 per 1M**. The row crosses *below* that bar at
+around 100 copies and never returns, so **depth on one row is dominated by width
+at every point past the third gate.** The old claim — *a fully-levelled cohort 1
+still earns while you are buying cohort 8* — is false at these figures and is
+retired rather than restated.
+
+That is now the shape rather than the flaw. Width is what the all-cohort tier
+is priced in: going deep on one row buys ×64 and loses the race, going 25 deep
+on *every* row buys a seventh rung for all of them at once. Depth still pays —
+it pays through width, which is the only spend that reaches every row.
+
+**The way out taken: the gate pays twice.** Packing the gates back under 200 was
+the other candidate and is not needed. AdCap's counts are kept, and so is the
+×2 rung — what changes is that each count is now *two* rewards:
+
+> **25 of one cohort levels that cohort. 25 of every cohort levels them all.**
+> Same six counts, one number to learn, and six more rungs on every row.
+
+Twelve rungs a row, so **×4,096** rather than ×64 — the figure the ×4 rung would
+have bought, without a rung that reads as anything but a halving. The second
+tier is the all-cohort scope (`cohorts` in `upgrades.ts`), fanned out by
+machinery that already existed.
+
+**The top cohort gatekeeps all six.** A cohort that is not unlocked counts as
+holding none, so the tier cannot fire at all until the whole ladder exists and
+every row is 25 deep. That is deliberate — read against unlocked cohorts only,
+25 of cohort 1 alone would grant the first rung and the grant would be taken
+straight back the moment cohort 2 opened at zero. It also gates on **held**
+count, not the lifetime tally, so an all-cohort rung falls with a merge exactly
+as a per-cohort level does.
+
+#### A rung halves the life until the life hits the floor
+
+Both tiers author the same rung and nothing else:
+
+> **A rung halves the life — or doubles the yield, once the life is already at
+> `emission.streamUnder`.** Both are ×2; only the shape of the ×2 changes.
+
+**Halving the life and doubling the yield are the same income.** Rate is yield
+over duration, so `(y × floor/raw) ÷ floor` is `y ÷ raw` — the conversion is
+exact, and a rung that would push a life under the floor is never wasted.
+
+The old split spent this rule as **`halvings = min(6, n + 4)`**, derived from the
+index. That guessed. The conversion now happens in `Building.#clampDuration`,
+live, at the rung where *that cohort's* clock actually reaches the floor —
+counting its own levels, the all-cohort rungs, and the `boost` shortenings
+together. Which rung that turns out to be differs per cohort and per run, which
+is precisely why it cannot be authored, and why neither `cohort-levels.ts` nor
+the milestone tier writes a yield rung at all.
+
+Holding the life at the floor rather than past it also keeps the two axes honest:
+below `streamUnder` the emitter stops keeping a timer per life and pays by the
+tick, so further shortening is invisible where doubling the payout is not.
+
+| Cohort | Base life | Halvings | Yield rungs | Life, all 12 rungs |
+|---|---|---|---|---|
+| 1 | 2 s | 5 | 7 | 62.5 ms |
+| 2 | 4 s | 6 | 6 | 62.5 ms |
+| 3 | 8 s | 7 | 5 | 62.5 ms |
+| 4 | 16 s | 8 | 4 | 62.5 ms |
+| 5 | 32 s | 9 | 3 | 62.5 ms |
+| 6 | 64 s | 10 | 2 | 62.5 ms |
+| 7 | 128 s | 11 | 1 | 62.5 ms |
+| 8 | 256 s | 12 | 0 | 62.5 ms |
+
+**Every cohort bottoms out at 62.5 ms and nowhere else.** The claim was retired
+as a ten-rung artefact; twelve rungs across two tiers restore it, and this time
+it is not a coincidence of the authoring — cohort 8's 256 s is `2^12` floors
+exactly, and every row below spends its surplus rungs on yield instead. The
+ladder's rate ratio is untouched: ×4,096 on every row.
+
+⚠ **A `boost` shortening makes the conversion fractional**, and `payout` rounds.
+On cohort 1, whose yield is 2, a 6% shortening past the floor rounds away
+entirely. It is 6% of the smallest income in the game and is left alone.
+Millisecond lives are fine where they happen: the register is deadpan industrial
+and a life is a ledger entry.
+
+#### How far up the ladder each ramp gets
+
+The gates are shared; the ramp decides reach. Given the budget that takes cohort
+1 to its top gate, as a multiple of each row's own base cost:
+
+| Cohort | ramp | count reached | rungs | row multiplier |
+|---|---|---|---|---|
+| 1 | 1.07 | **400** | **6** | **×64** |
+| 2 | 1.15 | 199 | 3 | ×8 |
+| 3 | 1.14 | 211 | 4 | ×16 |
+| 4 | 1.13 | 226 | 4 | ×16 |
+| 5 | 1.12 | 243 | 4 | ×16 |
+| 6 | 1.11 | 263 | 4 | ×16 |
+| 7 | 1.10 | 287 | 4 | ×16 |
+| 8 | 1.09 | 316 | 5 | ×32 |
+
+**Cohort 1 is the only row that reaches all six**, which is the Lemonade Stand's
+role exactly. ⚠ Honestly read, the differentiation is *cohort 1 against the
+rest* — rows 3 through 7 all land on four rungs and are told apart by duration.
+On a six-rung ladder the whole spread is three multiplier steps wide, so the
+ramp says much less about a row than it did at ten.
+
+Four hundred copies of cohort 1 is 121 trillion experience against cohort 8's
+12.4M opener, so **you finish the first cohort last** in the strongest possible
+sense: on current figures you do not finish it at all. That is the AdCap shape
+taken literally, and whether a terminal gate nobody reaches reads as an horizon
+or as a dead entry in the rail is the thing to watch.
 
 ### Clerks — the game is clicking several things before it is clicking one
 
 **Every cohort past the first starts manual and has a clerk to buy.** You click
-its row to send one batch of souls out. A **clerk** costs `250 × cost(n)` and
+its row to send one batch of souls out. A **clerk** costs `175 × cost(n)` and
 thereafter the cohort runs itself, forever.
 
 ⚠ **`clerk` is a placeholder — the word is unsettled.** It reads as an office the
@@ -446,7 +639,7 @@ clerk chip on it prices busywork you would buy on sight. So autonomy rides along
 with the free first copy, on the same grant, and the row is never manual.
 
 What this costs is one rung of practice: the first clerk anyone pays for is
-cohort 2's, at ten times a price nobody was ever charged. That is a **pacing**
+cohort 2's, at a price nobody was ever charged. That is a **pacing**
 problem and it is answered by pacing rather than by reinstating a purchase on
 cohort 1 — the reveal multiplier under *Entry* now puts cohort 2's row and
 cohort 2's clerk a full ladder apart, so the price is met after the row has been
@@ -493,35 +686,39 @@ the log itself is placeholder and no line of it is load-bearing.
 - **Every cohort past the first is revealed at `25 × cost(n)` experience** and
   has no separate entry price. The first copy *is* the entry. One reveal rule, no
   table.
-  - **`25×`, and it is `250 × cost(n−1)` wearing a different hat.** A cohort
-    costs ten times the one below it, so `reveal(n+1)` and `clerk(n)` are the
-    same figure: **a row appears at the exact moment the row below it can be
-    automated.** Run it, clerk it, next row. The two multipliers are one knob and
-    the code derives one from the other so they cannot drift.
-  - **Corrected from `5×` this session, which was itself a correction of `0.5×`.**
-    Held against a row's own ladder, in units of `10^(n−1)`: the current row's
-    tier I costs 507 all-in, its tier II costs 2,949, its clerk costs 3,750. At
-    `5×` the next row landed at **750** — past tier I, four times short of tier
-    II. So width was permanently the cheaper buy, depth never had a reason, and
-    you could stand two rows clear of your first purchased clerk. At `25×` it
-    lands at 3,750 and the ladder is walked instead of skipped.
-  - **The clerk's `250×` was never the fault** and did not move. It sits just
-    past the row's own tier II, which is the right price for selling your
-    timing away — cheapening it would put automation before tier II and take
-    the manual-batching lever §6 leans on out of the game.
+  - **`25×`, and it is `175 × cost(n−1)` wearing a different hat.** A cohort
+    costs a cost-decade more than the one below it, so `reveal(n+1)` and
+    `clerk(n)` are the same figure: **a row appears at the exact moment the row
+    below it can be automated.** Run it, clerk it, next row. The two multipliers
+    are one knob and the code derives one from the other so they cannot drift.
+  - **Held against the share of the row's ladder it buys.** `175 × cost(n)` of
+    experience is **38 copies** at cohort 1's ramp and **24** at cohort 2's, but
+    both sit between a quarter and a third of the way to that row's reach — so a
+    clerk always arrives a couple of gates in, whatever the row. At the old cost
+    decade it was `250×` and 43 copies, the same place.
+  - ⚠ **Two framings this used to argue from are retired.** It read *the clerk
+    sits just past the row's own tier II*, which needed a rung to have a price;
+    rungs are free now. Then it read *38 copies, just short of tier IV's gate*,
+    which needed one ramp and one gate ladder to be the same for everyone. The
+    share is what survives both.
   - ⚠ **The cost lands entirely in the first ten minutes.** Income is nearly
-    flat while there is one row and a button, so a 5× threshold is close to a 5×
-    wait: the second row moves from roughly two or three minutes to five or
-    eight. After that income compounds and the delay stops being felt. **Not
-    measured against a clock** — see *Open*.
+    flat while there is one row and a button, so a threshold is close to a wait
+    in direct proportion. After that income compounds and the delay stops being
+    felt. **Not measured against a clock** — see *Open*.
 
 ### What this deletes
 
-Per-cohort ramps and the cap-at-200 retune. Per-cohort yields, biases, durations
-and resistances. Per-tier speed and yield multipliers. The six-rung gate ladder and
-the argument that chose it. `through` and per-cohort `priceFactor`. Cohort entry
-prices. The `red_basic` cohort — **the refinery is now the only source of
-Crimson**, which is a cleaner story than a cohort that eats its own output.
+The cap-at-200 retune. Per-cohort yields, biases, durations and resistances.
+Per-tier speed and yield multipliers. The six-rung gate ladder and the argument
+that chose it. `through`, and `priceFactor` in every form — **a level has no
+price at all now**, per-cohort or otherwise. Cohort entry prices. The `red_basic`
+cohort — **the refinery is now the only source of Crimson**, which is a cleaner
+story than a cohort that eats its own output.
+
+⚠ **Per-cohort ramps are not deleted.** An earlier draft of this list cut them,
+on the argument that one ramp made the crossover a single number. They came back
+once rungs were free: a steeper row simply reaches fewer gates, nothing is
+stranded because nothing was bought, and the ladder stays shared.
 
 And `zealot`'s **ρ = ∞** resolves itself: every cohort yields experience, so
 payback is defined everywhere and a buy-policy can rank the whole board.
@@ -533,30 +730,47 @@ payback is defined everywhere and a buy-policy can rank the whole board.
 > **A count-gated upgrade is held only while its count is held.**
 
 A shallow merge costs a rung or two; merging everything costs the ladder. The
-slider still prices its own consequence (§14), and it prices it harder now, because
-ten rungs of ×2 are a bigger thing to lose than six rungs were.
+slider still prices its own consequence (§14), though more softly than the
+ten-rung draft did: six rungs spread over four hundred copies means a merge has
+to be deep to cost you anything at all.
 
-**Prices are generated, never hand-typed.** More true than before: there is now
-exactly one price formula and one `priceFactor` behind every purchase on the
-board.
+**It reads better free than priced.** A merge now costs you milestones and the
+counts that earned them, not money — and the way back is to re-earn the count,
+with nothing to re-buy. The rule did not change; what it takes away got cleaner.
+
+**Prices are generated, never hand-typed.** Still true, and there is now one
+fewer of them: cohorts and clerks are priced by formula, and levels are not
+priced at all.
 
 **An army is a ramp.** The §5 rule still holds — count is set by the ramp — but
 the conclusion inverts. The old ladder had hand-picked yields with no fixed
 relation between cohorts, so income went roughly linear once the last cohort was
 bought and the counts stalled. **Here income compounds by construction**: each
-cohort is a fixed multiple of the last, so the 1.07 curve never catches up, counts
+cohort is a fixed multiple of the last, so no row's ramp catches up, counts
 never stall, and the cap that the retune installed is not needed and is gone.
 
 ### Open
 
 - **Nothing above is tuned against a clock.** The ladder is internally consistent;
   whether cohort 5 arrives at the right minute of the run has not been measured.
-- **`priceFactor` is unauthored** and is now the single pacing knob on every
-  level in the game.
-- **The clerk multiplier of 250×** was lifted straight from AdCap's manager
-  ratio, and it has now been checked against this economy and holds: it prices a
-  clerk just past the row's own tier II, which is the right moment to sell your
-  timing. **The reveal multiplier is the one that does not hold** — see *Entry*.
+- ⚠ **The depth axis does not currently pay, and this is the live question.**
+  Six rungs of ×2 over `[25, 50, 100, 200, 300, 400]` puts a levelled cohort 1
+  below cohort 8's first copy from about a hundred copies on — see *Where the
+  gates sit*. The gate counts are authored and the ×2 is not; **the cheapest
+  fix is the rung, not the ladder.** Six rungs of ×4 is ×4,096 and restores the
+  crossing, at the cost of *a rung halves the life*, which only cohorts 1 and 2
+  can honour at six rungs anyway.
+- **Whether a payback-ranked buyer ever reaches gate 200.** The hundred copies
+  before it each pay back over days. The bench answers this and nothing else
+  does.
+- **Gate 400 is unreachable** at 121 trillion experience, so the ladder has a
+  terminal rung nobody takes. AdCap's runs to 8,000 and is reached only because
+  angel investors multiply income while leaving cost alone; §18's prestige is
+  parked, so nothing here plays that role yet.
+- **The clerk multiplier of 175×** is derived from the reveal multiplier and the
+  cost decade, and it has been re-checked against this economy: it prices a clerk
+  between a quarter and a third of the way up the row's own ladder, whatever that
+  row's ramp, which is the right moment to sell your timing.
 - **Cohorts are `cohort_1`…`cohort_8` in code and `Cohort n` in the UI —
   placeholders, not names.** The four inherited names — Impulse, Steady, Chaos,
   Zealot — were named for yield shapes that no longer exist and are gone from
@@ -694,13 +908,54 @@ That is an argument *for* the square wave that did not exist before.
 ### The re-aim penalty
 
 Changing the detent costs you. `reaimPenalty: 0.65` — a 65% cut to karma —
-decaying linearly to nothing over `reaimPhases: 1`.
+decaying linearly to nothing over a span the move itself buys.
+
+**The cost is the distance, not the destination.**
+
+```
+phases = reaimPhases × ceil(|Δdetent| / 2)
+```
+
+`reaimPhases: 1` is the **unit**, so the shortest step costs one phase and a full
+swing across the track costs two.
+
+| Move | \|Δ\| | Phases |
+|---|---|---|
+| 0 → ±1 | 1 | 1 |
+| 0 → ±2, or ±1 → ∓1 | 2 | 1 |
+| ±2 → ∓1 | 3 | 2 |
+| ±2 → ∓2 | 4 | 2 |
+
+A flat cost was the wrong shape: it made re-aiming constant and turned the
+penalty into permanent background, and **a cost that is always on is not a
+cost**. It also priced a nudge and a full reversal identically.
+
+⚠ **Do not price by destination.** Making ±2 expensive to *enter* is thematically
+right and mechanically wrong: hard aim with the refinery idled is the only
+correction fast enough to clear a deep tilt, and that emergency brake has to stay
+cheap to pull.
+
+⚠ **Halved and rounded up, not `|Δ|` outright.** World 1 is eight phases, so a
+raw `|Δ|` puts a full swing at half the first world. `ceil(|Δ|/2)` is the safe
+authoring; §19's standing question — whether `reaimPhases` should be a share of
+the world rather than a count — is the one that would make `|Δ|` affordable.
+
+**Scale the duration, never the depth.** The wave strip's end-of-penalty marker
+is what made this feel deliberate, and a marker can only move if the duration
+does. `reaimPenalty: 0.65` therefore stays put at every distance.
 
 **The dial is drafted, then confirmed.** Pointing it is free; one verb in the
 Aim panel's aside buys the change. It used to commit the instant the detent
 moved, which made a drag across the track pay the penalty once per detent it
-crossed — the cost of a decision depended on how you happened to make it. The
-draft is not saved: a pending aim surviving a reload is a decision nobody made.
+crossed — the cost of a decision depended on how you happened to make it.
+
+> **The confirm button is also what makes distance pricing possible.** That
+> objection was the reason per-detent pricing was rejected, and it is spent:
+> `|Δdetent|` is well defined at the moment of confirm, whatever path the handle
+> took to get there.
+
+The draft is not saved: a pending aim surviving a reload is a decision nobody
+made.
 
 **The wave draws where it ends.** A solid line on the phase strip marks the
 phase the penalty runs out at, and a fainter one previews where it would land if
@@ -716,6 +971,28 @@ under the old experience-priced wave, have extended its own duration.
 ⚠ The penalty was tuned against an economy where resisted cohorts kept earning
 through a re-aim. Nothing resists now, so it bites harder than it did. It wants
 re-measuring, not necessarily changing.
+
+### Reaching a world resets the dial
+
+> **You arrive at every world at Even, free.** The reset is not a move, so it
+> costs no phases and it clears whatever penalty was still owed.
+
+Three things make it the right rule rather than a convenience:
+
+- **The penalty's clock is the world's, not the run's.** The mark is kept in the
+  active world's progress units (§7), so a penalty owed at phase 12 of the world
+  behind you would read against a new clock that has just restarted at zero — and
+  hang at full depth until the new world caught up to a phase it never shared.
+- **A world's demand has to start neutral.** §14 reads `matchShare` off the karma
+  earned on the world. A hard tilt carried across the gap would begin filling the
+  next world's tally — against a pole that **alternates** — before its screen had
+  said a word about it.
+- **The swing gets cheaper, and that is the intent.** From Even, committing to
+  either pole is one phase; carried across, a full reversal is two. §14 asks for
+  the swing once a world, and this is what keeps asking for it affordable.
+
+It fires on **reaching** a world and nowhere else. Restoring a save resumes
+exactly where the run was, and the boot's first world is already at Even.
 ## 7. The wave is a clock
 
 > **A phase is a fixed span of time spent on the world. Income must never buy
@@ -1426,6 +1703,7 @@ where that commitment belongs once there is a prestige loop behind it.
 excessGate(p)    = 0.12 × 0.7^(p−1)         0.12 · 0.08 · 0.05 · 0.04 · 0.03
 mergeMinimum(p)  = min(0.5, 0.15 + 0.10(p−1))
 mergeHalving(p)  = mergeMinimum(p)
+wants(p)         = −1 on odd p, +1 on even   the swing, priced and never gated
 ```
 
 | | **1** | **2** | **3** | **4** | **5** |
@@ -1436,6 +1714,7 @@ mergeHalving(p)  = mergeMinimum(p)
 | `excessGate` | 0.12 | 0.08 | 0.05 | 0.04 | 0.03 |
 | `mergeMinimum` | 15% | 25% | 35% | 45% | 50% |
 | `mergeHalving` | 15% | 25% | 35% | 45% | 50% |
+| **`wants`** | **Burden** | **Comfort** | **Burden** | **Comfort** | **Burden** |
 | — | | | | | |
 | Anchoring | none | 2 × 36 s | 3 × 180 s | 4 × 240 s | 5 × 300 s |
 | Harvest pays, xp · karma | 15 s · 45 s | 30 · 90 | 45 · 135 | 60 · 180 | 80 · 240 |
@@ -1499,11 +1778,11 @@ hands it back.
 first world on its floor and nobody will. It should be read as a formality rather
 than retuned to be met.
 
-**`reaimPhases: 2` is a shrinking cost.** Two phases is a quarter of world 1 and a
-twenty-fourth of world 5. That was true before and is now easier to see. **Whether
-the re-aim penalty should be a share of the world rather than a fixed count of
-phases is open** — the §6 argument for pricing it in phases was that phases are a
-clock nothing can buy, and that argument survives either way.
+**The re-aim penalty is a shrinking cost.** A full swing is two phases (§6) — a
+quarter of world 1 and a twenty-fourth of world 5. That was true before and is now
+easier to see. **Whether the penalty should be a share of the world rather than a
+fixed count of phases is open** — the §6 argument for pricing it in phases was
+that phases are a clock nothing can buy, and that argument survives either way.
 
 ### What is still authored by hand
 
@@ -1631,6 +1910,79 @@ worth about what Comfort's is and the reading is a three-way trade again.
 > ⚠ **`evenExperienceBonus` stays at 2.0, so Even still pays ×3.** The finding
 > that ×3 dominates was measured while `K` was worth zero on one side. It has to
 > be re-measured now that it is not, and only then decided.
+
+### A world wants a pole, and pays for it
+
+Everything above prices the *lock*. Nothing in the game had yet asked for a
+specific pole — and the one target every reading names is **zero**, which is
+where you already are if you never touch the dial. Even wins by default, not
+because it is strong.
+
+> **A world declares a polarity it wants. Serving it multiplies `K`; opposing it
+> divides `K` by the same figure.**
+
+```
+K × D^(2 · matchShare − 1)
+```
+
+**It cannot read the harvest's own reading.** `excessGate` puts the excess inside
+±0.12 at the instant of harvest by construction, ±0.03 by world 5 — there is no
+room there to record that a world wanted Burden and got it. So the demand reads a
+**running** quantity, accumulated across the whole stay:
+
+```
+matchShare = karma paid into the demanded pile while on this world
+             ÷ all karma earned on this world
+```
+
+Then the gate and the demand stop competing and start composing:
+
+> **Tilt hard for most of the world to earn the demand. Spend the last stretch
+> cleaning up to pass the gate and leave.**
+
+The share is **banked as it is earned**, so the cleanup costs nothing it already
+paid for. Keyed on the *locked* alignment instead, cleaning up would land you in
+`evenBand` and wipe the demand you spent the world earning — the arc would not
+work at all.
+
+**Nothing is added to the payout.** `D` redistributes the same `K` across the
+poles, mean-preserving in log space, which is §6's bias pair's own idiom. A third
+unbounded multiplier on a figure that already compounds across five worlds is how
+a payout runs away; this is bounded and authored per world, `D = 2` to start.
+
+| `matchShare` | Karma pays |
+|---|---|
+| 1.0 — everything its way | **× D** |
+| 0.5 — an even split | ×1 |
+| 0.0 — everything the other way | **× 1/D** |
+
+**The alternation is authored, priced, and never gated.** `wants` across system 1
+is **− / + / − / + / −**. The swing is forced economically and never by a lock,
+which is §13's *the toll is a toll, not a condition* one level up: a player who
+wants to eat the penalty and run one pole forever still can, and almost nobody
+will. That lands the first-run-as-tutorial idea **without a tutorial** — the first
+system teaches the swing by paying for it, and by the time prestige is behind you
+the habit is built.
+
+**It is an offer, not a cleanup job.** Not karmic pollution: a world that needs
+cleaning has a right answer, and §1 says the game never moralises about the pole.
+The neutral shape is §12's, already written — **the world offers and you may
+decline**. A world paying double for a Burden life is an offer; locking Even for
+the experience is a legal answer.
+
+> ⚠ **Even is now the only lock a world can neither improve nor spoil**, since it
+> pays no karma for `D` to move. That may be correct — Even is the *refusal* of
+> the offer — but it interacts with §19's standing *Even's experience bonus: ×1.5,
+> ×2 or ×3* question, and the two want re-measuring together.
+
+> ⚠ **The correction cost moves from once-a-run to once-a-world**, and has never
+> been measured at that cadence. Clearing any tilt was measured at ~10% of the run
+> so far; paid five times instead of once is a different number. Measure it before
+> authoring any short-pile skim — this may be all the teeth the axis needs.
+
+> ⚠ **The gate ladder is now under pressure from two directions.** `excessGate`
+> tightens 0.12 → 0.03 while the demand asks for a deeper tilt on the later
+> worlds. **Check world 5 is passable at all.** It is one retune, not two.
 
 ### Boons
 
@@ -1791,9 +2143,9 @@ for the event — **those four have no floor by design and must not be given one
 | # | Beat | Fires on | Floor | Starts | Reveals |
 |---|---|---|---|---|---|
 | 1 | `click` | start | — | incarnation, **wave** | the disc, the log, the experience reading |
-| 2 | `karma` | any positive karma | 340 | positive karma | the karma reading |
-| 3 | `rail` | 40 experience | 40 | — | the upgrade rail |
-| 4 | `first_soul` | 1 soul | 1,100 | cohorts | the cohort table, **the send verb on each row** |
+| 2 | `rail` | 50 experience | 50 | — | the upgrade rail |
+| 3 | `first_soul` | 1 soul | 1,100 | cohorts | the cohort table, **the send verb on each row** |
+| 4 | `karma` | any positive karma | 340 | positive karma | the karma reading |
 | 5 | `rows` | 5 souls | 4,200 | — | the header, the status row, the Details tab |
 | 6 | `wave` | buy `read_the_wave` | 26,900 | — | the wave reading |
 | 7 | `negative_karma` | buy `the_other_way` | 74,200 | negative karma, aim | the negative reading, the aim dial |
@@ -1830,8 +2182,10 @@ reachable. With a system to finish and a run to end that is no longer true, and
 
 ⚠ The floors in the table were fitted to the old cohort economy and every one of
 them is now wrong. They are fallbacks, so nothing breaks — but a floor that fires
-before its own trigger turns a beat into a timer. **Refit all nine against the
-generated ladder.**
+before its own trigger turns a beat into a timer. **Refit all eight against the
+generated ladder**, and note they no longer even climb: `karma`'s 340 sits under
+`first_soul`'s 1,100 on the beat above it, so the fallback order and the beat
+order disagree.
 
 ### Two beats are purchases
 
@@ -2207,7 +2561,10 @@ authored well enough to run that test against — see §1.
 |---|---|
 | **Which screen hosts the harvest** | §17 — the verb is now on **both** columns; the takeover is still the Overview's body and its host is still unpicked |
 | **Where the end-run verb sits** | §17, §18 — the bottom strip beside the tabs today; §18 argued for the Overview's axis and the strip shipped without the argument being settled |
-| **Even's experience bonus: ×1.5, ×2, or ×3** | §14 — ×3 is live; the "×3 dominates" reading was taken while `K` was worth zero and must be re-measured |
+| **Even's experience bonus: ×1.5, ×2, or ×3** | §14 — ×3 is live; the "×3 dominates" reading was taken while `K` was worth zero and must be re-measured. Now also the only lock a world's demand cannot move |
+| **What the per-world correction cost actually is** | §14 — the demand moves clearing a tilt from once-a-run to once-a-world. It was measured at ~10% of the run so far, once. Five times is a different number and gates any short-pile skim |
+| **Whether world 5 is passable under both pressures** | §13, §14 — `excessGate` tightens to 0.03 while the demand asks for a deeper tilt. One retune, and it has not been run |
+| **`D = 2`, and whether it should differ per world** | §14 — authorable per world and authored nowhere; every world takes the default |
 | **Whether the Burden/Comfort sink asymmetry is right** | §3, §8 — five upgrades now price in `karma_negative`; whether that is the *shape* of the answer or just the stopgap before commerce is still open |
 | **Whether commerce is a system or a framing** | §18 — the rates worsening may be enough without a market screen |
 | **Wisdom's structure shelf vs knowledge's permanent shelf** | §18 — both permanent, both bought; the distinction is real and uncomfortable |
@@ -2221,7 +2578,7 @@ authored well enough to run that test against — see §1.
 | **Which cohorts hold the lines** | §12 — the first *n* of the roster, and riders split among them by active count. Both are the simplest rule, neither is argued |
 | **The worlds' identity, and the cohorts'** | §1 — the largest fiction hole, now with an index to hang on |
 | **The entire log** | §1 — placeholder throughout; the register is settled and no line is |
-| **Whether `reaimPhases` should be a share of the world** | §6, §13 — two phases is a quarter of world 1 and a twenty-fourth of world 5 |
+| **Whether `reaimPhases` should be a share of the world** | §6, §13 — a full swing is two phases, a quarter of world 1 and a twenty-fourth of world 5. Resolving this toward a share is what would let §6 price at `\|Δ\|` outright instead of halving it |
 | **Every world decomposition** | §13 — phase duration, ages and cycles are now free within a fixed total and have had one pass |
 
 ### Resolved by the ladder rewrite
@@ -2233,7 +2590,7 @@ authored well enough to run that test against — see §1.
 | **What wisdom *is*** | the prestige residue, `√(karma moved)` (§18) |
 | **`zealot`'s ρ = ∞** | gone — every cohort yields experience, so payback is defined everywhere |
 | **The cap at 200 a cohort** | gone — income compounds by construction, so counts no longer stall |
-| **Six rungs and not ten** | ten rungs; the emission-rate constraint is handled by a 60 ms floor rather than by a shorter ladder |
+| **Six rungs and not ten** | back to **six**, at AdCap's counts. The emission-rate constraint is handled by a 60 ms floor rather than by a shorter ladder, but six rungs reach it on cohorts 1 and 2 only — and ×64 is too little multiplier to keep a low row worth owning. Reopened as the ×2 question in §5, *Open* |
 | **Per-cohort `resistance` / `polarity_bias` / `polarity_multiplier`** | cut; duration and the manual batch carry cohort identity (§6) |
 
 ### Resolved by the post-ladder rebalance
@@ -2280,15 +2637,20 @@ the slot counts together** — no one of them is meaningful alone.
   right is a sim question, not a desk one.
 - **All four token prices** — Ochre, Indigo, inversion base and growth. Not tuned
   against the refinery's placeholders either.
-- **`priceFactor`**, now a single number and the pacing knob on every level in
-  the game.
+- ~~**`priceFactor`**, now a single number and the pacing knob on every level in
+  the game.~~ **Retired — a level has no price.** It was granted a value of 0.2
+  and fitted to the acceptance test before the realisation that no value of it
+  is a decision: a rung came to a fixed multiple of one more copy at every gate
+  on every cohort, so it was a tax or an off switch. What remains a placeholder
+  is the **gate ladder**, which is the only knob depth has left. See §5,
+  *Levels*.
 - ~~**The clerk multiplier**, 250× a cohort's base cost, lifted from AdCap and
-  never checked against this economy.~~ **Checked and kept** — it prices a clerk
-  just past the row's own tier II, which is where selling your timing should
-  cost. The reveal multiplier was the one out of place and moved 5× → 25×, which
-  makes the two the same figure one rung apart. What is still unmeasured is the
-  **wall clock**: the second row now wants roughly five to eight minutes instead
-  of two or three, and nobody has sat through it. See §5, *Entry*.
+  never checked against this economy.~~ **Checked, re-derived, and kept** — at a
+  cost decade of 7 it reads 175×, a quarter to a third of the way up the row's
+  own ladder whatever that row's ramp. Both framings it used to be argued from
+  are retired: the tier price needed a rung to have one, and the flat 38 copies
+  needed one ramp for everybody. What is still unmeasured is the **wall clock**:
+  nobody has sat through the gap between rows. See §5, *Entry*.
 - **`W` and the +2% per wisdom** — `firstWisdomAt` was fitted against karma moved
   at one coverage and has not been re-measured now that it reads crimson
   produced through the v6 ratio split. `P` is still unwritten because nothing

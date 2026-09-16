@@ -4,7 +4,7 @@ import Cohort from '$lib/buildings/cohort.svelte';
 import { PlanetManager, ResourceManager } from '.';
 import { reserve } from '$lib/reserve.svelte';
 import { aim } from '$lib/aim';
-import data from '$data/buildings';
+import data, { cohortId, COHORT_COUNT } from '$data/buildings';
 
 /** Named in, never excluded out: an unlisted role is a plain building. */
 const KINDS: Record<string, typeof Building> = {
@@ -73,6 +73,26 @@ class BuildingManager {
 
   countSouls() {
     return this.#cohorts().reduce((sum, cohort) => sum + cohort.count, 0);
+  }
+
+  /**
+   * The least any one cohort holds — what an *every cohort* gate is asked of.
+   *
+   * All `COHORT_COUNT` of them, and a cohort that does not exist yet counts as
+   * none. Deliberately not `cohorts`, which names the unlocked ones: read that
+   * way, twenty-five of cohort 1 alone would open an all-cohort milestone and
+   * `releaseUnheld` would take it straight back the moment cohort 2 opened at
+   * zero — a toast for something you never had. Counting the locked ones as
+   * zero means the tier simply cannot fire until the whole ladder exists, which
+   * makes the top cohort the gatekeeper for all six rungs.
+   */
+  countLeastHeld() {
+    const counts = Array.from(
+      { length: COHORT_COUNT },
+      (_, i) => this.#buildings[cohortId(i + 1)]?.count ?? 0,
+    );
+
+    return Math.min(...counts);
   }
 
   /** Souls held back from incarnating, both jobs. Summed per cohort, matching the rounding. */

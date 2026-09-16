@@ -32,20 +32,21 @@ export default {
   /**
    * The one multiple that paces the cohort ladder. It buys two prices, not one:
    * a row is revealed at `revealFactor × cost(n)` lifetime experience, and its
-   * clerk costs `revealFactor × COHORT_DECADE × cost(n)`. Since a cohort costs a
-   * decade more than the one below it, those are the same figure one rung apart
-   * — **a row appears exactly when the row below it can be automated**, and the
-   * rhythm reads *run it, clerk it, next row*. Derived rather than authored
-   * twice so the pair cannot drift.
+   * clerk costs `revealFactor × COST_DECADE × cost(n)`. Since a cohort costs a
+   * cost-decade more than the one below it, those are the same figure one rung
+   * apart — **a row appears exactly when the row below it can be automated**,
+   * and the rhythm reads *run it, clerk it, next row*. Derived rather than
+   * authored twice so the pair cannot drift.
    *
-   * `25`, not the `5` the reveal was. Held against a row's own ladder in units
-   * of `10^(n−1)`: tier I costs 507 all-in, tier II 2,949, the clerk 3,750. At 5
-   * the next row landed at 750 — past tier I, four times short of tier II — so
-   * width was permanently cheaper than depth and depth never happened. The
-   * clerk's side of it was always sited right; only the reveal moved.
+   * Held against the **share of the row's own ladder** it buys, which is the
+   * one reading that survives a per-cohort ramp: `175 × cost(n)` is 38 copies
+   * at `BASE_RAMP` and 24 at cohort 2's 1.15, but both land between a quarter
+   * and a third of the way to that row's reach. So a clerk always arrives a
+   * couple of gates in, whatever the row. Neither a fixed copy count nor a
+   * tier price anchors anything any more — the first moves with the ramp and
+   * the second no longer exists.
    *
-   * ⚠ Unmeasured against a clock: the second row now wants roughly five to
-   * eight minutes rather than two or three, and all of that delay lands where
+   * ⚠ Unmeasured against a clock: all of the delay between rows lands where
    * income is flattest. This is the knob the bench exists to sweep.
    */
   cohorts: {
@@ -141,7 +142,12 @@ export default {
      * pays this. No per-cohort figures any more — see `docs/design.md` §6.
      */
     extremityMultiplier: 2,
-    /** What re-aiming costs, and how many phases it takes to pay off. */
+    /**
+     * What re-aiming costs, and the **unit** it is paid in. A move buys
+     * `reaimPhases × ceil(|Δdetent|/2)` of them, so the shortest step costs one
+     * of these and a full swing two. The depth never moves: the wave strip's
+     * end-of-penalty marker makes a duration legible and a depth invisible.
+     */
     reaimPenalty: 0.65,
     reaimPhases: 1,
     /**
@@ -176,6 +182,14 @@ export default {
     evenExperienceBonus: 2.0,
     mergeHalving: 0.25,
     maxMergeSpeed: 8,
+    /**
+     * What serving a world's pole is worth, when the world does not say. Nothing
+     * is added to the payout — the same karma is redistributed across the poles,
+     * which is `wave`'s bias pair one level up. Bounded on purpose: a third
+     * unbounded multiplier on a figure that already compounds across five worlds
+     * is how a payout runs away.
+     */
+    demand: 2,
   },
 
   /**

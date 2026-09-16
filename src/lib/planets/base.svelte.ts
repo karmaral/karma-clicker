@@ -4,7 +4,7 @@ import { getExcess } from '$lib/excess';
 import { getWaveBias } from '$lib/wave';
 import { FIRST_HARVEST_CONDITIONS } from '$lib/labels';
 import balance from '$data/balance';
-import { resolveHarvestDuration, resolveHarvestYields } from './harvest';
+import { resolveDemandBonus, resolveHarvestDuration, resolveHarvestYields } from './harvest';
 import type {
   FirstHarvestCondition, HarvestRates, PlanetData, Polarity, ResourceType,
 } from '$types';
@@ -34,7 +34,16 @@ export interface PlanetSnapshot extends Departure {
   livedMs: number;
   isHarvested: boolean;
   placedMs: number;
+  bankedMs: number;
   isAnchorJobActive: boolean;
+  /**
+   * The demand's running tally, and what it settled at. Both sums travel rather
+   * than the share alone — a world is saved mid-stay far more often than it is
+   * saved at the harvest, and a ratio cannot be added to.
+   */
+  demandedKarma: number;
+  earnedKarma: number;
+  demandBonus: number;
 }
 
 /** The wave's marker steps once per this many ms of world time — a second hand. */
@@ -54,11 +63,28 @@ export default class Planet {
   #emitter = $state<ResourceEmitter>();
   #anchorBonusAtDeparture = $state(1);
   /**
+   * Karma earned on this world, and how much of it went where the world asked.
+   * Accumulated over the whole stay because the harvest's own reading cannot
+   * carry a demand: `excessGate` forces it near even by construction, so the
+   * door and the demand would be fighting over one number. See §14.
+   */
+  #demandedKarma = $state(0);
+  #earnedKarma = $state(0);
+  #demandBonusAtDeparture = $state(1);
+  /**
    * Milliseconds of the anchoring job done, across every anchor. One accumulator
    * rather than one per anchor: they fill in order, which is what "next anchor
    * in" means, and each meter is a slice of this.
    */
   #placedMs = $state(0);
+
+  /**
+   * Of that, what a finished job already banked — the floor a cancel returns to.
+   * A job forfeits its own work and never a closed one's: capacity bought after
+   * a world is fully anchored re-offers it, and giving *that* offer back must
+   * not pull anchors you finished paying for two upgrades ago.
+   */
+  #bankedMs = $state(0);
 
   /**
    * Whether you took this world's offer. Anchoring is opt-in, so a world with
@@ -86,6 +112,39 @@ export default class Planet {
 
     this.#livedMs += ms;
   }
+
+  /**
+   * Every karma payout made while standing here, split as the aim and the wave
+   * left it. Both piles count towards the total: the demand asks what share of
+   * what you earned went its way, not how much of it there was.
+   */
+  recordKarma(positive: number, negative: number) {
+    const earned = positive + negative;
+    if (this.#isHarvested || !(earned > 0)) return;
+
+    this.#earnedKarma += earned;
+
+    const wants = this.#data.demand?.wants;
+    if (!wants) return;
+
+    this.#demandedKarma += wants > 0 ? positive : negative;
+  }
+
+  /**
+   * What the world asked for, met so far. Half with nothing earned and half with
+   * nothing asked — both are the neutral reading, and both pay ×1.
+   */
+  get matchShare() {
+    if (!this.#data.demand?.wants || !(this.#earnedKarma > 0)) return 0.5;
+
+    return this.#demandedKarma / this.#earnedKarma;
+  }
+
+  /** What the demand is paying right now. Locked at departure like the anchors. */
+  get demandBonus() { return resolveDemandBonus(this.#data.demand, this.matchShare); }
+
+  get demand() { return this.#data.demand; }
+  get demandBonusAtDeparture() { return this.#demandBonusAtDeparture; }
 
   /** Every condition the planet imposes that is not met yet. Empty means go. */
   #unmet = $derived.by(() => {
@@ -132,6 +191,9 @@ export default class Planet {
     this.#alignment = alignment;
     this.#rates = rates;
     this.#anchorBonusAtDeparture = Math.max(1, anchorBonus);
+    // The whole stay, not the instant. Locked for the same reason the anchors
+    // are: what the world paid for is what you did while you were on it.
+    this.#demandBonusAtDeparture = this.demandBonus;
 
     this.#armHarvest();
   }
@@ -161,7 +223,11 @@ export default class Planet {
       rates: $state.snapshot(this.#rates),
       anchorBonus: this.#anchorBonusAtDeparture,
       placedMs: this.#placedMs,
+      bankedMs: this.#bankedMs,
       isAnchorJobActive: this.#isAnchorJobActive,
+      demandedKarma: this.#demandedKarma,
+      earnedKarma: this.#earnedKarma,
+      demandBonus: this.#demandBonusAtDeparture,
     };
   }
 
@@ -175,7 +241,11 @@ export default class Planet {
     this.#rates = state.rates;
     this.#anchorBonusAtDeparture = state.anchorBonus;
     this.#placedMs = state.placedMs;
+    this.#bankedMs = state.bankedMs;
     this.#isAnchorJobActive = state.isAnchorJobActive;
+    this.#demandedKarma = state.demandedKarma;
+    this.#earnedKarma = state.earnedKarma;
+    this.#demandBonusAtDeparture = state.demandBonus;
 
     if (this.#isHarvested) this.#armHarvest();
   }
@@ -197,7 +267,7 @@ export default class Planet {
       this.#data.harvest?.yields ?? {},
       this.#alignment,
       this.#rates,
-      this.#anchorBonusAtDeparture,
+      { anchorBonus: this.#anchorBonusAtDeparture, demandBonus: this.#demandBonusAtDeparture },
     );
   });
 
@@ -226,14 +296,29 @@ export default class Planet {
   }
 
   /**
-   * And giving it back. Everything placed is forfeit: the anchors come out with
-   * the harness, so there is no half-anchored world to bank. A job resumed from
-   * a saved fraction would make cancelling free, which is the one thing it must
-   * not be.
+   * And giving it back. This job's own work is forfeit — the anchors it was
+   * part-way through come out with the harness, so there is no half-anchored
+   * slot to bank. A job resumed from a saved fraction would make cancelling
+   * free, which is the one thing it must not be.
+   *
+   * Back to `#bankedMs` rather than to zero: what a *closed* job put down is
+   * not this one's to lose.
    */
   cancelAnchorJob() {
     this.#isAnchorJobActive = false;
-    this.#placedMs = 0;
+    this.#placedMs = this.#bankedMs;
+  }
+
+  /**
+   * Spent, not given back — the anchors stay down and bank at what they reached.
+   * Consent is per offer: a job left open past its last anchor would restart
+   * itself the moment an upgrade widened the world, and holding souls on a
+   * phase nobody re-entered is the one thing taking the offer is supposed to
+   * be. `Harness` calls it, because only the rig knows when the job is done.
+   */
+  closeAnchorJob() {
+    this.#isAnchorJobActive = false;
+    this.#bankedMs = this.#placedMs;
   }
 
   #anchoring = $derived.by(() => this.#data.anchoring);
@@ -344,6 +429,9 @@ export default class Planet {
 
   /** Job-ms done, for the harness to slice into anchors. */
   get placedMs() { return this.#placedMs; }
+
+  /** Job-ms a cancel would keep — what closed jobs banked. The harness names it in anchors. */
+  get bankedMs() { return this.#bankedMs; }
   get isAnchorJobActive() { return this.#isAnchorJobActive; }
 
   /** What the anchors were worth when you left. 1 until you do. */

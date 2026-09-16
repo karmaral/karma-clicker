@@ -12,14 +12,15 @@
  * 2  harness        no depth test — the ink rule is its whole depth cue
  *                   (quads, not lines: a line has no width to carry)
  * 3  ghost anchor   no depth test: a place does not stop existing when it turns away
- * 4  souls          discard what is behind the world themselves
- * 5  halo           the click, around the world and behind it, inverting what it crosses
- * 6  spark          the click, lying in the terrain and drawn through the body on purpose
- * 7  flare          the same spark standing up off it
- * 8  spark outline  both again, grown, on the plane behind — so the depth test
- * 9  flare outline  rejects the ink under the mark and leaves its border
- * 10 spawn          a soul's own arrival, riding the dot it marks
- * 11 bolt           the click, a strike from the press to the spark it paid
+ * 4  orbit ring     a hovered cohort's own line, under the dots so they ride it
+ * 5  souls          discard what is behind the world themselves
+ * 6  halo           the click, around the world and behind it, inverting what it crosses
+ * 7  spark          the click, lying in the terrain and drawn through the body on purpose
+ * 8  flare          the same spark standing up off it
+ * 9  spark outline  both again, grown, on the plane behind — so the depth test
+ * 10 flare outline  rejects the ink under the mark and leaves its border
+ * 11 spawn          a soul's own arrival, riding the dot it marks
+ * 12 bolt           the click, a strike from the press to the spark it paid
  *                   for — inverting, like the halo, and drawn last of all:
  *                   it is the newest thing on screen for as long as it lasts
  * ```
@@ -90,12 +91,13 @@ export const RENDER_ORDER = {
   anchor: 1,
   harness: 2,
   ghost: 3,
-  soul: 4,
-  halo: 5,
-  spark: 6,
-  flare: 7,
-  sparkOutline: 8,
-  flareOutline: 9,
-  spawn: 10,
-  bolt: 11,
+  orbitRing: 4,
+  soul: 5,
+  halo: 6,
+  spark: 7,
+  flare: 8,
+  sparkOutline: 9,
+  flareOutline: 10,
+  spawn: 11,
+  bolt: 12,
 };

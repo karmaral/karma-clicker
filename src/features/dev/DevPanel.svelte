@@ -10,6 +10,7 @@
   } from '$lib/managers';
   import { pulse } from '$lib/loop';
   import { getExcess } from '$lib/excess';
+  import { getDemandLabel } from '$lib/labels';
   import { reserve, type SplitJob } from '$lib/reserve.svelte';
   import { refinery } from '$lib/refinery.svelte';
   import * as save from '$lib/save';
@@ -113,6 +114,22 @@
     pulse();
   }
 
+  /**
+   * Feeds the active world's demand tally without playing the world. Grants the
+   * piles too, so the reading stays consistent with what a cohort paying that
+   * karma would have left behind.
+   */
+  function serveDemand(matching: boolean, amount = 1e4) {
+    const active = PlanetManager.getActive();
+    const wants = active?.demand?.wants;
+    if (!active || !wants) return;
+
+    const isPositive = matching === wants > 0;
+
+    grant(isPositive ? 'karma_positive' : 'karma_negative', amount);
+    active.recordKarma(isPositive ? amount : 0, isPositive ? 0 : amount);
+  }
+
   /** The only way to set either split until its screen is built. */
   function reserveSouls(job: SplitJob, fraction: number) {
     reserve.set(job, fraction);
@@ -201,6 +218,23 @@
         <span class="id">karma {f(ResourceManager.getAmount('karma_positive'))}</span>
         <button onclick={() => grant('karma_positive', 1e4)}>+10k pos</button>
         <button onclick={() => grant('karma_negative', 1e4)}>+10k neg</button>
+      </div>
+
+      <!-- Granting karma above does not move this: the world tallies what the
+           cohorts *earned* on it, not what the piles hold. So the demand needs a
+           verb of its own or it takes a full world to watch it move at all. -->
+      <div class="row">
+        <span class="id">
+          {#if planet?.demand}
+            wants {getDemandLabel(planet.demand)}
+            · {Math.round(planet.matchShare * 100)}% served
+            · ×{Math.round(planet.demandBonus * 100) / 100}
+          {:else}
+            demand — this world wants nothing
+          {/if}
+        </span>
+        <button onclick={() => serveDemand(true)}>+10k its way</button>
+        <button onclick={() => serveDemand(false)}>+10k the other</button>
       </div>
 
       <div class="row">

@@ -72,6 +72,19 @@
   /** Lit while an upgrade that would change this cohort is being hovered. */
   const isLit = $derived(spotlight.isLit('cohort', cohort.id));
 
+  /**
+   * And pointed the other way, on the row's own hover: the planet draws this
+   * cohort's orbit. Through `spotlight` rather than a prop because the two ends
+   * are the table and a canvas four components down — the case the channel is
+   * for — and because the row then tints itself through the same reading an
+   * upgrade's hover gives it, instead of by a second rule in CSS.
+   *
+   * The bucket key `parseScope` already reads, so nothing new is being spoken.
+   */
+  function pointAtBand() {
+    spotlight.point(`cohort:${cohort.id}`);
+  }
+
   function startPreview() {
     onpreview?.(cohort.id);
   }
@@ -215,6 +228,8 @@
   tabindex={canSend ? 0 : undefined}
   onclick={onRowClick}
   onkeydown={onRowKeydown}
+  onmouseenter={pointAtBand}
+  onmouseleave={() => spotlight.clear()}
 >
 
   <div class="ident" {@attach tooltip({ content: tooltipElem, options: identOptions })}>

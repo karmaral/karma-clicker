@@ -54,7 +54,7 @@
    */
   const crimson = $derived(refinery.crimsonPerSecond);
 
-  /** The clock keeps pulsing unstaffed, but a sweep to nowhere is a lie. */
+  /** Unstaffed is stopped now, not pulsing at nothing — see `Refinery.tick`. */
   const isIdle = $derived(refinery.workers <= 0);
 
   /** A countdown under a quarter second is not a countdown — see `ResourceEmitter`. */
@@ -65,11 +65,19 @@
     return `next ${nextIn.toFixed(1)}s`;
   });
 
+  /**
+   * Both ends of a cycle: one arms the sweep, the other takes it down. No idle
+   * guard around it any more — the clock genuinely stops when the split leaves
+   * the refinery unstaffed, so there is no pulse left to filter out.
+   */
   const subscribe: (fn: Listener) => () => void = (fn) => {
-    const wrapped: Listener = (detail) => { if (!isIdle) fn(detail); };
-    refinery.addListener('queue', wrapped);
+    refinery.addListener('queue', fn);
+    refinery.addListener('halt', fn);
 
-    return () => refinery.removeListener('queue', wrapped);
+    return () => {
+      refinery.removeListener('queue', fn);
+      refinery.removeListener('halt', fn);
+    };
   };
 </script>
 

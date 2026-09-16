@@ -8,6 +8,7 @@
   import type Building from '$lib/buildings/base.svelte';
 
   import { aim } from '$lib/aim';
+  import { spotlight } from '$lib/spotlight.svelte';
   import { harness } from '$lib/harness.svelte';
   import { rig } from '$lib/harness-visuals.svelte';
   import planetTexts from '$data/planets-texts';
@@ -61,6 +62,27 @@
   const streamingPerCohort = $derived(cohorts.map((cohort) => cohort.isStreaming));
 
   /**
+   * And which of them are being pointed at, so the world draws that orbit — the
+   * one line between a row of figures and the clump of dots it is about.
+   *
+   * A row of booleans rather than the one hovered id, because `spotlight` fans
+   * out: an upgrade scoped to every cohort lights every row, and every band
+   * should ring with them.
+   */
+  const litPerCohort = $derived(cohorts.map((cohort) => spotlight.isLit('cohort', cohort.id)));
+
+  /**
+   * And how long one life takes in each, in seconds — the band turns at the pace
+   * the row is printing, so a quick cohort is a quick lane and a tier that halves
+   * a clock is seen out on the world rather than only in a figure.
+   *
+   * `duration` and not the raw ladder, so every modifier is in it. Past the
+   * stream floor the clock stops shortening and the levels buy payout instead,
+   * so a streaming band levels off at its top speed — which is the truth.
+   */
+  const pacePerCohort = $derived(cohorts.map((cohort) => cohort.duration / 1000));
+
+  /**
    * How many times each cohort has paid out. The swarm strikes on the rise, so
    * a band throws its bolts when that cohort actually yields — the same reading
    * `yields` gives the click's spark, one row per cohort instead of one figure.
@@ -79,6 +101,33 @@
       BuildingManager.addListener(cohort.id, 'action', onaction);
 
       return () => BuildingManager.removeListener(cohort.id, 'action', onaction);
+    });
+
+    return () => offs.forEach((off) => off());
+  });
+
+  /**
+   * And how many souls each has taken on. The ring flashes on the rise, so a
+   * band's lane answers the purchase that filled it.
+   *
+   * On `add` rather than on the purchase call, because `add` is where a cohort
+   * actually grows however it was reached — and a restore does not go through it,
+   * so loading a save does not open with eight rings flashing at once.
+   *
+   * One rise per gesture: a buy of ten is one `add` of ten, and ten flashes of
+   * the same circle would be one flash that took ten times as long to leave.
+   */
+  let boughtPerCohort = $state<number[]>([]);
+
+  $effect(() => {
+    const offs = cohorts.map((cohort, row) => {
+      const onadd: Listener = () => {
+        boughtPerCohort[row] = (boughtPerCohort[row] ?? 0) + 1;
+      };
+
+      BuildingManager.addListener(cohort.id, 'add', onadd);
+
+      return () => BuildingManager.removeListener(cohort.id, 'add', onadd);
     });
 
     return () => offs.forEach((off) => off());
@@ -131,7 +180,7 @@
   const draftAt = $derived.by(() => {
     if (!planet || !aim.isPending) return undefined;
 
-    return (planet.position + aim.reaimPhases / planet.phasesPerAge) % 1;
+    return (planet.position + aim.draftPhases / planet.phasesPerAge) % 1;
   });
 
   /** Instant, always — the press has no clock of its own. See `buildings.ts`. */
@@ -197,6 +246,9 @@
         cohorts={soulsPerCohort}
         paid={paidPerCohort}
         streaming={streamingPerCohort}
+        lit={litPerCohort}
+        bought={boughtPerCohort}
+        pace={pacePerCohort}
         {clickActionVerb}
         {clickActionSub}
         {onclickaction}
@@ -204,6 +256,7 @@
         yieldValue={isAnchoring ? 0 : clickYield}
         anchors={hasField ? rig.anchors : undefined}
         anchored={hasField ? harness.anchored : undefined}
+        facesSite={isAnchoring}
         harness={hasField ? rig.harness : undefined}
         riders={hasField ? harness.riders : undefined}
         working={hasField ? harness.workers : undefined}

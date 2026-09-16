@@ -2,12 +2,6 @@
   /**
    * One axis, three bands. Selecting feeds the planet column beside it, and
    * that column carries the verb for whatever is picked.
-   *
-   * And the takeover's screen: the first harvest takes this screen's body
-   * rather than the frame, so the navbar stays lit while the one decision the
-   * Overview leads to is being taken. Hidden by the same `Screen` the tabs use
-   * rather than removed — a band is a planet apiece, and those WebGL contexts
-   * should come back turning instead of blank.
    */
   import { PlanetManager } from '$lib/managers';
   import { progression } from '$lib/progression';
@@ -18,9 +12,6 @@
   import BehindLedger from './BehindLedger.svelte';
   import AheadGrid from './AheadGrid.svelte';
   import { selection } from './selection.svelte';
-  import { FirstHarvestScreen } from '$features/harvest';
-  import { PrestigeScreen } from '$features/prestige';
-  import { Screen } from '$features/frame';
   import { nav } from '$lib/nav.svelte';
 
   const BEHIND_PX = 24;
@@ -39,88 +30,64 @@
   }
 </script>
 
-<div class="stack">
-  <Screen active={!nav.isHarvesting && !nav.isPrestiging}>
-    <div class="overview view-layout">
+<div class="overview view-layout">
 
-      <div class="detail">
-        {#if progression.isRevealed('overview.active')}
-          <PlanetDetail id={selected} />
-        {/if}
-      </div>
+  <div class="detail">
+    {#if progression.isRevealed('overview.active')}
+      <PlanetDetail id={selected} />
+    {/if}
+  </div>
 
-      <div class="axis">
+  <div class="axis">
 
-        <!-- `overview.ahead` reveals in the same beat as `overview.active` —
-             one gate, one card. -->
-        {#if progression.isRevealed('overview.active')}
-          <Section subgrid label="Active">
-            {#snippet aside()}
-              <Label text="Ahead" />
-            {/snippet}
+    <!-- `overview.ahead` reveals in the same beat as `overview.active` —
+         one gate, one card. -->
+    {#if progression.isRevealed('overview.active')}
+      <Section subgrid label="Active">
+        {#snippet aside()}
+          <Label text="Ahead" />
+        {/snippet}
 
-            <div class="here">
-              <div class="here-active">
-                <ActiveCell
-                  id={PlanetManager.selected}
-                  {selected}
-                  stat={getHereStat}
-                  empty="No active planet."
-                  stillPx={HERE_PX}
-                  onpick={(id) => selection.pick(id)}
-                  ondblclick={() => nav.to('details')}
-                />
-              </div>
+        <div class="here">
+          <div class="here-active">
+            <ActiveCell
+              id={PlanetManager.selected}
+              {selected}
+              stat={getHereStat}
+              empty="No active planet."
+              stillPx={HERE_PX}
+              onpick={(id) => selection.pick(id)}
+              ondblclick={() => nav.to('details')}
+            />
+          </div>
 
-              <div class="here-ahead">
-                <AheadGrid
-                  ids={PlanetManager.ahead}
-                  {selected}
-                  empty="Nowhere else is known."
-                  stillPx={HERE_PX}
-                  onpick={(id) => selection.pick(id)}
-                />
-              </div>
-            </div>
-          </Section>
-        {/if}
+          <div class="here-ahead">
+            <AheadGrid
+              ids={PlanetManager.ahead}
+              {selected}
+              empty="Nowhere else is known."
+              stillPx={HERE_PX}
+              onpick={(id) => selection.pick(id)}
+            />
+          </div>
+        </div>
+      </Section>
+    {/if}
 
-        {#if progression.isRevealed('overview.behind') && PlanetManager.behind.length}
-          <BehindLedger
-            ids={PlanetManager.behind}
-            {selected}
-            reporting={isReporting}
-            stillPx={BEHIND_PX}
-            onpick={(id) => selection.pick(id)}
-          />
-        {/if}
+    {#if progression.isRevealed('overview.behind') && PlanetManager.behind.length}
+      <BehindLedger
+        ids={PlanetManager.behind}
+        {selected}
+        reporting={isReporting}
+        stillPx={BEHIND_PX}
+        onpick={(id) => selection.pick(id)}
+      />
+    {/if}
 
-      </div>
-    </div>
-  </Screen>
-
-  {#if nav.isHarvesting}
-    <FirstHarvestScreen onclose={() => nav.closeHarvest()} />
-  {/if}
-
-  <!-- Plain `{#if}` where the harvest takes a `Screen`: there is no WebGL here
-       to keep alive off-camera. -->
-  {#if nav.isPrestiging}
-    <PrestigeScreen onclose={() => nav.closePrestige()} />
-  {/if}
+  </div>
 </div>
 
 <style>
-  /* The ground the hidden body is positioned out of flow against, while the
-     harvest holds the screen. A grid for the same reason `.screens` is one:
-     exactly one child is ever in flow, and it should take the whole height
-     rather than its own. */
-  .stack {
-    display: grid;
-    position: relative;
-    min-width: 0;
-  }
-
   /* Same two halves BehindLedger's rows use — planet+name, then time+yield —
      so Active+Ahead's split lines up with the ledger below via subgrid. */
   /* `start`, not the grid default: this column now stands full height, and left

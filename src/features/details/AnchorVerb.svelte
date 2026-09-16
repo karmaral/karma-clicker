@@ -50,15 +50,28 @@
     return isConfirming ? 'Confirm cancel' : 'Cancel';
   });
 
-  /** The reading the old stacked sub carried, now one line on hover. */
+  /**
+   * The reading the old stacked sub carried, now one line on hover. An offer
+   * standing over anchors already down is capacity bought since the last job
+   * closed, so it counts what is left rather than the world's whole ask.
+   */
   const hint = $derived.by(() => {
     if (!isActive) {
-      return `Anchor ${name} · ${f(harness.anchorsAsked)} anchors · ${bonus} yields`;
+      const asked = harness.anchorsPlaced
+        ? `${f(harness.anchorsAsked - harness.anchorsPlaced)} more`
+        : `${f(harness.anchorsAsked)} anchors`;
+
+      return `Anchor ${name} · ${asked} · ${bonus} yields`;
     }
 
     const placed = `${f(harness.anchorsPlaced)} of ${f(harness.anchorsAsked)}`;
+    if (!isConfirming) return `${placed} down`;
 
-    return isConfirming ? `Forfeits ${placed}` : `${placed} down`;
+    // A cancel pulls this job's own anchors and leaves what a closed one banked,
+    // so where the two differ the confirm has to say which figure it means.
+    return harness.anchorsBanked
+      ? `Forfeits ${f(harness.anchorsAtRisk)} · keeps ${f(harness.anchorsBanked)}`
+      : `Forfeits ${placed}`;
   });
 
   let hintElem: HTMLElement | undefined = $state();

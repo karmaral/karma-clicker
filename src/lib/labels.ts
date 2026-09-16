@@ -8,7 +8,8 @@ import buildingTexts from '$data/buildings-texts';
 import planetTexts from '$data/planets-texts';
 import { parseScope } from '$data/upgrades';
 import type {
-  Effect, EffectVerb, FirstHarvestCondition, HarvestBoon, ModifierStat, Polarity, YieldType,
+  Effect, EffectVerb, FirstHarvestCondition, HarvestBoon, ModifierStat, PlanetDemand, Polarity,
+  YieldType,
 } from '$types';
 
 export type ScreenName = 'overview' | 'details' | 'harness' | 'refinery';
@@ -116,6 +117,20 @@ export function getExcessSideNote(excess: number | undefined) {
   const side = getExcessSideLabel(excess);
 
   return side && `${side} side`;
+}
+
+/**
+ * What a world is asking for. The excess words, because a demand is a demand for
+ * one of the two piles and naming it anything else would make it a third thing.
+ *
+ * An **offer**, and it reads as one: the world pays more for a life spent its
+ * way and less for one spent the other. Never a condition and never a judgement
+ * — declining costs you the premium and nothing else. See `docs/design.md` §14.
+ */
+export function getDemandLabel(demand: PlanetDemand | undefined) {
+  if (!demand?.wants) return undefined;
+
+  return demand.wants > 0 ? EXCESS_SIDES.positive : EXCESS_SIDES.negative;
 }
 
 /**

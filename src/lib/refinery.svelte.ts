@@ -28,6 +28,7 @@ import { ResourceEmitter, type Listener } from '$lib/emission';
 import { ModifierSet } from '$lib/modifiers';
 import { BuildingManager, ResourceManager } from '$lib/managers';
 import { getShortPileIncome } from '$lib/income';
+import { reserve } from '$lib/reserve.svelte';
 import { clock } from '$lib/clock';
 import balance from '$data/balance';
 import type { Modifier, ResourceType } from '$types';
@@ -156,12 +157,35 @@ class Refinery {
     this.#emitter = new ResourceEmitter((pulls) => this.#refine(pulls), () => this.#interval);
   }
 
-  /** The clock runs from the beat on, staffed or not. Idempotent. */
+  /** Autonomy from the beat on. Whether a cycle is actually running is `tick`'s. */
   start() {
     if (this.#emitter.isAutonomous) return;
 
     this.#emitter.toggleAutonomy(true);
     this.#emitter.queue();
+  }
+
+  /**
+   * Staffing, from the loop. An unstaffed refinery has a capacity of 0, so the
+   * pulse in flight would pay nothing when it landed — halting it forfeits no
+   * work and stops the screen sweeping toward a payout that is not coming.
+   *
+   * Driven rather than derived: the worker count moves on the split lever, on a
+   * purchase and on a merge, and a `$effect` writing the emitter off a rune
+   * would be the loop that reads it. `pulse` already ticks the harness the same
+   * way.
+   */
+  tick() {
+    if (!this.#emitter.isAutonomous) return;
+
+    if (this.#workers <= 0) {
+      this.#emitter.halt();
+      return;
+    }
+
+    if (!this.#emitter.isInProgress) {
+      this.#emitter.queue();
+    }
   }
 
   /**
@@ -264,6 +288,12 @@ class Refinery {
   addModifier(modifier: Modifier) {
     if (this.#modifiers.add(modifier)) {
       this.#emitter.retime();
+
+      // A finer lever leaves the share sitting between slots — put it on the
+      // one below rather than let it read a setting it can no longer be set to.
+      if (modifier.stat === 'step') {
+        reserve.snapTo('refining', this.step);
+      }
     }
   }
 
@@ -317,6 +347,9 @@ class Refinery {
 
   /** Pulsing faster than a pulse reads. See `ResourceEmitter`. */
   get isStreaming() { return this.#emitter.isStreaming; }
+
+  /** Stopped for want of a worker — see `tick`. The clock is not running at all. */
+  get isHalted() { return this.#emitter.isHalted; }
 
   /** The share of short-pile income the refinery can clear. Approaches 1.0, never reaches it. */
   get coverage() { return this.#coverage; }

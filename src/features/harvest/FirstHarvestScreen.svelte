@@ -1,14 +1,10 @@
 <script lang="ts">
   /**
-   * A takeover, not a fourth tab — but of the **Overview**, not of the frame.
-   * The header and the rail stay: they are how you get back out, and a screen
-   * with nothing lit in the header above it is a room with no door. The
-   * Overview's tab stays lit because this is the Overview, holding the one
-   * decision it can lead to.
-   *
-   * Its home there is **provisional** — whether the harvest belongs to the
-   * Overview or to Details is not settled, which is why the flag that opens it
-   * lives in `nav` rather than in this feature or that screen.
+   * A takeover, not a fifth tab. It takes the frame's body from whichever
+   * screen offered the verb — Details or Overview — and the header stays: a
+   * screen with nothing above it is a room with no door. Leaving puts the
+   * screen you came from straight back, because opening this never moved the
+   * tab underneath it; see `nav`.
    *
    * The layout is a **shoulder on each side and the controls down the middle**,
    * on a world drawn across the whole block and held above them. The three
@@ -100,7 +96,7 @@
 
   /**
    * You cannot arrive here unready — the beat fires on the world being
-   * harvestable and the Overview's verb is dead until it is. But `excessGate`
+   * harvestable and the verb that opens this is dead until it is. But `excessGate`
    * reads a live figure, so readiness can *lapse* under you while the screen is
    * open, and that is what this says. Empty is the normal state of the screen.
    */
@@ -130,7 +126,7 @@
   <div class="decision">
     <div class="shoulder">
       {#if planet}
-        <AlignmentPanel yields={planet.data.harvest?.yields ?? {}} {rates} />
+        <AlignmentPanel {planet} {rates} />
       {/if}
     </div>
 

@@ -22,6 +22,8 @@
   import { OverviewScreen } from '$features/overview';
   import { HarnessScreen } from '$features/harness';
   import { RefineryScreen } from '$features/refinery';
+  import { FirstHarvestScreen } from '$features/harvest';
+  import { PrestigeScreen } from '$features/prestige';
   import DevPanel from '$features/dev/DevPanel.svelte';
   import Log from '$features/Log.svelte';
 
@@ -71,6 +73,17 @@
   const preludePlanetName = $derived(planetTexts[preludePlanet?.id ?? '']?.title);
 
   const hasRail = $derived(progression.isRevealed('frame.rail') && !nav.isTakeover);
+
+  /**
+   * Which screen the body is showing — nothing, while a takeover holds it. The
+   * takeovers are hosted here rather than by the screen their verb was on, so
+   * leaving one puts you back on the screen you opened it from: `nav.active`
+   * never moved, so there is nothing to restore.
+   *
+   * The screens go quiet rather than away, the same as switching tabs: their
+   * canvases should come back turning instead of blank.
+   */
+  const shown = $derived(nav.isTakeover ? undefined : nav.active);
 
   /**
    * The rail doubles as the app's reading room: a panel with nowhere to float is
@@ -136,21 +149,36 @@
 
     <div class="body" class:railed={hasRail}>
       <div class="screens">
-        <Screen active={nav.active === 'details'}>
+        <Screen active={shown === 'details'}>
           <DetailsScreen />
         </Screen>
 
-        <Screen active={nav.active === 'overview'}>
+        <Screen active={shown === 'overview'}>
           <OverviewScreen />
         </Screen>
 
-        <Screen active={nav.active === 'harness'}>
+        <Screen active={shown === 'harness'}>
           <HarnessScreen />
         </Screen>
 
-        <Screen active={nav.active === 'refinery'}>
+        <Screen active={shown === 'refinery'}>
           <RefineryScreen />
         </Screen>
+
+        <!-- Warmed rather than built on the way in: the takeover's world is a
+             WebGL context of its own, and compiling it under the click is the
+             white flash you see before the planet arrives. Hidden-but-standing
+             keeps its box measurable, which is what its own intersection
+             observer needs to mount the canvas at all — see `PlanetView`. -->
+        <Screen active={nav.isHarvesting} warm={nav.isHarvestOffered}>
+          <FirstHarvestScreen onclose={() => nav.closeHarvest()} />
+        </Screen>
+
+        <!-- Plain `{#if}`: nothing here is drawn on a canvas, so there is
+             nothing to warm. -->
+        {#if nav.isPrestiging}
+          <PrestigeScreen onclose={() => nav.closePrestige()} />
+        {/if}
       </div>
 
       {#if hasRail}

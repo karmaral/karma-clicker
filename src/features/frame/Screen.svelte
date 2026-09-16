@@ -13,23 +13,35 @@
 
   interface Props {
     active: boolean;
+    /**
+     * Build it before it is first asked for. A screen whose canvas is compiled
+     * on the way in flashes white for as long as that takes, and a takeover you
+     * open once per world has no second visit to be fast on — so the screens
+     * that are *reached* rather than lived in are warmed the moment they become
+     * reachable, and hidden until then like any screen that has been left.
+     *
+     * It costs a WebGL context held for the rest of the run, so this is for a
+     * screen that will certainly be opened, not one that might be.
+     */
+    warm?: boolean;
     children: Snippet;
   }
 
-  let { active, children }: Props = $props();
+  let { active, warm = false, children }: Props = $props();
 
   /**
-   * Built on first ask, never taken down. A screen never reached costs nothing —
-   * the Overview does not load three.js before it is opened.
+   * Built on first ask — or on `warm`, for the one screen that cannot afford to
+   * be built when asked — and never taken down. A screen never reached costs
+   * nothing: the Overview does not load three.js before it is opened.
    *
    * Seeded rather than started at `false`, so the screen the app opens on is
    * there in the first pass and not a frame behind it. Untracked because that is
    * a starting value and the effect below is what watches for the rest.
    */
-  let isBuilt = $state(untrack(() => active));
+  let isBuilt = $state(untrack(() => active || warm));
 
   $effect(() => {
-    if (active) isBuilt = true;
+    if (active || warm) isBuilt = true;
   });
 
   setWatched(() => active);

@@ -45,7 +45,15 @@ class UpgradeManager {
       // The building the count is asked of, not the upgrade's own bucket key —
       // 'cohort:cohort_1' has no building, 'cohort_1' does. Locked while there
       // is no building at all: a cohort you have not unlocked holds nothing.
-      const { entity } = parseScope(target);
+      const { kind, entity } = parseScope(target);
+
+      // `cohorts` names every cohort rather than one, so a count asked of it is
+      // asked of all of them at once and the gate opens on the least held. Held
+      // count and not the lifetime tally, deliberately: an all-cohort rung has
+      // to fall with a merge the way a per-cohort level does, or the deepest
+      // merge would be free of the one cost the slider is supposed to weigh.
+      if (kind === 'cohorts') return BuildingManager.countLeastHeld() < unlocks_at;
+
       const tgt = entity && BuildingManager.getBuilding(entity);
       if (!tgt) return true;
 

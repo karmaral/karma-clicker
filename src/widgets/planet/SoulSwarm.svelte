@@ -6,9 +6,9 @@
   import { sampleLoop, type HarnessLoop } from './harness';
   import { createSoulMaterial, createSpawnMaterial, syncSoulUniforms, syncSpawnUniforms } from './material';
   import {
-    berthOf, berthRoom, createSouls, createSpawns, createWorkFrame, hatchOf, phaseOf, placeSoul,
-    placeWorker, rankOf, ridersOf, settleScale, swellOf, travelOf, workFrameOf,
-    SOUL_CAPACITY, SPAWN_CAPACITY, type SwarmVisual, type WorkSite,
+    berthOf, berthRoom, createPacing, createSouls, createSpawns, createWorkFrame, hatchOf,
+    phaseOf, placeSoul, placeWorker, rankOf, rateOf, ridersOf, settleScale, swellOf, travelOf,
+    workFrameOf, SOUL_CAPACITY, SPAWN_CAPACITY, type SwarmVisual, type WorkSite,
   } from './orbit';
   import { lifeOf } from './pulse';
   import {
@@ -124,12 +124,33 @@
      * the cohort. Such a band gets a fixed rhythm instead — see `streamCycleOf`.
      */
     streaming?: boolean[];
+    /**
+     * Which bands are being pointed at, in the same rows as `counts`. Their dots
+     * grow by `LIT_GROW` — the ring `OrbitRing` draws names the lane, and this is
+     * what says which of the overlapping shells is actually riding it.
+     *
+     * Still not a cohort: a row of booleans, like `streaming`.
+     */
+    lit?: boolean[];
+    /**
+     * How long one of each band's lives takes, in seconds, in the same rows as
+     * `counts`. A short life is a quick lane — see `rateOf`. Game state like
+     * `yields`, and absent falls back to the authored doubling, which is the
+     * lab: nothing there has a clock, so the ladder is imitated instead.
+     */
+    pace?: number[];
   }
 
   let {
     visual, counts, zoom, loops, riders, working = 0, site, clock, spinAngle = 0, size = 1,
-    bleed = 0, merge, core = 0, filled, lean = 0, bolts, yields, streaming,
+    bleed = 0, merge, core = 0, filled, lean = 0, bolts, yields, streaming, lit, pace,
   }: Props = $props();
+
+  /**
+   * Enough to read against a neighbouring band and not enough to read as nearer —
+   * size is the swarm's own distance cue and this is borrowing it.
+   */
+  const LIT_GROW = 1.35;
 
   /** The core as drawn, which is the only one an arrival is measured against. */
   const drawn = $derived(Math.max(0, Math.min(core, filled ?? core)));
@@ -159,6 +180,16 @@
    * would cost a re-render for a value nothing renders from.
    */
   const beats = createBoltBeats();
+
+  /** How fast each band turns, as a multiple of `speed`. One row per band. */
+  const rates = $derived(counts.map((unused, band) => rateOf(band, visual, pace)));
+
+  /**
+   * And the clocks those rates run, kept across frames for the reason `beats` is
+   * — a rate that changed can only be answered by something that remembers what
+   * it was. Not `$state`: written from inside the task, and nothing renders off it.
+   */
+  const pacing = createPacing();
 
   /**
    * The spawn-in flare: a small second mesh, keyed to the *index* a soul lit
@@ -353,6 +384,11 @@
 
     if (striking && paying) beats.follow(paying, elapsed);
 
+    // Before anything is placed: a band whose clock just changed is re-seated
+    // here, so the frame that changes its pace is not also the frame that moves
+    // its dots.
+    pacing.follow(rates, elapsed);
+
     spawns.marks.forEach((mark) => {
       const t = lifeOf(mark, elapsed, visual.spawnLife);
       if (t >= 1 || mark.index < 0 || mark.index >= SOUL_CAPACITY) return;
@@ -368,6 +404,14 @@
 
       /** Which branch below placed it, kept because the strike reads it too. */
       const isWorking = soul.place < crewed;
+
+      /**
+       * Its band's clock, which is the world's run at that band's own rate. Only
+       * the orbit is on it: a soul on the anchor's ring is doing a job with a
+       * rate of its own, one berthed in the core has left its orbit behind, and
+       * a strike answers the economy rather than the lane it was thrown from.
+       */
+      const own = pacing.timeOf(soul.band, elapsed);
 
       if (isWorking) {
         // On the job: the ring is drawn in the body's frame, like the anchor it
@@ -387,10 +431,10 @@
         const around = Math.PI * 2 * soul.radius;
         const rate = line.length > 1e-6 ? around / line.length : 1;
 
-        sampleLoop(line, phaseOf(soul, elapsed * rate), dummy.position);
+        sampleLoop(line, phaseOf(soul, own * rate), dummy.position);
         dummy.position.applyAxisAngle(AXIS, spinAngle);
       } else {
-        placeSoul(soul, elapsed, dummy.position);
+        placeSoul(soul, own, dummy.position);
 
         // Radial, and after the placement rather than inside it: the orbit is
         // still the orbit, and this is only how far out along it the soul is.
@@ -482,7 +526,17 @@
       // dust whatever size the world it is holding claims to be. The hatch is
       // applied past it — an arriving soul is *not* there yet, and a floor that
       // held it at a pixel would be a dot that pops in before its own flare.
-      dummy.scale.setScalar(Math.max(soul.size / Math.max(0.05, size), floor) * hatches[i]);
+      //
+      // And the hover past that, for the same reason: a band already sitting on
+      // the floor is exactly the one too small to pick out, so a bump inside the
+      // clamp would be no bump at all. It widens this dot's `vSpan` by as much,
+      // which moves the core's arrival test by a fraction of the wobble — and a
+      // band being pointed at is a band you are looking at anyway.
+      const grow = lit?.[soul.band] ? LIT_GROW : 1;
+
+      dummy.scale.setScalar(
+        Math.max(soul.size / Math.max(0.05, size), floor) * hatches[i] * grow,
+      );
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
     });

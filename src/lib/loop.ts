@@ -34,6 +34,9 @@ export function pulse() {
   // Reads `clock` deltas rather than the interval, so a direct call after a
   // discrete event costs nothing and a simulated run fast-forwards it.
   harness.tick();
+  // Halts the clock when the split leaves it unstaffed, and starts it again on
+  // the first worker back. Before the sample, so a halted pulse is not counted.
+  refinery.tick();
   // Self-throttled, so a direct `pulse()` elsewhere costs nothing extra.
   refinery.sample();
   // Before the triggers, so a beat gated on what it unlocked sees it this tick.

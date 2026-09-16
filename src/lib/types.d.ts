@@ -94,8 +94,9 @@ export type BuildingRole = 'click' | 'soul';
 
 /**
  * `upgrade_threshold` authors the cohort's level upgrades — the counts that
- * unlock them. `Building` does not read it: a level is bought, not earned, so
- * its multiplier arrives as a modifier. See `cohort-levels.ts`.
+ * grant them. A level is earned rather than bought, so the count is the whole
+ * trigger; the multiplier still arrives as a modifier. `Building` reads the
+ * field too, for the tier and the countdown. See `cohort-levels.ts`.
  */
 export interface BuildingData {
   role?: BuildingRole;
@@ -187,6 +188,25 @@ export interface PlanetAnchoring {
 }
 
 /**
+ * The pole a world pays for. The first thing in the game that asks for a number
+ * other than zero — every other reading wants the piles paired, which is where
+ * you already are if you never touch the dial. See `docs/design.md` §14.
+ *
+ * Read off a running share of the karma earned on the world, not off the
+ * alignment locked on the way out: the gate forces that reading near even, so a
+ * world's demand and its door would be fighting over one number.
+ */
+export interface PlanetDemand {
+  /** Which pile the world wants fed. Even is not a demand — leave it unsaid. */
+  wants: Polarity;
+  /**
+   * What full service is worth on the harvest's karma; full opposition pays its
+   * inverse, and an even split pays 1. Falls back to `balance.harvest.demand`.
+   */
+  factor?: number;
+}
+
+/**
  * A phase is a half-wave, light or dense; two make a cycle; `cycles_per_age` of
  * those make an age. Three words, used the same way in code and in the UI.
  */
@@ -216,6 +236,8 @@ export interface PlanetData {
   };
   /** Absent means a world you may incarnate on the moment you arrive. */
   anchoring?: PlanetAnchoring;
+  /** The pole this world pays for. Absent means a world that does not care. */
+  demand?: PlanetDemand;
   /** Kept when you leave, unlike the yields — see `HarvestBoon`. */
   boons?: HarvestBoon[];
 }

@@ -53,6 +53,23 @@ export interface SwarmVisual {
   /** Per-soul variation, as a fraction of `speed`. At 0 a band turns rigidly. */
   speedScatter: number;
 
+  /**
+   * The life, in seconds, of a band turning at exactly `speed` — the reference
+   * every other band's rate is read against. Absolute on purpose: a cohort whose
+   * clock shortens speeds *its* band up, rather than slowing every other one
+   * down by moving a shared reference under them.
+   */
+  speedAt: number;
+  /**
+   * How much of that a band's orbit actually honours, 0…1 — the exponent on the
+   * ratio, not a blend. The game's ladder spans 2s to 256s, and a band turning
+   * 128 times slower than its neighbour is a band that has stopped; at 0.3 the
+   * same ladder comes out about 4× from the inner lane to the outer, which reads
+   * as *quicker* and *slower* without anything standing still. 0 is every band
+   * at `speed`, which is what this was before it was a knob.
+   */
+  speedFollow: number;
+
   /** Radial breathing, so an orbit is not a drawn circle. */
   wobble: number;
   wobbleRate: number;
@@ -236,7 +253,7 @@ export interface SwarmVisual {
    *
    * Seconds between one soul's strikes, for band 0. **0 is the whole thing off**,
    * so nothing below needs a switch of its own. Later bands double it, which is
-   * the game's own `duration(n) = 1s × 2^(n-1)` read as a look: the inner band
+   * the game's own `duration(n) = 2s × 2^(n-1)` read as a look: the inner band
    * flickers and the outer one tolls.
    */
   boltEvery: number;
@@ -518,6 +535,64 @@ export function createSouls(visual: SwarmVisual, counts: number[]): Soul[] {
   return souls;
 }
 
+/** Spans per ring — a band is ~900px around at the stage's zoom, so ~7px a side. */
+const RING_SPANS = 128;
+
+/**
+ * One band's own line, as the segment list `buildRibbon` widens — the shape
+ * `strokeLoops` and `buildAnchorSolid` already hand it.
+ *
+ * Drawn through `bandAt` and `placeSoul`, the same two the dots go through, so a
+ * ring cannot drift from the clump that rides it. A scratch soul at the band's
+ * mean: no scatter, because scatter is what makes a band a clump rather than a
+ * lane, and no wobble, because the breathing is each soul's own.
+ *
+ * One band at a time and not the lit set, because each ring carries its own
+ * strength — a hover holds, a purchase fades — and a strength is a uniform.
+ */
+export function ringEdges(index: number, visual: SwarmVisual): Float32Array {
+  const edges = new Float32Array(RING_SPANS * 6);
+
+  const scratch: Soul = {
+    ux: 0, uy: 0, uz: 0,
+    vx: 0, vy: 0, vz: 0,
+    radius: 0,
+    // A turn of the scratch is a radian, so the angle asked for is the angle placed.
+    speed: 1,
+    phase: 0,
+    size: 0,
+    wobble: 0,
+    wobbleRate: 0,
+    spread: 0,
+    place: 0,
+    band: 0,
+  };
+
+  const at = { x: 0, y: 0, z: 0 };
+  const band = bandAt(index, visual);
+
+  scratch.radius = band.radius;
+  orbitBasis(scratch, band.tilt, band.node);
+
+  let cursor = 0;
+
+  for (let span = 0; span < RING_SPANS; span++) {
+    // Closed by arithmetic: span `RING_SPANS - 1` ends at a full turn, which is
+    // where span 0 began.
+    placeSoul(scratch, (span / RING_SPANS) * Math.PI * 2, at);
+    edges[cursor++] = at.x;
+    edges[cursor++] = at.y;
+    edges[cursor++] = at.z;
+
+    placeSoul(scratch, ((span + 1) / RING_SPANS) * Math.PI * 2, at);
+    edges[cursor++] = at.x;
+    edges[cursor++] = at.y;
+    edges[cursor++] = at.z;
+  }
+
+  return edges;
+}
+
 /** A share of a swarm as the whole souls it comes to. */
 export function shareOf(share: number, souls: number) {
   return Math.max(0, Math.min(souls, Math.round(share * souls)));
@@ -776,6 +851,97 @@ export function placeSoul(
 }
 
 /**
+ * The ends of the rate, as multiples of `speed`. Not tuning: they are what keeps
+ * the two failure modes off the screen whatever the ladder grows into — a band
+ * so slow it reads as parked, and one so fast its dots smear into a belt.
+ */
+const RATE_FLOOR = 0.2;
+const RATE_CEIL = 2.5;
+
+/**
+ * How long one of a band's lives takes, in seconds — **the authored doubling,
+ * for a swarm with no economy behind it.** The same fallback and the same
+ * `2 ** band` as `boltPeriodOf`, and for the same reason: the lab and the still
+ * read like the world without being told what a cohort is.
+ */
+function paceOf(band: number, visual: SwarmVisual, pace?: number[]) {
+  const given = pace?.[band];
+
+  return given !== undefined && given > 0 ? given : visual.speedAt * 2 ** band;
+}
+
+/**
+ * And how fast that band turns, as a multiple of `speed`. A short life is a
+ * quick lane: a cohort that incarnates twice as often orbits faster, and a tier
+ * that halves its clock is seen out on the world rather than only in its row.
+ *
+ * Compressed by `speedFollow` rather than taken straight — see that field. A
+ * cohort whose clock has hit the stream floor stops gaining here, which is the
+ * truth: past the floor a level buys payout and not speed.
+ */
+export function rateOf(band: number, visual: SwarmVisual, pace?: number[]) {
+  const follow = Math.max(0, Math.min(1, visual.speedFollow));
+  if (follow <= 0) return 1;
+
+  const seconds = paceOf(band, visual, pace);
+  const at = Math.max(0.01, visual.speedAt);
+
+  return Math.max(RATE_FLOOR, Math.min(RATE_CEIL, (at / seconds) ** follow));
+}
+
+/**
+ * A clock per band, running at that band's own rate.
+ *
+ * The rate cannot simply be multiplied into a soul's speed, because a soul's
+ * angle is `phase + speed × elapsed` and `elapsed` is large: a tier bought an
+ * hour in would change the speed by a fifth and the *angle* by a hundred turns,
+ * scattering the band in a frame. So what moves is the band's clock, held
+ * continuous across the change — the dots keep their places and only their pace
+ * differs after it.
+ *
+ * This is the one thing in the swarm that remembers, and a much smaller sin than
+ * `mergeLag`: it is 8 numbers, written only at the discrete moments a cohort's
+ * clock actually changes, so it never accumulates frame-rate drift. Two views of
+ * one world that saw the same purchases still agree exactly.
+ */
+export function createPacing() {
+  const was: number[] = [];
+  const shift: number[] = [];
+
+  /** Re-seats any band whose rate moved. A band's first reading is its seating. */
+  function follow(rates: number[], elapsed: number) {
+    for (let band = 0; band < rates.length; band++) {
+      const rate = Math.max(1e-4, rates[band]);
+      const before = was[band];
+
+      if (before === undefined) {
+        was[band] = rate;
+        shift[band] = 0;
+        continue;
+      }
+
+      if (Math.abs(rate - before) < 1e-6) continue;
+
+      // Both sides read the same clock at this instant, so nothing on the band
+      // moves — only what it does next.
+      shift[band] = (before * (elapsed + shift[band])) / rate - elapsed;
+      was[band] = rate;
+    }
+  }
+
+  /** What that band's clock reads. A band never seen turns with the world. */
+  function timeOf(band: number, elapsed: number) {
+    const rate = was[band];
+
+    return rate === undefined ? elapsed : rate * (elapsed + shift[band]);
+  }
+
+  return { follow, timeOf };
+}
+
+export type Pacing = ReturnType<typeof createPacing>;
+
+/**
  * How far round its own orbit a soul is, 0…1. The same figure indexes a harness
  * loop, so a soul can be put on a line without its motion changing rate and
  * without a second clock being started for it.
@@ -807,6 +973,12 @@ export const SWARM_PARAMS: SwarmParam[] = [
   { key: 'spacing', label: 'Spacing', group: 'Orbits', min: 0, max: 0.4, step: 0.005 },
   { key: 'tiltStep', label: 'Tilt step', group: 'Orbits', min: 0, max: 1.6, step: 0.01 },
   { key: 'speed', label: 'Speed', group: 'Orbits', min: 0, max: 1.5, step: 0.01 },
+  // The life that turns at exactly `Speed`. Band 0's authored 2s by default, so
+  // the inner lane is the one the slider above is literally naming.
+  { key: 'speedAt', label: 'Speed at s', group: 'Orbits', min: 0.25, max: 16, step: 0.25 },
+  // 0 is every band at `Speed`. Past ~0.5 the ladder's own 128× starts showing
+  // through and the outer bands sit on the floor.
+  { key: 'speedFollow', label: 'Follow clock', group: 'Orbits', min: 0, max: 1, step: 0.02 },
   { key: 'rim', label: 'Rim', group: 'Orbits', min: 0.8, max: 1.3, step: 0.005 },
 
   { key: 'radiusScatter', label: 'Radius scatter', group: 'Scatter', min: 0, max: 0.3, step: 0.005 },
@@ -881,6 +1053,8 @@ export const DEFAULT_SWARM: SwarmVisual = {
   tiltStep: 0.74,
   speed: 0.69,
   speedScatter: 0.31,
+  speedAt: 2,
+  speedFollow: 0.3,
   wobble: 0.065,
   wobbleRate: 0.8,
   dot: 0.042,

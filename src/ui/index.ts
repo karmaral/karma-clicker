@@ -58,6 +58,8 @@ export {
 
 export { formatExcess } from './format';
 
+export { createPixelGrid } from './pixel-grid.svelte';
+
 export { dragScroll } from './actions/dragScroll';
 export { tooltip } from './actions/tooltip';
 

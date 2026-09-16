@@ -9,10 +9,12 @@ import type { ResourceType, YieldType } from '$types';
 import data from '$data/buildings';
 import type { LadderRow } from './types';
 
-// Runs the milestone gates all the way out — see `LEVEL_GATES` in `buildings.ts`.
+// Every milestone gate, plus the counts either side of it — the row is a
+// sawtooth now and a sample that misses a gate misses the whole shape. Runs
+// past the top gate, since a steep cohort stalls well short of it.
 const COUNTS = [
-  1, 2, 3, 5, 8, 12, 16, 20, 25, 30, 40, 50, 65, 80, 100, 125, 150, 175, 200,
-  250, 300, 350, 400,
+  1, 2, 3, 5, 8, 12, 20, 25, 35, 50, 65, 100, 130, 170, 200, 250, 300, 350,
+  400, 450,
 ];
 
 /**

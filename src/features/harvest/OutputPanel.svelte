@@ -27,7 +27,12 @@
   const harvest = $derived(planet.data.harvest);
 
   const yields = $derived.by(() => {
-    const paid = resolveHarvestYields(harvest?.yields ?? {}, getFirstHarvestAlignment(), rates);
+    const paid = resolveHarvestYields(harvest?.yields ?? {}, getFirstHarvestAlignment(), rates, {
+      // What the stay already earned. The anchors are read at departure by
+      // `Harness` and do not reach this projection, so neither figure is a
+      // promise — both are what leaving right now would lock.
+      demandBonus: planet.demandBonus,
+    });
 
     return (Object.keys(paid) as ResourceType[])
       .sort(byRateOrder)

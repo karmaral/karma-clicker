@@ -19,8 +19,9 @@ export interface Beat {
 const GLOBAL = 'global';
 
 /**
- * `building:main/str_1`'s own gate. The rail opens on the figure that puts the
- * first chip in it, so it is never revealed empty — keep the two together.
+ * Cohort 1's `first` gate — **not** `str_1`'s, which is the 100 that chip costs.
+ * The rail opens on the figure that puts the first chip in it, so it is never
+ * revealed empty; keep the two together.
  */
 const FIRST_CHIP = 50;
 
@@ -38,9 +39,9 @@ export const beats: Beat[] = [
     },
   },
   // Somewhere to spend. Gated on experience and not on souls: what the rail
-  // holds here is the click's own ladder, which souls have nothing to do with —
-  // and on a soul count the two chips unlocked before it arrived together as a
-  // wall. `when` is the floor, because this beat *is* a threshold.
+  // holds here is bought by pressing — cohort 1's chip at 50, `str_1` at the 100
+  // that chip costs — and on a soul count the two arrived together as a wall.
+  // `when` is the floor, because this beat *is* a threshold.
   {
     id: 'rail',
     when: (ctx) => ctx.total('experience') >= FIRST_CHIP,
