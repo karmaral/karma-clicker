@@ -189,7 +189,8 @@
     align-items: start;
     gap: var(--sp-5);
     padding: var(--sp-5) var(--sp-4);
-    min-height: 680px;
+    height: 100%;
+    min-height: 615px;
   }
 
   .shoulder {
