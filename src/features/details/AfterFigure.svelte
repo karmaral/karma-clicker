@@ -16,17 +16,29 @@
     digits?: number;
     /** Rides inside both halves, so the unit is not read as part of the change. */
     suffix?: string;
+    /**
+     * For a figure whose units are not its own — a life, which reads in phases
+     * of the world it is lived on. What moved is then the *words*, not the
+     * number behind them: two lengths a percent apart name the same landmark and
+     * must not draw an arrow at themselves.
+     */
+    format?: (value: number) => string;
   }
 
-  let { value, after, digits, suffix = '' }: Props = $props();
+  let { value, after, digits, suffix = '', format }: Props = $props();
 
-  const moved = $derived(after !== undefined && after !== value);
+  const shown = $derived(format ? format(value) : `${f(value, digits)}`);
+  const shownAfter = $derived(
+    after === undefined ? undefined : format ? format(after) : `${f(after, digits)}`,
+  );
+
+  const moved = $derived(shownAfter !== undefined && shownAfter !== shown);
 </script>
 
 <span class="figure">
-  {f(value, digits)}{suffix}
+  {shown}{suffix}
   {#if moved}
-    <span class="after">→ {f(after!, digits)}{suffix}</span>
+    <span class="after">→ {shownAfter}{suffix}</span>
   {/if}
 </span>
 

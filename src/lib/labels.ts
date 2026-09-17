@@ -7,6 +7,7 @@
 import buildingTexts from '$data/buildings-texts';
 import planetTexts from '$data/planets-texts';
 import { parseScope } from '$data/upgrades';
+import { f } from '$lib/utils';
 import type {
   Effect, EffectVerb, FirstHarvestCondition, HarvestBoon, ModifierStat, PlanetDemand, Polarity,
   YieldType,
@@ -16,12 +17,11 @@ export type ScreenName = 'overview' | 'details' | 'harness' | 'refinery';
 
 /**
  * Header order, left to right. Details leads because the minute you are living in
- * leads; Overview arrives between two cells that already exist rather than at an
- * end, which is what it costs to keep experience out of the tabs. Harness sits
- * third for the same reason — and it reveals a beat before Refinery does, so in
- * play it appends to the strip rather than pushing anything along.
+ * leads. Harness sits second, and until it reveals Details stands across both
+ * slots — so it lands in a cell that was already there rather than pushing
+ * Overview along. Refinery reveals a beat later and appends.
  */
-export const SCREENS: ScreenName[] = ['details', 'overview', 'harness', 'refinery'];
+export const SCREENS: ScreenName[] = ['details', 'harness', 'overview', 'refinery'];
 
 export const SCREEN_LABELS: Record<ScreenName, string> = {
   overview: 'Overview',
@@ -90,9 +90,65 @@ export function getPhaseLabel(phase: number, phasesPerAge: number) {
   return `phase ${phase + 1} of ${phasesPerAge}`;
 }
 
+/**
+ * Ages completed on this world. The first-harvest gate counts the same thing, so
+ * the reading and the door it opens can never disagree — and it is a count, never
+ * `age 3`, which would name an age you are only part-way through.
+ */
+export function getAgesLabel(agesLived: number) {
+  return `${f(agesLived)} ${agesLived === 1 ? 'age' : 'ages'}`;
+}
+
 /** The header's one-line note: the same, plus which half of the wobble it is in. */
 export function getWaveLabel(phase: number, phasesPerAge: number, isDense: boolean) {
   return `${getPhaseLabel(phase, phasesPerAge)} · ${isDense ? 'dense' : 'light'}`;
+}
+
+/** Within a percent of whole. Wide enough for float drift, tight enough to refuse a lie. */
+function isWhole(value: number) {
+  return Math.abs(value - Math.round(value)) < 0.01 * Math.max(1, Math.abs(value));
+}
+
+function plural(count: number, unit: string) {
+  return `${Math.round(count)} ${unit}${Math.round(count) === 1 ? '' : 's'}`;
+}
+
+/**
+ * A life in the wave's own words. Lives are authored in phases and double per
+ * index (see `buildings.ts`, `BASE_LIFE`), so every one of them lands on a
+ * landmark the wave already has a name for — and the reading a player needs is
+ * whether a life fits inside a phase, not how many seconds it happens to be on
+ * this world.
+ *
+ * Bigger units first: a length that is both four phases and two cycles reads as
+ * cycles, because a cycle is what the one-phase line is drawn against.
+ *
+ * ⚠ Seconds are the guard, not a fallback anybody should reach. Nothing may
+ * multiply a life by anything but a power of two — that is what keeps every one
+ * of them on a landmark, and it is why the two all-cohort `boost` entries buy
+ * yield rather than duration (see `upgrades.ts`, the `cohorts` bucket). A life
+ * off the grid would have to be named by the nearest landmark, which is a lie
+ * about the only figure on the row, so it reads in seconds instead. A floored
+ * life never arrives here at all — `lifeLabel` answers *stream* first.
+ *
+ * The power-of-two test is exact on the rounded denominator and not on its
+ * log: `isWhole` is a *relative* tolerance, and at a denominator of 960 it
+ * accepted log2 9.907 as 10 and then printed the 960.
+ */
+export function formatLife(ms: number, phaseMs: number, phasesPerAge: number) {
+  const phases = ms / Math.max(1, phaseMs);
+  const ages = phases / Math.max(1, phasesPerAge);
+
+  if (ages >= 1 && isWhole(ages)) return plural(ages, 'age');
+  if (phases >= 2 && isWhole(phases / 2)) return plural(phases / 2, 'cycle');
+  if (phases >= 1 && isWhole(phases)) return plural(phases, 'phase');
+
+  const denominator = Math.round(1 / phases);
+  if (phases > 0 && isWhole(1 / phases) && Number.isInteger(Math.log2(denominator))) {
+    return `1/${denominator} phase`;
+  }
+
+  return `${f(ms / 1000)}s`;
 }
 
 /**

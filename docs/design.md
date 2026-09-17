@@ -331,11 +331,17 @@ about it falls out of that index.
 ```
 cost(n)     = 15 × 7^(n−1)          experience
 yield(n)    = 2  × 13^(n−1)         experience per soul
-duration(n) = 2s × 2^(n−1)
+life(n)     = 1/16 × 2^(n−1)        phases of the world you stand on
 karma(n)    = 2  × yield(n)
 ramp(1)     = 1.07
 ramp(n)     = max(1.07, 1.17 − 0.01n)             n ≥ 2
 ```
+
+**A life is a length in phases, not in seconds.** The world converts it:
+`seconds = life(n) × phase_duration`. The ladder doubles per index and so does
+the wave — a cycle is two phases, an age is eight — so every cohort lands on a
+landmark the wave already has a name for, and the eight-row ladder spans exactly
+one sixteenth of a phase up to one age. See *Lives are phases* below.
 
 **The ramp is the one figure that is not flat across the ladder**, and it is
 AdCap's shape: the first row is the cheap outlier, the second is the steepest,
@@ -349,30 +355,71 @@ decision to move up lives.
 
 Two consequences fall straight out and both are worth memorising:
 
-> **rate = 1 × 6.5^(n−1) per second.** Cohort 1 is **one experience a second**,
-> and each cohort is six and a half times the throughput of the one below it.
+> **rate = 6.5^(n−1) × 16 / phase_duration per second.** On a 30 s world cohort 1
+> is **one experience a second**, and each cohort is six and a half times the
+> throughput of the one below it.
 >
-> **payback = 15 s × 1.077^(n−1).** Each cohort takes **1.077 times** as long to
-> repay itself as the one below it.
+> **payback = 14 s × 1.077^(n−1) × phase_duration / 30 s.** Each cohort takes
+> **1.077 times** as long to repay itself as the one below it.
 
-| # | Base cost | Yield | Life | Rate/s | Payback |
-|---|---|---|---|---|---|
-| 1 | 15 | 2 | 2 s | 1 | 15 s |
-| 2 | 105 | 26 | 4 s | 6.5 | 16 s |
-| 3 | 735 | 338 | 8 s | 42.3 | 17 s |
-| 4 | 5,145 | 4,394 | 16 s | 274.6 | 19 s |
-| 5 | 36,015 | 57,122 | 32 s | 1,785 | 20 s |
-| 6 | 252,105 | 742,586 | 64 s | 11,603 | 22 s |
-| 7 | 1.76M | 9.65M | 128 s | 75,419 | 23 s |
-| 8 | 12.4M | 125M | 256 s | 490,223 | 25 s |
+Both carry `phase_duration` now. The table below reads the 30 s world — worlds 1
+and 2, and what the bench prices the ladder against:
+
+| # | Base cost | Yield | Life | at 30 s | Rate/s | Payback |
+|---|---|---|---|---|---|---|
+| 1 | 15 | 2 | 1/16 phase | 1.9 s | 1.07 | 14 s |
+| 2 | 105 | 26 | 1/8 phase | 3.8 s | 6.9 | 15 s |
+| 3 | 735 | 338 | 1/4 phase | 7.5 s | 45.1 | 16 s |
+| 4 | 5,145 | 4,394 | 1/2 phase | 15 s | 292.9 | 18 s |
+| 5 | 36,015 | 57,122 | **1 phase** | 30 s | 1,904 | 19 s |
+| 6 | 252,105 | 742,586 | **1 cycle** | 60 s | 12,376 | 20 s |
+| 7 | 1.76M | 9.65M | 2 cycles | 120 s | 80,447 | 22 s |
+| 8 | 12.4M | 125M | **1 age** | 240 s | 522,904 | 24 s |
 
 **The base is 2 so that the bottom row is a unit.** A rate is the figure a
 player holds, and half of one is not a number anybody counts in. The yield axis
-carries it and not `duration` on purpose: a 1 s base would have moved every life
+carries it and not the life on purpose: a 1 s base would have moved every life
 on the ladder, and lives are what tell two cohorts apart (§6) and what every
 level rung spends itself on. Doubling the column touches neither —
 but it does halve payback, which is the second generosity step in a row and is
 part of what the ⚠ below is about.
+
+### Lives are phases
+
+**`1/16` and not `1/32`, which was the other candidate.** Two things pick it. It
+holds the economy where it already sat — rates are ×1.07 against the 2 s base it
+replaces, which is no change at all — where `1/32` would have doubled every rate
+and made the move an income grant wearing a clock's clothes. And it is the value
+that lands the eighth row on an age exactly: at `1/32` the landmarks slide up one
+row and no cohort reaches an age at all.
+
+**It is nonetheless an income knob, and the only new one.** Halving it halves
+every life, which doubles every cohort's rate. It is a module constant in
+`buildings.ts` rather than a `balance.ts` figure because it does not differ per
+world — the bench sweeps a generated row's `life` when it wants to ask the
+question.
+
+**A longer phase pays less per second**, and that is the point. A life's yield is
+fixed and only its length stretches, so a world whose phase is twice as long pays
+the same per life, half as often. On the live decomposition (§13) the phase
+doubles exactly once, so income has **one step down, on arriving at world 3** —
+and everything priced off income steps with it: the refinery's capacity (§9), the
+wisdom it feeds (§18), and the harvest snapshot (§15). The press does not: its
+yield is flat and it has no life, so it is worth twice as much of your income on
+a long-phase world.
+
+⚠ Unplayed. Income grows about `t^2.3` and worlds 1–2 pay from behind, so the
+halving may be masked entirely, or may read as the climb restarting — the same
+complaint §14 recorded once. Measure the world 2 → 3 arrival before touching the
+harvest ratios or `firstWisdomAt`.
+
+**Lives in flight at a harvest are called off, not carried or prorated.** With
+the world harvested and the next not chosen there is nowhere to be born, so a
+life still running would land on nothing; it is halted at departure and a fresh
+full one begins on arrival, measured against the new world. What the departing
+life had served is forfeit, bounded at one life a cohort. Prorating it was the
+alternative and was dropped: it would pay for an incarnation that never finished,
+and the payout rounds it to zero on the low rows anyway.
 
 ### Why 13 and not 10
 
@@ -481,6 +528,14 @@ the way up:
 | 100 | 5,684 s | **60 s** |
 | 200 | 28 days | **3.6 hours** |
 
+⚠ This table and the rate-per-experience one below were computed against the 2 s
+base that *Lives are phases* replaced. Every absolute figure shifts by ×0.94 for
+payback and ×1.07 for rate on a 30 s world, and doubles or halves with the phase
+elsewhere. Both tables are arguments about **ratios** — the gate copy against the
+copy before it, one row's rate-per-experience against another's — and every ratio
+is untouched, so they are left as they were read rather than restated a
+twentieth lower.
+
 That is *three more to the milestone*, and it is the shape the priced rung was
 trying to buy. ⚠ **A gate every hundred copies makes the run-up long**: the
 approach to gate 200 is a hundred copies each paying back over days, with only
@@ -567,22 +622,40 @@ Holding the life at the floor rather than past it also keeps the two axes honest
 below `streamUnder` the emitter stops keeping a timer per life and pays by the
 tick, so further shortening is invisible where doubling the payout is not.
 
-| Cohort | Base life | Halvings | Yield rungs | Life, all 12 rungs |
-|---|---|---|---|---|
-| 1 | 2 s | 5 | 7 | 62.5 ms |
-| 2 | 4 s | 6 | 6 | 62.5 ms |
-| 3 | 8 s | 7 | 5 | 62.5 ms |
-| 4 | 16 s | 8 | 4 | 62.5 ms |
-| 5 | 32 s | 9 | 3 | 62.5 ms |
-| 6 | 64 s | 10 | 2 | 62.5 ms |
-| 7 | 128 s | 11 | 1 | 62.5 ms |
-| 8 | 256 s | 12 | 0 | 62.5 ms |
+**The floor stays an absolute figure and does not become a phase fraction.** It
+is about the eye, and the eye does not change per world: a sixteenth of a second
+reads as a rate wherever you are standing, where `1/512` of a 60 s phase is
+117 ms — eight and a half a second, which is still visibly a beat. The cost is
+that a long-phase world needs one more halving to reach it, which is the honest
+reading, and it costs nothing in rate because the conversion is income-neutral
+either way.
 
-**Every cohort bottoms out at 62.5 ms and nowhere else.** The claim was retired
-as a ten-rung artefact; twelve rungs across two tiers restore it, and this time
-it is not a coincidence of the authoring — cohort 8's 256 s is `2^12` floors
-exactly, and every row below spends its surplus rungs on yield instead. The
-ladder's rate ratio is untouched: ×4,096 on every row.
+So the count is **`n + 4` on a 30 s world and `n + 5` on a 60 s one**, against
+twelve rungs across the two tiers:
+
+| Cohort | Base life | at 30 s | Halvings | Yield rungs | Life, all 12 rungs |
+|---|---|---|---|---|---|
+| 1 | 1/16 phase | 1.9 s | 5 | 7 | 62.5 ms |
+| 2 | 1/8 phase | 3.8 s | 6 | 6 | 62.5 ms |
+| 3 | 1/4 phase | 7.5 s | 7 | 5 | 62.5 ms |
+| 4 | 1/2 phase | 15 s | 8 | 4 | 62.5 ms |
+| 5 | **1 phase** | 30 s | 9 | 3 | 62.5 ms |
+| 6 | **1 cycle** | 60 s | 10 | 2 | 62.5 ms |
+| 7 | 2 cycles | 120 s | 11 | 1 | 62.5 ms |
+| 8 | **1 age** | 240 s | 12 | 0 | 62.5 ms |
+
+**On a 30 s world every cohort bottoms out at 62.5 ms and nowhere else.** The
+claim was retired as a ten-rung artefact; twelve rungs across two tiers restore
+it, and this time it is not a coincidence of the authoring — cohort 8's age is
+`2^12` floors of the eye, and every row below spends its surplus rungs on yield
+instead. The ladder's rate ratio is untouched: ×4,096 on every row.
+
+⚠ **On a 60 s world the top row never becomes a stream.** Cohort 8 would want a
+thirteenth halving and there are twelve, so it bottoms out at 117 ms — a fast
+beat, and zero yield rungs, as cohort 7 already had. Its *rate* is unaffected;
+the floor is income-neutral, so all this changes is whether the row reads as a
+clock or as a flow. Whether the top of the ladder losing its stream on the long
+worlds is a loss or a texture is unplayed.
 
 ⚠ **A `boost` shortening makes the conversion fractional**, and `payout` rounds.
 On cohort 1, whose yield is 2, a 6% shortening past the floor rounds away
@@ -785,13 +858,25 @@ without anyone writing a rule that says so.
 
 | Upgrade | Effect | Unlocks at | Costs |
 |---|---|---|---|
-| `shorter_lives_1` | −6% duration, all cohorts | 250,000 karma+ | 310,000 karma+ |
-| `hard_season` | −12% duration, all cohorts | 900,000 karma+ | 1,200,000 karma+ |
+| `harder_lives_1` | +6% yield, all cohorts | 250,000 karma+ | 310,000 karma− |
+| `hard_season` | +12% yield, all cohorts | 900,000 karma+ | 1,200,000 karma− |
 
-They **sum** to −18% rather than compounding to −17%. A global shortening of every
-life should add up the way a player reading two percentages expects.
+They **sum** to +18% rather than compounding to +19%. A global lift on every
+cohort should add up the way a player reading two percentages expects.
 
-⚠ Both are now much smaller than a single level rung and want re-siting
+**Yield and not duration, and that is structural.** A life prints in the wave's
+own landmarks — `1/16 phase`, `1 phase`, `2 cycles`, `1 age` — and only a power
+of two lands on one. These two used to shorten by −6% / −12%, and one purchase
+dropped every row of the table to seconds, permanently, on every world. Rate is
+yield over duration, so the same income arrives on the axis that cannot break
+the vocabulary: it is `#clampDuration`'s own substitution, moved up to where the
+entry is authored. **Nothing but a halving may ever touch `duration` again.**
+
+⚠ The pair is 3.2% weaker than the shortening it replaces — `1/0.82` is 1.2195
+against 1.18. Exact parity wanted +7.32% / +14.63%, which costs the readable
+pair above; both figures are placeholders wanting re-siting anyway.
+
+⚠ Both are still much smaller than a single level rung and want re-siting
 against the generated ladder.
 ## 6. Aim and polarity
 
@@ -852,21 +937,50 @@ observed doing its job, sitting on top of an economy that could not be played lo
 enough to test it. Removing an untested mechanic costs nothing and removes a
 tuning surface from every cohort at once.
 
-**Duration replaces them, and does the job better because it is already there:**
+**The life replaces them, and does the job better because it is already there:**
 
-> **A life accumulates the phase bias across its whole span.** A one-second life
-> sits inside a single phase and takes that phase's bias whole. A 128-second life
-> spans several and averages them.
+> **A life accumulates the phase bias across its whole span**, and a life is
+> measured in phases (§5). So the line is exact:
+>
+> **A life of one phase or less can be timed. A life of one cycle or more cannot.**
+
+Lives are powers of two, so nothing sits between those two lengths and the rule
+has no middle. A life of a whole cycle spends exactly half of itself in each half
+of the wave and comes out at ×1.0 — always, wherever it started — and stays there
+under the excess spread below, because that spread is mean-preserving. Shorter
+than a phase and where it starts is the whole of it:
+
+| Life | Starting at a flip | Starting mid-phase |
+|---|---|---|
+| ¼ phase | ×1.5 or ×0.5 | ×1.5 or ×0.5 |
+| 1 phase | ×1.5 or ×0.5 | ×1.0 |
+| **1 cycle or more** | **×1.0** | **×1.0** |
 
 So **short cohorts are volatile and can be timed; long cohorts are smooth and
 cannot.** That is a real reason to own both ends of the ladder at once, it is
-derived entirely from `duration(n)`, and it costs zero authored numbers.
+derived entirely from `life(n)`, and it costs zero authored numbers.
+
+**The square wave is load-bearing here**, and this is the strongest argument for
+keeping it. A continuous bias would blur the one-phase / one-cycle line into a
+gradient and there would be no rule left to state. See §19.
+
+⚠ **A halving changes a cohort's character, not only its speed.** A cohort
+becomes timeable the rung its life drops to one phase — after `n − 5` halvings —
+so levelling a long row erodes the smooth end of the ladder from underneath.
+Whether that is a feature to keep or a thing to cap is undecided; see §19.
 
 **The manual batch is the lever this hands you.** A cohort without a clerk (§5)
 sends its souls when you click it, so you can hold a batch through a dense phase
 and release it into a light one. Buying the clerk sells that timing for
 throughput. **This is the polarity decision the removed numbers were reaching
 for**, and it is legible without a needle diagram.
+
+⚠ **The lever only exists for cohorts of one phase or less.** Holding a
+cycle-long batch for the right phase changes nothing, so a manual long cohort
+offers waiting and nothing else, and its clerk sells throughput alone — which
+breaks §5's *automation is a trade* at that end of the ladder. Cheaper clerks for
+long rows, or long rows arriving clerked, would both fix it and both break
+`clerk(n) = reveal(n+1)`, so neither is taken. Unresolved; see §19.
 
 ### The phase bias
 
@@ -1174,6 +1288,11 @@ batch     = capacity × interval
 is 1.5 and 0.5 over equal halves of a cycle, so it averages to exactly 1.0, and
 excluding it *is* the cycle mean, not an approximation. That is what keeps
 coverage from jittering: nothing about it depends on the size of a pile.
+
+⚠ **Capacity halves on arrival at world 3.** It is a share of income, and income
+halves when the phase doubles (§5, §13) — so crimson per second, and the wisdom
+it feeds (§18), step down with everything else. `firstWisdomAt` was already due a
+recalibration and now has a second reason.
 
 **The backlog always grows, by construction, and that is deliberate.**
 Coverage never reaches 1.0, so capacity is permanently pinned under
@@ -1675,8 +1794,14 @@ ages(p) × cycles_per_age(p) × 2 × phase_duration(p)  =  time(p)
 
 **That constraint is the point.** `phase_duration` is one of the few things making
 worlds feel different, and under the old formulas it could not be touched without
-moving pacing. Under a total-first law you can author a world's breathing rate
-freely — a slower phase just means fewer of them.
+moving pacing. Under a total-first law the decomposition is yours to author — a
+slower phase just means fewer of them, and the world still takes the same time.
+
+⚠ **`phase_duration` is no longer a free feel knob.** Since §5 a life is a length
+in phases, so phase length is also an **income multiplier of `30 s ÷ phase`**: a
+world breathing twice as slowly pays half as much a second. Authoring it is
+therefore a pacing decision as well as a texture one, and the freedom the law
+hands you is freedom over *where the income steps*, not freedom from stepping it.
 
 | World | Total | Phase | Phases | Cycles | Ages | Cycles/age |
 |---|---|---|---|---|---|---|
@@ -1692,6 +1817,22 @@ phases; `phase_duration` doubles exactly once, between worlds 2 and 3; `ages`
 carries the rest. The freedom the total-first law hands you is real and this
 first pass spends almost none of it — one world breathing at 30 s and four at
 60 s. **Making them differ is the authoring work still outstanding.**
+
+Because the phase doubles exactly once, **income has exactly one step down, on
+arriving at world 3**, and holds at ×0.5 for the rest of the run:
+
+| World | Phase | Income vs world 1 |
+|---|---|---|
+| 1 | 30 s | ×1 |
+| 2 | 30 s | ×1 |
+| 3 | 60 s | **×0.5** |
+| 4 | 60 s | ×0.5 |
+| 5 | 60 s | ×0.5 |
+
+Unaffected by any of it: excess, which is a ratio of piles; the harvest cadence;
+world length itself; and §7's rule that nothing buys wave speed — which now
+matters *more*, since a phase-shortening upgrade would no longer be a feel change
+but a direct income multiplier.
 
 **A three-world system is 28 minutes of floor instead of 124.** Five worlds is 124
 — so the old third world's length is now where the *fifth* sits, which is about
@@ -1901,7 +2042,7 @@ pile. Two more are plainly the same register:
 | `refinery:slots_1` | 25,000 karma− | already gated on `karma_negative` |
 | `harness:riders_1` | 150,000 karma− | " |
 | `building:main:carry_1` | 200,000 karma− | " |
-| `cohorts:shorter_lives_1` | 310,000 karma− | spending lives faster for throughput |
+| `cohorts:harder_lives_1` | 310,000 karma− | taking more out of the same span |
 | `cohorts:hard_season` | 1,200,000 karma− | the same, doubled |
 
 Roughly 1.7M of negative sink against positive's remainder, so Burden's `K` is
@@ -2044,6 +2185,13 @@ larger income.
 
 **The snapshot is taken pre-merge.** Merging must not destroy the thing you are
 being paid for.
+
+⚠ **The snapshot is halved from world 3 on.** A life is a length in phases (§5),
+so income halves when the phase doubles, and a payout denominated in *seconds of
+income* halves with it. The `15 / 30 / 45 / 60 / 80` ladder may want raising on
+the long-phase worlds to compensate — or may not, if a smaller banked multiple is
+exactly the progression cost the phase length was meant to charge. Measure the
+world 2 → 3 arrival before deciding; see §19.
 
 **Karma is phase-averaged, never read off the instant.** The wave swings karma
 income by at least ×3 (§6's bias pair, wider the deeper the tilt), so an
@@ -2570,7 +2718,13 @@ authored well enough to run that test against — see §1.
 | **Wisdom's structure shelf vs knowledge's permanent shelf** | §18 — both permanent, both bought; the distinction is real and uncomfortable |
 | **A karma-to-red ratio** | §9 — the refinery ran 4.6× ahead of the economy at level 29, so this is now needed rather than merely absent. Held until worlds 4–5 are played |
 | **The click** | §4 — 700/click against 150k/s is 0.5% of income. `carry` is linear and capped against income compounding ×5 per index; it needs a different shape (a share of *income*) or an explicit decision to let the hand go vestigial |
-| **Continuous vs square-wave phase bias** | §6 — now also the thing that keeps the two ends of the cohort ladder distinct |
+| **Continuous vs square-wave phase bias** | §6 — now load-bearing: the square wave is what makes the one-phase / one-cycle line a rule rather than a gradient |
+| **`BASE_LIFE`, and whether the world 3 step reads** | §5, §13 — `1/16` holds today's economy and lands cohort 8 on an age; the halving on arrival at world 3 is unplayed and may read as the climb restarting |
+| **Whether a halving should be allowed to make a long cohort timeable** | §6 — a row becomes timeable `n − 5` rungs in, so levelling erodes the smooth end of the ladder. Feature or cap, undecided |
+| **Clerk handling for cycle-long cohorts** | §5, §6 — their clerk sells throughput and no timing. Cheaper clerks or arriving clerked both fix it and both break `clerk(n) = reveal(n+1)` |
+| **Whether the life forfeited at departure wants recovering** | §5, §14 — halted, not prorated, and bounded at one life a cohort. An age-long life on world 5 is 8 minutes, which is where it would start to be felt |
+| **Harvest ratios on long-phase worlds** | §15 — the snapshot halves from world 3; whether `15…80 s` compensates is unmeasured |
+| **Lumpiness of age-long lives** | §5, §17 — an age on world 5 is 8 minutes between payouts, and the row's bar has to carry that wait on its own |
 | **How many worlds a system has** | §13 — 5 is authored, not derived |
 | **Per-cohort aiming** | §6 — parked, and further away now that cohorts have no aim figures. `LeanMeter` is kept in the tree, unwired, against this coming back |
 | **`clerk`'s own name** | §5, §20 — the mechanic shipped, the word did not; ledger, mechanical and managerial candidates all tried and set aside |
@@ -2665,9 +2819,10 @@ the slot counts together** — no one of them is meaningful alone.
 - **All four world-discovery gates.** They put discovery near the harvest beat and
   nothing more.
 - **The whole click ladder**, whose gates were set against the old cohort costs.
-- **`shorter_lives_1` and `hard_season`**, now much smaller than a single
-  level rung — and now the bulk of the `karma_negative` sink (§14), so they are
-  load-bearing for the alignment trade as well as for duration.
+- **`harder_lives_1` and `hard_season`**, still much smaller than a single
+  level rung — and the bulk of the `karma_negative` sink (§14), so they are
+  load-bearing for the alignment trade as well as for throughput. They are on
+  the yield axis now and must stay there; see §5.
 - **`shortPileFloor`**, chosen so the cliff's one honest use survives at 95%.
 - **Worlds 4 and 5's pictures**, which are existing specimens at a new seed and
   have never been through the widget lab.

@@ -8,9 +8,34 @@
  * combines order-independently, so nothing is ever added and taken back off.
  */
 import { progression } from '$lib/progression';
+import { PlanetManager } from '$lib/managers';
+import { formatLife } from '$lib/labels';
+import { REFERENCE_PHASE } from '$data/buildings';
+import balance from '$data/balance';
 import type Building from '$lib/buildings/base.svelte';
 import type { Modifier, YieldType } from '$types';
 import { byRateOrder } from './badge';
+
+/**
+ * A life in the wave's words, against the world you are standing on — see
+ * `formatLife`. The fallback is the world the ladder is priced against, so a
+ * roster read in the gap between two worlds still reads in landmarks rather
+ * than going blank or naming a length nothing is living.
+ *
+ * A life at the floor is a rate and not a clock, so it says so here rather than
+ * at each caller: `streamUnder` is absolute and no phase fraction lands on it,
+ * so `formatLife` could only ever print it in seconds. `CohortRow` keeps its
+ * own `isStreaming` branch — that one reads autonomy too — and a tooltip
+ * pricing a purchase cannot use it, since the life it projects may cross the
+ * floor while the one it holds has not.
+ */
+export function lifeLabel(ms: number) {
+  if (ms > 0 && ms <= balance.emission.streamUnder) return 'stream';
+
+  const planet = PlanetManager.getActive();
+
+  return formatLife(ms, planet?.phaseDuration ?? REFERENCE_PHASE, planet?.phasesPerAge ?? 8);
+}
 
 export interface Rate {
   type: YieldType;

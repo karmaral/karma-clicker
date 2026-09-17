@@ -75,6 +75,10 @@ class PlanetManager {
 
     this.#selected = id;
     aim.reset();
+
+    // The roster was halted on the way out, and a life is a length in phases —
+    // so every cohort starts a fresh full life measured against *this* world.
+    BuildingManager.startEmitters();
   }
 
   /**
@@ -116,6 +120,16 @@ class PlanetManager {
     planet.completeFirstHarvest({ merged, mergedShare: share, alignment, rates, anchorBonus });
     this.#grantBoons(planet);
     this.#selected = '';
+
+    // With no world there is nowhere to be born, so `Cohort.yieldScale` is 0 and
+    // every life still in flight would land on nothing — and then requeue, and
+    // land on nothing again, for as long as the next world goes unchosen. Called
+    // off instead, the way the refinery calls off a pulse that would pay
+    // nothing. What the departing life had served is forfeit, bounded at one
+    // life a cohort; `reach` starts fresh ones. It also means no wait is ever in
+    // flight across a change of phase length, so a stream's batch and its
+    // overflow can never be read from two different worlds.
+    BuildingManager.haltEmitters();
 
     return merged;
   }

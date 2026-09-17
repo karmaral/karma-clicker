@@ -649,6 +649,59 @@ luck, and luck stops being good enough the moment a head has to match its rows.
 `byRateOrder` in `badge.ts` sorts both: experience first, as in the score block,
 then karma negative-then-positive, as in Details and the grade table.
 
+### The row is the bar
+
+The 12rem `SweepBar` under the cohort's name is gone. A life in flight now washes
+the **whole row** left to right — the reading the manual send already had at row
+scale, and the reading the stream has kept. Three states on one surface: a wash
+filling is a life running, a band crossing is a stream, nothing is a row between
+lives. `.row.sending`'s travelling band retired into `.row.streaming`, since the
+fill says what it used to say and says where the life stands as well.
+
+The width the track gave back is the countdown: `2 phases · 4.3s left`, the same
+line `WaveStrip` reads — a length, then what is left of the one running. The
+emitter's `nextAt` reached `Building` for it, mirroring `refinery.nextAt`.
+
+**The clock is a box, not the row's background.** `.wash` is an absolute box
+inset by `--wash-start` on the left and by `--purchase-width` on the right — so
+the run it draws across begins past the ident's copy and stops where the buy cell
+begins, and the fill inside it travels 0 → 100% of whatever that box turns out to
+be. Widen the buy cell and the wash gives way to it; nothing here is measured and
+nothing is recomputed.
+
+**Out of flow, because it is not a cell.** It draws over the row rather than
+sitting in it, so the grid places the four real cells exactly as it did before
+there was a clock — no explicit `grid-area` on any of them, and no row 2 for an
+auto-placed sibling to fall into. Both insets are stated against the row's
+padding box, which is what an absolute box is measured from, so each carries
+`--pad-inline` as well as its own figure.
+
+Two shapes were tried first and both failed on the same thing. The wash as the
+row's own `background-image` had to be *masked* off the ident, because a
+gradient's flat tail runs behind its leading edge — and the mask was an opaque
+white plate, which is opaque over the row's hover and spotlight tints too. A row
+that stops tinting under its own name is worse than the problem. The box has
+nothing to mask: where it is not, the row is simply the row.
+
+It needs no `z-index` and gets none. `.count` and `.held` carry a bare
+`position: relative` instead — an absolute box paints over static content, and
+tree order is what settles it once both sides are positioned. `.ident` was
+already relative and the buy cell sits past the wash's right edge, so those two
+are the whole of it. `pointer-events: none`, or the wash would eat the send click.
+
+**Translate, never scale.** The fill is the box's full width and slides in from
+the left, so the falloff on its leading edge is a fixed tenth of the run at every
+progress; a scaled box takes its gradient with it and the edge would soften as it
+went. Either way it is a transform and not a `width` — the same reason `SweepBar`
+gave up animating one.
+
+The stream band lives in the same box on the same terms, so both readings are the
+same run wide. `--pad-top` / `--pad-bottom` came out of this and stayed: the buy
+cell bleeds back over the row's block padding and now negates a name instead of
+restating 26px and 17px, which collapsed the `.row.compact` override with it.
+
+`SweepBar` itself is untouched and still serves the refinery and the Overview.
+
 ## Figures
 
 ### A decimal earns its place only under ten
@@ -3610,14 +3663,62 @@ Two smaller things worth keeping:
 - **Who counts as a cohort is answered by class, not by exclusion.**
   `BuildingManager.cohorts` filters on `instanceof Cohort`, so the click is out
   of `All cohorts` without anyone writing a rule that says so.
-- **`boost`, not `mult`.** The two entries sum to −18% rather than compounding to
-  −17%. A global shortening of every life should add up the way a player reading
+- **`boost`, not `mult`.** The two entries sum to +18% rather than compounding to
+  +19%. A global lift on every cohort should add up the way a player reading
   two percentages expects it to; `ModifierSet` gives that for free by summing the
   `boost` bucket.
 
-`hard_season` had twice `shorter_lives_1`'s effect at under a hundredth of its
+`hard_season` had twice `harder_lives_1`'s effect at under a hundredth of its
 price. That inversion was invisible while both sat behind an unreachable gate,
 which is the argument against parking an entry instead of finishing it.
+
+### The vocabulary is load-bearing, so the axis moved
+
+Both entries used to shorten `duration` — −6% and −12%, under the names
+`shorter_lives_1` and *Shorter Lives I*. A life prints in the wave's own words
+(`formatLife`) and **only a power of two lands on a landmark**, so one purchase
+of either took every row of the cohort table off the grid and into seconds,
+permanently, on every world. The halvings never did: the ten per-cohort levels
+and the ten `milestone_*` rungs are all `×0.5`, and the fractions survive them
+all the way down to the floor — `1/16 → 1/32 → … → 1/256 phase`.
+
+Three fixes were on the table. Snapping the folded duration to the grid and
+spilling the remainder into yield — generalising what `#clampDuration` already
+does at the floor — is the invariant version and quantises the swarm's pace with
+it. Making both entries halvings puts them on the grid by construction but at
+16× and 8× their intended strength, and makes them clones of a level rung.
+
+**What was taken: move them to yield.** Rate is yield over duration, so `×1.18`
+on yield is the income `×0.82` on duration was — the same substitution, made at
+the authoring layer instead of inside the clamp. It costs the *shorter lives*
+fiction, which is why the id and the title are now `harder_lives_1` / *Harder
+Lives I*: the entry no longer shortens anything, and an id naming a mechanic it
+does not have is the next author's trap. `hard_season` needed no rewording.
+
+The rule this leaves behind: **nothing may multiply a life by anything but a
+power of two.** It is written at `formatLife` and at the `cohorts` bucket, in
+both places as the reason rather than as a note.
+
+Two figures went with it. The pair is 3.2% weaker (`1/0.82` = 1.2195 against
+1.18) — parity wanted +7.32% / +14.63%, which costs the readable pair the
+`boost` choice above exists for, and both are placeholders §5 wants re-sited.
+And cohort 1 at low tier loses the purchase to `payout`'s rounding: base yield 2,
+`+18%` is 2.36 → 2. That is the ⚠ already standing against `overflow` in
+`Building`, reaching one rung earlier, behind a 250,000 karma+ gate by which
+point cohort 1 holds many rungs.
+
+Two bugs surfaced in the same check and were fixed with it:
+
+- **`formatLife` printed `1/960 phase`.** `isWhole` is a *relative* tolerance
+  (`0.01 × value`) and it was being applied to a `log2` result — at `log2` 9.907
+  that passes as 10, and the line then printed the raw 960. The test is exact on
+  the rounded denominator now, with the tolerance kept only on the division,
+  where float drift is what it is for.
+- **The cohort tooltip printed `0.1s` where the row said *stream*.** `CohortRow`
+  guarded on `isStreaming`; `CohortTooltip` did not, and could not — its `after`
+  figure may cross the floor while its `now` has not, and both go through one
+  `AfterFigure`. `lifeLabel` answers *stream* at or under `streamUnder` now, so
+  the two surfaces cannot disagree.
 
 ### The hand rides with the crowd
 
@@ -4892,6 +4993,72 @@ The cost, taken knowingly: the wave is no longer connected to the thing the game
 is about. Amaral liked "experience as time" as a concept and let it go on the
 pacing argument — if it comes back, it comes back as an explicit, priced upgrade
 axis on phase speed, not as the pricing of the clock itself.
+
+⚠ **That last sentence now costs more than it did.** Since *The wave became the
+cohort clock* below, a phase-speed upgrade would not be a feel change — it would
+be a direct income multiplier. The invariant was always the load-bearing one; it
+is now load-bearing twice.
+
+## The wave became the cohort clock
+
+**A cohort's life is a length in phases of the world it is standing on**, not a
+span in seconds: `life(n) = 1/16 × 2^(n−1)` phases, converted by
+`Building.#clampDuration` against `Planet.phaseDuration`. It replaces
+`duration(n) = 2s × 2^(n−1)`.
+
+The reason is that §6 was already claiming the thing and only approximately
+meaning it. *Short cohorts are volatile and can be timed; long ones are smooth
+and cannot* was true of the shipped numbers on a 30 s world and an accident
+everywhere else — a 64 s life is a cycle on world 1 and half a cycle on world 3,
+so the same cohort had a different character per world for no authored reason.
+Denominating the life in phases makes the line exact and free: lives are powers
+of two, so a life is either one phase or less (timeable) or one cycle or more
+(exactly ×1.0, always), and nothing sits between.
+
+- **`1/16`, not `1/32`.** Both were on the table. `1/16` holds the economy where
+  it already was — rates ×1.07 against the 2 s base, no change worth measuring —
+  where `1/32` doubles every rate and smuggles an income grant in as a clock
+  change. It also lands the eighth row on an age exactly; at `1/32` the landmarks
+  slide up a row and no cohort reaches an age at all. The landmarks are the
+  point, so the value that hits them wins.
+- **A generator constant, not a `balance.ts` knob.** It does not differ per
+  world, and `overrides.ts` could not reach it anyway — `buildings.ts` evaluates
+  at module load, before a worker applies its overrides. The bench sweeps a
+  generated row's `life` when it wants to ask the question.
+- **Yield per life is fixed, so a longer phase pays less per second.** Taken
+  deliberately as the progression cost: a world that breathes slowly pays the
+  same per life, less often. On the live decomposition the phase doubles exactly
+  once, so income has one step down, on arriving at world 3, and everything
+  priced off income steps with it. Unplayed — income grows about `t^2.3` and
+  worlds 1–2 pay from behind, so the halving may be masked or may read as the
+  climb restarting.
+- **The alternative on record, not taken:** measure length in phases but keep
+  rate in seconds, so a life pays `rate × its length in seconds`. Income would
+  then be identical on every world and phase length would be feel only. Rejected
+  in favour of the progression cost; revisit if the world 3 step reads badly.
+- **The floor stayed absolute.** Making `streamUnder` a phase fraction was
+  proposed and dropped: it is about the eye, and the eye does not change per
+  world. `1/512` of a 60 s phase is 117 ms, which is still visibly a beat. The
+  cost is that a long-phase world needs one more halving to reach it — `n + 5`
+  rather than `n + 4` — and none in rate, since the conversion is income-neutral
+  either way.
+
+**One defect surfaced while arguing about this and was fixed with it.** Nothing
+halted the cohort emitters at a harvest: `completeFirstHarvest` cleared the
+selection and every emitter kept cycling through the whole between-worlds gap
+while `Cohort.yieldScale` returned 0, so the life in flight landed on nothing,
+requeued, and landed on nothing again until a world was chosen. Already live,
+and phase-length lives make it worse — an age on world 5 is eight minutes.
+`BuildingManager.haltEmitters()` at departure and `startEmitters()` at arrival,
+matching what the refinery already does with a pulse that would pay nothing.
+
+Prorating the departing life was the alternative and was dropped: it pays for an
+incarnation that never finished, against `yieldScale`'s own fiction that a soul
+has to incarnate *somewhere*, and `payout` rounds it to zero on the low rows.
+What is forfeit is bounded at one life a cohort. The halt also means no wait is
+ever in flight across a change of phase length, so a stream's batch — snapshotted
+when it was armed — and its overflow, read live at payout, can never be taken
+from two different worlds.
 
 ## Excess — there is no wall
 

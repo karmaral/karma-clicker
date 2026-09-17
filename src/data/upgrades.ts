@@ -359,9 +359,17 @@ const data: Record<string, UpgradeData[]> = {
    * out of it without anyone excluding it. Re-applied off the loop, so a cohort
    * unlocked after one of these was bought still gets it.
    *
-   * `boost` and not `mult`, so the two of them sum to −18% rather than
-   * compounding to −17%: these are a global shortening of every life, and a
+   * `boost` and not `mult`, so the two of them sum to +18% rather than
+   * compounding to +19%: these are a global lift on every cohort at once, and a
    * global thing should add up the way the player expects it to.
+   *
+   * **Nothing here touches `duration` but a halving.** A life is printed in the
+   * wave's own landmarks — see `formatLife` — and only a power of two lands on
+   * one. The two entries below used to shorten by −6% / −12% and a single
+   * purchase dropped the whole table to seconds, permanently, on every world.
+   * They buy yield now: rate is yield over duration, so it is the same axis
+   * said the other way — the substitution `Building.#clampDuration` already
+   * performs at the floor, moved up to where it is authored.
    *
    * Placeholder figures. Both used to sit behind a billion karma purely to keep
    * them unreachable while nothing routed them; those parking values are gone.
@@ -389,20 +397,28 @@ const data: Record<string, UpgradeData[]> = {
     })),
     {
       // Priced in negative karma, and the two of them are the bulk of that
-      // pile's sink. Spending lives faster for throughput is the register
-      // exactly — it is not gated there like the other three, it simply reads
-      // as service to self on its face.
-      id: 'shorter_lives_1',
-      effect: { op: 'boost', value: -0.06, stat: 'duration' },
+      // pile's sink. Taking more out of the same span is the register exactly —
+      // it is not gated there like the other three, it simply reads as service
+      // to self on its face.
+      //
+      // No `stat`, which `ModifierSet` reads as `yield`, and no `target`, which
+      // it reads as `all` — the same way the whole `str_*` ladder is authored.
+      //
+      // ⚠ The pair is 3.2% weaker than the shortening it replaces: 1/0.82 is
+      // 1.2195 and +18% is 1.18. Exact parity wanted +7.32% / +14.63%, which
+      // costs the readable pair the block above argues for — and both figures
+      // are placeholders §5 already wants re-sited.
+      id: 'harder_lives_1',
+      effect: { op: 'boost', value: 0.06 },
       unlocks_at: { karma_positive: 250_000 },
       costs: { karma_negative: 310_000 },
     },
     {
-      // Twice the effect of `shorter_lives_1`, so it is priced past it. It used
+      // Twice the effect of `harder_lives_1`, so it is priced past it. It used
       // to cost 2400 against that one's 310k, which was the parking value hiding
       // a straight inversion rather than a decision.
       id: 'hard_season',
-      effect: { op: 'boost', value: -0.12, stat: 'duration' },
+      effect: { op: 'boost', value: 0.12 },
       unlocks_at: { karma_positive: 900_000 },
       costs: { karma_negative: 1_200_000 },
     },

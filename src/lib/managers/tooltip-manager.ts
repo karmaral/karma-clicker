@@ -8,6 +8,7 @@ export class TooltipManager {
   #options: Record<string, unknown>;
   #singletonOptions: TooltipOptions;
   #instances: Instance[] = [];
+  #resize: ResizeObserver | undefined;
 
   /**
    * `singletonOptions` are the box's own, settled once and never per instance:
@@ -43,6 +44,11 @@ export class TooltipManager {
         // empty room; a tooltip that says nothing about it keeps tippy's own.
         'duration',
         'hideOnClick',
+        // Whether this reference gets to open at all. The singleton listens on
+        // hover for everyone, so a tooltip with another trigger — the cohort
+        // rows, which open on a held right button — vetoes the hover here and
+        // opens itself through `show` below.
+        'onShow',
         // What the box points at, which is not always what you hovered — a
         // reference that only triggers can borrow another's rect, so two cells
         // of the same row open one panel in one place.
@@ -59,6 +65,20 @@ export class TooltipManager {
       onAfterUpdate: (instance) => requestAnimationFrame(() => instance.popperInstance?.forceUpdate()),
     });
 
+    // One box for every row means its height is whatever the last row left in
+    // it. That only ever shows on a `top` placement, where popper anchors the
+    // box's *bottom* edge — `y = referenceTop - height` — so a height measured
+    // a beat before the new content lays out drops the box onto the thing it
+    // was supposed to clear. On `bottom` the top edge is the anchor and the
+    // same staleness is invisible, which is why only half the placements ever
+    // looked broken.
+    // Watching the box is the fix that does not depend on guessing which beat
+    // the content lands on: whenever the size actually changes, popper runs
+    // again. `forceUpdate` writes a transform and nothing else, so it cannot
+    // feed its own observer.
+    this.#resize = new ResizeObserver(() => this.#singleton?.popperInstance?.forceUpdate());
+    this.#resize.observe(this.#singleton.popper);
+
     return this.#singleton;
   }
 
@@ -73,6 +93,22 @@ export class TooltipManager {
     this.#getSingleton().setInstances(this.#instances);
 
     return instance;
+  }
+
+  /**
+   * Open on something other than a hover. The singleton's own trigger is fixed
+   * for every reference it holds, so a call site that wants a different one
+   * refuses the hover through `onShow` and presses the box open here.
+   *
+   * The element is the instance's own reference: passing it retargets the box
+   * before the show lands, which is the same order a real trigger arrives in.
+   */
+  show(elem: HTMLElement) {
+    this.#getSingleton().show(elem);
+  }
+
+  hide() {
+    this.#singleton?.hide();
   }
 
   removeInstance(instance: Instance) {

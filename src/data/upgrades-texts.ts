@@ -179,13 +179,13 @@ const data: Record<string, Record<string, ItemTextData>> = {
         effect: 'every life halved',
       }]),
     ),
-    'shorter_lives_1': {
-      title: 'Shorter Lives I',
-      description: 'Placeholder. Every cohort turns over a little faster.',
+    'harder_lives_1': {
+      title: 'Harder Lives I',
+      description: 'Placeholder. Every cohort gives up a little more of the same span.',
     },
     'hard_season': {
       title: 'Hard Season',
-      description: 'Placeholder. A harder push, felt across every cohort at once.',
+      description: 'Placeholder. A harder push, asked of every cohort at once.',
     },
   },
 };

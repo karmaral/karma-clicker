@@ -53,7 +53,10 @@ const COHORT_FIELDS: FieldSpec[] = [
   { field: 'cost', label: 'cost', range: scaled(20) },
   // Authored per cohort by `rampFor` — this sweeps one row off that curve.
   { field: 'cost_multiplier', label: 'cost ramp', range: fixed(1.005, 1.5, 0.001) },
-  { field: 'duration', label: 'duration ms', range: fixed(0, 20_000, 100) },
+  // Phases, not ms — the world converts it. `BASE_LIFE` generates the column and
+  // is a module constant this cannot reach, so sweeping a row is how the bench
+  // asks the `BASE_LIFE` question. See `buildings.ts`.
+  { field: 'life', label: 'life · phases', range: fixed(0, 16, 0.01) },
   { field: 'yields.karma', label: 'karma', range: scaled(20) },
   { field: 'yields.experience', label: 'experience', range: scaled(20) },
 ];

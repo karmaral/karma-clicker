@@ -453,6 +453,13 @@ export default class Planet {
   /** What the world is worth in wall-clock, and how far in you are. Both in ms. */
   get lived() { return this.#livedMs; }
   get phaseDuration() { return this.#phaseMs; }
+
+  /**
+   * Ms left in the phase you are standing in. Off `#displayThroughPhase` and not
+   * the raw one, so the figure steps with the marker rather than against it.
+   */
+  get phaseRemaining() { return this.#phaseMs * (1 - this.#displayThroughPhase); }
+
   get length() { return this.#data.ages * this.#phasesPerAge * this.#phaseMs; }
 
   get phases() { return this.#currentPhases; }

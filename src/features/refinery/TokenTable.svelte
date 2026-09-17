@@ -20,7 +20,7 @@
    * rather than let a long one hang back into the gap. The last one holds the
    * passive reading *and* the buy cell, so it is wide.
    */
-  const COLUMNS = 'minmax(0, 1fr) 88px 208px';
+  const COLUMNS = 'minmax(0, 1fr) 100px 230px';
 
   const PURCHASE_MODES: readonly TokenPurchaseMode[] = ['1', '10', '100', 'Max'];
 

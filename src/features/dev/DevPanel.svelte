@@ -79,6 +79,14 @@
     saveName = '';
   }
 
+  /** Same confirm as `writeSave` — the row sits one button away from loading it. */
+  function overwriteSave(name: string) {
+    if (!confirm(`Overwrite "${name}" with the current run?`)) return;
+
+    save.save(name);
+    saves = save.list();
+  }
+
   function deleteSave(name: string) {
     save.remove(name);
     saves = save.list();
@@ -179,7 +187,8 @@
               <button class="load" title={describe(entry.summary)} onclick={() => loadSave(entry.name)}>
                 {entry.name}
               </button>
-              <button onclick={() => deleteSave(entry.name)}>×</button>
+              <button title="overwrite with the current run" onclick={() => overwriteSave(entry.name)}>↓</button>
+              <button title="delete" onclick={() => deleteSave(entry.name)}>×</button>
             </li>
           {/each}
         </ul>

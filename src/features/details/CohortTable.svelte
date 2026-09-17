@@ -6,12 +6,13 @@
    */
   import { Label, Section, Tabs } from '$ui';
   import { progression } from '$lib/progression';
-  import { f } from '$lib/utils';
   import type Building from '$lib/buildings/base.svelte';
   import type { YieldType } from '$types';
   import type { PurchaseMode } from './types';
   import CohortRow from './CohortRow.svelte';
   import RateFigure from './RateFigure.svelte';
+  import SoulCount from './SoulCount.svelte';
+  import { extended } from './extended.svelte';
   import { byRateOrder } from './badge';
   import { resolvePurchasable } from './purchase';
 
@@ -40,12 +41,22 @@
 
   /**
    * No per-cohort lean column any more — aim is one global dial. See §6.
-   * Two soul tracks: what is incarnating and what the levers hold back. Both are
-   * the same width, since either can end up carrying the roster — and both are
-   * wide enough for the foot's total, which is a sum and so the widest figure in
-   * its column.
+   * One soul track, not two: the reserved share is a single global lever restated
+   * in every row, so it reads as the denominator of what is incarnating rather
+   * than as a column of its own — and only in the extended register at that.
+   *
+   * Held at the width of the **pair** rather than of the roster normally showing
+   * in it, so opening the register widens nothing: the incarnating figure opens
+   * into slack the column was already holding. Past the counts play actually
+   * reaches it runs on into the slack to its right, which the last track has
+   * because the buy button is pinned to that track's far edge and does not fill
+   * it.
+   *
+   * That last track is sized by the **foot's rates**, not by the button — three
+   * or four figures on one line is the widest thing the column ever holds, and
+   * it used to run out of room and spill left over the roster.
    */
-  const columns = 'minmax(0, .75fr) 6ch 5ch .75fr';
+  const columns = 'minmax(0, 1fr) 13ch 1fr';
 
   /** Which row is hovering its purchase button, if any. */
   let previewId: string | undefined = $state();
@@ -85,11 +96,13 @@
   }
 
   /**
-   * The foot is the sum of the column above it, so it counts what is incarnating
-   * and not what is owned — the held souls have their own column and are summed
-   * nowhere, because the levers already say what they took.
+   * Both halves of the column above it, in the same order the rows put them: the
+   * roster rests, and what is incarnating opens with the register. The roster is
+   * the honest total — it is what every purchase moved — so the sum can be
+   * checked against what you bought.
    */
   const totalIncarnating = $derived(cohorts.reduce((sum, cohort) => sum + cohort.active, 0));
+  const totalOwned = $derived(cohorts.reduce((sum, cohort) => sum + cohort.count, 0));
 
   const totals = $derived(totalsAt(undefined));
   const preview = $derived(new Map(previewId ? totalsAt(previewId) : []));
@@ -108,9 +121,10 @@
 
       <span><Label text="Name" size="sm" /></span>
 
-      <span class="count"><Label text="Incarnating" size="sm" /></span>
-
-      <span class="count"><Label text="Held" size="sm" /></span>
+      <!-- What rests under it is the roster, so that is what it names. The lore
+           word went with the figure it belongs to: `SoulCount` says `of` when
+           the incarnating count is showing, and the tooltip says the rest. -->
+      <span class="count"><Label text="Souls" size="sm" /></span>
 
       <!-- The head cell is the switcher: the words are a read-out of where the
            cycle is, and clicking anywhere in the cell advances it. -->
@@ -134,11 +148,11 @@
       <div class="foot">
         <span><Label text="Total" size="sm" muted /></span>
 
-        <span class="count num">{f(totalIncarnating)}</span>
-
-        <!-- The held column has no total. The levers already said what they took,
-             and a sum here would read as a second population. -->
-        <span></span>
+        <!-- The foot follows the rows into the extended register, or the sum
+             would be the one figure in the column with nothing to check. -->
+        <span class="count num">
+          <SoulCount active={totalIncarnating} total={totalOwned} extended={extended.active} />
+        </span>
 
         <span class="rates">
           {#each totals as [type, value] (type)}
@@ -174,8 +188,6 @@
 
   .foot .count {
     font-size: var(--fs-base);
-    font-weight: 600;
-    text-align: right;
     color: var(--ink-900);
   }
 
@@ -206,22 +218,14 @@
     justify-content: flex-end;
   }
 
-  /* Both soul labels are wider than the tracks they name, and widening the
-     tracks to fit a word would cost the roster and the rates real room. So the
-     label is taken out of flow and pinned by its right edge: a shrink-to-fit box
-     anchored that way grows leftward, into the name column's slack, which is
-     empty past the four letters of its own heading.
-     Out of flow rather than merely right-aligned, because an in-flow cell is
-     still a box the next column has to sit after — however it aligns its text,
-     it cannot be allowed to be wider than its track. */
-  .head .count {
-    position: relative;
-  }
+  /* Left, with the figures under it — the roster's own left edge at rest, which
+     is where the reading starts.
 
+     It may be wider than its track, and is allowed to be: what is to its right
+     is the cost heading, which right-aligns into the far edge of a track the
+     button does not fill. So the overflow lands in slack rather than on
+     anything, and the track stays sized for figures instead of for a word. */
   .head .count :global(.label) {
-    position: absolute;
-    right: 0;
-    bottom: 0;
     white-space: nowrap;
   }
 

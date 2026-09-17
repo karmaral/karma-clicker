@@ -7,7 +7,18 @@
 
   const visible = $derived(SCREENS.filter((screen) => nav.state(screen) !== 'absent'));
 
-  /** 1/2/3 follow `SCREENS`' own order — details, overview, refinery. */
+  /**
+   * Harness' slot is the second one whether or not Harness is there yet: until
+   * it reveals, Details stands across both. So the strip is a slot wider than it
+   * has tabs, and the day Harness lands it fills a cell that already existed —
+   * Overview and Refinery never move.
+   */
+  const spread = $derived(!visible.includes('harness'));
+
+  const slots = $derived(visible.length + (spread ? 1 : 0));
+
+  /** 1/2/3/4 follow `SCREENS`' own order, which is the slot order — so a number
+      names the slot you are looking at, and 2 is dead while Details spans it. */
   function onkeydown(event: KeyboardEvent) {
     if (event.ctrlKey || event.metaKey || event.altKey) return;
 
@@ -22,11 +33,11 @@
 <svelte:window {onkeydown} />
 
 {#if visible.length > 1}
-  <nav class="navbar" style:--tabs={visible.length}>
+  <nav class="navbar" style:--tabs={slots}>
     {#each visible as screen (screen)}
       <button
         type="button"
-        class={['item', { active: nav.active === screen }]}
+        class={['item', { active: nav.active === screen, wide: spread && screen === 'details' }]}
         disabled={!nav.isAvailable(screen)}
         onclick={() => nav.to(screen)}
       >
@@ -69,6 +80,13 @@
     text-transform: uppercase;
     color: var(--ink-900);
     transition: background var(--t-fast), color var(--t-fast);
+  }
+
+  /* Details holding Harness' slot as well as its own. It is one tab across two
+     tracks and not a wider track, so the strip's width is the same `--tab`
+     arithmetic either way and nothing reflows when Harness lands. */
+  .item.wide {
+    grid-column: span 2;
   }
 
   .item + .item {

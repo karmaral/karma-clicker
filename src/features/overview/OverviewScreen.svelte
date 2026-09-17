@@ -5,7 +5,7 @@
    */
   import { PlanetManager } from '$lib/managers';
   import { progression } from '$lib/progression';
-  import { f } from '$lib/utils';
+  import { getAgesLabel, getPhaseLabel } from '$lib/labels';
   import { Label, Section } from '$ui';
   import ActiveCell from './ActiveCell.svelte';
   import PlanetDetail from './PlanetDetail.svelte';
@@ -26,7 +26,7 @@
   function getHereStat(id: string) {
     const planet = PlanetManager.getPlanet(id);
 
-    return `${f(planet.agesLived)} ages · phase ${planet.phase + 1} of ${planet.phasesPerAge}`;
+    return `${getAgesLabel(planet.agesLived)} · ${getPhaseLabel(planet.phase, planet.phasesPerAge)}`;
   }
 </script>
 

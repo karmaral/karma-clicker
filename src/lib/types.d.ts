@@ -106,7 +106,12 @@ export interface BuildingData {
   cost_multiplier?: number;
   yields: Partial<Record<YieldType, number>>;
   count?: number;
-  duration?: number;
+  /**
+   * How long one life lasts, **in phases of the world it is lived on** — not in
+   * ms. `Building.#clampDuration` is where it becomes a clock. 0 is the
+   * emitter's synchronous path: the press has no life at all.
+   */
+  life?: number;
 }
 /**
  * What a planet demands before it will let you take the first harvest — the

@@ -1,4 +1,4 @@
-# Handoff — 2026-09-11
+# Handoff — 2026-09-16
 
 **Orientation only, and a board rather than an essay.** Three rules keep it that
 way:
@@ -18,9 +18,9 @@ way:
 `design.md` states more than the build ships. One line each; the section is the
 argument, this is only the flag.
 
-- **`design.md` §13** — world totals are still the old cubic figures
-  (`ages`/`cycles_per_age`/`phase_duration` in `planets.ts`); the doc's
-  `time(p) = 240s × 2^(p−1)` law is not landed.
+- ~~**`design.md` §13** — world totals still the old cubic figures.~~ **Landed.**
+  `planets.ts` decomposes to `240s × 2^(p−1)` on every world; phase doubles once,
+  between 2 and 3. Load-bearing now that a life is a length in phases.
 - **`design.md` §18** — the minimum landed: wisdom is the run's residue, beat 14
   opens the Overview's *End the run*, and the reset is a reload. Knowledge,
   commerce and the structure shelf are still argument only.
@@ -32,38 +32,50 @@ argument, this is only the flag.
 - **`design.md` §16's nine beat floors** — fitted to the pre-rewrite cohort
   ladder, all wrong now that §5 is generated.
 
-§5 (cohorts) and §6 (aim) landed this session — see *Tree* below.
-
 ## Tree
 
-Branch `dev-next`, last commit `f769625 rebuild checkpoint 30`. Uncommitted:
-**anchoring became opt-in and the harness got a tab** — `design.md` §12 and §17
-rewritten to match. `git status` and `git log` for the list.
+Branch `dev-next`, last commit `23b37ac rebuild checkpoint 32`. Uncommitted:
+**a cohort's life is a length in phases** — `design.md` §5, §6, §9, §13, §15, §19
+spliced, rationale in *The wave became the cohort clock*. `git status` and
+`git log` for the list.
 
 The shape, in five lines:
 
-- A world **offers** anchor slots; `min(rig, offer)` decides. Begun and cancelled
-  from a verb under the planet on Details; cancelling forfeits everything.
-- The anchors also multiply that world's **recurring harvest**, locked at
-  departure, nominal with no coverage cut.
-- **Fourth tab**, `nav.harness`, revealed at beat 11. The invariant it broke had
-  no argument behind it; the replacement rule is in `keys.ts` and §17.
-- **Cohort lines** gate who rides. Unlocked by an upgrade, then bought
-  repeatedly on a geometric curve like the refinery's inversions.
-- Every harness axis moves a **visual** field. `lib/rig.ts` is the pure map
-  (`readAxes` + `rigVisualsAt`), `lib/harness-visuals.svelte.ts` the live getter
-  over it, and `widgets/harness-stages.ts` replays the ladder so `?widgets` draws
-  every rung at once. `data/harness-visuals.ts` is gone.
+- `life(n) = 1/16 × 2^(n−1)` **phases**, replacing `duration(n) = 2s × 2^(n−1)`.
+  `Building.#clampDuration` is the only seam — it converts against
+  `Planet.phaseDuration` before folding, so `cohort.duration` stays ms and every
+  consumer below it is untouched.
+- **`1/16` holds the economy** (rates ×1.07 against the 2 s base) and lands the
+  eight rows on the wave's landmarks: cohort 5 = 1 phase, 6 = 1 cycle, 8 = 1 age.
+- **§6's line is now exact.** One phase or less can be timed; one cycle or more
+  is ×1.0 always. Lives are powers of two so nothing sits between.
+- **Yield per life is fixed, so income halves on arrival at world 3** — the
+  phase doubles exactly once. Refinery capacity, wisdom and the harvest snapshot
+  all step with it. Unmeasured.
+- **Emitters now halt at a harvest** and start fresh on arrival. A defect that
+  predates this: they cycled through the whole between-worlds gap against a
+  `yieldScale` of 0, landing on nothing and requeueing.
 
-`planet-visuals.ts` carries a **UTF-8 BOM**, and a new required field on
-`PlanetVisual` means editing all nine records.
+Also: `BASE_LIFE` / `REFERENCE_PHASE` are generator constants in `buildings.ts`,
+not `balance.ts` — the lab cannot reach a constant the module read at load, so it
+sweeps a generated row's `life` instead. `BuildingData.duration` → `life`, and
+the rename is the guard: the units changed under the name.
+
+⚠ `FirstHarvestScreen.svelte` is dirty from the author's own lab (a CSS height),
+not from this work.
 
 ## Verified, and how
 
-- `npm run check` → **956 FILES 0 ERRORS 6 WARNINGS**, re-run this session. The
-  6 warnings are unused-CSS selectors in `ExcessMeter.svelte` and
-  `Preview.svelte`, all pre-existing.
-- `npx vite build` clean.
+- `npm run check` → **964 FILES 0 ERRORS 9 WARNINGS**, re-run this session. The
+  9 warnings are unused-CSS selectors in `ExcessMeter.svelte`, `JobStats.svelte`
+  and `Preview.svelte`, all pre-existing.
+- `npm run build` clean.
+- **`formatLife` checked against the whole ladder**, both phase lengths, under
+  node in the scratchpad: every row and its first two halvings name a landmark,
+  a `boost`-shortened life falls back to seconds rather than naming one it does
+  not sit on, and a floored life never reaches it (the row draws *stream*).
+- **Nothing about the phase change has been played.** No world 3 arrival, no
+  harvest, no bench run.
 - **Every new module transforms** under a throwaway dev server, `rig`'s
   module-level deriveds included — the `planet-manager ↔ harness` cycle this
   session introduces resolves lazily, but **nothing has been booted**.
@@ -326,6 +338,21 @@ The shape, in five lines:
 50. **The manual send verb on a cohort row.** `CohortRow`'s `Send` link, live
     only while `!cohort.isAutonomous`. Never watched — check it disappears the
     instant the clerk lands and that rapid clicking cannot double-queue a life.
+51. **Lives read as phases, on the row and in the tooltip.** `1/16 phase` …
+    `1 age`, and a level preview reading `1 cycle → 1 phase`. Verified as
+    arithmetic, never seen. Watch the column width — the strings are wider than
+    `256 s` was — and that cohort 5's sweep really does match one phase of the
+    strip above it.
+52. **The world 2 → 3 arrival.** Income halves there, once, and never recovers.
+    This is the whole open question of the change: progression cost, or the
+    climb restarting. Bench first, then play it.
+53. **A harvest taken mid-life.** Emitters now halt at departure. Watch the bar
+    stop dead rather than keep sweeping, nothing pay out during the gap, and a
+    full-length life start on arrival — at the *new* world's length, which on
+    world 3 is twice what the bar just showed.
+54. **An age-long cohort.** 240 s on world 1–2 and 480 s on 3–5, one payout at a
+    time. Nothing has watched a bar hold a player's attention for eight minutes,
+    and the answer may be that the row needs a different readout.
 
 ## Parked — named, argued, not done
 
@@ -378,11 +405,29 @@ one is a real defect: the anchoring phase runs ~10× faster than designed.
 Still owed: the **comment sweep** (§*The comments want the same pass*).
 
 **`design.md` §5 and §6 are landed** — the generated cohort ladder
-(`cohort_1`…`cohort_8`, ten shared level rungs, one clerk per cohort including
-the first), and the global-only aim dial with the span-averaged phase bias that
-replaces the cut per-cohort figures. Nothing above is played — the sim bench run
-that opens the retune (*Unseen* #48) is next, not the retune itself. §13 and §18
-are still argument only; see *Ahead of the build*.
+(`cohort_1`…`cohort_8`, six shared level rungs plus six all-cohort ones, one
+clerk per cohort including the first), and the global-only aim dial with the
+span-averaged phase bias that replaces the cut per-cohort figures. §18 is still
+argument only; see *Ahead of the build*.
+
+**The life is now a length in phases**, and it is the thing waiting on an eye.
+In order:
+
+1. **Play worlds 1–2** and check the short and long rows now read as different
+   kinds of thing, not just different speeds. The rows say `1/16 phase` … `1 age`
+   and should line up against the strip above them.
+2. **Bench the world 2 → 3 arrival.** Income should halve, and the refinery and
+   wisdom with it. Whether that reads as progression or as the climb restarting
+   is the whole question, and desk arithmetic cannot settle it.
+3. **Only then** the harvest ratios (§15) and `firstWisdomAt`. Both were already
+   owed a recalibration and both now have a second reason; retuning either before
+   the arrival is measured is guessing twice.
+4. **Decide the clerk on cycle-long rows** (§19). Their clerk sells throughput
+   and no timing, which breaks §5's *automation is a trade* at that end. Both
+   fixes break `clerk(n) = reveal(n+1)`, so it wants play before a choice.
+
+⚠ **An age-long life on world 5 is eight minutes between payouts.** The row's bar
+has to carry that wait alone, and nobody has watched it try.
 
 ---
 
@@ -416,6 +461,16 @@ are still argument only; see *Ahead of the build*.
 - **A probe can pass on a defect it never assembles.** The ribbon check replayed
   one endpoint at a time and passed on 312 crossed quads. Assert what the shape
   has to be, not what the builder wrote.
+- **A cohort's `life` is phases; its `duration` is milliseconds.** One is
+  authored, the other is what `#clampDuration` makes of it against the world you
+  are standing on. Reading a `life` as a clock is wrong by a factor of the phase.
+- **Nothing may buy wave speed** — §7, and it now costs double. A
+  phase-shortening upgrade would not be a feel change; it would multiply income
+  directly.
+- **The lab cannot sweep a `buildings.ts` constant.** `overrides.ts` writes into
+  the data objects, but the module already generated itself from `BASE_LIFE` at
+  load. Sweep a generated row's field, or move the figure into `balance.ts` —
+  and it only belongs there if it differs per world.
 - **`printVisual` and friends** emit every field at four decimals; paste
   indentation has drifted once.
 

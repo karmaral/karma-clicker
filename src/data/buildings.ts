@@ -4,12 +4,12 @@
  * the same for every cohort, forever.
  *
  * `cost(n) = 15 × 7^(n−1)` experience, `yield(n) = 2 × 13^(n−1)` experience a
- * soul, `karma(n) = 2 × yield(n)`, `duration(n) = 2s × 2^(n−1)`. The ramp is
- * per cohort and the ten level gates are shared — how far up them a row gets is
- * what the ramp decides. See `cohort-levels.ts` for what a level does.
+ * soul, `karma(n) = 2 × yield(n)`, `life(n) = 1/16 × 2^(n−1)` **phases**. The
+ * ramp is per cohort and the ten level gates are shared — how far up them a row
+ * gets is what the ramp decides. See `cohort-levels.ts` for what a level does.
  *
  * Nothing here is authored per cohort any more: no bias, no resistance, no
- * per-cohort aim figure. Duration alone carries identity now — a short cohort's
+ * per-cohort aim figure. The life alone carries identity now — a short cohort's
  * whole life sits inside one wave phase and takes its bias whole; a long one
  * spans several and averages them. See `docs/design.md` §6.
  */
@@ -85,7 +85,7 @@ export const YIELD_DECADE = 13;
  * its 2 s life — a rate is the figure the player holds, and half of one is not
  * a unit anybody counts in.
  *
- * It is the yield axis that carries this and not `duration`, deliberately: a
+ * It is the yield axis that carries this and not the life, deliberately: a
  * 1 s base would have moved every life on the ladder, and lives are what tell
  * two cohorts apart (see the header) and what every level rung spends itself on
  * (see `cohort-levels.ts`). Doubling the column touches neither.
@@ -94,6 +94,47 @@ export const YIELD_DECADE = 13;
  * 30 s and tops out at 25 s. Hold it by moving the cost base off 15 instead.
  */
 export const YIELD_BASE = 2;
+
+/**
+ * **A life is a length in phases, not in seconds.** The world you stand on
+ * converts it — see `Building.#clampDuration`. The wave counts in doublings too
+ * (phase → cycle is ×2, cycle → age is ×4 at `cycles_per_age: 4`), so a ladder
+ * that doubles per index passes through the wave's own landmarks and an
+ * eight-row ladder spans exactly one sixteenth of a phase up to one age:
+ *
+ *     n │ life        │ at a 30 s phase │ at 60 s
+ *     ──┼─────────────┼─────────────────┼────────
+ *     1 │ 1/16 phase  │  1.875 s        │  3.75 s
+ *     2 │ 1/8         │  3.75           │  7.5
+ *     3 │ 1/4         │  7.5            │ 15
+ *     4 │ 1/2         │ 15              │ 30
+ *     5 │ **1 phase** │ 30              │ 60
+ *     6 │ **1 cycle** │ 60              │ 120
+ *     7 │ 4 phases    │ 120             │ 240
+ *     8 │ **1 age**   │ 240             │ 480
+ *
+ * 1/16 and not 1/32, which was the other candidate: it holds the economy where
+ * it already was (rates ×1.067 against the 2 s base this replaces) where 1/32
+ * would have doubled every rate, and it is the value that lands cohort 8 on an
+ * age exactly. The landmarks are the point — halving it slides every row off
+ * them and leaves no cohort reaching an age at all.
+ *
+ * **It is also an income knob.** Halving it halves every life, which doubles
+ * every cohort's rate. Not in `balance.ts` for two reasons: it does not differ
+ * per world, and `overrides.ts` could not reach it anyway — this module
+ * evaluates at load, before a worker applies its overrides. The bench sweeps the
+ * generated per-cohort `life` instead, as it already does `cost` and `yields`.
+ */
+export const BASE_LIFE = 1 / 16;
+
+/**
+ * The world the ladder is priced against, and the fallback wherever there is no
+ * world to read: the boot before a save loads, the gap between a harvest and the
+ * next arrival, and `buildLadder`, which builds bare cohorts before any planet
+ * is unlocked. Worlds 1 and 2 author exactly this, so the design's ladder table
+ * and the first world a player stands on are the same figures.
+ */
+export const REFERENCE_PHASE = 30_000;
 
 export function cohortId(n: number) {
   return `cohort_${n}`;
@@ -111,7 +152,7 @@ function cohortData(n: number) {
       experience: yieldXp,
       karma: 2 * yieldXp,
     },
-    duration: 2000 * 2 ** (n - 1),
+    life: BASE_LIFE * 2 ** (n - 1),
   };
 }
 
@@ -122,7 +163,7 @@ const data: Record<string, BuildingData> = {
   'main': {
     role: 'click',
     yields: { experience: 1 },
-    duration: 0,
+    life: 0,
     count: 1,
   },
   ...Object.fromEntries(

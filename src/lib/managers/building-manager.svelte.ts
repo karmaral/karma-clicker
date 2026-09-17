@@ -294,9 +294,18 @@ class BuildingManager {
     });
   }
 
-  /** The last step of a load: the clocks start once the modifiers are on. */
+  /**
+   * The last step of a load: the clocks start once the modifiers are on. Also
+   * the first step of an arrival — a halted roster wants a fresh full life at
+   * the new world's phase length, and the guard is the same one.
+   */
   startEmitters() {
     Object.values(this.#buildings).forEach((building) => building.startEmitter());
+  }
+
+  /** Every clock called off, for the gap between a harvest and the next world. */
+  haltEmitters() {
+    Object.values(this.#buildings).forEach((building) => building.haltEmitter());
   }
 
   getBuilding(id: string) {

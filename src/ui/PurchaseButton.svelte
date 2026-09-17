@@ -11,8 +11,16 @@
     onclick?: () => void;
     onmouseenter?: () => void;
     onmouseleave?: () => void;
-    /** Right-click. Given one, the browser menu is suppressed on this button. */
+    /**
+     * A tapped right button. The same button held is a read elsewhere — the
+     * cohort rows open their derivation on it — so the clock tells the two
+     * apart rather than a modifier. Without an `onhold` there is nothing to
+     * tell apart and any release is a tap. The menu that would land on the
+     * release is refused document-wide — see `main.ts`.
+     */
     oncycle?: () => void;
+    /** The same press, once it has been down `HOLD_MS`. The tap is off from then on. */
+    onhold?: () => void;
   }
 
   let {
@@ -25,14 +33,51 @@
     onmouseenter,
     onmouseleave,
     oncycle,
+    onhold,
   }: Props = $props();
 
-  function contextmenu(event: MouseEvent) {
-    if (!oncycle) return;
+  /** Right. `MouseEvent.button`, not the `buttons` mask. */
+  const RIGHT = 2;
+
+  /** Long enough that a click never reads as a hold, short enough to feel like a press. */
+  const HOLD_MS = 180;
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let holding = false;
+
+  function press(event: MouseEvent) {
+    if (event.button !== RIGHT || !(oncycle || onhold)) return;
 
     event.preventDefault();
-    oncycle();
+    holding = false;
+
+    if (onhold) {
+      timer = setTimeout(() => {
+        holding = true;
+        onhold();
+      }, HOLD_MS);
+    }
+
+    // On the window, because a press dragged off the button still comes up
+    // somewhere — and filtered there, because the left button is busy buying.
+    window.addEventListener('mouseup', release);
   }
+
+  function release(event: MouseEvent) {
+    if (event.button !== RIGHT) return;
+
+    window.removeEventListener('mouseup', release);
+    clearTimeout(timer);
+
+    if (!holding) {
+      oncycle?.();
+    }
+  }
+
+  $effect(() => () => {
+    clearTimeout(timer);
+    window.removeEventListener('mouseup', release);
+  });
 </script>
 
 <button
@@ -42,7 +87,7 @@
   {onclick}
   {onmouseenter}
   {onmouseleave}
-  oncontextmenu={contextmenu}
+  onmousedown={press}
 >
   {#if quantity}
     <span class="quantity">{quantity}×</span>

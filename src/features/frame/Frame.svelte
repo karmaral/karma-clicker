@@ -51,7 +51,7 @@
    * figure without reflowing the band around it.
    */
   const WIDTHS: Record<HeaderScreen, string> = {
-    details: 'minmax(560px, 1fr)',
+    details: 'minmax(585px, 1fr)',
     refinery: 'minmax(420px, 1fr)',
   };
 

@@ -4,6 +4,7 @@
   import { PlanetManager } from '$lib/managers';
   import { progression } from '$lib/progression';
   import { f } from '$lib/utils';
+  import { getAgesLabel, getPhaseLabel } from '$lib/labels';
   import { DEFAULT_VISUAL, PlanetView } from '$widgets/planet';
   import planetVisuals from '$data/planet-visuals';
   import planetTexts from '$data/planets-texts';
@@ -43,7 +44,7 @@
       return `${f(planet.merged)} merged`;
     }
 
-    return `${f(planet.agesLived)} ages · phase ${planet.phase + 1} of ${planet.phasesPerAge}`;
+    return `${getAgesLabel(planet.agesLived)} · ${getPhaseLabel(planet.phase, planet.phasesPerAge)}`;
   }
 </script>
 

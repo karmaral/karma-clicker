@@ -13,6 +13,8 @@
   import { PlanetManager } from '$lib/managers';
   import { progression } from '$lib/progression';
   import { aim } from '$lib/aim';
+  import { reserve, type SplitJob } from '$lib/reserve.svelte';
+  import { harness } from '$lib/harness.svelte';
   import { f, formatRounded } from '$lib/utils';
   import texts from '$data/buildings-texts';
   import balance from '$data/balance';
@@ -22,7 +24,7 @@
   import RateFigure from './RateFigure.svelte';
   import AfterFigure from './AfterFigure.svelte';
   import { badgeFor } from './badge';
-  import { gainOf, readCohort } from './derivation';
+  import { gainOf, lifeLabel, readCohort } from './derivation';
   import { resolvePurchasable } from './purchase';
 
   interface Props {
@@ -63,6 +65,29 @@
    * figure any more: every cohort is worth the same extremity, the same formula
    * `Aim#resolve` prices.
    */
+  /**
+   * Which levers took the souls the roster is missing, and at what setting. The
+   * table stopped carrying a held column — one global share restated per row —
+   * so this is where the figure is spelled out, once, beside the count it is
+   * taken off.
+   *
+   * Read off `reserve` rather than off the cohort: the shares *are* the setting,
+   * and each row's held figure is only that setting rounded to its own count.
+   * Anchoring is gated on the job the way `Cohort` gates it, so a lever left set
+   * between worlds does not claim souls it is not holding.
+   */
+  const heldFrom = $derived.by(() => {
+    const live: [SplitJob, number][] = [
+      ['refining', reserve.refining],
+      ['anchoring', harness.isPlacing ? reserve.anchoring : 0],
+    ];
+
+    return live
+      .filter(([, share]) => share > 0)
+      .map(([job, share]) => `${Math.round(share * 100)}% ${job}`)
+      .join(' · ');
+  });
+
   const extremityPayoff = $derived.by(() => {
     const extremity = Math.abs(aim.detent) / 2;
 
@@ -88,7 +113,7 @@
           <span>
             <AfterFigure value={now.production[type] ?? 0} after={moved(preview.production[type])} />
             each ·
-            <AfterFigure value={now.duration / 1000} after={moved(preview.duration / 1000)} suffix="s" />
+            <AfterFigure value={now.duration} after={moved(preview.duration)} format={lifeLabel} />
             {#if now.heldBack > 0}· ×{f(now.activeCount)}{/if}
           </span>
         </span>
@@ -139,10 +164,15 @@
       </div>
     {/if}
 
+    <!-- The difference the roster's `of` leaves implicit, and where it went —
+         same shape as `wave` above: the figure, then what set it. -->
     {#if now.heldBack > 0}
       <div class="line">
         <span class="label">held back</span>
-        <span class="num">{f(now.heldBack)}</span>
+        <span class="num">
+          {f(now.heldBack)} of {f(cohort.count)}
+          {#if heldFrom}<span class="dim">{heldFrom}</span>{/if}
+        </span>
       </div>
     {/if}
   {/if}

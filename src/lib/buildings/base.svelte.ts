@@ -3,6 +3,7 @@ import { ResourceManager, PlanetManager } from '$lib/managers';
 import { ResourceEmitter, EMITTER_EVENTS } from '$lib/emission';
 import { ModifierSet } from '$lib/modifiers';
 import { aim, type ResolvedAim } from '$lib/aim';
+import { REFERENCE_PHASE } from '$data/buildings';
 import balance from '$data/balance';
 
 type Listener = (detail?: Record<string, unknown>) => void;
@@ -31,9 +32,24 @@ export default class Building {
    * not held, priced as if they were. Nothing is added or removed to answer it.
    */
   /**
-   * Where a life stops getting shorter and starts paying more instead. Duration
-   * is folded normally, then held at `emission.streamUnder`; whatever shortening
-   * the floor refused comes back as `overflow`, a multiplier on every yield.
+   * Where a life becomes a clock, and where it stops getting shorter and starts
+   * paying more instead.
+   *
+   * **A life is authored in phases of the world it is lived on**, so the world
+   * converts it before anything else happens — see `buildings.ts`, `BASE_LIFE`.
+   * There is no per-tick advance on a building to put this anywhere else: the
+   * loop never touches one, each holds a single `clock.after`, and everything
+   * downstream of here is already `$derived`. So this is the only seam, and a
+   * world with longer phases simply pays the same per life, less often.
+   *
+   * Converted *before* the fold, so the modifier set goes on seeing
+   * milliseconds and `'duration'` keeps meaning what it meant. The two are the
+   * same figure either way — every source is multiplicative — but not the same
+   * units, and units are what this function is for.
+   *
+   * Duration is folded normally, then held at `emission.streamUnder`; whatever
+   * shortening the floor refused comes back as `overflow`, a multiplier on every
+   * yield.
    *
    * **Income-neutral by construction.** Rate is yield over duration, so
    * `(y × floor/raw) / floor` is `y / raw` — the same figure, spent on the other
@@ -46,13 +62,23 @@ export default class Building {
    * the all-cohort milestones, and the `boost` shortenings — rather than at a
    * rung guessed from its position on the ladder.
    *
+   * The floor stays an absolute figure and does not become a phase fraction:
+   * it is about the eye (see `balance.emission`), and the eye does not change
+   * per world. The cost is that a cohort converts a rung later on a long-phase
+   * world — `n + 4` halvings at a 30 s phase, `n + 5` at 60 s — which is the
+   * honest reading, since a longer life really does need one more halving to
+   * reach the same threshold. It costs nothing in rate: the conversion is
+   * income-neutral either way.
+   *
    * ⚠ A `boost` source makes `overflow` fractional, and `payout` rounds. On
    * cohort 1, whose yield is 2, a 6% shortening past the floor rounds away
    * entirely. It is 6% of the smallest income in the game and is left alone;
    * every row above has yields large enough that the rounding is noise.
    */
   #clampDuration(extra: Modifier[] = []) {
-    const raw = this.#modifiers.apply(this.#data.duration ?? 0, 'duration', undefined, extra);
+    const phase = PlanetManager.getActive()?.phaseDuration ?? REFERENCE_PHASE;
+    const base = (this.#data.life ?? 0) * phase;
+    const raw = this.#modifiers.apply(base, 'duration', undefined, extra);
     const floor = balance.emission.streamUnder;
 
     if (raw <= 0 || raw >= floor) return { duration: raw, overflow: 1 };
@@ -161,6 +187,17 @@ export default class Building {
     if (!this.#emitter.isAutonomous || !this.#count) return;
 
     this.queueAction();
+  }
+
+  /**
+   * The world is gone and there is nowhere to be born, so the life in flight is
+   * called off rather than left to land on a `yieldScale` of 0 — see
+   * `PlanetManager.completeFirstHarvest`. `halt` keeps nothing of the wait
+   * served, which is its stated contract for exactly this case: what stopped it
+   * was the payout becoming nothing.
+   */
+  haltEmitter() {
+    this.#emitter.halt();
   }
 
   snapshot(): BuildingSnapshot {
@@ -379,6 +416,9 @@ export default class Building {
   get modifiers() { return this.#modifiers.modifiers; }
   get isAutonomous() { return this.#emitter.isAutonomous; }
   get isInProgress() { return this.#emitter.isInProgress; }
+
+  /** When the life in flight lands, for anything drawing a countdown. */
+  get nextAt() { return this.#emitter.nextAt; }
 
   /**
    * Lives too short to be counted one at a time — the cohort pays by the tick

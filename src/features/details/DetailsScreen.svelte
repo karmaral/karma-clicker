@@ -3,7 +3,8 @@
   import { progression } from '$lib/progression';
   import { f, formatSpan } from '$lib/utils';
   import { pulse } from '$lib/loop';
-  import { getWaveLabel } from '$lib/labels';
+  import { clock } from '$lib/clock';
+  import { parseScope } from '$data/upgrades';
   import type { Listener } from '$lib/emission';
   import type Building from '$lib/buildings/base.svelte';
 
@@ -23,6 +24,7 @@
   import AnchorPanel from './AnchorPanel.svelte';
   import AnchorVerb from './AnchorVerb.svelte';
   import WaveStrip from './WaveStrip.svelte';
+  import { extended } from './extended.svelte';
   import type { Phase, PurchaseMode } from './types';
 
   let purchaseMode: PurchaseMode = $state('1');
@@ -137,11 +139,6 @@
 
   const planetName = $derived(planet ? planetTexts[planet.id]?.title ?? planet.id : '');
 
-  /** Same reading the header's own tab note gives this screen — see `Frame`. */
-  const waveLabel = $derived(
-    planet ? getWaveLabel(planet.phase, planet.phasesPerAge, planet.isDense) : '',
-  );
-
   /** The centered, borderless prelude layout recedes once the header & rail land. */
   const isFramed = $derived(progression.isRevealed('frame.header'));
 
@@ -181,6 +178,51 @@
     if (!planet || !aim.isPending) return undefined;
 
     return (planet.position + aim.draftPhases / planet.phasesPerAge) % 1;
+  });
+
+  /**
+   * Which row the pointer is on, if it is on one. The rail's own hovers come
+   * down the same channel, so the fan-out bucket and every other scope answer
+   * nothing here — this wants one cohort or none.
+   */
+  const pointed = $derived.by(() => {
+    if (!spotlight.target) return undefined;
+
+    const scope = parseScope(spotlight.target);
+    if (scope.kind !== 'cohort' || !scope.entity) return undefined;
+
+    return BuildingManager.getBuilding(scope.entity);
+  });
+
+  /**
+   * Where that row's life lands, on the strip's own axis — the row says how long
+   * is left and the strip says what the world will be doing when it does, which
+   * is the half the row cannot answer.
+   *
+   * Only in the extended register: it is a reading about one row, and the strip
+   * is the far end of the question the derivation panel is already answering.
+   *
+   * The mark stands still. `remaining` falls at exactly the rate `position`
+   * climbs, so the sum holds until the cohort re-arms — what makes it re-read at
+   * all is `position` ticking, which is also what keeps `clock.now()` fresh.
+   *
+   * A life longer than an age wraps rather than hiding, for `settleAt`'s reason.
+   *
+   * ⚠ An idle row is asked the same question, not refused it. A cohort without a
+   * clerk stands still between sends, and the rungs that stand still longest are
+   * exactly the ones whose landing is worth looking up — so a row with nothing in
+   * flight is marked a whole life out, which is where a life sent now would land.
+   * Owning none is the only thing that has no answer.
+   */
+  const yieldAt = $derived.by(() => {
+    if (!extended.active || !planet || !pointed) return undefined;
+    if (pointed.isStreaming || !pointed.count) return undefined;
+
+    const remaining = pointed.isInProgress
+      ? Math.max(0, pointed.nextAt - clock.now())
+      : pointed.duration;
+
+    return (planet.position + remaining / planet.phaseDuration / planet.phasesPerAge) % 1;
   });
 
   /** Instant, always — the press has no clock of its own. See `buildings.ts`. */
@@ -266,7 +308,17 @@
     {/if}
 
     {#if progression.isRevealed('details.wave') && planet}
-      <WaveStrip {phases} current={planet.phase} position={planet.position} {settleAt} {draftAt} />
+      <WaveStrip
+        {phases}
+        current={planet.phase}
+        position={planet.position}
+        {settleAt}
+        {draftAt}
+        {yieldAt}
+        phaseMs={planet.phaseDuration}
+        remainingMs={planet.phaseRemaining}
+        agesLived={planet.agesLived}
+      />
     {/if}
   {/snippet}
 
@@ -277,11 +329,9 @@
     <!-- The header rides in with the frame — the prelude column stays the
          same borderless, labelless block it always was. -->
     {#if isFramed}
+      <!-- No aside: the wave's own head says where in the age you are, a strip's
+           height from the wave rather than a disc's. -->
       <Section label={planetName || 'Planet'} className="planet-head">
-        {#snippet aside()}
-          <span>{waveLabel}</span>
-        {/snippet}
-
         <!-- The anchor rides the viewport's own corner: the offer is made by
              the world you are looking at, so it is drawn on it. -->
         <div class="staged">
