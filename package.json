@@ -12,7 +12,6 @@
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.2.0",
     "@tsconfig/svelte": "^4.0.1",
-    "@zerodevx/svelte-toast": "^0.9.3",
     "svelte": "^5.56.8",
     "svelte-check": "^4.7.4",
     "tslib": "^2.5.0",
@@ -26,6 +25,7 @@
     "@threlte/core": "^8.5.16",
     "@threlte/extras": "^9.21.0",
     "@types/three": "^0.185.4",
+    "svelte-sonner": "^1.2.1",
     "three": "^0.185.1",
     "tippy.js": "^6.3.7"
   }

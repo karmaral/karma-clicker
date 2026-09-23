@@ -68,9 +68,19 @@
     padding-inline: 0;
   }
 
+  /* The head rides the same tracks, so an aside labels the last column from
+     its own left edge rather than floating to the right. */
   .section.subgrid > .head {
+    display: grid;
+    grid-template-columns: subgrid;
     grid-column: 1 / -1;
+    column-gap: normal;
     padding-inline: var(--sp-4);
+  }
+
+  .section.subgrid > .head > .aside {
+    grid-column: -2 / -1;
+    text-align: left;
   }
 
   .head {

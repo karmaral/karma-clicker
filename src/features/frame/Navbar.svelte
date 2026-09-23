@@ -93,6 +93,11 @@
     border-left: var(--rule-row);
   }
 
+  /* Closes the strip, so the last tab ends on a rule instead of fading into the bar. */
+  .item:last-child {
+    border-right: var(--rule-row);
+  }
+
   .item:not(:disabled):hover {
     background: var(--res-xp);
     color: var(--ink-inverse);

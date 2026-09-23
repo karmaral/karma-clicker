@@ -28,7 +28,7 @@ export type LabelTone = 'active' | 'inactive' | 'disabled';
 
 export type FigureSize = 'hero' | 'xxl' | 'xl' | 'lg' | 'md' | 'base';
 
-export type MeterFill = 'ink' | 'pos' | 'neg';
+export type MeterFill = 'ink' | 'pos' | 'neg' | 'xp';
 
 export type MeterAlign = 'start' | 'end';
 

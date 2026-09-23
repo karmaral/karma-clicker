@@ -26,7 +26,7 @@
   const pct = (n: number) => `${Math.max(0, Math.min(1, n / max)) * 100}%`;
 
   const fillClass = $derived(
-    fill === 'pos' ? 'karma-pos' : fill === 'neg' ? 'karma-neg' : 'ink'
+    fill === 'pos' ? 'karma-pos' : fill === 'neg' ? 'karma-neg' : fill === 'xp' ? 'xp' : 'ink'
   );
 </script>
 
@@ -63,6 +63,10 @@
   }
   .meter.dark .ink {
     background: var(--ink-900);
+  }
+
+  .fill.xp {
+    background: var(--res-xp);
   }
 
   .tick {

@@ -41,8 +41,7 @@
     border-radius: var(--radius);
     width: var(--tooltip-width, auto);
     max-width: var(--tooltip-max, 320px);
-    /* box-shadow: 0 4px 4px rgba(0, 0, 0, 0.15); */
-    box-shadow: 0 8px 24px rgba(0,0,0,.10);
+    box-shadow: var(--shadow-float);
   }
 
   .tooltip.hint {

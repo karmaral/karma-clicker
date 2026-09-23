@@ -59,7 +59,7 @@
     align-items: start;
     gap: 3px;
     /* What a single rate stands off its figure inside `Value` — the reading's
-       own row has no gap, so the distance is paid here to land on the same one. */
-    margin-left: calc(var(--badge-gap) + var(--sp-1));
+       own row has no gap, so the whole distance is paid here. */
+    margin-left: var(--gap-rate);
   }
 </style>

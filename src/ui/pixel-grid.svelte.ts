@@ -21,6 +21,7 @@ export function createPixelGrid() {
   let generation = $state(0);
 
   return {
+
     /**
      * `{@attach grid.measure}` on the box whose grid this is. An attachment
      * rather than a bound node, so there is nothing to wire up in an effect of

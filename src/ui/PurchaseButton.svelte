@@ -4,7 +4,8 @@
 
   interface Props {
     kind: BadgeKind;
-    quantity: number;
+    /** Already formatted, like `amount`. Empty hides it. */
+    quantity?: string;
     amount: string;
     affordable?: boolean;
     disabled?: boolean;

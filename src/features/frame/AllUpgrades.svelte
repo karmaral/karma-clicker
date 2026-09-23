@@ -129,7 +129,7 @@
     max-height: 86svh;
     background: var(--surface);
     border: var(--rule-card);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, .10);
+    box-shadow: var(--shadow-float);
   }
 
   .head {

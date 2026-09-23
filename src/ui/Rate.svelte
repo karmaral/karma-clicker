@@ -1,8 +1,8 @@
 <script lang="ts">
   /**
-   * Flow, beside a standing figure: `+12/s`. The unit is set apart from the
-   * number because it is the same three characters on every rate in the band —
-   * lighter, it stops being read again each time.
+   * What a standing figure is gaining, beside it: `+12/s`. The unit is set apart
+   * from the number because it is the same three characters on every rate in the
+   * band — lighter, it stops being read again each time.
    *
    * `label` names the source rather than the resource, for a figure paid by more
    * than one thing. Bare, the rate belongs to whatever figure it stands next to.
@@ -10,20 +10,26 @@
   import Label from './Label.svelte';
 
   interface Props {
-    /** Per-second income, already formatted. */
+    /** Income, already formatted. */
     value: string;
+    /**
+     * Per second unless told otherwise. Empty for a gain that is owed rather
+     * than flowing — a pending figure is still a `+` on the number beside it,
+     * and it belongs in the same slot as the rate it stands in for.
+     */
+    unit?: string;
     /** Where it comes from — omit when the figure beside it already says. */
     label?: string;
     /** Drawn greyed rather than withheld, so a stack of rates keeps its height. */
     muted?: boolean;
   }
 
-  let { value, label, muted = false }: Props = $props();
+  let { value, unit = '/s', label, muted = false }: Props = $props();
 </script>
 
 <span class="rate">
   <span class={['num', { muted }]}>
-    +{value}<span class="unit">/s</span>
+    +{value}{#if unit}<span class="unit">{unit}</span>{/if}
   </span>
   {#if label}
     <Label text={label} size="caption" tone={muted ? 'disabled' : 'inactive'} />

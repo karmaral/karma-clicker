@@ -96,6 +96,9 @@
   --badge-size:9px;
   --badge-radius:1.5px;
   --badge-gap:6px;
+  /* The headline pair, for a badge beside a hero figure rather than a line of text. */
+  --badge-size-lg:15px;
+  --badge-gap-lg:10px;
   --glyph-size:16px;
 
   --font:"Encode Sans", system-ui, sans-serif;
@@ -131,6 +134,14 @@
      baseline alignment line up the figures above them too. */
   --gap-caption:6px;
 
+  /* Figure to the rate standing on it. Tighter than the badge gap on purpose: a
+     badge is a separate mark and wants air, but a rate is a clause on the number
+     beside it and reads as belonging to it only while it sits closer than the
+     next figure over. A token because two components set it from opposite sides
+     — `Value` nudges back off its own row gap to reach it, and `ScoreCell`'s
+     stacked pair pays the whole distance itself. */
+  --gap-rate:4px;
+
   /* The excess meter's track. A token because two components have to agree on
      it and cannot see each other: the meter draws it, and the aside naming it
      on the header's label line is width-matched to it from the other side of
@@ -159,6 +170,17 @@
   --rule-row: 1px solid var(--line-100);
   --rule-card: 1px solid var(--line-200);
 
+  /* The two drop shadows in the system; everything else separating a box from
+     its ground is a rule. Same geometry on purpose, so a floating layer is one
+     visual idea at two strengths rather than two.
+
+     --shadow-float is for a box that carries its own edge: a tooltip's ink-900
+     border, the catalogue's full overlay. --shadow-soft is for one edged in a
+     hairline, where the shadow does more of the separating and the stronger
+     ink would read as a halo around a line that is barely there. */
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, .10);
+  --shadow-soft: 0 8px 24px rgba(0, 0, 0, .05);
+
   --sp-1:4px;
   --sp-2:8px;
   --sp-3:14px;
@@ -171,19 +193,35 @@
   /* For a reading that drifts rather than a control that answers a press. */
   --t-slow:.35s ease-out;
 
-  --toastBtnFont: inherit;
-  --toastContainerTop: auto;
-  --toastContainerBottom: 1.5rem;
-  --toastContainerLeft: 50%;
-  --toastColor: var(--ink-900);
-  --toastBackground: var(--surface);
-  --toastHeight: auto;
-  --toastMinHeight: 3em;
-  --toastBoxShadow: none;
-  --toastBorder: var(--rule-card);
-  --toastBorderRadius: 0px;
-  --toastMsgPadding: var(--sp-2);
-  --toastBarHeight: 0;
+}
+
+
+/* Sonner ships a rounded card in its own font and its own shadow. Flatten it
+   onto the app's surface the way everything else here draws a box.
+   Every selector below leads with :root, and it is load-bearing rather than
+   decorative: the library's rules match at the same specificity, and Vite
+   injects them after this sheet, so an unprefixed copy loses the tie. */
+:root [data-sonner-toaster][data-sonner-theme="light"] {
+  --normal-bg: var(--surface);
+  --normal-border: var(--line-200);
+  --normal-text: var(--ink-900);
+  --border-radius: 0px;
+  font-family: var(--font);
+}
+
+:root [data-sonner-toast][data-styled="true"] {
+  padding: var(--sp-2);
+  box-shadow: var(--shadow-soft);
+  font-size: var(--fs-base);
+}
+
+:root [data-sonner-toast][data-styled="true"] [data-title] {
+  font-weight: 600;
+}
+
+:root [data-sonner-toast][data-styled="true"] [data-description] {
+  font-size: var(--fs-sm);
+  color: var(--ink-700);
 }
 
 
@@ -255,14 +293,33 @@ button {
   font-size: inherit;
 }
 
+/* A key or button named in copy. Global, so every hint spells input the same way. */
+kbd {
+  display: inline-block;
+  padding: 1px 4px;
+  border: 1px solid var(--line-200);
+  border-bottom-width: 2px;
+  border-radius: 2px;
+  font-family: inherit;
+  font-size: .85em;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: .04em;
+  color: var(--ink-700);
+  background: var(--surface);
+}
+
+/* How the key is pressed, under the key itself. */
+kbd small {
+  font-size: .85em;
+  font-weight: 500;
+  color: var(--ink-300);
+}
+
 .num { font-variant-numeric: tabular-nums; }
 .karma-pos { background: var(--hatch-pos); box-shadow: var(--hatch-pos-edge); }
 .karma-neg { background: var(--hatch-neg); }
 
-
-._toastItem {
-  translate: -50%;
-}
 
 .view-layout {
   display: grid;

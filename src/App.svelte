@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { onMount, type ComponentType } from 'svelte';
-  import { SvelteToast, toast } from '@zerodevx/svelte-toast';
+  import { onMount } from 'svelte';
+  import { Toaster, toast } from 'svelte-sonner';
   import { Card, Label, Rail, Value } from '$ui';
   import {
     PlanetManager, BuildingManager, NotificationManager, ResourceManager,
   } from '$lib/managers';
-  import Notification from '$features/notification/Notification.svelte';
   import planetTexts from '$data/planets-texts';
   import { progression, validate } from '$lib/progression';
   import { nav } from '$lib/nav.svelte';
@@ -52,18 +51,7 @@
 
   /** What a notification looks like. The manager only knows that one exists. */
   NotificationManager.use(({ title, description }) => {
-    toast.push({
-      component: {
-        // svelte-toast 0.9's JSDoc still types `src` as Svelte 4's class
-        // `ComponentType`, while a Svelte 5 component is a function. Its
-        // `<svelte:component>` takes either, so only the type is behind.
-        src: Notification as unknown as ComponentType,
-        props: { title, description },
-        sendIdTo: 'toastId',
-      },
-      pausable: true,
-      intro: { x: 0, y: 128 },
-    });
+    toast(title, { description });
   });
 
   const experience = $derived(f(ResourceManager.getAmount('experience')));
@@ -209,7 +197,7 @@
   <AllUpgrades />
 {/if}
 
-<SvelteToast />
+<Toaster position="bottom-center" />
 
 <style>
   main {
@@ -276,7 +264,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--sp-1);
-    --badge-size: 18px;
-    --badge-gap: 12px;
+    --badge-size: var(--badge-size-lg);
+    --badge-gap: var(--badge-gap-lg);
   }
 </style>

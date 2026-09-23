@@ -12,16 +12,18 @@
     muted?: boolean;
     /** Per-second income, already formatted. Omit to leave the figure bare. */
     rate?: string;
+    /** Passed through to `Rate` — empty puts a gain that is owed in the rate's slot. */
+    rateUnit?: string;
   }
 
-  let { kind, value, size = 'xl', muted = false, rate }: Props = $props();
+  let { kind, value, size = 'xl', muted = false, rate, rateUnit }: Props = $props();
 </script>
 
 <span class="value">
   <span class="badge"><Badge {kind} /></span>
   <Figure {value} {size} {muted} />
   {#if rate}
-    <span class="rate"><Rate value={rate} /></span>
+    <span class="rate"><Rate value={rate} unit={rateUnit} /></span>
   {/if}
 </span>
 
@@ -47,8 +49,10 @@
   }
 
   /* Placement only — the rate draws itself, and the baseline now does the
-     vertical work a pixel of padding used to. */
+     vertical work a pixel of padding used to. Negative because the row's gap is
+     sized for the badge, which wants more air than a rate does: this pulls back
+     off `--badge-gap` to land on `--gap-rate` exactly. */
   .rate {
-    margin-left: var(--sp-1);
+    margin-left: calc(var(--gap-rate) - var(--badge-gap));
   }
 </style>

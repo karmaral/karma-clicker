@@ -13,7 +13,7 @@
    * escapes an `overflow: hidden` ancestor that is not also its containing
    * block. Nothing here transforms, so nothing here is.
    */
-  import { SvelteToast, toast } from '@zerodevx/svelte-toast';
+  import { Toaster, toast } from 'svelte-sonner';
   import { Label } from '$ui';
   import { log } from '$lib/log.svelte';
   import logIcon from '../assets/log-icon-light.svg';
@@ -66,7 +66,17 @@
     if (open || !head.highlight) return;
 
     place();
-    toast.push(head.text, { target: 'highlight', pausable: true });
+    toast(head.text, { toasterId: 'highlight' });
+  });
+
+  /**
+   * Beside the button on the side it has room on. `mobileOffset` mirrors it
+   * rather than defaulting: sonner swaps to that one under 600px, and its flat
+   * 16px would tear the toaster off the button on a narrow window.
+   */
+  const inset = $derived({
+    bottom: `${below}px`,
+    right: `calc(${right}px + ${btnWidth}px + var(--sp-2))`,
   });
 </script>
 
@@ -76,8 +86,6 @@
   class={['log', { floating }]}
   style:--right="{right}px"
   style:--above="{above}px"
-  style:--below="{below}px"
-  style:--btn-w="{btnWidth}px"
 >
   <button class="trigger" aria-label="Log" bind:this={trigger} bind:clientWidth={btnWidth} onclick={toggle}>
     <img src={logIcon} alt="" width="20" height="20" />
@@ -94,9 +102,7 @@
     </div>
   {/if}
 
-  <div class="highlight-toast">
-    <SvelteToast target="highlight" options={{ intro: { x: 0, y: 24 } }} />
-  </div>
+  <Toaster id="highlight" position="bottom-right" offset={inset} mobileOffset={inset} />
 </div>
 
 <style>
@@ -160,27 +166,17 @@
     font-weight: 600;
   }
 
-  /* A second toast container, beside the button on the side it has room on:
-     the default's centered translate doesn't apply here, and the message wants
-     the log's bold treatment. */
-  .highlight-toast {
-    --toastContainerTop: auto;
-    --toastContainerBottom: var(--below);
-    --toastContainerLeft: auto;
-    --toastContainerRight: calc(var(--right) + var(--btn-w) + var(--sp-2));
-    --toastWidth: 300px;
-    --toastMinHeight: auto;
-    /* Top-only, so the bottommost toast's own edge lands exactly on
-       --toastContainerBottom instead of the library's default bottom margin
-       pushing it up half a rem short of the button's bottom. */
-    --toastMargin: var(--sp-2) 0 0 0;
+  /* Narrower and quieter than the centre toaster: this is a log line that
+     happened to pop, so it reads as one of the popover's entries rather than
+     as an upgrade's announcement. Sonner's own width is inline on its list, so
+     the override goes on the item — and the id is what outranks both the
+     library's attribute rule and app.css's title weight. */
+  :global(#highlight [data-sonner-toast]) {
+    width: 300px;
   }
 
-  .highlight-toast :global(._toastItem) {
-    translate: none;
-  }
-
-  .highlight-toast :global(._toastMsg) {
-    font-weight: 600;
+  :global(#highlight [data-title]) {
+    font-size: var(--fs-sm);
+    font-weight: 400;
   }
 </style>
