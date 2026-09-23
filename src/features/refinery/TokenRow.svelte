@@ -71,7 +71,7 @@
         <PurchaseButton
           kind={costKind}
           amount={formatCost(cost!)}
-          {quantity}
+          quantity={quantity ? f(quantity) : undefined}
           {affordable}
           onclick={onpurchased}
           oncycle={oncyclemode}
@@ -161,7 +161,7 @@
      has to hold still down four rows priced in four different figures. The rest
      is the global `.purchase-container`. */
   .purchase-container {
-    width: 15ch;
+    width: 19ch;
   }
 
   /* Information, not a control: what the refinery pays for the same thing. */

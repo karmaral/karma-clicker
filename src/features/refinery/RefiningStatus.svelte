@@ -54,6 +54,9 @@
    */
   const crimson = $derived(refinery.crimsonPerSecond);
 
+  /** The goal, not the tally — the same "N to next" line the prestige screen reads. */
+  const expLeft = $derived(Math.max(0, refinery.expToNext - refinery.exp));
+
   /** Unstaffed is stopped now, not pulsing at nothing — see `Refinery.tick`. */
   const isIdle = $derived(refinery.workers <= 0);
 
@@ -62,7 +65,7 @@
     if (isIdle) return 'idle';
     if (refinery.isStreaming) return 'streaming';
 
-    return `next ${nextIn.toFixed(1)}s`;
+    return `${nextIn.toFixed(1)}s next`;
   });
 
   /**
@@ -83,17 +86,17 @@
 
 <Section label="Refining" highlighted={spotlight.isLit('refinery')}>
   {#snippet aside()}
-    <span class="level">
-      level {f(refinery.level)} 
-    </span>
-
+    Level {f(refinery.level)}
   {/snippet}
 
+  <!-- Baseline, so the unit reads as the figure's own word; the badge alone
+       centres, as it does beside every value. -->
   <div class="rate">
     {#if isIdle}
       <Figure value="—" size="xxl" muted />
       <span class="unit">unstaffed<br>nothing to clear</span>
     {:else}
+      <span class="badge"><Badge kind="both" /></span>
       <Figure value={f(karma)} size="xxl" />
       <span class="unit">karma/s<br>refined at this coverage</span>
     {/if}
@@ -106,27 +109,37 @@
 
   <div class="progress">
     <div class="track">
-      <Meter value={refinery.levelProgress} height="6px" />
+      <Meter value={refinery.levelProgress} fill="xp" height="6px" />
     </div>
-    <span class="next">{f(refinery.exp)} / {f(refinery.expToNext)}</span>
+    <span class="next">{f(expLeft)} exp to <strong>level {f(refinery.level + 1)}</strong></span>
   </div>
 
   <div class="batch">
     <Badge kind="red-both" />
-    <span class="num">{f(crimson)} matched Crimson/s</span>
+    <span class="num">{f(crimson)} matched Crimson<span class="per">/s</span></span>
 
     <span class="ratio">×{f(refinery.ratio)} efficiency</span>
   </div>
 </Section>
 
 <style>
+  /* Last baseline row-wide: an item's own last-baseline joins a separate
+     group from the figure's and falls to the row's end instead. */
   .rate {
     display: flex;
-    align-items: center;
+    align-items: last baseline;
     gap: var(--sp-3);
     min-width: 0;
   }
 
+  .badge {
+    display: flex;
+    align-self: center;
+    margin-right: calc(var(--badge-gap-lg) - var(--sp-3));
+    --badge-size: var(--badge-size-lg);
+  }
+
+  /* The caption stands on the figure's baseline and stacks up from it. */
   .unit {
     font-size: var(--fs-sm);
     line-height: 1.2;
@@ -151,22 +164,27 @@
     min-width: 0;
   }
 
-  .level,
+  /* Readings, not titles: `CohortRow`'s countdown register — sentence case, 500. */
   .next {
     flex: none;
     font-size: var(--fs-xs);
-    font-weight: 600;
+    font-weight: 500;
     font-variant-numeric: tabular-nums;
-    letter-spacing: .14em;
-    text-transform: uppercase;
     color: var(--ink-500);
+  }
+
+  /* The goal, as the prestige screen sets its own. */
+  .next strong {
+    color: var(--ink-700);
+    font-weight: 600;
   }
 
   /* The figure sizes the row, so the track is whatever it leaves — a label that
      narrows as its digits tick steals width back from the fill, and the bar walks
      backwards while the number it reports goes up. Reserved and right-aligned, so
-     the track is the same track from one pulse to the next. */
-  .progress .next {
+     the track is the same track from one pulse to the next — and the same width
+     on both rows, so the two tracks end together. */
+  .next {
     min-width: 22ch;
     text-align: right;
   }
@@ -182,6 +200,12 @@
   .batch .num {
     font-weight: 600;
     color: var(--ink-900);
+  }
+
+  /* `Rate`'s unit: the bold slash set its own spacing. */
+  .per {
+    font-weight: 500;
+    color: var(--ink-500);
   }
   .ratio {
     margin-left: auto;

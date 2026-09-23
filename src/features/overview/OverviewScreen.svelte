@@ -101,11 +101,11 @@
     min-width: 0;
   }
 
+  /* Stretched: Active takes Ahead's height, however many rows Ahead wraps to. */
   .here {
     display: grid;
     grid-template-columns: subgrid;
     grid-column: 1 / -1;
-    align-items: start;
     min-width: 0;
   }
 
@@ -114,9 +114,11 @@
     min-width: 0;
   }
 
+  /* Clips the lattice's outer edge — see `AheadGrid`. */
   .here-ahead {
     grid-column: 2;
     min-width: 0;
+    overflow: hidden;
   }
 
   .detail {

@@ -25,9 +25,6 @@
   const isIdle = $derived(refinery.workers <= 0);
   const pct = $derived(refinery.coverage * 100);
 
-  /** Forecast — what the meter's percentage is of. */
-  const cleared = $derived(refinery.perSecond * 2);
-
   /** What the trend converges onto: cohort karma, bias and aim split excluded. */
   const produced = $derived(refinery.shortPileIncome * 2);
 </script>
@@ -51,7 +48,7 @@
     {#if isIdle}
       {f(produced)} karma/s produced, none of it cleared
     {:else}
-      {f(cleared)} of {f(produced)} karma/s produced cleared
+      of {f(produced)} karma/s produced
     {/if}
   </p>
 </Section>

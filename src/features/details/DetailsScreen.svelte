@@ -2,6 +2,7 @@
   import { BuildingManager, PlanetManager } from '$lib/managers';
   import { progression } from '$lib/progression';
   import { f, formatSpan } from '$lib/utils';
+  import { getAgesLabel } from '$lib/labels';
   import { pulse } from '$lib/loop';
   import { clock } from '$lib/clock';
   import { parseScope } from '$data/upgrades';
@@ -301,6 +302,7 @@
         facesSite={isAnchoring}
         harness={hasField ? rig.harness : undefined}
         riders={hasField ? harness.riders : undefined}
+        lines={hasField ? harness.lineBands : undefined}
         working={hasField ? harness.workers : undefined}
         pressValue={isAnchoring ? harness.clickMs : undefined}
         pressFormat={seconds}
@@ -317,7 +319,6 @@
         {yieldAt}
         phaseMs={planet.phaseDuration}
         remainingMs={planet.phaseRemaining}
-        agesLived={planet.agesLived}
       />
     {/if}
   {/snippet}
@@ -329,9 +330,13 @@
     <!-- The header rides in with the frame — the prelude column stays the
          same borderless, labelless block it always was. -->
     {#if isFramed}
-      <!-- No aside: the wave's own head says where in the age you are, a strip's
-           height from the wave rather than a disc's. -->
+      <!-- The age count is the world's, so it heads the world as Overview's does;
+           the phase stays on the wave it is a reading of. -->
       <Section label={planetName || 'Planet'} className="planet-head">
+        {#snippet aside()}
+          {#if planet}{getAgesLabel(planet.agesLived)}{/if}
+        {/snippet}
+
         <!-- The anchor rides the viewport's own corner: the offer is made by
              the world you are looking at, so it is drawn on it. -->
         <div class="staged">

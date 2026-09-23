@@ -105,15 +105,14 @@
   /**
    * The amount behind the caret's percentage, and which way it leans — in the
    * karma columns' words, the same ones the scale draws, never the excess sides
-   * (see `labels.ts`). Keyed off `alignment` rather than the raw sign so the
-   * sentence and the lit word above it cannot disagree: inside the even band the
-   * lean is real but buys no side, and saying it leans *positive* there would
-   * name a column this harvest will not lock to.
+   * (see `labels.ts`). Keyed off the raw sign, not `alignment`: the lit word
+   * already says what locks, and this says where the karma actually sits —
+   * inside the even band it still sits on one side.
    */
   const unpaired = $derived(getUnpairedKarma());
 
   const lean = $derived(
-    alignment === 0 ? 'into neither side' : `into the ${wordFor(alignment)}`,
+    unpaired === 0 ? 'into neither side' : `into the ${wordFor(Math.sign(unpaired) as Polarity)}`,
   );
 
   /**

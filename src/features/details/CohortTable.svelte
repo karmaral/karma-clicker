@@ -115,6 +115,12 @@
 </script>
 
 <Section label="Soul cohorts" {title}>
+  <!-- Both verbs are the right button, told apart by where and how long — see
+       `CohortRow`'s hold and `PurchaseButton`'s tap. -->
+  {#snippet aside()}
+    <span class="hint"><kbd>RMB <small>(hold)</small></kbd> for details · <kbd>RMB</kbd> a price to cycle quantity</span>
+  {/snippet}
+
   <div class="table" style:--cohort-cols={columns}>
 
     <div class="head">
@@ -172,6 +178,8 @@
 </Section>
 
 <style>
+  .hint { font-size: var(--fs-xs); }
+
   .table {
     display: flex;
     flex-direction: column;

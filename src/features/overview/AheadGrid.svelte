@@ -40,24 +40,36 @@
 <style>
   /* Flex rather than grid: cells pack from the left and wrap as a row fills,
      so one planet and a dozen both end up flush against the same edge. */
+  /* Tiles edge to edge on a lattice of the same pitch, so the cells a row
+     leaves empty still read as slots. Inner lines only: each sits on a tile's
+     right and bottom, and the last row's bottom is pulled under the clip. */
   .grid {
+    --cell: 6rem;
+
     display: flex;
     flex-wrap: wrap;
-    gap: var(--sp-3);
-    margin: 0;
+    margin: 0 0 -1px;
     padding: 0;
     list-style: none;
+    background-image:
+      linear-gradient(to left, var(--line-100) 1px, transparent 1px),
+      linear-gradient(to top, var(--line-100) 1px, transparent 1px);
+    background-size: var(--cell) var(--cell);
   }
 
+  /* Its own lines too, so a tinted tile keeps its edges. */
   .cell {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: var(--sp-2);
-    width: 6rem;
-    padding: var(--sp-3) var(--sp-2);
+    width: var(--cell);
+    height: var(--cell);
+    padding: var(--sp-2);
     background: none;
     border: none;
+    box-shadow: inset -1px -1px var(--line-100);
     text-align: center;
   }
 

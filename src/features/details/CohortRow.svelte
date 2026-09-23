@@ -361,7 +361,7 @@
 
        Out of flow: it draws over the row without taking a cell, so the grid
        places the four real ones exactly as it did before there was a clock. -->
-  <div class="wash" aria-hidden="true">
+  <div class={['wash', { streaming: cohort.isStreaming }]} aria-hidden="true">
     {#if cohort.isStreaming}
       <span class="flow"></span>
     {:else}
@@ -410,7 +410,7 @@
          which is the whole trade: the bar is the row now. -->
     <span class="duration">
       {#if cohort.isStreaming}
-        <span class="stream">stream</span>
+        <span>continuous</span>
       {:else}
         <span>{lifeLabel(cohort.duration)}</span>
         {#if cohort.isInProgress}
@@ -446,7 +446,7 @@
         onmouseleave={endPreview}
         oncycle={oncyclemode}
         onhold={beginHold}
-        {quantity}
+        quantity={quantity ? f(quantity) : undefined}
       />
     </div>
 
@@ -481,7 +481,7 @@
     /* The buy cell narrows itself by inset inside its own track (see
        `.purchase-container`), so this is the only statement of where that cell
        actually begins — and the wash reads it to know where to stop. */
-    --purchase-width: 16ch;
+    --purchase-width: 18ch;
 
     /* Where the wash begins: the one figure here that is authored and not laid
        out. The ident is shrink-to-fit inside a `1fr` track, so nothing in the
@@ -566,17 +566,22 @@
     transform: translateX(-100%);
   }
 
-  /* No landing to fill to, so the same ink crosses instead of arriving: a
-     shading passing over, not a thing moving. The band is the run's own width
-     and travels exactly that in each direction, so **the two middle stops are
-     the only knob** — they are the flat top of the band, held nearly shut so a
-     whole row of movement never reads as an alarm. */
+  /* A stream is a life that never lands, so it reads as a full fill: the
+     sibling of a filling row at its peak, not an empty one. */
+  .wash.streaming {
+    background: rgb(17 17 17 / .05);
+  }
+
+  /* And the same ink crosses over that ground: a shading passing, not a thing
+     moving. The band is the run's own width and travels exactly that in each
+     direction, so **the two middle stops are the only knob** — the flat top of
+     the band. */
   .flow {
     background: linear-gradient(
       90deg,
       rgba(17, 17, 17, 0) 0%,
-      rgba(17, 17, 17, .04) 46%,
-      rgba(17, 17, 17, .04) 54%,
+      rgba(17, 17, 17, .07) 12%,
+      rgba(17, 17, 17, .07) 88%,
       rgba(17, 17, 17, 0) 100%
     );
     animation: flow 2.4s linear infinite;
@@ -696,14 +701,6 @@
   .left {
     color: var(--ink-300);
     font-variant-numeric: tabular-nums;
-  }
-
-  /* The word standing where the figure was — same weight, so a row that starts
-     streaming does not also get louder. */
-  .stream {
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    font-size: .9em;
   }
 
   /* No clock until the clerk is bought — this is the row's clock in the

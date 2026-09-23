@@ -39,16 +39,24 @@
    * Which word the split lands on. Read off `resolveHarvestDuration` at both
    * ends rather than off the souls, so the legend cannot disagree with the
    * figure in the panel — one is the other's own scale.
+   *
+   * The ends are **the slider's ends**, not 0 and 1. Share 0 is under the toll
+   * and cannot be dialled, so measuring from it spent the first words on
+   * positions no handle reaches — on a 15% world the far left already read
+   * Even. From the floor the row spans the travel: the far left is Longest and
+   * the far right is Shortest, on every world whatever it charges.
    */
   const lit = $derived.by(() => {
-    const slowest = resolveHarvestDuration(1, 0, merge);
+    const slowest = resolveHarvestDuration(1, floor, merge);
     // Merging everything: the fastest a share can ever go, which is the cap or
     // just under it — never an unreachable asymptote, now that the axis is 0…1.
     const fastest = resolveHarvestDuration(1, 1, merge);
     const span = slowest - fastest;
     if (span <= 0) return 0;
 
-    const through = (slowest - resolveHarvestDuration(1, share, merge)) / span;
+    // Clamped low as well as high: the realized share rounds per cohort and can
+    // land a soul under the floor the handle is standing on.
+    const through = Math.max(0, (slowest - resolveHarvestDuration(1, share, merge)) / span);
 
     return Math.min(CYCLE_WORDS.length - 1, Math.floor(through * CYCLE_WORDS.length));
   });

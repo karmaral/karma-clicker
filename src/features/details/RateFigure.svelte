@@ -20,7 +20,7 @@
 </script>
 
 <span class="rate">
-  <Badge kind={badgeFor(type)} />
+  <span class="badge"><Badge kind={badgeFor(type)} /></span>
   <span class="value num">
     +{f(value)}<span class="unit">/s</span>
 
@@ -31,10 +31,18 @@
 </span>
 
 <style>
+  /* Baselined on the number, with the badge centred out of the group — as in
+     `Value` — so a row can set a rate on a bigger figure's baseline. */
   .rate {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     gap: var(--badge-gap);
+  }
+
+  .badge {
+    display: flex;
+    align-self: center;
+    flex: none;
   }
 
   .value {
