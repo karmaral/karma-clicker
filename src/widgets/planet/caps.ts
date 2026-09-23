@@ -45,7 +45,7 @@ const TIER_SEEDS = [0x2f6e2b1, 0x51ed270b, 0x1b56c4e9];
 const SKIRT_REACH = 0.5;
 
 /** xorshift32, the same generator `noise.ts` shuffles its permutation with. */
-function createRandom(seed: number) {
+export function createRandom(seed: number) {
   let state = (seed | 0) || 0x9e3779b9;
 
   return () => {

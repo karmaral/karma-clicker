@@ -51,6 +51,10 @@
     harness?: HarnessVisual;
     /** How many souls the harness carries. See `SoulSwarm`. */
     riders?: number;
+    /** The band each line was bought for. See `PlanetScene`. */
+    lines?: number[];
+    /** The line being pointed at. See `PlanetScene`. */
+    litLine?: number;
     /** And how many are placing the anchor going down. See `PlanetScene`. */
     working?: number;
     pulse?: PulseVisual;
@@ -112,6 +116,8 @@
     facesSite = false,
     harness,
     riders,
+    lines,
+    litLine,
     working,
     pulse,
     clickMs,
@@ -272,6 +278,8 @@
         {facesSite}
         {harness}
         {riders}
+        {lines}
+        {litLine}
         {working}
         {pulse}
         {clickMs}

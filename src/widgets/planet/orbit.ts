@@ -87,6 +87,67 @@ export interface SwarmVisual {
   dotFloor: number;
 
   /**
+   * The sleeve a crowded band wears: a translucent tube swung around the band's
+   * own mean orbit, so a cohort past a certain size reads as a volume of people
+   * rather than as a count of dots. The dots keep riding it — this is what they
+   * are riding through.
+   *
+   * Its cross-section radius, in body radii, and **0 is the whole thing off**.
+   * Authored against the scatter rather than against the count: a band's spread
+   * is set by `radiusScatter` and `tiltScatter` and does not widen as souls are
+   * bought, so neither does this. What grows with the count is the strength.
+   */
+  tubeWidth: number;
+  /**
+   * The threshold, in souls, and the count the sleeve is fully grown at. Under
+   * `tubeFrom` a band wears nothing: a handful of dots has no volume to stand
+   * for, and a sleeve around six souls is a hoop with gaps in it.
+   *
+   * **What the count buys between the two is coverage, not strength.** A patch
+   * of sleeve is always the same ink and there is simply more of it — see
+   * `swarmTubeFragment` for why that is the whole mark and not a detail of it.
+   */
+  tubeFrom: number;
+  tubeFull: number;
+  /**
+   * What a filled patch is worth, and it never moves. Slight, because the dots
+   * are still the reading and two walls of one tube already double it.
+   */
+  tubeAlpha: number;
+  /**
+   * How much of the sleeve a fully-grown band fills, 0…1, and how soft the cut
+   * that fills it is. `tubeEdge` at 0 is as hard as the screen can draw — which
+   * is the point: a soft cut is a tube being revealed, and a hard one is mass
+   * that was there all along and could not be drawn a dot at a time.
+   */
+  tubeCover: number;
+  tubeEdge: number;
+  /**
+   * The field under that cut: crests winding the ring, crests winding the
+   * section, and how far the two of them give way to noise. Whole counts,
+   * because a fraction would not close at the seam. `tubeBreak` at 0 is ruled
+   * bands and at 1 is clumps — the ruling is the flow, the noise is the crowd,
+   * and it wants both.
+   */
+  tubeWave: number;
+  tubeTurn: number;
+  tubeBreak: number;
+  /**
+   * Turns a second the field travels, on the **band's own clock** — so a quick
+   * cohort's sleeve flows quickly, the tie `rateOf` already makes for the dots.
+   * 0 holds it still.
+   */
+  tubeFlow: number;
+  /**
+   * How far the field is taken down where the shell faces us, 0…1. A shell seen
+   * edge-on is more of itself to look through, so this leaves the tube standing
+   * at its own silhouette and opens the flat of it. Spent on the *field* rather
+   * than on the alpha, which is the same argument the coverage makes: a limb
+   * paid in opacity is the soft reveal this is built to avoid. 0 is off.
+   */
+  tubeLimb: number;
+
+  /**
    * A contrasting ring around each dot, as a fraction of its radius. Drawn
    * *outside* the fill, so a dot keeps its weight and gains an edge.
    *
@@ -375,24 +436,79 @@ function strayBy(random: () => number, reach: number) {
   return (random() * 2 - 1) * reach;
 }
 
+/** The six numbers a plane is held as. `Soul`'s own, structurally. */
+interface OrbitBasis {
+  ux: number; uy: number; uz: number;
+  vx: number; vy: number; vz: number;
+}
+
 /**
  * The plane's basis. Starts in the body's own equator — the swarm sits inside
  * the tilt group and outside the spinner, so "equatorial" is the group's XZ
  * plane and needs no angle authored for it.
  */
-function orbitBasis(soul: Soul, tilt: number, node: number) {
+function orbitBasis(out: OrbitBasis, tilt: number, node: number) {
   const ct = Math.cos(tilt);
   const st = Math.sin(tilt);
   const cn = Math.cos(node);
   const sn = Math.sin(node);
 
-  soul.ux = cn;
-  soul.uy = 0;
-  soul.uz = -sn;
+  out.ux = cn;
+  out.uy = 0;
+  out.uz = -sn;
 
-  soul.vx = ct * sn;
-  soul.vy = -st;
-  soul.vz = ct * cn;
+  out.vx = ct * sn;
+  out.vy = -st;
+  out.vz = ct * cn;
+}
+
+/**
+ * One band's plane, as its radius and an orthonormal frame for it — `n` is the
+ * axis a sleeve is swept about. Drawn through `bandAt` and `orbitBasis`, the
+ * same two `createSouls` and `ringEdges` go through, so nothing wrapped around
+ * a band can drift from the clump inside it.
+ */
+export interface BandFrame extends OrbitBasis {
+  radius: number;
+  nx: number; ny: number; nz: number;
+}
+
+export function bandFrameOf(index: number, visual: SwarmVisual): BandFrame {
+  const band = bandAt(index, visual);
+  const frame: BandFrame = {
+    ux: 0, uy: 0, uz: 0,
+    vx: 0, vy: 0, vz: 0,
+    nx: 0, ny: 0, nz: 0,
+    radius: band.radius,
+  };
+
+  orbitBasis(frame, band.tilt, band.node);
+
+  frame.nx = frame.uy * frame.vz - frame.uz * frame.vy;
+  frame.ny = frame.uz * frame.vx - frame.ux * frame.vz;
+  frame.nz = frame.ux * frame.vy - frame.uy * frame.vx;
+
+  return frame;
+}
+
+/**
+ * How far a band has grown into its sleeve, 0…1. Nothing under `tubeFrom`, full
+ * at `tubeFull` — a threshold and then a ramp, rather than a ramp from nothing,
+ * because the sleeve is what a *crowd* looks like: below the threshold there is
+ * no volume for it to be standing in for.
+ *
+ * Spent on **coverage** and never on strength: it is how much of the sleeve is
+ * filled, at an ink that does not move. A band growing into a fixed shape is a
+ * tube being revealed; a band filling out is mass arriving. See
+ * `swarmTubeFragment`.
+ */
+export function volumeOf(count: number, visual: SwarmVisual) {
+  if (visual.tubeWidth <= 0 || visual.tubeAlpha <= 0) return 0;
+
+  const from = Math.max(0, visual.tubeFrom);
+  const full = Math.max(from + 1, visual.tubeFull);
+
+  return Math.max(0, Math.min(1, (count - from) / (full - from)));
 }
 
 /**
@@ -952,7 +1068,8 @@ export function phaseOf(soul: Soul, elapsed: number) {
   return turns - Math.floor(turns);
 }
 
-export type SwarmGroup = 'Orbits' | 'Scatter' | 'Souls' | 'Work' | 'Spawn' | 'Bolt';
+export type SwarmGroup =
+  'Orbits' | 'Scatter' | 'Souls' | 'Volume' | 'Work' | 'Spawn' | 'Bolt';
 
 export interface SwarmParam {
   key: keyof SwarmVisual;
@@ -964,7 +1081,7 @@ export interface SwarmParam {
 }
 
 export const SWARM_GROUPS: SwarmGroup[] = [
-  'Orbits', 'Scatter', 'Souls', 'Work', 'Spawn', 'Bolt',
+  'Orbits', 'Scatter', 'Souls', 'Volume', 'Work', 'Spawn', 'Bolt',
 ];
 
 /** Shaped like `VISUAL_PARAMS`, so wiring a panel onto it is mechanical. */
@@ -1001,6 +1118,33 @@ export const SWARM_PARAMS: SwarmParam[] = [
   { key: 'ring', label: 'Ring', group: 'Souls', min: 0, max: 0.8, step: 0.02 },
   { key: 'outTone', label: 'Tone outside', group: 'Souls', min: 0, max: 6, step: 1 },
   { key: 'frontTone', label: 'Tone in front', group: 'Souls', min: 0, max: 6, step: 1 },
+
+  // 0 is the sleeve off, so nothing below needs a switch of its own. The top is
+  // wide enough to swallow a neighbouring band, which is honest — at the default
+  // scatter the clumps already overlap.
+  { key: 'tubeWidth', label: 'Width', group: 'Volume', min: 0, max: 0.4, step: 0.005 },
+  // Counts, because the thing being crossed is a number of souls. The tops are
+  // the lab's own per-band ceiling.
+  { key: 'tubeFrom', label: 'From souls', group: 'Volume', min: 0, max: 100, step: 1 },
+  { key: 'tubeFull', label: 'Full at', group: 'Volume', min: 1, max: 100, step: 1 },
+  // Fixed, and never touched by the count — the count buys Fill instead.
+  { key: 'tubeAlpha', label: 'Strength', group: 'Volume', min: 0, max: 0.8, step: 0.01 },
+  // What a fully-grown band comes to. 1 is the whole sleeve and no gaps, which
+  // is the one setting that reads as a tube rather than as a crowd.
+  { key: 'tubeCover', label: 'Fill', group: 'Volume', min: 0, max: 1, step: 0.02 },
+  // 0 is the hardest edge the screen can draw. Up from there the patches go
+  // back to being a reveal, which is what this pair exists to avoid.
+  { key: 'tubeEdge', label: 'Softness', group: 'Volume', min: 0, max: 0.4, step: 0.01 },
+  // Whole crests only — a fraction leaves a step at the seam where each texture
+  // coordinate closes on itself.
+  { key: 'tubeWave', label: 'Crests', group: 'Volume', min: 0, max: 24, step: 1 },
+  { key: 'tubeTurn', label: 'Crests round', group: 'Volume', min: 0, max: 8, step: 1 },
+  // 0 is ruled bands, 1 is clumps. The middle is a current with lumps in it.
+  { key: 'tubeBreak', label: 'Break', group: 'Volume', min: 0, max: 1, step: 0.05 },
+  { key: 'tubeFlow', label: 'Flow turns/s', group: 'Volume', min: 0, max: 1.5, step: 0.01 },
+  // 0 is an even sleeve; 1 opens the flat of the tube out altogether and leaves
+  // only its own silhouette standing.
+  { key: 'tubeLimb', label: 'Limb', group: 'Volume', min: 0, max: 1, step: 0.05 },
 
   // 0 is the crew off — nobody stands on the pole, however many are working.
   { key: 'workRadius', label: 'Ring', group: 'Work', min: 0, max: 0.8, step: 0.01 },
@@ -1060,6 +1204,17 @@ export const DEFAULT_SWARM: SwarmVisual = {
   dot: 0.042,
   dotScatter: 0.012,
   dotFloor: 1.5,
+  tubeWidth: 0.11,
+  tubeFrom: 88,
+  tubeFull: 100,
+  tubeAlpha: 0.27,
+  tubeCover: 0.34,
+  tubeEdge: 0.27,
+  tubeWave: 23,
+  tubeTurn: 8,
+  tubeBreak: 0.7,
+  tubeFlow: 0.35,
+  tubeLimb: 1,
   riders: 1,
   settleAt: 0.8,
   strayTo: 1.1,

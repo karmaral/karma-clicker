@@ -7,18 +7,20 @@
   import Bolt from './Bolt.svelte';
   import Halo from './Halo.svelte';
   import Harness from './Harness.svelte';
+  import LineVolume from './LineVolume.svelte';
   import PlanetBody from './PlanetBody.svelte';
   import OrbitRing from './OrbitRing.svelte';
   import SoulBolt from './SoulBolt.svelte';
   import SoulSwarm from './SoulSwarm.svelte';
+  import SoulVolume from './SoulVolume.svelte';
   import Sparks from './Sparks.svelte';
   import { placeAnchors, type AnchorPlacement, type AnchorVisual } from './anchor';
   import { advanceClock, getClock } from './clock';
   import { createSurfaceField } from './field';
   import { createSlew, frameOn, shortAngle, slewTo, type Framing } from './framing';
-  import { buildLoops, trimLoopCache, type HarnessVisual } from './harness';
+  import { buildLoops, claimFamilies, trimLoopCache, type HarnessVisual } from './harness';
   import { readToken } from './ink';
-  import { ridersOf, type SwarmVisual } from './orbit';
+  import { bandFrameOf, DEFAULT_SWARM, ridersOf, type SwarmVisual } from './orbit';
   import {
     createPulses, PULSE_CAPACITY, sparkWorldPosition,
     type PulseVisual, type Spot,
@@ -108,6 +110,17 @@
     /** How many souls the harness carries. See `SoulSwarm`. */
     riders?: number;
     /**
+     * The band each line was bought for, in purchase order — a band may hold
+     * several. Each line claims a family of the harness — see `claimFamilies`.
+     * Absent is the lab: every family ridden, every soul free to ride any of it.
+     */
+    lines?: number[];
+    /**
+     * The one line being pointed at, by its index in `lines`. Its family keeps
+     * its ink and every other fades, as a lit band's lines do.
+     */
+    litLine?: number;
+    /**
      * And how many are placing the anchor going down. The anchor itself is not
      * passed with it — the scene already knows which one that is, and a caller
      * naming a second one could name a different one. See `SoulSwarm`.
@@ -188,6 +201,8 @@
     facesSite = false,
     harness,
     riders,
+    lines,
+    litLine,
     working,
     pulse,
     clockKey,
@@ -346,6 +361,68 @@
     trimLoopCache();
 
     return built;
+  });
+
+  /**
+   * The families each band rides, one per line it holds, each matched against
+   * the band's own plane. The swarm's frames when there is one, the default's
+   * otherwise — a lab strip with no souls still shows which families light.
+   */
+  const perLine = $derived.by(() => {
+    if (lines === undefined || !harness || !strung.length) return undefined;
+
+    const planes = lines.map((band) => {
+      const frame = bandFrameOf(band, swarm ?? DEFAULT_SWARM);
+
+      return { x: frame.nx, y: frame.ny, z: frame.nz };
+    });
+
+    return claimFamilies(harness, strung, planes);
+  });
+
+  const claims = $derived.by(() => {
+    if (!perLine || !lines) return undefined;
+
+    const byBand: number[][] = [];
+
+    perLine.forEach((family, line) => {
+      if (family < 0) return;
+
+      (byBand[lines[line]] ??= []).push(family);
+    });
+
+    return byBand;
+  });
+
+  /** Every family a line claimed, for the ink. */
+  const claimed = $derived(claims?.flat());
+
+  /**
+   * The families a hover names: every line of a lit band, and the one line
+   * pointed at. A lit band with no line names none, so the harness stays as it is.
+   */
+  const litFamilies = $derived.by(() => {
+    const named = (lit ?? []).flatMap((isLit, band) => (isLit ? claims?.[band] ?? [] : []));
+    const pointed = litLine === undefined ? -1 : perLine?.[litLine] ?? -1;
+
+    if (pointed >= 0) named.push(pointed);
+
+    return named;
+  });
+
+  /**
+   * How much of each band is riding, for the two sleeves to split. The swarm
+   * seats riders evenly across the bands that hold a line, so one share serves
+   * them all — the crew is left out, being a handful against a crowd.
+   */
+  const shares = $derived.by(() => {
+    if (!claims || !cohorts?.length || !loops) return undefined;
+
+    const isLined = (band: number) => Boolean(claims[band]?.length);
+    const lined = cohorts.reduce((sum, count, band) => sum + (isLined(band) ? Math.floor(count) : 0), 0);
+    const share = lined > 0 ? Math.min(1, (riders ?? 0) / lined) : 0;
+
+    return cohorts.map((unused, band) => (isLined(band) ? share : 0));
   });
 
   /**
@@ -719,7 +796,29 @@
 >
   {#snippet standing()}
     {#if harness && loops}
-      <Harness visual={harness} {loops} {zoom} {rim} size={worldSize} />
+      <Harness
+        visual={harness}
+        {loops}
+        claims={claimed}
+        lit={litFamilies}
+        {zoom}
+        {rim}
+        size={worldSize}
+      />
+    {/if}
+
+    <!-- The riding half of the sleeve, on the lines and so inside the spin. -->
+    {#if swarm && cohorts?.length && loops && claims && shares && swarm.tubeWidth > 0}
+      <LineVolume
+        visual={swarm}
+        counts={cohorts}
+        {loops}
+        {claims}
+        {shares}
+        {clock}
+        {pace}
+        {bleed}
+      />
     {/if}
 
     {#if poles && anchored?.length && field}
@@ -732,10 +831,17 @@
     {/if}
   {/snippet}
 
+  <!-- Under both of them, and first in the markup for the same reason: a sleeve
+       is the clump's own body, so the line that names it and the dots that are
+       in it are drawn onto it. -->
+  {#if swarm && cohorts?.length && swarm.tubeWidth > 0}
+    <SoulVolume visual={swarm} counts={cohorts} {clock} {pace} {bleed} {shares} />
+  {/if}
+
   <!-- Before the swarm in the markup as it is below it in the stack: the line is
        what the dots ride, so they are drawn onto it. -->
   {#if swarm && cohorts?.length && lit?.length}
-    <OrbitRing visual={swarm} {lit} {bought} {clock} {zoom} size={worldSize} {rim} />
+    <OrbitRing visual={swarm} {lit} {bought} {shares} {clock} {zoom} size={worldSize} {rim} />
   {/if}
 
   {#if swarm && cohorts?.length}
@@ -745,6 +851,7 @@
       {zoom}
       {loops}
       {riders}
+      {claims}
       {working}
       {site}
       {clock}

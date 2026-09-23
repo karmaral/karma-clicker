@@ -10,7 +10,7 @@
  * and `orbit.ts` already keep.
  */
 
-import type { AnchorNode } from './anchor';
+import { nodesFor, type AnchorNode } from './anchor';
 
 /** Points per loop. The reference's 54; a hairline curve needs no more. */
 const SEGMENTS = 54;
@@ -77,6 +77,11 @@ export interface HarnessVisual {
   outTone: number;
   backFade: number;
   levelFade: number;
+  /**
+   * And once more for a family no band has claimed: strung between anchors but
+   * carrying no one. What a bought line lights is its family coming off this.
+   */
+  idleFade: number;
 
   /**
    * How heavy a line is, in px at size 1, and the two bounds that hold it there.
@@ -118,6 +123,8 @@ export interface HarnessLoop {
   points: Float32Array;
   /** 0 innermost … 1 outermost. Drives the ink's fade and the loop's bulge. */
   level: number;
+  /** The crown or link it belongs to — see `familiesOf`. What a band claims. */
+  family: number;
   /**
    * How far round it is, in world units — the polyline's own length. A rider
    * covers all of it in one turn of its orbit, so this is what says how fast
@@ -130,6 +137,10 @@ export interface HarnessLoop {
 export interface HarnessLines {
   positions: Float32Array;
   levels: Float32Array;
+  /** Per span, 1 where its family is unclaimed. */
+  idle: Float32Array;
+  /** Per span, the family it belongs to — what a hover lights by. */
+  families: Int16Array;
 }
 
 type Vec = AnchorNode;
@@ -360,6 +371,7 @@ interface LoopPlan {
   /** The family's rotation about the chord, or the petal's about the anchor. */
   turn: number;
   level: Level;
+  family: number;
 }
 
 /** The crown an anchor carries. One anchor is all of the harness there is. */
@@ -368,6 +380,7 @@ function planCrown(
   node: HarnessNode,
   families: number,
   levels: Level[],
+  family: number,
 ): LoopPlan[] {
   const petals = rotationsFor(visual, families, levels.length, true);
   const plans: LoopPlan[] = [];
@@ -375,7 +388,7 @@ function planCrown(
   for (let i = 0; i < petals; i++) {
     const turn = (i / petals) * Math.PI * 2;
 
-    levels.forEach((level) => plans.push({ a: node, turn, level }));
+    levels.forEach((level) => plans.push({ a: node, turn, level, family }));
   }
 
   return plans;
@@ -394,6 +407,7 @@ function planLink(
   link: Link,
   families: number,
   levels: Level[],
+  family: number,
 ): LoopPlan[] {
   const isFull = link.angle > ANTIPODAL;
   const rotations = rotationsFor(visual, families, levels.length, isFull);
@@ -404,7 +418,7 @@ function planLink(
       ? (i / rotations) * Math.PI * 2
       : rotations === 1 ? 0 : -visual.spread + (i / (rotations - 1)) * visual.spread * 2;
 
-    levels.forEach((level) => plans.push({ a: link.a, b: link.b, turn, level }));
+    levels.forEach((level) => plans.push({ a: link.a, b: link.b, turn, level, family }));
   }
 
   return plans;
@@ -434,6 +448,16 @@ function linksOf(nodes: HarnessNode[], span: number): Link[] {
 }
 
 /**
+ * Every family, as the anchors it is tied to: a crown each, then a link per
+ * strung pair. Its index here is the `family` its loops carry.
+ */
+function familiesOf(visual: HarnessVisual, nodes: HarnessNode[]): HarnessNode[][] {
+  const links = nodes.length > 1 ? linksOf(nodes, visual.span) : [];
+
+  return [...nodes.map((node) => [node]), ...links.map((link) => [link.a, link.b])];
+}
+
+/**
  * Handed the nodes that are *placed* — a line is strung between anchors that
  * exist, so the harness grows as they are driven in rather than being drawn in
  * full and waiting for them.
@@ -448,11 +472,70 @@ function planLoops(visual: HarnessVisual, nodes: HarnessNode[]): LoopPlan[] {
   const links = nodes.length > 1 ? linksOf(nodes, visual.span) : [];
   const families = nodes.length + links.length;
 
-  const plans = nodes.flatMap((node) => planCrown(visual, node, families, levels));
+  const plans = nodes.flatMap((node, i) => planCrown(visual, node, families, levels, i));
 
-  links.forEach((link) => plans.push(...planLink(visual, link, families, levels)));
+  links.forEach((link, i) => {
+    plans.push(...planLink(visual, link, families, levels, nodes.length + i));
+  });
 
   return plans;
+}
+
+/**
+ * Which family each line takes, one per plane normal — the orbit plane of the
+ * band the line was bought for. A line takes the free family whose anchors sit
+ * closest to that plane, so a soul stepping off its orbit lands on a line
+ * running the way it already was.
+ *
+ * Greedy in line order, so buying a line never moves the ones before it. A
+ * family is never shared: past the last free one a line claims nothing, -1.
+ *
+ * Planes are read against the body at rest; the spin carries the anchors off
+ * them, so the match is where a line starts, not a lock it keeps.
+ */
+export function claimFamilies(
+  visual: HarnessVisual,
+  nodes: HarnessNode[],
+  planes: AnchorNode[],
+): number[] {
+  const families = familiesOf(visual, nodes);
+  const taken = new Set<number>();
+
+  return planes.map((plane) => {
+    let best = -1;
+    let bestMiss = Infinity;
+
+    families.forEach((family, f) => {
+      if (taken.has(f)) return;
+
+      const miss = Math.max(...family.map((node) => Math.abs(dotOf(unitOf(node), plane))));
+
+      if (miss < bestMiss - 1e-6) {
+        best = f;
+        bestMiss = miss;
+      }
+    });
+
+    if (best >= 0) taken.add(best);
+
+    return best;
+  });
+}
+
+/**
+ * A figure's own edges: pairs within this multiple of its closest pair. Fixed,
+ * not `span` — the lines a rig can hold are a rule, and a slider must not move it.
+ */
+const FIGURE_SPAN = 1.4;
+
+/**
+ * How many lines `count` anchors hold: one per family of the figure, a crown
+ * each and a link per edge. 1, 3, 6, 10, 14, 18, 22, 24.
+ */
+export function linesFor(count: number) {
+  const nodes = nodesFor(count, 0);
+
+  return nodes.length + (nodes.length > 1 ? linksOf(nodes, FIGURE_SPAN).length : 0);
 }
 
 /**
@@ -504,7 +587,7 @@ export function buildLoops(visual: HarnessVisual, nodes: HarnessNode[]): Harness
       ? arcLoop(plan.a, plan.b, plan.turn, plan.level)
       : petalLoop(plan.a, plan.turn, visual.reach, plan.level);
 
-    return { level: plan.level.level, points, length: lengthOf(points) };
+    return { level: plan.level.level, family: plan.family, points, length: lengthOf(points) };
   });
 
   cache.set(key, loops);
@@ -535,15 +618,25 @@ export function countLinks(visual: HarnessVisual, nodes: HarnessNode[]) {
   return nodes.length > 1 ? linksOf(nodes, visual.span).length : 0;
 }
 
-/** One `LineSegments` for the whole harness — a draw call per loop is not a budget. */
-export function strokeLoops(loops: HarnessLoop[]): HarnessLines {
+/**
+ * One `LineSegments` for the whole harness — a draw call per loop is not a budget.
+ * `claimed` is the families bands ride; absent is every family ridden, the lab.
+ */
+export function strokeLoops(loops: HarnessLoop[], claimed?: number[]): HarnessLines {
   const spans = loops.length * SEGMENTS;
   const positions = new Float32Array(spans * 6);
   const levels = new Float32Array(spans * 2);
+  const idle = new Float32Array(spans);
+  const families = new Int16Array(spans);
 
   let span = 0;
 
   loops.forEach((loop) => {
+    const isIdle = claimed ? !claimed.includes(loop.family) : false;
+
+    idle.fill(isIdle ? 1 : 0, span, span + SEGMENTS);
+    families.fill(loop.family, span, span + SEGMENTS);
+
     for (let i = 0; i < SEGMENTS; i++) {
       const from = i * 3;
       const to = from + 3;
@@ -557,7 +650,7 @@ export function strokeLoops(loops: HarnessLoop[]): HarnessLines {
     }
   });
 
-  return { positions, levels };
+  return { positions, levels, idle, families };
 }
 
 /**
@@ -612,6 +705,7 @@ export const HARNESS_PARAMS: HarnessParam[] = [
   // A toggle, drawn as the panel draws every other integer field.
   { key: 'backHide', label: 'Behind hidden', group: 'Ink', min: 0, max: 1, step: 1 },
   { key: 'levelFade', label: 'Outer fade', group: 'Ink', min: 0, max: 3, step: 1 },
+  { key: 'idleFade', label: 'Unridden fade', group: 'Ink', min: 0, max: 3, step: 1 },
   // 0 is no harness drawn, and the floor does not overrule it — see `weightOf`.
   { key: 'width', label: 'Line px', group: 'Ink', min: 0, max: 6, step: 0.1 },
   { key: 'floor', label: 'Floor px', group: 'Ink', min: 0.1, max: 3, step: 0.1 },
@@ -632,6 +726,7 @@ export const DEFAULT_HARNESS: HarnessVisual = {
   backFade: 3,
   backHide: 1,
   levelFade: 2,
+  idleFade: 2,
   width: 1,
   floor: 0.6,
   ceiling: 2.5,

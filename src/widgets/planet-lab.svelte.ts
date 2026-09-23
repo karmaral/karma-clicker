@@ -32,6 +32,11 @@ function createPlanetLab() {
     drafts[selected].seed = Math.floor(Math.random() * 100_000);
   }
 
+  /** New storm eyes, and nothing else on the world moves. */
+  function reseedStorms() {
+    drafts[selected].veilStormSeed = Math.floor(Math.random() * 100_000);
+  }
+
   function revert() {
     drafts[selected] = cloneVisual(planetVisuals[selected]);
   }
@@ -50,6 +55,7 @@ function createPlanetLab() {
     set,
     reset,
     reseed,
+    reseedStorms,
     revert,
     print,
   };

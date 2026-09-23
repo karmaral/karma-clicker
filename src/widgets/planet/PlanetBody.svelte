@@ -3,13 +3,15 @@
   import { onDestroy, type Snippet } from 'svelte';
   import type * as THREE from 'three';
   import PlanetCore from './PlanetCore.svelte';
+  import PlanetRings from './PlanetRings.svelte';
   import { buildGeometry, trimGeometryCache } from './geometry';
   import { readInkRamp } from './ink';
   import {
     createBurstMaterial, createOutlineMaterial, createSurfaceMaterial,
-    syncBurstUniforms, syncOutlineUniforms, syncSurfaceUniforms, syncVeilUniforms,
-    veilMaterialFor,
+    syncBurstUniforms, syncOutlineUniforms, syncStormEyes, syncSurfaceUniforms,
+    syncVeilUniforms, veilMaterialFor,
   } from './material';
+  import { placeStorms } from './storms';
   import { fadeOf, lifeOf, type Pulses, type PulseVisual } from './pulse';
   import { RENDER_ORDER } from './stack';
   import type { PlanetVisual } from './visual';
@@ -96,7 +98,7 @@
   /** Both surfaces are cut from one rim, so the window is worked out once. */
   const gamma = $derived(Math.max(0.01, clarityGamma ?? visual.clarityGamma));
 
-  const { invalidate } = useThrelte();
+  const { invalidate, renderer } = useThrelte();
   const ramp = readInkRamp();
   const surface = createSurfaceMaterial();
   const outline = createOutlineMaterial();
@@ -143,12 +145,18 @@
     };
   });
 
+  /** Placed against a bake of the veil's own field — cached there, so cheap here. */
+  const eyes = $derived(
+    visual.veil > 0 ? placeStorms(renderer as THREE.WebGLRenderer, visual) : [],
+  );
+
   // Kept apart from the effect above on purpose: that one writes `veilMaterial`
   // and this one reads it, and a single effect doing both is a loop with no exit.
   $effect(() => {
     if (!veilMaterial) return;
 
     syncVeilUniforms(veilMaterial, visual, hasCore ? visual.clarity : 0, gamma);
+    syncStormEyes(veilMaterial, eyes);
     invalidate();
   });
 
@@ -217,6 +225,10 @@
             frustumCulled={false}
           />
         </T.Group>
+      {/if}
+
+      {#if visual.rings > 0}
+        <PlanetRings {visual} />
       {/if}
 
       <!-- Outside the spin, unlike everything above it: a reading is not ground,

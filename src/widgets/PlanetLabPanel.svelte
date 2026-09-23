@@ -49,6 +49,7 @@
     <div class="row">
       <span class="id">seed {current.seed}</span>
       <button onclick={() => planetLab.reseed()}>reseed</button>
+      <button onclick={() => planetLab.reseedStorms()}>storms</button>
       <button onclick={() => planetLab.revert()}>revert</button>
       <button onclick={copy}>{copied ? 'copied' : 'copy'}</button>
     </div>

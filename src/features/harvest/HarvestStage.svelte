@@ -8,14 +8,26 @@
    * foot, so the world takes the head of the block and the swarm strays out
    * behind the two panels either side of it.
    *
-   * No click, no anchors, no harness — nothing here is a verb. The stage is
-   * what the decision is about, and the only thing it answers to is the split.
+   * No click, no anchors, no harness, no sleeves — nothing here is a verb and
+   * nothing here is a reading. The stage is what the decision is about, and the
+   * only thing it answers to is the split.
    */
   import {
-    DEFAULT_SWARM, DEFAULT_VISUAL, HARVEST_ANCHOR, HARVEST_RADIUS, PlanetView, scaleInk,
+    DEFAULT_SWARM, DEFAULT_VISUAL, HARVEST_ANCHOR, HARVEST_RADIUS, PlanetView, cloneSwarm, scaleInk,
   } from '$widgets/planet';
   import planetVisuals from '$data/planet-visuals';
+  import type { SwarmVisual } from '$widgets/planet';
   import type { Polarity } from '$lib/types';
+
+  /**
+   * The swarm without its tube. Bands are a reading of the cohorts and this
+   * screen is not about them — the sleeves only strayed out behind the panels.
+   *
+   * Module scope, not a derived: `SoulVolume` rebuilds every torus when the
+   * visual's identity changes, so a clone per render would be paid for in the
+   * views that do wear one.
+   */
+  const HARVEST_SWARM: SwarmVisual = { ...cloneSwarm(DEFAULT_SWARM), tubeWidth: 0 };
 
   interface Props {
     id: string;
@@ -72,7 +84,7 @@
       {frame}
       {offsetY}
       backgroundToken="--surface"
-      swarm={DEFAULT_SWARM}
+      swarm={HARVEST_SWARM}
       {cohorts}
       {merge}
       {alignment}

@@ -299,6 +299,13 @@ const surfaceVertex = /* glsl */ `
   }
 `;
 
+/**
+ * How far one unit of grain frays the ice's edge, in sin-latitude. The grain is
+ * authored in band slots, which mean nothing to a latitude, so this converts:
+ * at the grain's full reach the edge wanders 0.15 either way.
+ */
+const ICE_GRAIN = 0.15;
+
 const surfaceFragment = /* glsl */ `
   uniform vec3 uRamp[${RAMP_SLOTS}];
   uniform float uRim;
@@ -318,6 +325,10 @@ const surfaceFragment = /* glsl */ `
   uniform float uGrain;
   uniform float uShadeGrain;
   uniform float uGrainScale;
+  uniform float uShadeGrainScale;
+  uniform float uIce;
+  uniform float uIceSnowline;
+  uniform float uIceTone;
   uniform vec3 uOrigin;
   uniform float uClarity;
   uniform float uClarityGamma;
@@ -358,12 +369,29 @@ const surfaceFragment = /* glsl */ `
     return interior * (1.0 - smoothstep(reach - 0.5, reach + 0.5, pixels));
   }
 
+  /** The ice's edge at the contour's weight — contourAt with one boundary, at 0. */
+  float iceContourAt(float edge, float perPixel) {
+    if (uContour <= 0.0 || uIce <= 0.0) return 0.0;
+
+    float pixels = abs(edge) / max(perPixel, 1e-6);
+    float reach = uContour * 0.5;
+
+    return 1.0 - smoothstep(reach - 0.5, reach + 0.5, pixels);
+  }
+
+  /** Half the noise's range, faded out as its period nears two pixels. */
+  float grainAt(float scale, float perStep) {
+    float fade = 1.0 - smoothstep(0.25, 0.5, scale * perStep);
+
+    return snoise(vDir * scale + uOrigin) * 0.5 * fade;
+  }
+
   void main() {
     // The field's own surface normal, so the shade follows the terrain's slope
     // rather than the triangles it was tessellated into.
     vec3 N = normalize(vNormal);
 
-    // The grain, and the one noise in the body's fragment. Both quantisers
+    // The grain, and the only noise in the body's fragment. Both quantisers
     // below are exact level sets, so a smooth field crosses one as a perfect
     // curve; this displaces the coordinate before the floor and the boundary
     // comes apart into paper instead. Half the noise's range, so an amount of 1
@@ -374,12 +402,12 @@ const surfaceFragment = /* glsl */ `
     // fizzes there. To nothing rather than to its mean, because a grain stuck
     // at its mean is a constant offset on the band, which is uBias said badly.
     //
-    // One sample under both amounts. They are independent coordinates already,
-    // so a shared displacement is a grain in the paper rather than a
-    // correlation — and it is one snoise instead of two.
+    // The shade takes its own sample only at its own scale. At the same scale
+    // the two are one noise, which is what every world authored before the
+    // split was drawn with, and one snoise instead of two.
     float perStep = length(fwidth(vDir));
-    float fade = 1.0 - smoothstep(0.25, 0.5, uGrainScale * perStep);
-    float grain = snoise(vDir * uGrainScale + uOrigin) * 0.5 * fade;
+    float grain = grainAt(uGrainScale, perStep);
+    float shadeGrain = uShadeGrainScale == uGrainScale ? grain : grainAt(uShadeGrainScale, perStep);
 
     // The window, on the field's own normal so the front opens along the
     // terrain rather than along the sphere it was displaced from. Spent as an
@@ -412,6 +440,16 @@ const surfaceFragment = /* glsl */ `
     float level = floor(clamp(band, 0.0, uSteps - 1.0));
     float spread = uSteps > 1.0 ? level / (uSteps - 1.0) : 0.0;
 
+    // The ice. vDir is object space inside the spin, so y is the world's own
+    // axis and the cap rides the pole however the world is held. uIceSnowline
+    // tilts the line by the ground under it: positive freezes the peaks first,
+    // negative the lowlands. The texture grain frays its edge, and the rate is
+    // taken clean for the contour's reason.
+    float cold = abs(vDir.y) + uIceSnowline * vHeight - (1.0 - uIce);
+    float icePerPixel = fwidth(cold);
+    float edge = cold + uGrain * grain * ${ICE_GRAIN.toFixed(2)};
+    float frozen = step(0.0, edge) * step(1e-4, uIce);
+
     // The shade, in view space. It never reaches the band coordinate — it is
     // quantised on its own and composited as a shift along the ramp, so the
     // texture survives into the shadow instead of being redrawn by it.
@@ -424,10 +462,13 @@ const surfaceFragment = /* glsl */ `
     // Rounded rather than floored, so a signed rim lightens the limb by as many
     // levels as a positive one darkens it.
     float shade = clamp(uRim * rim + uKey * key, -1.0, 1.0);
-    float shadeLevel = floor(shade * uShadeSteps + 0.5 + uShadeGrain * grain);
+    float shadeLevel = floor(shade * uShadeSteps + 0.5 + uShadeGrain * shadeGrain);
 
     // readRamp clamps, so the shadow crushes to solid ink rather than wrapping.
-    float index = mix(uToneFloor, uToneCeil, spread) + shadeLevel * uShadeDepth;
+    // The ice replaces the band's tone and keeps the shade, so the terminator
+    // still crosses it.
+    float tone = mix(mix(uToneFloor, uToneCeil, spread), uIceTone, frozen);
+    float index = tone + shadeLevel * uShadeDepth;
 
     // A contour takes its ink from which side of the terminator it falls on,
     // not from the tone beneath it — so a line stays legible crossing out of a
@@ -444,7 +485,10 @@ const surfaceFragment = /* glsl */ `
     // depth write behind for the burst to be cut against.
     if (alpha <= 0.0) discard;
 
-    gl_FragColor = vec4(mix(readRamp(index), readRamp(contourInk), contourAt(band, perPixel)), alpha);
+    // Band lines stop at the ice; its own edge is drawn instead.
+    float line = max(contourAt(band, perPixel) * (1.0 - frozen), iceContourAt(edge, icePerPixel));
+
+    gl_FragColor = vec4(mix(readRamp(index), readRamp(contourInk), line), alpha);
 
     #include <colorspace_fragment>
   }
@@ -576,12 +620,16 @@ const soulVertex = /* glsl */ `
  * an ink of their own. At 0 the whole test is inert and this is the two-ink
  * shader it was.
  *
- * Being hidden is the soul's own commitment: `stay` scales the far half's
- * hiding, so a soul still in orbit is never behind the world and one crossing
- * into it sinks behind it over the crossing. A leaver clipped by a silhouette it
- * is not going into read as the world eating it. Spent on the alpha rather than
- * on a discard because a half-committed soul is halfway hidden, which no cut can
- * say.
+ * It is a place a soul *arrives* in and not a region of the screen, so the test
+ * is the disc **and** the soul's own crossing — `uEnter` is where that crossing
+ * begins. The disc has no depth in it, and a band seen near edge-on carries its
+ * whole orbit over the core twice a turn.
+ *
+ * Behind the world is behind the world for every soul, leaver or not — only
+ * the core's own souls are exempt, through `inCore`, and they come out from
+ * behind the silhouette by the same `arrived` fraction their ink comes in by.
+ * Spent on the alpha rather than on a discard because a half-arrived soul is
+ * halfway out, which no cut can say.
  */
 const soulFragment = /* glsl */ `
   uniform vec3 uRamp[${RAMP_SLOTS}];
@@ -592,6 +640,8 @@ const soulFragment = /* glsl */ `
   uniform float uCore;
   uniform float uCoreTone;
   uniform float uCoreRing;
+  uniform float uEnter;
+  uniform float uBerthed;
 
   varying vec2 vUv;
   varying float vStay;
@@ -626,14 +676,29 @@ const soulFragment = /* glsl */ `
     // berthed soul to the crescent of itself that was over the core. The dot's
     // own radius is added, so a soul touching the rim is in and the wobble
     // cannot carry an outermost berth back out of it.
+    //
+    // And gated on the soul's own crossing, because the disc is screen space and
+    // has no depth in it: an orbit seen near edge-on carries every soul on it
+    // across the core twice a turn, and untested they took the arrival's ink on
+    // the way past — souls that were never in the merge, drawn as though they
+    // were. The same fraction the berth is lerped by, so the ink arrives exactly
+    // as the soul does rather than at the rim.
+    float arrived = clamp((vStay - uEnter) / max(1e-6, 1.0 - uEnter), 0.0, 1.0);
     float span = uCore + vSpan;
-    float inCore = step(dot(vAt.xy, vAt.xy), span * span) * step(0.001, uCore);
+    float inCore = step(dot(vAt.xy, vAt.xy), span * span) * step(0.001, uCore) * arrived;
 
-    // Behind the world is behind the world, for whatever has thrown in with it.
+    // Which pass this dot belongs to. There is no depth test, so within one
+    // mesh the later instance wins whatever stands nearer — and the berths are
+    // dealt last, so the core painted over every orbit passing in front of it.
+    // The core's souls are drawn in a pass of their own, under the rest; whole
+    // dot, like the test above, so a soul is never split between the two.
+    if (abs(step(0.5, inCore) - uBerthed) > 0.5) discard;
+
+    // Behind the world is behind the world, whether or not the soul is staying.
     // Per fragment, so a dot crossing the silhouette is cut in half rather than
     // vanishing whole.
     float behind = over * (1.0 - front) * (1.0 - inCore);
-    alpha *= 1.0 - behind * clamp(vStay, 0.0, 1.0);
+    alpha *= 1.0 - behind;
     if (alpha <= 0.0) discard;
 
     float tone = mix(mix(uOutTone, uFrontTone, over), uCoreTone, inCore);
@@ -732,6 +797,7 @@ const spawnFragment = /* glsl */ `
   uniform float uCore;
   uniform float uCoreTone;
   uniform float uCoreRing;
+  uniform float uEnter;
   uniform float uDim;
 
   varying vec2 vUv;
@@ -770,14 +836,16 @@ const spawnFragment = /* glsl */ `
     float over = step(reach, edge);
     float front = step(surface, vRel.z);
 
+    // Gated on the crossing exactly as the dot's is — see soulFragment.
+    float arrived = clamp((vStay - uEnter) / max(1e-6, 1.0 - uEnter), 0.0, 1.0);
     float span = uCore + vSpan;
-    float inCore = step(dot(vAt.xy, vAt.xy), span * span) * step(0.001, uCore);
+    float inCore = step(dot(vAt.xy, vAt.xy), span * span) * step(0.001, uCore) * arrived;
 
     // Behind is dimmed rather than hidden: the star is short-lived enough that
     // losing it outright loses the arrival it marks. uDim is the floor it never
     // falls under.
     float behind = over * (1.0 - front) * (1.0 - inCore);
-    alpha *= 1.0 - behind * clamp(vStay, 0.0, 1.0) * (1.0 - clamp(uDim, 0.0, 1.0));
+    alpha *= 1.0 - behind * (1.0 - clamp(uDim, 0.0, 1.0));
     if (alpha <= 0.0) discard;
 
     float tone = mix(mix(uOutTone, uFrontTone, over), uCoreTone, inCore);
@@ -795,6 +863,164 @@ const spawnFragment = /* glsl */ `
     tone = mix(tone, ringTone, ring);
 
     gl_FragColor = vec4(readRamp(tone), alpha);
+
+    #include <colorspace_fragment>
+  }
+`;
+
+/**
+ * A crowded cohort's sleeve: the tube swung around its band's mean orbit, so a
+ * clump past a certain size reads as a volume of people instead of as a count
+ * of dots. The dots are drawn over it and are still the reading; this is only
+ * what they are riding through.
+ *
+ * The plane is baked into the geometry, so there is nothing to orient here and
+ * the two texture coordinates arrive as they are wanted: x around the ring, y
+ * around the section.
+ */
+const swarmTubeVertex = /* glsl */ `
+  attribute float along;
+
+  varying vec2 vUv;
+  varying float vAlong;
+  varying vec3 vRel;
+  varying vec3 vNormal;
+
+  void main() {
+    vUv = uv;
+    vAlong = along;
+
+    vec4 origin = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+    vec4 viewPos = modelViewMatrix * vec4(position, 1.0);
+
+    // The body's centre in camera axes — xy the silhouette, z near and far. The
+    // souls' own idiom, because the sleeve has to be cut exactly where they are.
+    vRel = viewPos.xyz - origin.xyz;
+    vNormal = normalize(normalMatrix * normal);
+
+    gl_Position = projectionMatrix * viewPos;
+  }
+`;
+
+/**
+ * **The count is spent as coverage, never as opacity.** A filled patch is always
+ * the same ink; what a crowded band buys is *more of the sleeve being filled*.
+ * That is the veil's own argument one layer out — a shape cut out of a field
+ * says "half a crowd" without saying it in a strength nobody authored — and it
+ * is the whole difference between mass gathering between the dots and a tube
+ * being faded in behind them. Faded, it reads as one object being revealed;
+ * cut, it reads as bodies there were more of than could be drawn.
+ *
+ * So the cut is hard and the field under it is what carries the look:
+ *
+ * - **A travelling helix.** One family of crests winding the ring and the
+ *   section together, at whole counts so it closes at both seams, scrolling on
+ *   the band's own clock.
+ * - **Broken by noise**, on the torus's own two circles rather than on a plane
+ *   wrapped round one — a wrapped plane has a join, and a join on a ring is the
+ *   one line the eye finds. `uBreak` is how far the helix gives way to it: at 0
+ *   the sleeve is ruled bands, at 1 it is clumps.
+ * - **Thinned where it faces us.** A shell seen edge-on is more of itself to
+ *   look through, so `uLimb` takes the field down over the flat of the tube and
+ *   leaves it standing at the tube's own silhouette. Spent on the field and not
+ *   on the alpha, deliberately: a limb paid in opacity is the soft reveal this
+ *   is built to avoid.
+ *
+ * Both walls are drawn — that is what `DoubleSide` is for — so where the near
+ * and far skins of one tube both survive the cut the ink doubles, which is the
+ * only place in the mark that is allowed to be denser than a patch.
+ *
+ * Its ink is the souls' own pair, read by place and not authored: the sleeve is
+ * the clump, so it cannot take a tone the dots in it are not taking. Its alpha
+ * is a partial one, which invents a grey between two ramp slots the way the
+ * alpha veil does — known, and the price of the thing being translucent at all.
+ */
+const swarmTubeFragment = /* glsl */ `
+  uniform vec3 uRamp[${RAMP_SLOTS}];
+  uniform float uRim;
+  uniform float uOutTone;
+  uniform float uFrontTone;
+  uniform float uAlpha;
+  uniform float uCover;
+  uniform float uEdge;
+  uniform float uWave;
+  uniform float uTurn;
+  uniform float uBreak;
+  uniform float uPhase;
+  uniform float uLimb;
+  uniform float uTaper;
+
+  varying vec2 vUv;
+  varying float vAlong;
+  varying vec3 vRel;
+  varying vec3 vNormal;
+
+  ${rampRead}
+  ${simplex3D}
+
+  /**
+   * The break, sampled on the two circles the torus actually is, so the field is
+   * exactly periodic around the ring and around the section and neither seam
+   * shows. The radii are the crest counts over a turn, so a break at a given
+   * count comes out about as coarse as the helix it is breaking.
+   */
+  float sleeveNoise(float a, float b) {
+    vec3 p = vec3(cos(a), sin(a), 0.0) * (uWave * 0.15915)
+           + vec3(0.0, cos(b), sin(b)) * (uTurn * 0.15915);
+
+    return snoise(p) * 0.5 + 0.5;
+  }
+
+  void main() {
+    float a = (vUv.x - uPhase) * 6.2831853;
+    float b = vUv.y * 6.2831853;
+
+    float helix = 0.5 + 0.5 * sin(a * uWave + b * uTurn);
+    float field = mix(helix, sleeveNoise(a, b), uBreak);
+
+    // Dead-on to an orthographic camera is 0 and edge-on is 1.
+    float facing = 1.0 - abs(normalize(vNormal).z);
+
+    field *= mix(1.0 - uLimb, 1.0, facing);
+
+    // Taken before any cut below, because a derivative has to be in uniform
+    // control flow and the silhouette test is not.
+    float perPixel = fwidth(field);
+
+    float reach = dot(vRel.xy, vRel.xy);
+    float edge = uRim * uRim;
+
+    // The body as a sphere, terrain ignored — at the amplitudes worlds are
+    // authored at the error is inside the outline's own weight.
+    float surface = sqrt(max(edge - reach, 0.0));
+    float over = step(reach, edge);
+
+    // Hidden where it passes behind the world, exactly as the dots are. A sleeve
+    // laid whole over the body would read as a disc painted on it rather than a
+    // ring around it, and the far wall would darken the near one through it.
+    if (over * step(vRel.z, surface) > 0.5) discard;
+
+    // The threshold is what turns a field into patches. uEdge is its softness in
+    // field units, with the derivative under it as a floor — so an edge is never
+    // harder than the screen can draw, and at 0 it is as hard as it can be
+    // rather than aliased.
+    float soft = max(max(uEdge, perPixel * 1.5), 1e-4);
+    float cut = 1.0 - uCover;
+
+    float alpha = uAlpha * smoothstep(cut - soft, cut + soft, field);
+
+    // A sleeve on a line ends at the anchors it is tied to: thinned into both
+    // ends over uTaper of its length, so it closes on the tip rather than
+    // stopping in a cut. Read off vAlong, 0 to 1 whatever the line's length —
+    // its u is in orbit turns, see LineVolume. A ring has no ends, and leaves
+    // this at 0.
+    if (uTaper > 0.0) {
+      alpha *= smoothstep(0.0, uTaper, vAlong) * smoothstep(0.0, uTaper, 1.0 - vAlong);
+    }
+
+    if (alpha <= 0.002) discard;
+
+    gl_FragColor = vec4(readRamp(mix(uOutTone, uFrontTone, over)), alpha);
 
     #include <colorspace_fragment>
   }
@@ -835,6 +1061,7 @@ const coreVertex = /* glsl */ `
 const coreFragment = /* glsl */ `
   uniform vec3 uRamp[${RAMP_SLOTS}];
   uniform float uLean;
+  uniform float uTilt;
   uniform float uDensity;
   uniform float uWidth;
   uniform float uReach;
@@ -886,14 +1113,19 @@ const coreFragment = /* glsl */ `
 
     // Every reading rules at its own lean and there is no third case: −1 and +1
     // tilt against each other, and 0 comes out level, which is the picture even
-    // wanted anyway. The reading is a spirit level.
-    float stroke = ruleAt(uLean, width);
+    // wanted anyway. The reading is a spirit level. uTilt, not uLean: the angle
+    // cuts to the new reading while only the inks ease.
+    float stroke = ruleAt(uTilt, width);
 
-    // Which of the three readings this is, as a selector rather than a branch:
-    // uLean is -1, 0 or +1, so the three components pick themselves out and the
-    // shader has one path. The pair is the whole of the read — a glance gets
-    // black, grey or paper before it has resolved a single stroke.
-    vec3 pick = vec3(step(uLean, -0.5), 1.0 - step(0.5, abs(uLean)), step(0.5, uLean));
+    // Which of the three readings this is, as a selector rather than a branch.
+    // The pair is the whole of the read — a glance gets black, grey or paper
+    // before it has resolved a single stroke.
+    //
+    // Weights rather than steps, because uLean is eased between readings: the
+    // slot slides through the ramp and readRamp rounds it, so a change of
+    // reading walks the inks in between instead of blending a grey the ramp
+    // does not have. At -1, 0 and +1 this is the three picks it always was.
+    vec3 pick = vec3(max(0.0, -uLean), 1.0 - abs(uLean), max(0.0, uLean));
     float ground = dot(GROUND, pick);
     float hatch = dot(HATCH, pick);
 
@@ -929,17 +1161,25 @@ const coreFragment = /* glsl */ `
  */
 const harnessVertex = /* glsl */ `
   attribute float level;
+  attribute float idle;
+  attribute float focus;
 
   uniform float uWidth;
   uniform float uCap;
+  uniform float uFocus;
 
   varying float vLevel;
+  varying float vIdle;
   varying vec3 vRel;
 
   ${ribbonPlace}
 
   void main() {
     vLevel = level;
+
+    // While a hover is held, every family it did not name reads as unridden and
+    // the named ones as ridden, whatever their claim.
+    vIdle = mix(idle, 1.0 - focus, uFocus);
 
     float slip;
     vec4 viewPos = ribbonView(slip);
@@ -973,9 +1213,11 @@ const harnessFragment = /* glsl */ `
   uniform float uBackFade;
   uniform float uBackHide;
   uniform float uLevelFade;
+  uniform float uIdleFade;
   uniform float uAlpha;
 
   varying float vLevel;
+  varying float vIdle;
   varying vec3 vRel;
 
   ${rampRead}
@@ -999,7 +1241,7 @@ const harnessFragment = /* glsl */ `
     if (uBackHide > 0.5 && over * back > 0.5) discard;
 
     float tone = mix(uOutTone, uInTone, over);
-    tone += (back * uBackFade + vLevel * uLevelFade) * sign(3.0 - tone);
+    tone += (back * uBackFade + vLevel * uLevelFade + vIdle * uIdleFade) * sign(3.0 - tone);
 
     gl_FragColor = vec4(readRamp(tone), uAlpha);
 
@@ -1693,6 +1935,9 @@ const VEIL_OCTAVES = 6;
  */
 const VEIL_SPREAD = 1.6;
 
+/** The most storms a veil carries — the loop's static bound and the array's length. */
+export const STORM_SLOTS = 6;
+
 /**
  * The veil as one number, and the whole of what the three composite modes
  * share. They differ only in what they do with it, which is why it lives out
@@ -1762,6 +2007,85 @@ const veilField = /* glsl */ `
   }
 
   /**
+   * Storms: each turns the sample point about its own centre, so the field
+   * under it winds into a spiral. The turn falls off with the square of the
+   * distance out, so the winding is tightest by the eye and slackens to nothing
+   * at the rim — a flat turn in the middle is a rigid rotation, and reads as
+   * nothing. Handed by hemisphere, as weather is. Statically bounded with a
+   * uniform break, as veilFbm is.
+   *
+   * calm is the distance to the nearest eye's wall in eye radii — below 0
+   * inside it. The caller clears the field there, so the eye is sky however the
+   * cloud was wound.
+   */
+  vec3 veilStormAt(vec3 dir, out float calm) {
+    calm = 1e3;
+    if (uStormCount <= 0.0) return dir;
+
+    for (int i = 0; i < ${STORM_SLOTS}; i++) {
+      if (float(i) >= uStormCount) break;
+
+      vec3 eye = uStorms[i];
+      // Each storm's own share of the authored twist, size and eye, so no two
+      // read as copies of one stamp.
+      vec3 vary = uStormVary[i];
+      float twist = uStormTwist * vary.x;
+      float size = uStormSize * vary.y;
+      float still = min(uStormEye * vary.z, 0.95);
+
+      // How far out, as a share of the storm's radius.
+      float reach = acos(clamp(dot(dir, eye), -1.0, 1.0)) / size;
+      if (reach >= 1.0) continue;
+
+      if (still > 0.0) calm = min(calm, reach / still - 1.0);
+
+      // Measured from the eye wall rather than the centre: the eye turns whole,
+      // as a calm does, and the winding is tightest just outside it — where a
+      // storm's wind is fastest.
+      float fall = 1.0 - clamp((reach - still) / (1.0 - still), 0.0, 1.0);
+      float angle = twist * fall * fall * (step(0.0, eye.y) * 2.0 - 1.0);
+      float c = cos(angle);
+
+      // Rodrigues, about the eye.
+      dir = dir * c + cross(eye, dir) * sin(angle) + eye * dot(eye, dir) * (1.0 - c);
+    }
+
+    return normalize(dir);
+  }
+
+  /**
+   * The field at a direction, and where the veil is allowed there. Its own
+   * function so the storm bake reads the very field the veil draws.
+   */
+  float veilFieldAt(vec3 dir, float perStep, out float mask) {
+    float calm;
+    vec3 warped = veilWarpAt(veilStormAt(dir, calm), perStep);
+    float field = veilFbm(warped, perStep);
+
+    // Latitude bands at the warped direction, so the swirl reaches them. The
+    // body's strata, and the same reason they are not a barcode.
+    if (uBands > 0.0) {
+      field = mix(field, sin(warped.y * uBandFrequency * 3.14159265), uBands);
+    }
+
+    // The eye: a second field that sits exactly at the coverage threshold on
+    // the wall and falls one field unit per eye radius inward, taken as a min
+    // so it only ever clears. Through the field rather than the mask, so the
+    // wall is a real edge of the cloud: uEdge fades it as it fades every other
+    // edge, and the outline and the hatch's gradient find it.
+    field = min(field, 2.0 * (calm + uCoverage) - 1.0);
+
+    // Where the veil is allowed: an annulus in sin-latitude, not a cap. An
+    // aurora is a ring at sixty degrees and a cap centred on the pole is a hat.
+    // Read at the warped direction too, or the ring's edge would be the one
+    // ruled line on the world. Past a uPoleEdge of 2 the test cannot fail and
+    // the mask is simply gone, which is the cloud reading.
+    mask = 1.0 - smoothstep(uPoleEdge * 0.5, uPoleEdge, abs(abs(warped.y) - uPole));
+
+    return field;
+  }
+
+  /**
    * The fill, and the line around it. Two answers from one field walk, because
    * the line is a contour *of* the fill and computing it anywhere else would be
    * a second threshold that could disagree with the first.
@@ -1786,21 +2110,8 @@ const veilField = /* glsl */ `
     // rate is this one.
     float perStep = length(fwidth(dir));
 
-    vec3 warped = veilWarpAt(dir, perStep);
-    float field = veilFbm(warped, perStep);
-
-    // Latitude bands at the warped direction, so the swirl reaches them. The
-    // body's strata, and the same reason they are not a barcode.
-    if (uBands > 0.0) {
-      field = mix(field, sin(warped.y * uBandFrequency * 3.14159265), uBands);
-    }
-
-    // Where the veil is allowed: an annulus in sin-latitude, not a cap. An
-    // aurora is a ring at sixty degrees and a cap centred on the pole is a hat.
-    // Read at the warped direction too, or the ring's edge would be the one
-    // ruled line on the world. Past a uPoleEdge of 2 the test cannot fail and
-    // the mask is simply gone, which is the cloud reading.
-    float mask = 1.0 - smoothstep(uPoleEdge * 0.5, uPoleEdge, abs(abs(warped.y) - uPole));
+    float mask;
+    float field = veilFieldAt(dir, perStep, mask);
 
     // The threshold is what turns a field into a shape. uEdge is its softness
     // in field units; the derivative under it is a floor, so an edge is never
@@ -1901,6 +2212,157 @@ const veilVertex = /* glsl */ `
 `;
 
 /**
+ * The storm bake: the veil's field unrolled onto a map of the whole sphere, so
+ * `storms.ts` can read where the cloud is before it places an eye. Longitude
+ * across, sin-latitude up — the same measure the eyes are drawn in. A
+ * full-screen quad; the matrices are not read.
+ */
+const stormBakeVertex = /* glsl */ `
+  varying vec2 vUv;
+
+  void main() {
+    vUv = uv;
+
+    gl_Position = vec4(position.xy, 0.0, 1.0);
+  }
+`;
+
+/**
+ * Every octave at full weight — the per-pixel fade is a property of a view, and
+ * where a storm sits may not depend on the size of the widget. Red is the field
+ * mapped to 0..1, green the pole mask. The storms are off, so the field is the
+ * one they will be placed into.
+ *
+ * Declares the whole block veilField reads, used here or not: GLSL wants every
+ * name in the chunk declared, and the join check wants every one supplied.
+ */
+const stormBakeFragment = /* glsl */ `
+  uniform float uVeil;
+  uniform vec3 uOrigin;
+  uniform float uFrequency;
+  uniform float uOctaves;
+  uniform float uGain;
+  uniform float uWarp;
+  uniform float uBands;
+  uniform float uBandFrequency;
+  uniform float uCoverage;
+  uniform float uEdge;
+  uniform float uOutline;
+  uniform float uPole;
+  uniform float uPoleEdge;
+  uniform vec3 uStorms[${STORM_SLOTS}];
+  uniform vec3 uStormVary[${STORM_SLOTS}];
+  uniform float uStormCount;
+  uniform float uStormSize;
+  uniform float uStormEye;
+  uniform float uStormTwist;
+  uniform float uKey;
+  uniform vec3 uKeyDir;
+
+  varying vec2 vUv;
+
+  ${simplex3D}
+  ${veilField}
+
+  void main() {
+    float longitude = vUv.x * 6.28318531;
+    float y = vUv.y * 2.0 - 1.0;
+    float radius = sqrt(max(0.0, 1.0 - y * y));
+
+    float mask;
+    float field = veilFieldAt(vec3(cos(longitude) * radius, y, sin(longitude) * radius), 0.0, mask);
+
+    gl_FragColor = vec4(clamp(field * 0.5 + 0.5, 0.0, 1.0), mask, 0.0, 1.0);
+  }
+`;
+
+/** How much of a ring's pattern is noise rather than the regular ringlets. */
+const RING_NOISE = 0.6;
+
+/**
+ * The rings. The geometry is a unit annulus from 1 to 2, so its radius says how
+ * far across the band a vertex sits and the authored span is a uniform write.
+ *
+ * vRel is the point in view space, in body radii off the world's centre — the
+ * key is aimed in view space, so the shadow is tested there.
+ */
+const ringVertex = /* glsl */ `
+  uniform float uInner;
+  uniform float uOuter;
+
+  varying float vRho;
+  varying vec3 vRel;
+
+  void main() {
+    vRho = mix(uInner, uOuter, length(position.xy) - 1.0);
+    vec3 p = vec3(normalize(position.xy) * vRho, 0.0);
+
+    vRel = mat3(modelViewMatrix) * p / length(modelViewMatrix[0].xyz);
+
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+  }
+`;
+
+/**
+ * A tone field, never a hairline. The pattern reads the radius alone, so it is
+ * the same all the way round and the ring needs no turn of its own.
+ *
+ * The body's shadow is a cylinder down the key from the far side: a point is
+ * in it when it is behind the world from the light and within a radius of the
+ * line through its centre. Hard, like every other tone step.
+ */
+const ringFragment = /* glsl */ `
+  uniform vec3 uRamp[${RAMP_SLOTS}];
+  uniform float uRings;
+  uniform float uInner;
+  uniform float uOuter;
+  uniform float uBands;
+  uniform float uGap;
+  uniform float uTone;
+  uniform float uShade;
+  uniform float uOutline;
+  uniform float uOutlineTone;
+  uniform vec3 uOrigin;
+  uniform vec3 uKeyDir;
+
+  varying float vRho;
+  varying vec3 vRel;
+
+  ${rampRead}
+  ${simplex3D}
+
+  void main() {
+    float at = (vRho - uInner) / max(uOuter - uInner, 1e-4) * uBands;
+    float field = mix(sin(at * 6.28318531), snoise(uOrigin + vec3(at * 1.7, 0.0, 0.0)), ${RING_NOISE.toFixed(2)});
+
+    // Past the field's reach at both ends, so 0 cuts nothing and 1 everything.
+    float cut = mix(-1.05, 1.05, uGap);
+
+    // Derivatives first, while the control flow is still uniform.
+    float gapPixels = (field - cut) / max(fwidth(field), 1e-6);
+    float rimPixels = min(vRho - uInner, uOuter - vRho) / max(fwidth(vRho), 1e-6);
+
+    float inside = clamp(gapPixels + 0.5, 0.0, 1.0);
+
+    // One-sided, inside the fill, so a gap is outlined rather than straddled.
+    float width = uOutline;
+    float line = (1.0 - smoothstep(width - 0.5, width + 0.5, min(gapPixels, rimPixels)))
+      * inside * step(1e-4, uOutline);
+
+    float alpha = max(inside * uRings, line);
+    if (alpha <= 0.0) discard;
+
+    vec3 L = normalize(uKeyDir);
+    float toward = dot(vRel, L);
+    float shadow = step(toward, 0.0) * step(length(vRel - toward * L), 1.0);
+
+    gl_FragColor = vec4(mix(readRamp(uTone + uShade * shadow), readRamp(uOutlineTone), line), alpha);
+
+    #include <colorspace_fragment>
+  }
+`;
+
+/**
  * Mode 0. Plain alpha over one ramp tone — the only veil that carries an ink,
  * and so the only one that can be authored wrong against the world beneath it.
  * That is the whole reason the other two exist.
@@ -1925,6 +2387,12 @@ const veilAlphaFragment = /* glsl */ `
   uniform float uEdge;
   uniform float uPole;
   uniform float uPoleEdge;
+  uniform vec3 uStorms[${STORM_SLOTS}];
+  uniform vec3 uStormVary[${STORM_SLOTS}];
+  uniform float uStormCount;
+  uniform float uStormSize;
+  uniform float uStormEye;
+  uniform float uStormTwist;
   uniform float uKey;
   uniform vec3 uKeyDir;
   uniform float uClarity;
@@ -2015,6 +2483,12 @@ const veilHatchFragment = /* glsl */ `
   uniform float uEdge;
   uniform float uPole;
   uniform float uPoleEdge;
+  uniform vec3 uStorms[${STORM_SLOTS}];
+  uniform vec3 uStormVary[${STORM_SLOTS}];
+  uniform float uStormCount;
+  uniform float uStormSize;
+  uniform float uStormEye;
+  uniform float uStormTwist;
   uniform float uKey;
   uniform vec3 uKeyDir;
   uniform float uHatchDensity;
@@ -2308,6 +2782,10 @@ export function createSurfaceMaterial() {
       uGrain: { value: 0 },
       uShadeGrain: { value: 0 },
       uGrainScale: { value: 30 },
+      uShadeGrainScale: { value: 30 },
+      uIce: { value: 0 },
+      uIceSnowline: { value: 0 },
+      uIceTone: { value: 0 },
       uOrigin: { value: new THREE.Vector3() },
       uClarity: { value: 0 },
       uClarityGamma: { value: 2 },
@@ -2337,6 +2815,7 @@ export function createCoreMaterial() {
     uniforms: {
       uRamp: { value: readInkRamp() },
       uLean: { value: 0 },
+      uTilt: { value: 0 },
       uDensity: { value: 12 },
       uWidth: { value: 1.5 },
       uReach: { value: 1 },
@@ -2397,6 +2876,12 @@ export function createVeilAlphaMaterial() {
       uEdge: { value: 0.08 },
       uPole: { value: 0 },
       uPoleEdge: { value: 2 },
+      uStorms: { value: Array.from({ length: STORM_SLOTS }, () => new THREE.Vector3(0, 1, 0)) },
+      uStormVary: { value: Array.from({ length: STORM_SLOTS }, () => new THREE.Vector3(1, 1, 1)) },
+      uStormCount: { value: 0 },
+      uStormSize: { value: 0.35 },
+      uStormEye: { value: 0 },
+      uStormTwist: { value: 0 },
       uKey: { value: 0 },
       uKeyDir: { value: new THREE.Vector3(0, 0, 1) },
       uClarity: { value: 0 },
@@ -2433,6 +2918,12 @@ export function createVeilHatchMaterial() {
       uEdge: { value: 0.08 },
       uPole: { value: 0 },
       uPoleEdge: { value: 2 },
+      uStorms: { value: Array.from({ length: STORM_SLOTS }, () => new THREE.Vector3(0, 1, 0)) },
+      uStormVary: { value: Array.from({ length: STORM_SLOTS }, () => new THREE.Vector3(1, 1, 1)) },
+      uStormCount: { value: 0 },
+      uStormSize: { value: 0.35 },
+      uStormEye: { value: 0 },
+      uStormTwist: { value: 0 },
       uKey: { value: 0 },
       uKeyDir: { value: new THREE.Vector3(0, 0, 1) },
       uClarity: { value: 0 },
@@ -2459,6 +2950,121 @@ export function veilMaterialFor(ink: number) {
   if (Math.round(ink) === 1) return createVeilHatchMaterial();
 
   return createVeilAlphaMaterial();
+}
+
+/** The storm bake — see `stormBakeFragment`. Drawn off screen, never in a scene. */
+export function createStormBakeMaterial() {
+  return new THREE.ShaderMaterial({
+    vertexShader: stormBakeVertex,
+    fragmentShader: stormBakeFragment,
+    depthTest: false,
+    depthWrite: false,
+    uniforms: {
+      uVeil: { value: 1 },
+      uOrigin: { value: new THREE.Vector3() },
+      uFrequency: { value: 2.6 },
+      uOctaves: { value: 4 },
+      uGain: { value: 0.55 },
+      uWarp: { value: 0.28 },
+      uBands: { value: 0 },
+      uBandFrequency: { value: 5 },
+      uCoverage: { value: 0.52 },
+      uEdge: { value: 0.08 },
+      uOutline: { value: 0 },
+      uPole: { value: 0 },
+      uPoleEdge: { value: 2 },
+      uStorms: { value: Array.from({ length: STORM_SLOTS }, () => new THREE.Vector3(0, 1, 0)) },
+      uStormVary: { value: Array.from({ length: STORM_SLOTS }, () => new THREE.Vector3(1, 1, 1)) },
+      uStormCount: { value: 0 },
+      uStormSize: { value: 0.35 },
+      uStormEye: { value: 0 },
+      uStormTwist: { value: 0 },
+      uKey: { value: 0 },
+      uKeyDir: { value: new THREE.Vector3(0, 0, 1) },
+    },
+  });
+}
+
+/** The field's own sliders only — the bake draws no fill, line or light. */
+export function syncStormBakeUniforms(material: THREE.ShaderMaterial, visual: PlanetVisual) {
+  const u = material.uniforms;
+
+  u.uOrigin.value.copy(originOf(visual.seed));
+  u.uFrequency.value = visual.veilFrequency;
+  u.uOctaves.value = Math.max(1, Math.round(visual.veilOctaves));
+  u.uGain.value = visual.veilGain;
+  u.uWarp.value = visual.veilWarp;
+  u.uBands.value = visual.veilBands;
+  u.uBandFrequency.value = visual.veilBandFrequency;
+  u.uPole.value = Math.abs(visual.veilPole);
+  u.uPoleEdge.value = Math.max(0.02, visual.veilPoleEdge);
+}
+
+/** The storms `placeStorms` chose. The count is theirs, not the slider's. */
+export function syncStormEyes(
+  material: THREE.ShaderMaterial,
+  eyes: { eye: THREE.Vector3; vary: THREE.Vector3 }[],
+) {
+  const u = material.uniforms;
+  const storms = u.uStorms.value as THREE.Vector3[];
+  const vary = u.uStormVary.value as THREE.Vector3[];
+  const count = Math.min(STORM_SLOTS, eyes.length);
+
+  for (let i = 0; i < count; i++) {
+    storms[i].copy(eyes[i].eye);
+    vary[i].copy(eyes[i].vary);
+  }
+
+  u.uStormCount.value = count;
+}
+
+/**
+ * Depth-tested and writing none: the body's depth hides the far half and the
+ * near half crosses it. Both sides, since a ring is seen from above and below.
+ */
+export function createRingMaterial() {
+  return new THREE.ShaderMaterial({
+    vertexShader: ringVertex,
+    fragmentShader: ringFragment,
+    side: THREE.DoubleSide,
+    transparent: true,
+    depthWrite: false,
+    uniforms: {
+      uRamp: { value: readInkRamp() },
+      uRings: { value: 0 },
+      uInner: { value: 1.4 },
+      uOuter: { value: 2.1 },
+      uBands: { value: 7 },
+      uGap: { value: 0 },
+      uTone: { value: 2 },
+      uShade: { value: 0 },
+      uOutline: { value: 0 },
+      uOutlineTone: { value: 6 },
+      uOrigin: { value: new THREE.Vector3() },
+      uKeyDir: { value: new THREE.Vector3(0, 0, 1) },
+    },
+  });
+}
+
+/** The outline is px, and weighed against a screen derivative — no zoom needed. */
+export function syncRingUniforms(material: THREE.ShaderMaterial, visual: PlanetVisual) {
+  const u = material.uniforms;
+  const inner = Math.max(0, Math.min(visual.ringInner, visual.ringOuter));
+
+  u.uRings.value = Math.max(0, Math.min(1, visual.rings));
+  u.uInner.value = inner;
+  u.uOuter.value = Math.max(inner + 0.01, visual.ringOuter);
+  u.uBands.value = Math.max(0.1, visual.ringBands);
+  u.uGap.value = Math.max(0, Math.min(1, visual.ringGap));
+  u.uTone.value = Math.round(visual.ringTone);
+  u.uShade.value = Math.round(visual.ringShade);
+  u.uOutline.value = Math.max(0, visual.ringOutline);
+  u.uOutlineTone.value = Math.round(visual.ringOutlineTone);
+  u.uOrigin.value.copy(originOf(visual.seed));
+
+  // The aim is the system's, not the world's — read ambiently, as the ramp is.
+  const key = keyLight.direction;
+  u.uKeyDir.value.set(key.x, key.y, key.z);
 }
 
 export function createOutlineMaterial() {
@@ -2491,6 +3097,10 @@ export function createBurstMaterial() {
   });
 }
 
+/**
+ * The default pass: every soul not berthed in the core, which in any view
+ * without a split is every soul. See `createBerthedSoulMaterial`.
+ */
 export function createSoulMaterial() {
   return new THREE.ShaderMaterial({
     vertexShader: soulVertex,
@@ -2509,8 +3119,21 @@ export function createSoulMaterial() {
       uCore: { value: 0 },
       uCoreTone: { value: 6 },
       uCoreRing: { value: 0 },
+      uEnter: { value: 0 },
+      uBerthed: { value: 0 },
     },
   });
+}
+
+/**
+ * The core's own pass: only souls that have arrived, drawn under everything
+ * still orbiting. A wrapper rather than a factory argument, so the join check
+ * still sees the soul material's uniforms.
+ */
+export function createBerthedSoulMaterial() {
+  const material = createSoulMaterial();
+  material.uniforms.uBerthed.value = 1;
+  return material;
 }
 
 /** The spawn flare's own material — undepth-tested, like the halo and the bolt. */
@@ -2532,7 +3155,43 @@ export function createSpawnMaterial() {
       uCore: { value: 0 },
       uCoreTone: { value: 6 },
       uCoreRing: { value: 0 },
+      uEnter: { value: 0 },
       uDim: { value: 0.3 },
+    },
+  });
+}
+
+/**
+ * One band's sleeve. Both walls, and no depth at all: the tube crosses the world
+ * twice a turn and its own ink rule is the whole of what says which side it is
+ * on — the rule the souls riding it already go by.
+ */
+export function createSwarmTubeMaterial() {
+  return new THREE.ShaderMaterial({
+    vertexShader: swarmTubeVertex,
+    fragmentShader: swarmTubeFragment,
+    side: THREE.DoubleSide,
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    uniforms: {
+      uRamp: { value: readInkRamp() },
+      uRim: { value: 1 },
+      uOutTone: { value: 6 },
+      uFrontTone: { value: 0 },
+      uAlpha: { value: 0 },
+      uEdge: { value: 0 },
+      uWave: { value: 0 },
+      uTurn: { value: 0 },
+      uBreak: { value: 0 },
+      uLimb: { value: 0 },
+      // The line sleeves' own; see the fragment.
+      uTaper: { value: 0 },
+      // The two the component writes per frame, because they are the two the
+      // *world* moves: how much of the sleeve the count has filled, and how far
+      // round the band's own clock has carried it.
+      uCover: { value: 0 },
+      uPhase: { value: 0 },
     },
   });
 }
@@ -2567,6 +3226,8 @@ export function createHarnessMaterial() {
       uBackFade: { value: 2 },
       uBackHide: { value: 0 },
       uLevelFade: { value: 1 },
+      uIdleFade: { value: 0 },
+      uFocus: { value: 0 },
       // The harness never writes this — a cage is drawn or it is not. It is here
       // for the ring, which is the one caller that wants less than the whole ink.
       uAlpha: { value: 1 },
@@ -2922,6 +3583,7 @@ export function syncHarnessUniforms(
   u.uBackFade.value = Math.round(visual.backFade);
   u.uBackHide.value = Math.round(visual.backHide);
   u.uLevelFade.value = Math.round(visual.levelFade);
+  u.uIdleFade.value = Math.round(visual.idleFade);
 }
 
 /**
@@ -3030,7 +3692,6 @@ export function syncSoulUniforms(
   visual: SwarmVisual,
   bleed: number,
   reach: number,
-  lean: number,
 ) {
   const u = material.uniforms;
 
@@ -3052,23 +3713,28 @@ export function syncSoulUniforms(
   // the *lean* rather than a slider: the core's ground is paper on one reading
   // and black on the other, so one authored tone would be a dot that disappears
   // on half the harvests. See `CORE_TONES` for why it is a fill and a ring and
-  // not simply the hatch's ink.
+  // not simply the hatch's ink. Written by `syncSoulLean`, every frame, because
+  // the lean is eased and this only runs when an argument changes.
   u.uCore.value = Math.max(0, reach);
-  u.uCoreTone.value = coreOf(lean).soul;
-  u.uCoreRing.value = coreOf(lean).ring;
+
+  // Where the crossing starts, so the shader can tell an arrival from a soul
+  // merely passing over the disc. The same clamp the swarm's own `enter` takes —
+  // the ink and the berth have to answer to one figure, or the third place
+  // would be reached at a different moment than it is drawn at.
+  u.uEnter.value = Math.max(0, Math.min(0.999, visual.berthEnter));
 }
 
 /**
  * Same signature as `syncSoulUniforms`, and for the same reason: the flare is
  * read against the body's silhouette exactly as the dot it stands on is, so it
- * takes the same `bleed`, `reach` and `lean` that call is already passing.
+ * takes the same `bleed` and `reach` that call is already passing — and its lean
+ * from `syncSoulLean`, the same way.
  */
 export function syncSpawnUniforms(
   material: THREE.ShaderMaterial,
   visual: SwarmVisual,
   bleed: number,
   reach: number,
-  lean: number,
 ) {
   const u = material.uniforms;
 
@@ -3077,8 +3743,7 @@ export function syncSpawnUniforms(
   u.uOutTone.value = Math.round(visual.outTone);
   u.uFrontTone.value = Math.round(visual.frontTone);
   u.uCore.value = Math.max(0, reach);
-  u.uCoreTone.value = coreOf(lean).soul;
-  u.uCoreRing.value = coreOf(lean).ring;
+  u.uEnter.value = Math.max(0, Math.min(0.999, visual.berthEnter));
   u.uDim.value = Math.min(1, Math.max(0, visual.spawnDim));
 
   // The authored 0…1 onto the superellipse's own exponent, which runs the other
@@ -3091,14 +3756,89 @@ export function syncSpawnUniforms(
   u.uPinch.value = 1 - 0.88 * pinch;
 }
 
-/** Which of the three readings a lean is. `syncCoreUniforms` and the swarm must agree. */
-function coreOf(lean: number) {
-  const at = Math.sign(Math.round(lean));
+/**
+ * The sleeve's look, all of it but the two figures the world moves: how much of
+ * it the count has filled, and how far round the band's own clock has carried
+ * it. Those are written per frame by `SoulVolume`, where both are known.
+ *
+ * **The strength is not one of them, and that is the design.** A patch of sleeve
+ * is always the same ink; the count buys coverage. See `swarmTubeFragment`.
+ *
+ * Takes `bleed` for the reason `syncSpawnUniforms` does — the sleeve is cut at
+ * the body's *drawn* edge, exactly where the dots inside it are cut.
+ */
+export function syncSwarmTubeUniforms(
+  material: THREE.ShaderMaterial,
+  visual: SwarmVisual,
+  bleed: number,
+) {
+  const u = material.uniforms;
 
-  if (at > 0) return CORE_TONES.light;
-  if (at < 0) return CORE_TONES.dark;
+  u.uRim.value = visual.rim + bleed;
+  u.uOutTone.value = Math.round(visual.outTone);
+  u.uFrontTone.value = Math.round(visual.frontTone);
+  u.uAlpha.value = Math.max(0, visual.tubeAlpha);
+  u.uEdge.value = Math.max(0, visual.tubeEdge);
+  u.uBreak.value = Math.min(1, Math.max(0, visual.tubeBreak));
+  u.uLimb.value = Math.min(1, Math.max(0, visual.tubeLimb));
 
-  return CORE_TONES.even;
+  // Whole crests only: both texture coordinates wrap, and a fraction of a crest
+  // leaves a step where they do. The break is sampled off the same two counts,
+  // so rounding here keeps its own circles closed as well.
+  u.uWave.value = Math.round(Math.max(0, visual.tubeWave));
+  u.uTurn.value = Math.round(Math.max(0, visual.tubeTurn));
+}
+
+/**
+ * How long a change of reading takes to land, in seconds — the time constant of
+ * an exponential chase, the idiom `mergeLag` already uses. One figure for the
+ * core and the souls berthed in it, which ease on separate clocks and so land
+ * together only by sharing it.
+ */
+const CORE_LEAN_LAG = 0.15;
+
+/** One frame of a lean chasing its reading. Written against `delta`, like the split. */
+export function easeLean(shown: number, target: number, delta: number) {
+  const next = shown + (target - shown) * (1 - Math.exp(-delta / CORE_LEAN_LAG));
+
+  return Math.abs(target - next) < 1e-3 ? target : next;
+}
+
+/**
+ * The core's tones at a lean that may be between readings — the three pairs
+ * weighted exactly as the core shader's `pick` weighs them, so a berthed soul
+ * walks the ramp in step with the ground it sits on.
+ */
+function coreAt(lean: number) {
+  const at = Math.max(-1, Math.min(1, lean));
+  const dark = Math.max(0, -at);
+  const light = Math.max(0, at);
+  const even = 1 - Math.abs(at);
+
+  const blend = (key: 'soul' | 'ring') =>
+    CORE_TONES.dark[key] * dark + CORE_TONES.even[key] * even + CORE_TONES.light[key] * light;
+
+  return { soul: blend('soul'), ring: blend('ring') };
+}
+
+/**
+ * The core's lean — written every frame by `PlanetCore`, not by the sync. The
+ * inks ease (`lean`); the ruling's angle cuts straight to the reading (`tilt`).
+ */
+export function syncCoreLean(material: THREE.ShaderMaterial, lean: number, tilt: number) {
+  material.uniforms.uLean.value = Math.max(-1, Math.min(1, lean));
+  material.uniforms.uTilt.value = Math.max(-1, Math.min(1, tilt));
+}
+
+/**
+ * The berthed soul's pair at the same eased lean — every frame, by the swarm.
+ * Soul and spawn materials alike, since the flare is read against the same core.
+ */
+export function syncSoulLean(material: THREE.ShaderMaterial, lean: number) {
+  const tones = coreAt(lean);
+
+  material.uniforms.uCoreTone.value = tones.soul;
+  material.uniforms.uCoreRing.value = tones.ring;
 }
 
 /**
@@ -3170,6 +3910,10 @@ export function syncSurfaceUniforms(
   u.uGrain.value = Math.max(0, visual.grain);
   u.uShadeGrain.value = Math.max(0, visual.shadeGrain);
   u.uGrainScale.value = Math.max(0.1, visual.grainScale);
+  u.uShadeGrainScale.value = Math.max(0.1, visual.shadeGrainScale);
+  u.uIce.value = Math.max(0, Math.min(1, visual.ice));
+  u.uIceSnowline.value = visual.iceSnowline;
+  u.uIceTone.value = Math.round(visual.iceTone);
   u.uOrigin.value.copy(originOf(visual.seed));
 }
 
@@ -3184,14 +3928,9 @@ export function syncSurfaceUniforms(
  * spacing rather than a weight — the pair `veilHatchDensity` and
  * `veilHatchWidth` already are.
  */
-export function syncCoreUniforms(
-  material: THREE.ShaderMaterial,
-  visual: PlanetVisual,
-  lean: number,
-) {
+export function syncCoreUniforms(material: THREE.ShaderMaterial, visual: PlanetVisual) {
   const u = material.uniforms;
 
-  u.uLean.value = Math.sign(Math.round(lean));
   u.uDensity.value = Math.max(0.1, visual.coreHatchDensity);
   u.uWidth.value = Math.max(0, visual.coreHatchWidth);
 
@@ -3232,6 +3971,11 @@ export function syncVeilUniforms(
   u.uPoleEdge.value = Math.max(0.02, visual.veilPoleEdge);
   u.uKey.value = visual.veilKey;
   u.uOutline.value = Math.max(0, visual.veilOutline);
+
+  // The eyes and their count are placed against the bake — `syncStormEyes`.
+  u.uStormSize.value = Math.max(0.01, Math.min(Math.PI, visual.veilStormSize));
+  u.uStormEye.value = Math.max(0, Math.min(1, visual.veilStormEye));
+  u.uStormTwist.value = visual.veilStormTwist;
   u.uTone.value = Math.round(visual.veilTone);
   u.uOutlineTone.value = Math.round(visual.veilOutlineTone);
 

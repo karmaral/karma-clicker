@@ -4,6 +4,7 @@ export { default as PlanetScene } from './PlanetScene.svelte';
 export { default as PlanetBody } from './PlanetBody.svelte';
 export { default as PlanetCore } from './PlanetCore.svelte';
 export { default as SoulSwarm } from './SoulSwarm.svelte';
+export { default as SoulVolume } from './SoulVolume.svelte';
 export { default as Anchors } from './Anchors.svelte';
 export { default as Harness } from './Harness.svelte';
 export { default as Halo } from './Halo.svelte';
@@ -18,15 +19,17 @@ export {
 export { createSurfaceField, type SurfaceField } from './field';
 export {
   DEFAULT_HARNESS, HARNESS_GROUPS, HARNESS_PARAMS,
-  buildLoops, cloneHarness, countLinks, countLoops, printHarness, trimLoopCache,
+  buildLoops, claimFamilies, cloneHarness, countLinks, countLoops, linesFor, printHarness,
+  trimLoopCache,
   type HarnessGroup, type HarnessLoop, type HarnessNode, type HarnessParam, type HarnessVisual,
 } from './harness';
 export { keyLight } from './light.svelte';
 export {
   DEFAULT_SWARM, SOUL_CAPACITY, SPAWN_CAPACITY, SWARM_GROUPS, SWARM_PARAMS,
-  berthOf, berthRoom, cloneSwarm, createSpawns, printSwarm,
-  rankOf, riderCount, settleScale, shareOf, travelOf,
-  type Soul, type SpawnMark, type Spawns, type SwarmGroup, type SwarmParam, type SwarmVisual,
+  bandFrameOf, berthOf, berthRoom, cloneSwarm, createSpawns, printSwarm,
+  rankOf, riderCount, settleScale, shareOf, travelOf, volumeOf,
+  type BandFrame, type Soul, type SpawnMark, type Spawns,
+  type SwarmGroup, type SwarmParam, type SwarmVisual,
 } from './orbit';
 export {
   DEFAULT_PULSE, PULSE_CAPACITY, PULSE_GROUPS, PULSE_PARAMS,

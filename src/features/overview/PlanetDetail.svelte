@@ -25,8 +25,12 @@
    * this column's. Exactly one of them ever shows: you harvest the world you
    * are on and reach the ones you are not.
    */
-  const PORTRAIT_PX = 180;
-  const PORTRAIT_FRAME = 2.4;
+  const PORTRAIT_PX = 220;
+  /** Planet scale, in px per world unit — fixed, so a taller box shows more room, not a bigger world. */
+  const PORTRAIT_ZOOM = 75;
+
+  /** The box spans the column, so rings run out to its edges instead of the canvas's. */
+  let portraitWidth = $state(0);
 
   const visual = $derived(planetVisuals[id] ?? DEFAULT_VISUAL);
 
@@ -37,8 +41,9 @@
   const isHere = $derived(id === PlanetManager.selected);
   const isAhead = $derived(!isHere && Boolean(planet) && !planet.isHarvested);
 
+  /** Nothing for a world ahead: it has lived no ages yet. */
   function getStatus() {
-    if (!planet) return '';
+    if (!planet || isAhead) return '';
 
     if (planet.isHarvested) {
       return `${f(planet.merged)} merged`;
@@ -54,14 +59,17 @@
       {getStatus()}
     {/snippet}
 
-    <div class="portrait">
-      <PlanetView
-        {visual}
-        widthPx={PORTRAIT_PX}
-        frame={PORTRAIT_FRAME}
-        backgroundToken="--surface"
-        clockKey={id}
-      />
+    <div class="portrait" bind:clientWidth={portraitWidth}>
+      {#if portraitWidth > 0}
+        <PlanetView
+          {visual}
+          widthPx={portraitWidth}
+          heightPx={PORTRAIT_PX}
+          frame={PORTRAIT_PX / PORTRAIT_ZOOM}
+          backgroundToken="--surface"
+          clockKey={id}
+        />
+      {/if}
     </div>
 
     {#if description}
@@ -93,6 +101,7 @@
   .portrait {
     display: flex;
     justify-content: center;
+    min-width: 0;
   }
 
   .description {

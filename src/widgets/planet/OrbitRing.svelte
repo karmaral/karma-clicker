@@ -32,6 +32,11 @@
      * timestamp taken here would be the tick and not the purchase.
      */
     bought?: number[];
+    /**
+     * How much of each band rides the harness, 0…1. A hover holds the ring at
+     * what is left on it — a band all on its lines is named by them instead.
+     */
+    shares?: number[];
     /** The world's own clock, advanced by the scene and only read here. */
     clock: WorldClock;
     /** Pixels per world unit. The line's weight is authored in px. */
@@ -42,7 +47,7 @@
     rim?: number;
   }
 
-  let { visual, lit, bought, clock, zoom, size = 1, rim = 1 }: Props = $props();
+  let { visual, lit, bought, shares, clock, zoom, size = 1, rim = 1 }: Props = $props();
 
   const { invalidate } = useThrelte();
 
@@ -156,6 +161,7 @@
     // either effect above owns — the loop below picks it up — so reading `lit`
     // here is what asks for the one frame that shows it.
     lit.some(Boolean);
+    shares;
 
     invalidate();
   });
@@ -175,7 +181,9 @@
 
       if (flash > 0) moving = true;
 
-      material.uniforms.uAlpha.value = Math.max(lit[band] ? HOVER_ALPHA : 0, flash);
+      const held = lit[band] ? HOVER_ALPHA * (1 - (shares?.[band] ?? 0)) : 0;
+
+      material.uniforms.uAlpha.value = Math.max(held, flash);
     });
 
     // Only while a flash is still going. Held hovers and an idle world ask for

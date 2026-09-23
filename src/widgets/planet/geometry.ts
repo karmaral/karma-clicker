@@ -72,7 +72,7 @@ function build(visual: PlanetVisual) {
     dir.fromBufferAttribute(position, i).normalize();
 
     // The attribute keeps the whole field; only the displacement is clipped.
-    const height = field.sampleHeight(dir.x, dir.y, dir.z);
+    const height = field.sampleLand(dir.x, dir.y, dir.z);
     const radius = field.sampleRadius(dir.x, dir.y, dir.z);
 
     heights[i] = height;

@@ -8,19 +8,23 @@
  * -1 burst          the click, the world's own shape thrown out behind it
  * 0  veil           the same shell again, over the body it is a layer on — no
  *                   depth test, and its far half is culled rather than cut
- * 1  placed anchor  depth-tested, so the solid caps the lines that end in it
- * 2  harness        no depth test — the ink rule is its whole depth cue
+ * 1  rings          depth-tested against the body, so its far half is hidden
+ *                   and its near half crosses the world and its veil
+ * 2  placed anchor  depth-tested, so the solid caps the lines that end in it
+ * 3  harness        no depth test — the ink rule is its whole depth cue
  *                   (quads, not lines: a line has no width to carry)
- * 3  ghost anchor   no depth test: a place does not stop existing when it turns away
- * 4  orbit ring     a hovered cohort's own line, under the dots so they ride it
- * 5  souls          discard what is behind the world themselves
- * 6  halo           the click, around the world and behind it, inverting what it crosses
- * 7  spark          the click, lying in the terrain and drawn through the body on purpose
- * 8  flare          the same spark standing up off it
- * 9  spark outline  both again, grown, on the plane behind — so the depth test
- * 10 flare outline  rejects the ink under the mark and leaves its border
- * 11 spawn          a soul's own arrival, riding the dot it marks
- * 12 bolt           the click, a strike from the press to the spark it paid
+ * 4  ghost anchor   no depth test: a place does not stop existing when it turns away
+ * 5  soul volume    a crowded cohort's sleeve, under both the line and the dots
+ * 6  orbit ring     a hovered cohort's own line, under the dots so they ride it
+ * 7  berthed souls  the core's own, under every soul still orbiting past it
+ * 8  souls          discard what is behind the world themselves
+ * 9  halo           the click, around the world and behind it, inverting what it crosses
+ * 10 spark          the click, lying in the terrain and drawn through the body on purpose
+ * 11 flare          the same spark standing up off it
+ * 12 spark outline  both again, grown, on the plane behind — so the depth test
+ * 13 flare outline  rejects the ink under the mark and leaves its border
+ * 14 spawn          a soul's own arrival, riding the dot it marks
+ * 15 bolt           the click, a strike from the press to the spark it paid
  *                   for — inverting, like the halo, and drawn last of all:
  *                   it is the newest thing on screen for as long as it lasts
  * ```
@@ -88,16 +92,19 @@ export const RENDER_ORDER = {
   body: -2,
   burst: -1,
   veil: 0,
-  anchor: 1,
-  harness: 2,
-  ghost: 3,
-  orbitRing: 4,
-  soul: 5,
-  halo: 6,
-  spark: 7,
-  flare: 8,
-  sparkOutline: 9,
-  flareOutline: 10,
-  spawn: 11,
-  bolt: 12,
+  rings: 1,
+  anchor: 2,
+  harness: 3,
+  ghost: 4,
+  soulVolume: 5,
+  orbitRing: 6,
+  berthed: 7,
+  soul: 8,
+  halo: 9,
+  spark: 10,
+  flare: 11,
+  sparkOutline: 12,
+  flareOutline: 13,
+  spawn: 14,
+  bolt: 15,
 };

@@ -61,6 +61,22 @@ export interface PlanetVisual {
    * The texture is unaffected and still reads the whole field.
    */
   clip: number;
+  /**
+   * Steps in the ground — mesas. `terraces` is how many across the field's whole
+   * range, 0 off; `terraceSharpness` is 0 for a soft ramp between treads and 1
+   * for a sheer riser. A riser is only as fine as the mesh, so a sharp one wants
+   * a high `detail`.
+   *
+   * `terraceTexture` is how far the texture follows: 0 reads the smooth height,
+   * so bands cross the steps; 1 makes each tread one flat value, so the bands
+   * change on the risers and `contour` draws the steps — the topographic map.
+   * `terraceJitter` slides where the steps fall by a slow noise, in steps, so
+   * they stop reading as evenly spaced rings.
+   */
+  terraces: number;
+  terraceSharpness: number;
+  terraceTexture: number;
+  terraceJitter: number;
   /** Edge subdivisions, not recursive: the mesh is 20·(detail+1)² triangles. */
   detail: number;
 
@@ -188,15 +204,12 @@ export interface PlanetVisual {
    * and a world can want its terrain broken up without its terminator going with
    * it.
    *
-   * One noise sample under both, though, and that is deliberate. The veil
-   * decorrelates its two cuts because they are one ruling read twice, and
-   * sharing collapsed every shoulder onto one slot; here the two coordinates are
-   * already independent fields, so a shared displacement is a grain in the
-   * *paper* rather than a correlation — and it is one `snoise` instead of two.
-   *
-   * `grainScale` is that noise's scale, shared, and it is the whole of the
-   * difference between a rough edge and a mottled one. Faded to nothing as its
-   * period approaches two pixels, `veilFbm`'s rule with its constants: the limb
+   * `grainScale` and `shadeGrainScale` are each noise's scale, and the whole of
+   * the difference between a rough edge and a mottled one — so a world can have
+   * a fine-grained terrain under a coarsely broken terminator. At equal scales
+   * the two are one sample, the same noise, which is how every world authored
+   * before the split was drawn. Each is faded to nothing as its period
+   * approaches two pixels, `veilFbm`'s rule with its constants: the limb
    * compresses the sphere hard, and an unfaded grain fizzes there. To nothing
    * and not to its mean, because a grain stuck at its mean is a constant offset
    * on the band, which is `bias` said badly.
@@ -209,6 +222,18 @@ export interface PlanetVisual {
   grain: number;
   shadeGrain: number;
   grainScale: number;
+  shadeGrainScale: number;
+  /**
+   * Polar caps: a tone laid over the band from each pole down. `ice` is how far
+   * toward the equator it reaches, 0 off and 1 the whole world. `iceSnowline`
+   * tilts the line by the ground under it — positive freezes the peaks first,
+   * negative the lowlands. `iceTone` replaces the band's slot and keeps the
+   * shade, so the terminator still crosses it. The texture grain frays the edge,
+   * and `contour` draws it; band hairlines stop at the ice.
+   */
+  ice: number;
+  iceSnowline: number;
+  iceTone: number;
   /**
    * How the shade composites. `shadeSteps` is its granularity — 1 is a
    * three-tone terminator, 2 a five-tone one — and `shadeDepth` is how many ramp
@@ -400,6 +425,39 @@ export interface PlanetVisual {
   veilPole: number;
   veilPoleEdge: number;
   /**
+   * Storms: eyes the veil winds into spirals around, placed off the seed and
+   * kept off the poles. `veilStorms` is how many, 0 off; `veilStormSize` their
+   * reach in radians; `veilStormTwist` how far the field turns at the eye, in
+   * radians, signed. Handed by hemisphere, so the two halves spin opposite ways.
+   * They ride the veil, so they drift with `veilSpin`.
+   *
+   * `veilStormSeed` reshuffles the eyes without touching the rest of the world.
+   * No slider — the lab's `storms` button rolls it.
+   *
+   * `veilStormMass` is where an eye may sit, in field units past `veilCoverage`,
+   * read off a bake of the veil's own field — see `storms.ts`. Positive wants
+   * that far into cloud; near 0 lands on the cloud's edges, where a spiral shows
+   * most; negative wants clear sky, so the cloud winds round an open eye.
+   */
+  veilStormSeed: number;
+  veilStorms: number;
+  veilStormSize: number;
+  veilStormTwist: number;
+  veilStormMass: number;
+  /**
+   * The eye: a clearing at each storm's centre, as a share of its radius, 0
+   * none. The cloud is cleared through the field, so the wall is a real edge:
+   * `veilEdge` fades it — as a share of the eye's radius — and `veilOutline`
+   * draws it.
+   */
+  veilStormEye: number;
+  /**
+   * How far each storm strays from the authored twist, size and eye — up to
+   * this share either side, drawn per storm off the seed, so no two read as
+   * one stamp. 0 makes them identical. Moves no eye.
+   */
+  veilStormVary: number;
+  /**
    * How the key reaches it, and it reaches the two modes differently.
    *
    * At `veilInk` 0 it is a *coverage* term: a single ink has no band coordinate
@@ -510,6 +568,28 @@ export interface PlanetVisual {
   veilHatchShade: number;
   veilHatchSoften: number;
 
+  /**
+   * A ring system in the equatorial plane — it tilts, leans and turns with the
+   * world. `rings` is the fill's weight, 0 off; the outline is never thinned.
+   *
+   * `ringInner` and `ringOuter` are in body radii and may run past the box: the
+   * framing is the world's, and a ring is allowed to be cut by it.
+   *
+   * `ringBands` is ringlets across the span, a sine roughened by noise on the
+   * radius alone; `ringGap` is how much of them is cut away. `ringShade` walks
+   * the ramp from `ringTone` where the body shadows the ring from the key.
+   * `ringOutline` draws the edges and every gap, in px.
+   */
+  rings: number;
+  ringInner: number;
+  ringOuter: number;
+  ringBands: number;
+  ringGap: number;
+  ringTone: number;
+  ringShade: number;
+  ringOutline: number;
+  ringOutlineTone: number;
+
   /** Motion. */
   spin: number;
 
@@ -530,7 +610,7 @@ export interface PlanetVisual {
 }
 
 export type VisualGroup =
-  'Shape' | 'Caps' | 'Texture' | 'Shade' | 'Outline' | 'Core' | 'Veil' | 'Motion';
+  'Shape' | 'Caps' | 'Texture' | 'Shade' | 'Outline' | 'Core' | 'Veil' | 'Rings' | 'Motion';
 
 export interface VisualParam {
   key: keyof PlanetVisual;
@@ -558,6 +638,10 @@ export const VISUAL_PARAMS: VisualParam[] = [
   { key: 'strataFrequency', label: 'Strata bands', group: 'Shape', min: 1, max: 12, step: 0.5, shape: true },
   { key: 'amplitude', label: 'Amplitude', group: 'Shape', min: -0.6, max: 0.6, step: 0.005, shape: true },
   { key: 'clip', label: 'Clip', group: 'Shape', min: 0, max: 1, step: 0.01, shape: true },
+  { key: 'terraces', label: 'Terraces', group: 'Shape', min: 0, max: 16, step: 1, shape: true },
+  { key: 'terraceSharpness', label: 'Terrace sharpness', group: 'Shape', min: 0, max: 1, step: 0.01, shape: true },
+  { key: 'terraceTexture', label: 'Terrace texture', group: 'Shape', min: 0, max: 1, step: 0.01, shape: true },
+  { key: 'terraceJitter', label: 'Terrace jitter', group: 'Shape', min: 0, max: 2, step: 0.01, shape: true },
   { key: 'detail', label: 'Detail', group: 'Shape', min: 1, max: 48, step: 1, shape: true },
 
   { key: 'caps', label: 'Caps', group: 'Caps', min: 0, max: 1, step: 0.01, shape: true },
@@ -583,13 +667,15 @@ export const VISUAL_PARAMS: VisualParam[] = [
   { key: 'contourTone', label: 'Contour lit', group: 'Texture', min: 0, max: 6, step: 1 },
   { key: 'contourShadowTone', label: 'Contour shadow', group: 'Texture', min: 0, max: 6, step: 1 },
   { key: 'grain', label: 'Grain', group: 'Texture', min: 0, max: 2, step: 0.01 },
-  // Shared with `shadeGrain`, and sat here because this is where a grain is
-  // first reached for. One noise under both — see the field's comment.
-  { key: 'grainScale', label: 'Grain scale', group: 'Texture', min: 4, max: 80, step: 0.5 },
+  { key: 'grainScale', label: 'Grain scale', group: 'Texture', min: 0, max: 25, step: 0.5 },
+  { key: 'ice', label: 'Ice', group: 'Texture', min: 0, max: 1, step: 0.01 },
+  { key: 'iceSnowline', label: 'Snowline', group: 'Texture', min: -1, max: 1, step: 0.01 },
+  { key: 'iceTone', label: 'Ice tone', group: 'Texture', min: 0, max: 6, step: 1 },
 
   { key: 'shadeDepth', label: 'Shade depth', group: 'Shade', min: -6, max: 6, step: 0.5 },
   { key: 'shadeSteps', label: 'Shade steps', group: 'Shade', min: 1, max: 6, step: 1 },
   { key: 'shadeGrain', label: 'Shade grain', group: 'Shade', min: 0, max: 2, step: 0.01 },
+  { key: 'shadeGrainScale', label: 'Shade grain scale', group: 'Shade', min: 4, max: 80, step: 0.5 },
   { key: 'relief', label: 'Relief', group: 'Shade', min: -0.6, max: 0.6, step: 0.005, shape: true },
   { key: 'key', label: 'Key', group: 'Shade', min: 0, max: 1.5, step: 0.01 },
   { key: 'rim', label: 'Rim', group: 'Shade', min: -1.5, max: 1.5, step: 0.01 },
@@ -631,6 +717,12 @@ export const VISUAL_PARAMS: VisualParam[] = [
   { key: 'veilOutlineTone', label: 'Veil outline tone', group: 'Veil', min: 0, max: 6, step: 1 },
   { key: 'veilPole', label: 'Veil latitude', group: 'Veil', min: 0, max: 1, step: 0.01 },
   { key: 'veilPoleEdge', label: 'Veil band width', group: 'Veil', min: 0.05, max: 2, step: 0.01 },
+  { key: 'veilStorms', label: 'Storms', group: 'Veil', min: 0, max: 6, step: 1 },
+  { key: 'veilStormSize', label: 'Storm size', group: 'Veil', min: 0.05, max: 1.2, step: 0.01 },
+  { key: 'veilStormTwist', label: 'Storm twist', group: 'Veil', min: -10, max: 10, step: 0.05 },
+  { key: 'veilStormMass', label: 'Storm mass', group: 'Veil', min: -0.5, max: 0.5, step: 0.01 },
+  { key: 'veilStormEye', label: 'Storm eye', group: 'Veil', min: 0, max: 0.6, step: 0.01 },
+  { key: 'veilStormVary', label: 'Storm vary', group: 'Veil', min: 0, max: 1, step: 0.01 },
   { key: 'veilKey', label: 'Veil key', group: 'Veil', min: -1, max: 1, step: 0.01 },
   { key: 'veilSpin', label: 'Veil spin', group: 'Veil', min: -0.6, max: 0.6, step: 0.005 },
   { key: 'veilHatchDensity', label: 'Hatch density', group: 'Veil', min: 4, max: 60, step: 0.5 },
@@ -640,6 +732,16 @@ export const VISUAL_PARAMS: VisualParam[] = [
   { key: 'veilHatchGrainScale', label: 'Hatch grain scale', group: 'Veil', min: 4, max: 80, step: 0.5 },
   { key: 'veilHatchShade', label: 'Hatch shade', group: 'Veil', min: 0, max: 4, step: 0.5 },
   { key: 'veilHatchSoften', label: 'Hatch soften px', group: 'Veil', min: 0, max: 20, step: 0.5 },
+
+  { key: 'rings', label: 'Rings', group: 'Rings', min: 0, max: 1, step: 0.01 },
+  { key: 'ringInner', label: 'Ring inner', group: 'Rings', min: 1, max: 4, step: 0.01 },
+  { key: 'ringOuter', label: 'Ring outer', group: 'Rings', min: 1, max: 4, step: 0.01 },
+  { key: 'ringBands', label: 'Ring bands', group: 'Rings', min: 1, max: 40, step: 0.5 },
+  { key: 'ringGap', label: 'Ring gap', group: 'Rings', min: 0, max: 1, step: 0.01 },
+  { key: 'ringTone', label: 'Ring tone', group: 'Rings', min: 0, max: 6, step: 1 },
+  { key: 'ringShade', label: 'Ring shadow', group: 'Rings', min: -6, max: 6, step: 1 },
+  { key: 'ringOutline', label: 'Ring outline px', group: 'Rings', min: 0, max: 4, step: 0.25 },
+  { key: 'ringOutlineTone', label: 'Ring outline tone', group: 'Rings', min: 0, max: 6, step: 1 },
 
   { key: 'spin', label: 'Spin', group: 'Motion', min: -0.6, max: 0.6, step: 0.005 },
   // No row for `tilt` or `lean`: they are one puck under this one. `turn` keeps a
@@ -655,7 +757,7 @@ export const TILT_REACH = 0.8;
 export const LEAN_REACH = 1.6;
 
 export const VISUAL_GROUPS: VisualGroup[] = [
-  'Shape', 'Caps', 'Texture', 'Shade', 'Outline', 'Core', 'Veil', 'Motion',
+  'Shape', 'Caps', 'Texture', 'Shade', 'Outline', 'Core', 'Veil', 'Rings', 'Motion',
 ];
 
 export const DEFAULT_VISUAL: PlanetVisual = {
@@ -672,6 +774,11 @@ export const DEFAULT_VISUAL: PlanetVisual = {
   strataFrequency: 4,
   amplitude: 0.07,
   clip: 0,
+  /** Off, and the sharpness is what the count opens onto. */
+  terraces: 0,
+  terraceSharpness: 0.6,
+  terraceTexture: 0,
+  terraceJitter: 0,
   detail: 28,
 
   /** Off. The tiers below are the shape the slider opens onto, not a shape in effect. */
@@ -701,10 +808,16 @@ export const DEFAULT_VISUAL: PlanetVisual = {
   contourTone: 6,
   contourShadowTone: 6,
 
-  /** Off, and the scale below is what the two amounts open onto. */
+  /** Off, and the scales below are what the two amounts open onto. */
   grain: 0,
   shadeGrain: 0,
   grainScale: 30,
+  shadeGrainScale: 30,
+
+  /** Off. Paper at the poles is what the slider opens onto. */
+  ice: 0,
+  iceSnowline: 0,
+  iceTone: 0,
 
   shadeSteps: 2,
   shadeDepth: 0,
@@ -744,6 +857,14 @@ export const DEFAULT_VISUAL: PlanetVisual = {
   veilOutlineTone: 6,
   veilPole: 0,
   veilPoleEdge: 2,
+  /** Off, and the size and twist are what the count opens onto. */
+  veilStormSeed: 0,
+  veilStorms: 0,
+  veilStormSize: 0.35,
+  veilStormTwist: 5,
+  veilStormMass: 0.05,
+  veilStormEye: 0.15,
+  veilStormVary: 0.35,
   veilKey: 0.4,
   /** Locked to the ground: a drift is a choice, and 0 is the deck riding its world. */
   veilSpin: 0,
@@ -754,6 +875,17 @@ export const DEFAULT_VISUAL: PlanetVisual = {
   veilHatchGrainScale: 30,
   veilHatchShade: 2,
   veilHatchSoften: 0,
+
+  /** Off, and the span and bands are what the slider opens onto. */
+  rings: 0,
+  ringInner: 1.4,
+  ringOuter: 2.1,
+  ringBands: 7,
+  ringGap: 0.3,
+  ringTone: 2,
+  ringShade: 3,
+  ringOutline: 1.5,
+  ringOutlineTone: 6,
 
   spin: 0.1,
   tilt: 0.2,
@@ -770,7 +902,9 @@ export function keyShape(visual: PlanetVisual) {
   return [
     visual.seed, visual.frequency, visual.octaves, visual.lacunarity, visual.gain,
     visual.ridge, visual.warp, visual.strata, visual.strataFrequency,
-    visual.amplitude, visual.clip, visual.relief, visual.detail,
+    visual.amplitude, visual.clip, visual.terraces, visual.terraceSharpness,
+    visual.terraceTexture, visual.terraceJitter,
+    visual.relief, visual.detail,
     visual.caps, visual.capSkirt, visual.capSwell, visual.capSwellBands,
     visual.capCoarse, visual.capCoarseSize, visual.capCoarseLift,
     visual.capMid, visual.capMidSize, visual.capMidLift,
@@ -892,8 +1026,9 @@ export const STAGE_RADIUS = 111;
  * in radii, so `zoom` carries them and their rings with them, and the anchors
  * and sparks the same. Only the px marks are stranded, so only they are scaled.
  *
- * The four that scale are **lines** — the silhouette, the band hairline, the
- * veil's edge, the core's ruling — chosen for their weight against the world.
+ * The five that scale are **lines** — the silhouette, the band hairline, the
+ * veil's edge, the ring's, the core's ruling — chosen for their weight against
+ * the world.
  * What is deliberately left alone is the **floors**: `dotFloor`,
  * `veilHatchWidth`. A floor is not a mark but a legibility rule about the
  * smallest thing this screen can draw, and a push-in is exactly the case where
@@ -912,6 +1047,7 @@ export function scaleInk(visual: PlanetVisual, radiusPx: number): PlanetVisual {
     outline: visual.outline * by,
     contour: visual.contour * by,
     veilOutline: visual.veilOutline * by,
+    ringOutline: visual.ringOutline * by,
     coreHatchWidth: visual.coreHatchWidth * by,
   };
 }

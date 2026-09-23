@@ -33,6 +33,8 @@
     harness?: HarnessVisual;
     /** How many souls the finished harness carries. See `SoulSwarm`. */
     riders?: number;
+    /** The cohort row each line was bought for. See `PlanetScene`. */
+    lines?: number[];
     /** And how many are placing the anchor going down. See `PlanetScene`. */
     working?: number;
     /** What a press is worth while it is placing anchors. See `PlanetView`. */
@@ -58,6 +60,7 @@
     facesSite = false,
     harness,
     riders,
+    lines,
     working,
     pressValue,
     pressFormat,
@@ -105,6 +108,7 @@
       {facesSite}
       {harness}
       {riders}
+      {lines}
       {working}
       {pressValue}
       {pressFormat}

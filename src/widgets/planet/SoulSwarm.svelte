@@ -4,7 +4,10 @@
   import * as THREE from 'three';
   import type { WorldClock } from './clock';
   import { sampleLoop, type HarnessLoop } from './harness';
-  import { createSoulMaterial, createSpawnMaterial, syncSoulUniforms, syncSpawnUniforms } from './material';
+  import {
+    createBerthedSoulMaterial, createSoulMaterial, createSpawnMaterial, easeLean, syncSoulLean,
+    syncSoulUniforms, syncSpawnUniforms,
+  } from './material';
   import {
     berthOf, berthRoom, createPacing, createSouls, createSpawns, createWorkFrame, hatchOf,
     phaseOf, placeSoul, placeWorker, rankOf, rateOf, ridersOf, settleScale, swellOf, travelOf,
@@ -30,6 +33,12 @@
      * Absent falls back to the visual's authored share, which is the lab.
      */
     riders?: number;
+    /**
+     * The families each band rides, in band order — one per line it holds, see
+     * `claimFamilies`. A band with none has no line and none of its souls ride.
+     * Absent is the lab: every soul may ride, spread over the whole harness.
+     */
+    claims?: number[][];
     /**
      * How many souls are placing the anchor, and which anchor that is. Game
      * state again, and a pair: a crew with nowhere to stand is idle, and a site
@@ -142,7 +151,7 @@
   }
 
   let {
-    visual, counts, zoom, loops, riders, working = 0, site, clock, spinAngle = 0, size = 1,
+    visual, counts, zoom, loops, riders, claims, working = 0, site, clock, spinAngle = 0, size = 1,
     bleed = 0, merge, core = 0, filled, lean = 0, bolts, yields, streaming, lit, pace,
   }: Props = $props();
 
@@ -158,20 +167,67 @@
   const { invalidate } = useThrelte();
   const material = createSoulMaterial();
 
+  /**
+   * The core's souls, drawn again as a second pass under the rest — the same
+   * geometry and the same matrices, with the shader keeping only arrivals here
+   * and only the rest in the main pass. Nothing depth-tests, so order is the
+   * whole of what says a soul orbiting in front of the core is in front of it.
+   */
+  const berthedMaterial = createBerthedSoulMaterial();
+
   /** A unit quad. The shader sizes and billboards it; this never changes. */
   const geometry = new THREE.PlaneGeometry(1, 1);
 
   /**
-   * How far each soul has committed to the world. The shader hides a soul
-   * behind the body in proportion to it, so a soul that is leaving is never
-   * behind anything and is never cut by the silhouette. Seeded at 1, which is
-   * every caller that passes no `merge` — the swarm the shader was written for.
+   * How far each soul has committed to the world. The shader reads its arrival
+   * in the core off it — the core's ink, its exemption from the silhouette, and
+   * which of the two passes draws it. Seeded at 1, which is every caller that
+   * passes no `merge` — the swarm the shader was written for.
    */
   const stays = new THREE.InstancedBufferAttribute(new Float32Array(SOUL_CAPACITY).fill(1), 1);
 
   geometry.setAttribute('stay', stays);
 
   const souls = $derived(createSouls(visual, counts));
+
+  /** Each band's loops — every family it claimed — so its riders keep to them. */
+  const byBand = $derived.by(() => {
+    if (!claims) return undefined;
+
+    return counts.map((unused, band) => {
+      const families = claims[band] ?? [];
+
+      return (loops ?? []).filter((loop) => families.includes(loop.family));
+    });
+  });
+
+  /**
+   * Who may ride, and in what order: the dealing order, kept to bands with a
+   * line. `places` is that order's own places, ascending, so the crew — the
+   * front of the whole order — can be counted off it. `seats` is each soul's
+   * rank inside its band, which spreads a band's riders over its family.
+   */
+  const queue = $derived.by(() => {
+    const order = souls
+      .map((soul, i) => i)
+      .filter((i) => !byBand || byBand[souls[i].band]?.length)
+      .sort((a, b) => souls[a].place - souls[b].place);
+
+    const turns = new Int32Array(souls.length).fill(-1);
+    const seats = new Int32Array(souls.length);
+    const filled = new Map<number, number>();
+
+    order.forEach((i, turn) => {
+      const band = souls[i].band;
+      const seat = filled.get(band) ?? 0;
+
+      turns[i] = turn;
+      seats[i] = seat;
+      filled.set(band, seat + 1);
+    });
+
+    return { turns, seats, places: order.map((i) => souls[i].place) };
+  });
 
   /**
    * When each band last paid, kept across frames because a payout is a rise and
@@ -249,6 +305,7 @@
 
   let mesh: THREE.InstancedMesh | undefined = $state();
   let spawnMesh: THREE.InstancedMesh | undefined = $state();
+  let berthedMesh: THREE.InstancedMesh | undefined = $state();
 
   // Composes one matrix per soul without allocating one.
   const dummy = new THREE.Object3D();
@@ -290,14 +347,26 @@
   );
 
   $effect(() => {
-    syncSoulUniforms(material, visual, bleed, reach, lean);
+    syncSoulUniforms(material, visual, bleed, reach);
+    syncSoulUniforms(berthedMaterial, visual, bleed, reach);
     invalidate();
   });
 
   $effect(() => {
-    syncSpawnUniforms(spawnMaterial, visual, bleed, reach, lean);
+    syncSpawnUniforms(spawnMaterial, visual, bleed, reach);
     invalidate();
   });
+
+  /**
+   * The lean the berthed souls are *showing*, chasing the reading on the same
+   * clock `PlanetCore` chases it on, so the souls walk the ramp with the ground
+   * they sit on. A plain `let` for the reason `shown` is one.
+   */
+  let shownLean = untrack(() => lean);
+
+  syncSoulLean(material, shownLean);
+  syncSoulLean(berthedMaterial, shownLean);
+  syncSoulLean(spawnMaterial, shownLean);
 
   useTask((delta) => {
     if (!mesh) return;
@@ -327,15 +396,22 @@
 
     if (crewed > 0 && site) workFrameOf(site, visual, crew);
 
+    // Riders are the queue after whoever of it the crew already took. The crew
+    // is the front of the whole dealing order, so it is a prefix of the queue's.
+    const { turns, seats, places } = queue;
+    let queued = 0;
+
+    while (queued < places.length && places[queued] < crewed) queued++;
+
     const riding = lines.length
-      ? Math.min(ridersOf(visual, souls.length, riders), souls.length - crewed)
+      ? Math.min(ridersOf(visual, souls.length, riders), places.length - queued)
       : 0;
 
-    // Souls are spread across the whole harness rather than taking loops in
-    // order: at eight anchors there are far more loops than souls, and modulo
-    // would crowd every one of them onto the first few pairs. The line is fixed
-    // by the soul's own index and not by how many ride, so buying a rider adds
-    // a soul to a line instead of dealing the swarm again.
+    // Unclaimed, souls are spread across the whole harness rather than taking
+    // loops in order: at eight anchors there are far more loops than souls, and
+    // modulo would crowd every one of them onto the first few pairs. The line is
+    // fixed by the soul's own index and not by how many ride, so buying a rider
+    // adds a soul to a line instead of dealing the swarm again.
     const stride = lines.length / Math.max(1, souls.length);
 
     // Where a soul crossing to the core leaves its orbit, and how far it may
@@ -358,6 +434,14 @@
       const lag = Math.max(0, visual.mergeLag);
 
       shown = lag > 1e-3 ? shown + (merge - shown) * (1 - Math.exp(-delta / lag)) : merge;
+    }
+
+    if (shownLean !== lean) {
+      shownLean = easeLean(shownLean, lean, delta);
+
+      syncSoulLean(material, shownLean);
+      syncSoulLean(berthedMaterial, shownLean);
+      syncSoulLean(spawnMaterial, shownLean);
     }
 
     // The marks, before the souls that wear them: a hatching dot is scaled as it
@@ -418,8 +502,12 @@
         // stands on, so the spin is put back exactly as it is for a rider.
         placeWorker(soul, elapsed, crew, visual, dummy.position);
         dummy.position.applyAxisAngle(AXIS, spinAngle);
-      } else if (soul.place < crewed + riding) {
-        const line = lines[Math.floor(i * stride) % lines.length];
+      } else if (turns[i] >= queued && turns[i] < queued + riding) {
+        // Claimed, a band's riders take its families' loops in turn.
+        const held = byBand?.[soul.band];
+        const line = held?.length
+          ? held[seats[i] % held.length]
+          : lines[Math.floor(i * stride) % lines.length];
 
         // A rider covers its whole loop in one turn of the orbit it left, and a
         // loop is shorter than that orbit — a crown petal by several times — so
@@ -441,8 +529,9 @@
         if (merge !== undefined) {
           const travel = travelOf(soul, shown, souls.length, visual.crossing);
 
-          // The same figure the crossing is drawn from, spent a second time as
-          // how much of the world's silhouette this soul is subject to.
+          // The same figure the crossing is drawn from, spent a second time on
+          // whether this soul has arrived in the core — its ink, and its exemption
+          // from the silhouette.
           stays.array[i] = travel;
 
           dummy.position.multiplyScalar(settleScale(soul, travel, visual));
@@ -545,6 +634,13 @@
     mesh.instanceMatrix.needsUpdate = true;
     stays.needsUpdate = true;
 
+    // Handed the main pass's matrices rather than copied them: one buffer, one
+    // upload, and the two passes can never disagree about where a soul is.
+    if (berthedMesh) {
+      berthedMesh.instanceMatrix = mesh.instanceMatrix;
+      berthedMesh.count = souls.length;
+    }
+
     // The flare rides whichever matrix the loop above just wrote for its own
     // index — copied wholesale, so it carries every soul's own position
     // whether it is orbiting, riding a loop or crossing into the core, without
@@ -586,8 +682,20 @@
     spawnMaterial.dispose();
     geometry.dispose();
     material.dispose();
+    berthedMaterial.dispose();
   });
 </script>
+
+<!-- Only when there is a core to berth in: anywhere else the pass keeps nothing. -->
+{#if core > 0}
+  <T.InstancedMesh
+    bind:ref={berthedMesh}
+    args={[geometry, berthedMaterial, SOUL_CAPACITY]}
+    frustumCulled={false}
+    renderOrder={RENDER_ORDER.berthed}
+    dispose={false}
+  />
+{/if}
 
 <T.InstancedMesh
   bind:ref={mesh}

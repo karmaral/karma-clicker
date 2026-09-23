@@ -7,7 +7,7 @@
   import PulseLabPanel from './PulseLabPanel.svelte';
   import SwarmLabPanel from './SwarmLabPanel.svelte';
   import {
-    HARVEST_ANCHOR, HARVEST_RADIUS, PlanetStill, PlanetView, scaleInk,
+    HARVEST_ANCHOR, HARVEST_RADIUS, PlanetStill, PlanetView, linesFor, scaleInk,
   } from './planet';
   import { anchorLab } from './anchor-lab.svelte';
   import { harnessLab } from './harness-lab.svelte';
@@ -588,9 +588,9 @@
       What to look for: <b>every rung must differ from the one before it</b>. A capacity
       that buys no visible change is an axis whose ceiling in <code>rigVisualsAt</code> is
       too far off, and the purchase will read as a number going up on a panel. Work slots
-      grow the solid, work efficiency adds sides and chamfer, press efficiency thickens the
-      edge, riders fill the cage, granularity twists it — and <code>anchors</code> moves the
-      count itself, which is the one axis that changes the figure rather than the shape.
+      grow the solid, riders fill the cage, granularity twists it — and <code>anchors</code>
+      moves the count itself, which is the one axis that changes the figure rather than the
+      shape. Work and press efficiency draw nothing yet.
     </p>
     <div class="canvas strip">
       {#each RIG_LADDER as stage (stage.id)}
@@ -622,8 +622,9 @@
     <p class="note">
       And the <b>lines</b>, which are not on that ladder: an upgrade unlocks them and each
       one after that is bought at a climbing price, so they move on their own clock. A line
-      is another cohort strung onto the rig, so it spends <code>span</code> — the strip below
-      holds the whole ladder bought and varies nothing else.
+      is a cohort claiming one family — a crown or a link — so it lights that family off
+      <code>idleFade</code>. The strip below holds the whole ladder bought and varies
+      nothing else.
     </p>
     <div class="canvas strip">
       {#each RIG_LINES as stage (stage.id)}
@@ -636,9 +637,10 @@
             anchors={stage.visuals.anchors}
             anchored={Array.from({ length: stage.visuals.count }, () => true)}
             harness={stage.visuals.harness}
+            lines={Array.from({ length: stage.axes.lines }, (unused, line) => line)}
           />
           <span class="spec name">{stage.id}</span>
-          <span class="spec">span {stage.visuals.harness.span.toFixed(2)}</span>
+          <span class="spec">{linesFor(stage.visuals.count)} lines held</span>
         </div>
       {/each}
     </div>

@@ -12,10 +12,10 @@
    * Nothing here is game state, the separation the whole widget keeps: the world
    * says what a core looks like and the caller says which way it leans.
    */
-  import { T, useThrelte } from '@threlte/core';
-  import { onDestroy } from 'svelte';
+  import { T, useTask, useThrelte } from '@threlte/core';
+  import { onDestroy, untrack } from 'svelte';
   import * as THREE from 'three';
-  import { createCoreMaterial, syncCoreUniforms } from './material';
+  import { createCoreMaterial, easeLean, syncCoreLean, syncCoreUniforms } from './material';
   import { RENDER_ORDER } from './stack';
   import type { PlanetVisual } from './visual';
 
@@ -52,9 +52,33 @@
   const geometry = new THREE.SphereGeometry(1, 48, 32);
 
   $effect(() => {
-    syncCoreUniforms(material, visual, lean);
+    syncCoreUniforms(material, visual);
     invalidate();
   });
+
+  /**
+   * The lean the core's *inks* are showing: the reading eased in rather than
+   * cut to, so a harvest tipping sides walks the core through the inks between.
+   * The ruling's angle does not ease — it takes `lean` straight. Seeded from the
+   * prop so the screen opens on the reading it is at, and a plain `let` because
+   * the frame writes it.
+   */
+  let shown = untrack(() => lean);
+
+  syncCoreLean(material, shown, shown);
+
+  // Asks for a frame only while it is still moving — at rest the core is a
+  // still, and an on-demand canvas should not redraw one.
+  useTask(
+    (delta) => {
+      if (shown === lean) return;
+
+      shown = easeLean(shown, lean, delta);
+      syncCoreLean(material, shown, lean);
+      invalidate();
+    },
+    { autoInvalidate: false },
+  );
 
   onDestroy(() => {
     geometry.dispose();

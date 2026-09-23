@@ -10,6 +10,8 @@ import type { PlanetVisual } from './visual';
 export interface SurfaceField {
   /** Terrain at a unit direction, −1…1 — the full range, measured, not assumed. */
   sampleHeight(x: number, y: number, z: number): number;
+  /** What the texture reads: the height, terraced as far as `terraceTexture` says. */
+  sampleLand(x: number, y: number, z: number): number;
   /** What actually moves the surface: the height with its far side clipped off. */
   sampleDisplacement(x: number, y: number, z: number): number;
   /** Where the surface sits along that direction, in object units. */
@@ -168,18 +170,63 @@ export function createSurfaceField(visual: PlanetVisual): SurfaceField {
    * clip line is the field's own midline, which is a real place because the
    * field is normalised — and `bias` cannot move it, being texture-side only.
    *
-   * The texture is not clipped. It keeps reading `sampleHeight`, so the flat
+   * The texture is not clipped. It reads `sampleLand`, so the flat
    * half still carries its bands and the same map can be cut or raised without
    * the pattern changing.
    */
   function sampleDisplacement(x: number, y: number, z: number) {
     const height = sampleHeight(x, y, z);
 
-    return height >= 0 ? height : height * (1 - visual.clip);
+    return terrace(height >= 0 ? height : height * (1 - visual.clip), x, y, z);
+  }
+
+  /**
+   * What the texture reads: the whole field, unclipped, drawn toward its
+   * terraced self by `terraceTexture`. At 1 each tread is one flat value, so the
+   * bands change only on the risers and `contour` draws the steps.
+   */
+  function sampleLand(x: number, y: number, z: number) {
+    const height = sampleHeight(x, y, z);
+    if (levels <= 0 || visual.terraceTexture <= 0) return height;
+
+    return height + (terrace(height, x, y, z) - height) * visual.terraceTexture;
+  }
+
+  // Levels per unit of height, so `terraces` counts the steps across −1…1.
+  const levels = Math.round(visual.terraces) / 2;
+  // The riser's width as a share of a step. Floored so a hard riser is still a
+  // slope the central difference in geometry.ts can take.
+  const riser = Math.max(0.02, 1 - visual.terraceSharpness);
+  const jitter = visual.terraceJitter;
+  // The ground's own frequency, halved: the jitter is a slow drift in where the
+  // steps fall, not a second terrain.
+  const jitterFrequency = options.frequency * 0.5;
+
+  /**
+   * Steps in the ground: each level a flat tread and a riser up to the next. The
+   * normals come off the displacement, so treads shade flat and risers catch
+   * the light.
+   *
+   * `jitter` slides the level grid by a low noise before the floor, so risers
+   * fall at uneven heights across the world instead of as evenly spaced rings.
+   * The tread stays the grid's own value, so it is still flat.
+   */
+  function terrace(height: number, x: number, y: number, z: number) {
+    if (levels <= 0) return height;
+
+    const drift = jitter > 0
+      ? jitter * noise(x * jitterFrequency + 41.7, y * jitterFrequency + 13.2, z * jitterFrequency + 29.9)
+      : 0;
+    const at = height * levels + drift;
+    const base = Math.floor(at);
+    const t = Math.max(0, Math.min(1, (at - base - 0.5) / riser + 0.5));
+
+    return (base + t * t * (3 - 2 * t)) / levels;
   }
 
   return {
     sampleHeight,
+    sampleLand,
     sampleDisplacement,
     sampleRadius: (x, y, z) => 1 + visual.amplitude * sampleDisplacement(x, y, z),
   };
