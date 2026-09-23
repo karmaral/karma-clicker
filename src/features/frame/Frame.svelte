@@ -68,10 +68,10 @@
   );
 
   /**
-   * Wisdom held, not this run's take — what survived is a standing reading, and
-   * what the run would earn belongs to the screen that spends it. Gated on the
-   * prestige screen because a legacy jumps the boot to its stored beat, so the
-   * key is already live on every run after the first.
+   * Wisdom held as the figure, this run's take beside it in the rate's slot —
+   * the standing reading stays the number, and what the run would add reads as
+   * the gain it is. Gated on the prestige screen because a legacy jumps the boot
+   * to its stored beat, so the key is already live on every run after the first.
    */
   const showLegacy = $derived(progression.isRevealed('prestige.screen'));
 
@@ -276,7 +276,19 @@
       {@attach tooltip({ content: legacyTooltipElem, options: LEGACY_TOOLTIP })}
     >
       <Reading label={READING_LABELS.wisdom}>
-        <Value kind="wisdom" value={f(prestige.held)} muted={!prestige.held} size="lg" />
+        <!-- The run's take stands in the rate's slot: it is the same `+` on the
+             same figure, and the only difference is that it is owed rather than
+             flowing — so it drops the `/s` and nothing else. Withheld at zero
+             rather than muted, unlike a rate: it is not a column that has to
+             keep its height, and its arrival is the run's first banked wisdom. -->
+        <Value
+          kind="wisdom"
+          value={f(prestige.held)}
+          muted={!prestige.held}
+          size="lg"
+          rate={prestige.gained ? f(prestige.gained) : undefined}
+          rateUnit=""
+        />
       </Reading>
     </Cell>
   {/if}

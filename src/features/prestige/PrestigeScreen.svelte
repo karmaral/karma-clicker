@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { Badge, Button, EscapeButton, Figure, Label, Value } from '$ui';
+  import { Icon } from '@steeze-ui/svelte-icon';
+  import { ArrowRight } from '@steeze-ui/tabler-icons';
+  import { Badge, Button, EscapeButton, Figure, Label, Meter, Value } from '$ui';
   import { BuildingManager, PlanetManager, ResourceManager, UpgradeManager } from '$lib/managers';
   import { GRADES, GRADE_LABELS } from '$lib/labels';
   import { badgeFor } from '$features/details/badge';
@@ -20,15 +22,15 @@
 
   const total = $derived(prestige.held + prestige.gained);
 
+  /** Lifetime, not the pile — spending a cohort's price cannot cost the run its residue. */
+  const xp = $derived(ResourceManager.getTotal('experience'));
+
   const before = $derived(prestige.yieldMultiplier);
   const after = $derived(1 + total * balance.prestige.yieldPerWisdom);
 
   /** Half-strength mirror of `before`/`after` — see `Click.yieldScale`. */
   const clickBefore = $derived(1 + (before - 1) * 0.5);
   const clickAfter = $derived(1 + (after - 1) * 0.5);
-
-  /** What the run is short of, when it is short. */
-  const missing = $derived(balance.prestige.firstWisdomAt - refinery.produced);
 
   const lost = $derived([
     { label: 'Souls', value: f(BuildingManager.countSouls()) },
@@ -75,12 +77,26 @@
 
     <div class="score">
       <div class="gain">
-        <Value kind="wisdom" value={f(prestige.gained)} size="hero" />
+        <Value kind="wisdom" value="+{f(prestige.gained)}" size="hero" />
         <span class="unit">wisdom</span>
       </div>
-      <span class="formula">
-        for producing <Value kind="red" value={f(refinery.produced)} size="lg" /> crimson this run
-      </span>
+      <div class="formula">
+        <span class="term">
+          for producing <Value kind="red" value={f(refinery.produced)} size="lg" /> crimson
+        </span>
+        <span class="term">
+          and earning <Value kind="xp" value={f(xp)} size="lg" /> experience
+        </span>
+      </div>
+
+      <div class="climb">
+        <Meter value={prestige.progress} height="6px" />
+        <div class="band">
+          <span class="need">
+            {f(prestige.toNext)} crimson to <span class="end">{f(prestige.gained + 1)} wisdom</span>
+          </span>
+        </div>
+      </div>
     </div>
 
     <div class="verb">
@@ -97,8 +113,9 @@
           {#if refused}
             The legacy could not be stored, so the run stands. Free some browser storage.
           {:else if !prestige.isOpen}
-            Needs {f(balance.prestige.firstWisdomAt)} crimson produced · {f(refinery.produced)} so far,
-            {f(missing)} to go
+            The first wisdom lands at {f(balance.prestige.firstWisdomAt)} crimson produced, or
+            {f(balance.prestige.firstWisdomFromXp)} experience earned, or any mix of the two. Below
+            that the run leaves nothing.
           {:else}
             Everything but wisdom goes: every soul, every world, every upgrade, the refinery and
             its level. There is no way back into this run.
@@ -110,30 +127,32 @@
   </div>
 
   <div class="shoulder right">
-    <div class="panel">
+    <div class="panel survives">
       <Label text="What survives" />
 
-      <div class="wisdom">
-        <Value kind="wisdom" value={f(total)} size="xl" />
+      <!-- Name, figure, then anything that qualifies it — OutputPanel's read. -->
+      <div class="block">
+        <Label text="Wisdom" size="caption" />
+        <Value kind="wisdom" value={f(total)} size="lg" />
         <span class="sum">{f(prestige.held)} held + {f(prestige.gained)} earned</span>
       </div>
 
-      <div class="multiplier">
-        <Label text="Cohort yield" size="sm" />
+      <div class="block">
+        <Label text="Cohort yield" size="caption" />
         <div class="swing">
-          <Figure value="×{f(before)}" size="lg" muted />
-          <span class="arrow">→</span>
-          <Figure value="×{f(after)}" size="xl" />
+          <Figure value="×{f(before)}" size="base" muted />
+          <span class="arrow"><Icon src={ArrowRight} size="14px" /></span>
+          <Figure value="×{f(after)}" size="md" />
         </div>
         <span class="sum">{Math.round(balance.prestige.yieldPerWisdom * 100)}% a unit, forever</span>
       </div>
 
-      <div class="multiplier">
-        <Label text="Direct yield" size="sm" />
+      <div class="block">
+        <Label text="Direct yield" size="caption" />
         <div class="swing">
-          <Figure value="×{f(clickBefore)}" size="lg" muted />
-          <span class="arrow">→</span>
-          <Figure value="×{f(clickAfter)}" size="xl" />
+          <Figure value="×{f(clickBefore)}" size="base" muted />
+          <span class="arrow"><Icon src={ArrowRight} size="14px" /></span>
+          <Figure value="×{f(clickAfter)}" size="md" />
         </div>
         <span class="sum">Half the cohort rate — the press rides wisdom, not a cohort</span>
       </div>
@@ -173,27 +192,43 @@
     min-width: 0;
   }
 
-  .wisdom,
-  .multiplier {
+  /* Grouping by space alone, as OutputPanel does: blocks sit several times
+     further apart than a header from its own figures. */
+  .survives {
+    gap: var(--sp-5);
+  }
+
+  /* The title heads the panel rather than standing as a block of its own. */
+  .survives > :global(.label) {
+    margin-bottom: calc(var(--sp-3) - var(--sp-5));
+  }
+
+  .block {
     display: flex;
     flex-direction: column;
-    gap: var(--sp-1);
-    --badge-size: 18px;
-    --badge-gap: 12px;
+    align-items: flex-start;
+    gap: var(--sp-2);
     min-width: 0;
   }
 
-  /* The one place the multiplier is ever a number, so it is the largest thing
-     in the column — the before is kept beside it only to say which way it moved. */
+  .block > :global(.label.caption) {
+    font-size: var(--fs-label-sm);
+    letter-spacing: var(--ls-label-sm);
+  }
+
+  /* The multipliers one size under the wisdom that buys them; the before is
+     kept only to say which way it moved. */
   .swing {
     display: flex;
-    align-items: baseline;
-    gap: var(--sp-3);
+    align-items: last baseline;
+    gap: var(--sp-2);
     min-width: 0;
   }
 
+  /* Out of the baseline group: an icon has no baseline of its own. */
   .arrow {
-    font-size: var(--fs-base);
+    display: flex;
+    align-self: center;
     color: var(--ink-300);
   }
 
@@ -220,8 +255,8 @@
     gap: var(--sp-2);
   }
   .gain :global(.value) {
-    --badge-size: 18px;
-    --badge-gap: 12px;
+    --badge-size: var(--badge-size-lg);
+    --badge-gap: var(--badge-gap-lg);
   }
 
   .gain {
@@ -235,9 +270,50 @@
     color: var(--ink-500);
   }
 
+  /* Two lines rather than one run-on: the axes are summed, not sequential, and
+     stacking them keeps either one readable when the other is still at zero. */
   .formula {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--sp-1);
     font-size: var(--fs-base);
     font-variant-numeric: tabular-nums;
+    color: var(--ink-500);
+  }
+
+  .term {
+    display: flex;
+    align-items: baseline;
+    gap: var(--sp-2);
+  }
+
+  /* One band of the root, drawn flat. Each band is wider than the last, so the
+     bar fills more slowly every time without the track ever lying about where
+     the fill sits. Width tracks .verb so the climb reads as the button's cost. */
+  .climb {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+    width: min(100%, 545px);
+    margin-top: var(--sp-3);
+  }
+
+  .band {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: var(--sp-3);
+    font-size: var(--fs-sm);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .end {
+    color: var(--ink-700);
+    font-weight: 600;
+  }
+
+  .need {
     color: var(--ink-500);
   }
 

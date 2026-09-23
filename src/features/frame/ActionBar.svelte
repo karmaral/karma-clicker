@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * Pinned to the bottom of the card: the screen tabs laid across the left, and
-   * beside them the one verb that is about the run rather than about a world —
+   * at the body's far edge the one verb that is about the run rather than a world —
    * every planet verb went back to the planet column it acts on.
    *
    * A strip rather than a band. The tabs take a measured width and the rest of
@@ -34,9 +34,7 @@
         <Navbar />
 
         <div class="run">
-          {#if nav.active === 'overview'}
-            <EndRunVerb />
-          {/if}
+          <EndRunVerb />
         </div>
       {/if}
     </div>
@@ -97,13 +95,13 @@
     --tab: calc((100% - var(--sp-4)) * 2 / 10.25);
   }
 
-  /* Beside the tabs rather than at the far edge — pushed right it would end up
-     under the upgrade rail, which is not what it is about. */
+  /* At the body's far edge, not the strip's: `.content` stops at the seam, so
+     this lands at the end of the screen it ends rather than under the rail. */
   .run {
     display: flex;
     align-items: center;
     gap: var(--sp-4);
-    padding-inline: var(--sp-4);
+    margin-left: auto;
     min-width: 0;
   }
 

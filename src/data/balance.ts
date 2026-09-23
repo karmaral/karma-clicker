@@ -194,11 +194,29 @@ export default {
 
   /**
    * What a run leaves the next one — see `docs/design.md` §18. Wisdom is earned,
-   * never bought, and the whole payout is one root over one constant.
+   * never bought, and the payout is one root over two axes: `√(produced/W + xp/X)`.
+   * Either figure alone earns the first wisdom at its own constant; together they
+   * sum inside the root, so the unit a run is climbing always widens.
    */
   prestige: {
-    /** §18's `W`: crimson produced that earns the first wisdom. `√(produced / W)`. */
-    firstWisdomAt: 1_000,
+    /** §18's `W`: crimson produced that alone earns the first wisdom. */
+    firstWisdomAt: 1_000_000_000_000,
+
+    /**
+     * `X`: lifetime experience that alone earns the first wisdom — the second
+     * axis, so a run that grows wide banks something even when refining is left
+     * alone.
+     *
+     * ⚠ Unmeasured, and deliberately the weaker term. A cohort pays
+     * `karma(n) = 2 × yield(n)` (`buildings.ts:6`), so xp tracks karma at a fixed
+     * half and crimson is that karma times coverage times the refinery's ratio —
+     * near coverage 0.5 and ratio 1 the two axes run about level. At `X = 4W`
+     * that parity adds ~25% to the root's argument, or ~12% more wisdom, which is
+     * a real term without displacing crimson as the thing the outer wheel reads.
+     * Owed a recalibration alongside `firstWisdomAt`.
+     */
+    firstWisdomFromXp: 40_000_000_000_000,
+
     yieldPerWisdom: 0.02,
   },
 };
