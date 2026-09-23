@@ -16,6 +16,9 @@
   import RigStage from './RigStage.svelte';
   import LineTable from './LineTable.svelte';
   import JobStats from './JobStats.svelte';
+
+  /** The line row under the pointer, drawn alone on the rig. */
+  let pointed = $state<number>();
 </script>
 
 {#if progression.isRevealed('nav.harness')}
@@ -29,13 +32,13 @@
           {f(harness.workers)} of {f(harness.slots)} slots
         {/snippet}
 
-        <RigStage />
+        <RigStage litLine={pointed} />
         <JobStats />
       </Section>
     </div>
 
     <div class="lines">
-      <LineTable />
+      <LineTable onpoint={(line) => (pointed = line)} />
     </div>
   </div>
 {/if}

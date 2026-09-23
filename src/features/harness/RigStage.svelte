@@ -20,6 +20,9 @@
 
   const STAGE_RATIO = 355 / 406;
 
+  /** The line row being hovered — its family keeps its ink, the rest fade. */
+  let { litLine }: { litLine?: number } = $props();
+
   /** One anchor drawn where a world offers none, so the tab is never an empty box. */
   const shown = $derived(Math.max(1, harness.anchorsAsked));
 
@@ -45,6 +48,8 @@
       {anchored}
       harness={rig.harness}
       riders={harness.riders}
+      lines={harness.lineBands}
+      {litLine}
     />
   {/if}
 </div>

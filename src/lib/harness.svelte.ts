@@ -20,7 +20,9 @@ import { BuildingManager, PlanetManager, ResourceManager } from '$lib/managers';
 import { clock } from '$lib/clock';
 import { readAxes } from '$lib/rig';
 import { reserve } from '$lib/reserve.svelte';
+import { linesFor } from '$widgets/planet';
 import balance from '$data/balance';
+import { COHORT_COUNT, cohortId } from '$data/buildings';
 import type { Modifier, ResourceType } from '$types';
 
 export interface HarnessSnapshot {
@@ -30,6 +32,11 @@ export interface HarnessSnapshot {
 
 /** Both piles pay for a line, so neither polarity is the cheap way to buy one. */
 const LINE_PILES: ResourceType[] = ['red_positive', 'red_negative'];
+
+/** The cohort a line strings — the ladder, round again once every rung has one. */
+export function cohortOfLine(line: number) {
+  return cohortId((line % COHORT_COUNT) + 1);
+}
 
 class Harness {
   #modifiers = new ModifierSet();
@@ -70,12 +77,49 @@ class Harness {
   /** What one press pays into the job, in ms. */
   #pressMs = $derived(this.#axes.clickMs);
 
+  /** The world's offer, capped by what the rig can fill. 0 on a world with no slots. */
+  #anchorsAsked = $derived.by(() => {
+    const slots = PlanetManager.getActive()?.anchorSlots ?? 0;
+
+    return Math.max(0, Math.min(Math.round(this.#anchors), slots));
+  });
+
   /**
-   * The cohorts the rig can carry: the first `#lines` of the roster. Filtered
-   * *in* rather than out, so a cohort unlocked later simply falls outside the
-   * lines until one is bought for it.
+   * Lines this world holds: one per family of the figure its anchors make. The
+   * world's offer, not the rig's capacity — a family is never shared, so lines
+   * bought on a larger world wait unstrung on a smaller one.
    */
-  #linedCohorts = $derived(BuildingManager.cohorts.slice(0, Math.max(0, Math.round(this.#lines))));
+  #lineCapacity = $derived(linesFor(this.#anchorsAsked));
+
+  /** The bought lines this world can string. */
+  #strung = $derived(Math.max(0, Math.min(Math.round(this.#lines), this.#lineCapacity)));
+
+  /**
+   * Line `k` strings cohort `k mod COHORT_COUNT`: once the whole ladder has one,
+   * the next goes back to the bottom, and every line a cohort holds adds its
+   * anchor bonus again. Kept to cohorts the roster has — filtered *in*.
+   */
+  #lineCohorts = $derived.by(() => {
+    const roster = BuildingManager.cohorts;
+
+    return Array.from({ length: this.#strung }, (unused, line) => cohortOfLine(line))
+      .filter((id) => roster.includes(id));
+  });
+
+  /** The roster row of each, which is the band the swarm draws it as. */
+  #lineBands = $derived(this.#lineCohorts.map((id) => BuildingManager.cohorts.indexOf(id)));
+
+  /** Lines per cohort — the bonus's multiple. */
+  #linesHeld = $derived.by(() => {
+    const held = new Map<string, number>();
+
+    this.#lineCohorts.forEach((id) => held.set(id, (held.get(id) ?? 0) + 1));
+
+    return held;
+  });
+
+  /** The cohorts the rig can carry, in roster order. */
+  #linedCohorts = $derived(BuildingManager.cohorts.filter((id) => this.#linesHeld.has(id)));
 
   /** What the lined cohorts have out. The denominator every rider share is taken over. */
   #linedActive = $derived.by(() => {
@@ -131,13 +175,6 @@ class Harness {
       .forEach(({ id }) => dealt.set(id, dealt.get(id)! + 1));
 
     return dealt;
-  });
-
-  /** The world's offer, capped by what the rig can fill. 0 on a world with no slots. */
-  #anchorsAsked = $derived.by(() => {
-    const slots = PlanetManager.getActive()?.anchorSlots ?? 0;
-
-    return Math.max(0, Math.min(Math.round(this.#anchors), slots));
   });
 
   /** The whole job, in ms — what `place` clamps against. */
@@ -247,16 +284,19 @@ class Harness {
    * a single multiply and the cap stays honest at every count.
    *
    * Asked per cohort, because a line is per cohort — an unlined one rides
-   * nothing and is paid nothing extra, however many anchors are down.
+   * nothing and is paid nothing extra, however many anchors are down. A cohort
+   * holding a second line, once the ladder has gone round, is paid it twice.
    */
   multiplierFor(id: string, souls: number) {
     if (souls <= 0 || !this.#anchorsPlaced) return 1;
-    if (!this.#linedCohorts.includes(id)) return 1;
+
+    const held = this.#linesHeld.get(id) ?? 0;
+    if (!held) return 1;
 
     const covered = Math.min(this.ridersFor(id, souls), souls) / souls;
     const bonus = PlanetManager.getActive()?.anchorBonus ?? 0;
 
-    return 1 + bonus * this.#anchorsPlaced * covered;
+    return 1 + bonus * this.#anchorsPlaced * covered * held;
   }
 
   /**
@@ -297,6 +337,7 @@ class Harness {
 
   canPurchaseLine(n = 1) {
     if (!this.#isLinesUnlocked || n < 1) return false;
+    if (!this.#hasRoomFor(n)) return false;
 
     const cost = this.lineCost(n);
 
@@ -315,12 +356,31 @@ class Harness {
     return true;
   }
 
-  /** How many the shorter pile can pay for, one at a time — the curve is geometric. */
+  /**
+   * Whether the next `n` lines fit: the world has a family for each, and each
+   * strings a cohort the roster already has.
+   */
+  #hasRoomFor(n: number) {
+    if (this.#lines + n > this.#lineCapacity) return false;
+
+    const roster = BuildingManager.cohorts;
+
+    for (let i = 0; i < n; i++) {
+      if (!roster.includes(cohortOfLine(this.#lines + i))) return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * How many the shorter pile can pay for, one at a time — the curve is
+   * geometric — and the world has room for.
+   */
   getMaxLines() {
     const held = Math.min(...LINE_PILES.map((pile) => ResourceManager.getAmount(pile)));
     let n = 0;
 
-    while (this.lineCost(n + 1) <= held) n++;
+    while (this.#hasRoomFor(n + 1) && this.lineCost(n + 1) <= held) n++;
 
     return n;
   }
@@ -356,7 +416,16 @@ class Harness {
   get clickMs() { return this.#pressMs; }
 
   get lines() { return this.#lines; }
+  get lineCapacity() { return this.#lineCapacity; }
+  /** Bought lines this world strings — `lines` capped by its families. */
+  get strung() { return this.#strung; }
   get linedCohorts() { return this.#linedCohorts; }
+
+  /** The roster row each strung line carries, in purchase order — what the swarm rides. */
+  get lineBands() { return this.#lineBands; }
+
+  /** How many lines a cohort holds — its anchor bonus's multiple. */
+  linesHeldBy(id: string) { return this.#linesHeld.get(id) ?? 0; }
   get isLinesUnlocked() { return this.#isLinesUnlocked; }
 
   /** How many the rig can fill, before a world caps it. What the upgrades move. */

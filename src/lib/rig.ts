@@ -84,34 +84,27 @@ function stepProgressOf(step: number) {
 }
 
 /**
- * Work slots make the solid bigger; efficiency sharpens it — more sides and a
- * deeper chamfer, so a fast rig reads as machined rather than driven in. Press
- * efficiency is the ink: a heavier hand draws a heavier edge.
+ * Work slots make the solid bigger. Its figure and ink — sides, chamfer, edge
+ * weight — hold at the authored defaults: they are the anchor's identity, not
+ * axes. Work and press efficiency have no picture yet.
  *
- * Riders fill the cage — more loops, more levels — and lines widen its reach,
- * because a line is another cohort strung onto it. Granularity twists: the finer
- * the lever, the more the family weaves rather than stacks.
+ * Riders fill the cage — more loops, more levels. Granularity twists: the finer
+ * the lever, the more the family weaves rather than stacks. Lines move nothing
+ * here: a line lights the family its cohort claims — see `claimFamilies`.
  */
 export function rigVisualsAt(axes: RigAxes): RigVisuals {
   const slotProgress = progressOf(axes.slots, balance.harness.slots, 24);
   const riderProgress = progressOf(axes.riders, balance.harness.riders, 2_000);
-  const workProgress = progressOf(axes.perWorker, balance.harness.perWorker, 0.4);
-  const pressProgress = progressOf(axes.clickMs, balance.harness.clickMs, 500);
-  const lineProgress = progressOf(axes.lines, 0, 4);
 
   return {
     anchors: {
       ...DEFAULT_ANCHOR,
       size: toward(DEFAULT_ANCHOR.size, 1.8, slotProgress),
-      sides: Math.round(toward(DEFAULT_ANCHOR.sides, 8, workProgress)),
-      chamfer: toward(DEFAULT_ANCHOR.chamfer, 0.45, workProgress),
-      edgeWidth: toward(DEFAULT_ANCHOR.edgeWidth, 2.4, pressProgress),
     },
     harness: {
       ...DEFAULT_HARNESS,
       density: toward(DEFAULT_HARNESS.density, 1.6, riderProgress),
       levels: Math.round(toward(DEFAULT_HARNESS.levels, 3, riderProgress)),
-      span: toward(DEFAULT_HARNESS.span, 2.4, lineProgress),
       twist: toward(DEFAULT_HARNESS.twist, 3.2, stepProgressOf(axes.step)),
     },
     count: Math.max(1, Math.min(ANCHOR_MAX, Math.round(axes.anchors))),
