@@ -1,7 +1,14 @@
 # Karma Clicker — Design
 
-**v6.3** · 2026-09-11 · supersedes CONTEXT v3
+**v6.4** · 2026-09-23 · supersedes CONTEXT v3
 
+> **v6.4** — a sync pass, no design moved. The v6.2 addendum is spliced: its
+>  correction-cost finding into §8, *karma expires* into §19, and its held
+>  proposals into a new §21. Drift against the data is fixed in §1, §3, §4, §12,
+>  §14, §16 and §18 — the press pays no karma, wisdom reads two axes, lines go
+>  round the ladder, beat 14 exists. **"Unplayed" is retired as a label**: the
+>  author has played the full game, and §19 now lists findings *unrecorded*
+>  rather than systems unseen. What was found in play is still owed to this file.
 > **v6.3** — the harness became a system with a screen: §12 rewritten around the
 >  world's offer as a *ceiling*, the rig's own visual ladder, cohort lines as a
 >  bought curve, and a twelve-row upgrade table priced in both crimsons. §17
@@ -54,7 +61,7 @@ Two companion documents remain, and neither owns design any more:
 
 Every figure below is checked against source data as of this writing. Figures
 that are placeholders are marked; §19 is the full index of what is untuned and
-unplayed.
+of what play has settled but this file has not yet recorded.
 
 ---
 
@@ -88,13 +95,12 @@ residue behind it. That residue is **karma**, and it has two sides.
 
 ### The log — a register, not a script
 
-⚠ **The narration is placeholder and was barely authored.** It has been treated in
-earlier drafts of this document as the fiction's specification. It is not. The
-lines below are a handful of first passes that happened to be written down, and
-**no argument anywhere in this file should rest on the wording of one.**
+**Every beat and moment has a line** (`log-texts.ts`) — fourteen beats, five
+moments, the prestige arrival and the ambient phase flips. Even so, **no argument
+in this file should rest on the wording of one.** The lines are live copy, not the
+fiction's specification.
 
-What survives scrutiny is the **register**, which is worth keeping and is cheap to
-keep:
+What is settled is the **register**:
 
 > *Something has to turn the wheel. For now that is you.*
 > *The lives leave a residue behind them. It has a name.*
@@ -108,25 +114,22 @@ keep:
 Flat, declarative, second person. No exclamation, no reward language, nothing that
 congratulates you. Two short sentences, the second doing the work.
 
-That constraint is the whole of what is settled. **Every line is replaceable and
-most of them should be replaced** — several now describe mechanics that have moved
-(a clerk is not "one of them", two worlds is not the end of a run) and the ones
-that still fit fit by accident. **Treat the log as unwritten and the voice as
-decided.**
+**The voice is decided and every line is replaceable.** Some describe mechanics
+that have moved — cohort 1's autonomy is not "one of them stayed", and two worlds
+is not the end of a run.
 
 ### What is unwritten
 
-- **The worlds have no identity.** They are `Planet 1 / Simple`,
-  `Planet 2 / Harder`, `Planet 3 / Haderer` (sic). Names, character and any sense
+- **The worlds have no identity.** They are `Planet 1…5`, subtitled *Simple*,
+  *Harder*, *Harder*, *Hardest*, *The last one*. Names, character and any sense
   of *why these and in this order* do not exist. This is the largest fiction hole
   and it sits on the game's central object. It is now at least *indexed* — a world
   has a place in its system (§13) — which gives the naming something to lean on.
 - **Boons are unauthored.** A world can leave you holding a permanent change
   when you finish it (§14). The mechanism is wired end to end and every world
   declares none, so the row reads `—`.
-- **The cohorts have no names past the four inherited ones**, and those four were
-  named for yield shapes the generated ladder no longer has (§5). Naming is now an
-  indexed authoring surface like everything else.
+- **The cohorts have no names.** They are `Cohort n`; the four inherited names
+  were retired with the yield shapes they described (§5).
 - **The clerk has a mechanic and no fiction** (§5). A revision-and-reincarnation
   loop is the obvious shape and nothing has been written.
 - **Prestige has a mechanism and one line of framing** (§18) — *you have been here
@@ -193,15 +196,20 @@ index up.
 
 | Resource | Polarised | Created by | Spent on |
 |---|---|---|---|
-| `experience` | no | press, cohorts, harvest income | cohort copies, level upgrades, clerks, some click and harness upgrades, **knowledge** |
-| `karma_positive` | yes | press, cohorts aimed positive, harvest income | ~15 upgrades across click / harness / refinery / cohorts / planets |
-| `karma_negative` | yes | cohorts aimed negative, harvest income | **nothing yet — see commerce, §18** |
-| `red_positive` (Crimson) | yes | the refinery | three refinery upgrades, three harness upgrades, Ochre |
-| `red_negative` (Crimson) | yes | the refinery | Ochre only |
-| `yellow` (Ochre) | no | pairing Crimson from both piles | Indigo, two refinery upgrades, one harness upgrade |
-| `blue` (Indigo) | no | Ochre | the deep end of the knowledge market (§18) |
-| `knowledge` | no | **buying it with experience, at a worsening rate** | in-run unlocks, and the permanent shelf (§18) |
-| `wisdom` | no | **prestige only** — `√(karma moved across the run)` | held it multiplies; spent it buys structure and stops multiplying (§18) |
+| `experience` | no | press, cohorts, harvest income | cohort copies, clerks, `str_1`/`str_2`, `efficiency_1`, `split_1`, **knowledge** (unbuilt) |
+| `karma_positive` | yes | cohorts aimed positive, harvest income | `read_the_wave`, `the_other_way`, `str_3`, `str_4` |
+| `karma_negative` | yes | cohorts aimed negative, harvest income | `carry_1`, `harder_lives_1`, `hard_season` — 1.71M in all |
+| `red_positive` (Crimson) | yes | the refinery | `reach_1`, `slots_1`, eight harness upgrades, lines, Ochre |
+| `red_negative` (Crimson) | yes | the refinery | eight harness upgrades, lines, Ochre |
+| `yellow` (Ochre) | no | pairing Crimson from both piles | Indigo, three refinery upgrades, three harness upgrades |
+| `blue` (Indigo) | no | Ochre | `reach_4`; the deep end of the knowledge market (§18) |
+| `knowledge` | no | **unbuilt** — buying it with experience, at a worsening rate | in-run unlocks, and the permanent shelf (§18) |
+| `wisdom` | no | **prestige only** — `√(crimson/W + experience/X)` | held it multiplies; spent it buys structure and stops multiplying (§18) |
+
+**The press pays no karma.** Karma comes from cohorts and finished worlds only.
+
+**Karma has run out of buyers by mid-run.** Seven purchases take it and then the
+refinery is its only consumer, forever — see §19, *Karma expires*.
 
 ### The two that changed
 
@@ -215,16 +223,15 @@ run by spending experience, spent inside a run — except for one shelf that
 survives. Wisdom is what you *are* and knowledge is what you *have*; they are not
 two names for one thing and §18 keeps them apart.
 
-### The asymmetry that is now a design target
+### The asymmetry, narrowed
 
-**Nothing costs `karma_negative`, and nothing costs `red_negative`.** So a Comfort
-tilt (positive surplus) is partly self-correcting — your own purchases eat it —
-while a Burden tilt has no sink but the aim dial.
+Both crimsons now have buyers (the harness prices in both, §12), and three
+purchases cost `karma_negative` (§14). What is left is a **timing** asymmetry: the
+positive-karma prices all land before beat 7, the negative ones well after, so an
+early Comfort tilt is eaten by your own purchases and a Burden tilt is not.
 
-This accumulated rather than being designed, and the commerce layer (§18) is the
-answer it was waiting for: **a market has two sides, and selling the pile you are
-long is the sink the negative side never had.** Until that is authored the
-asymmetry stands as-is.
+**Spending karma cleans excess**, since a price comes off one pile. §19's
+*incurred prices* row asks whether it should.
 
 ### Vocabulary note
 
@@ -237,9 +244,10 @@ cohort, excluded from everything that fans out over cohorts.
 
 | | |
 |---|---|
-| Yield | 5 experience, 1 karma |
+| Yield | 1 experience, no karma |
 | Duration | 0 — instant, and never anything else |
-| Aim | none — the press pays flat karma at any detent (§6) |
+| Aim | none — it pays no karma to aim |
+| Wisdom | half strength: +1% a wisdom against a cohort's +2% (§18) |
 
 **The press is instant from the first one.** It used to open on a 1,000 ms
 cooldown and ramp down through a three-rung `speed_*` ladder ending in *It
@@ -249,11 +257,9 @@ to unclerked cohorts alone** (§5): a row you send by hand and watch fill is a
 timing decision against the wave, where a cooldown on the press was only a
 throttle. One mechanic, one home.
 
-**The click's karma is a flat 1, untouched by every strength upgrade.** That is
-load-bearing: it makes a **karma gate a press count**. A cohort gated at 30
-positive karma is 30 presses, and how fast they arrive is the player's hand
-rather than a chip. An experience gate would be pulled forward by the strength
-ladder instead, and there are already four of those.
+**The press pays no karma.** An earlier draft paid a flat 1 so that a karma gate
+read as a press count; the build gates the opening on experience instead
+(cohort 1 at 50/100, §5), and karma first arrives from cohort 1's souls.
 
 ### The ladder — paced, not priced
 
@@ -408,10 +414,9 @@ wisdom it feeds (§18), and the harvest snapshot (§15). The press does not: its
 yield is flat and it has no life, so it is worth twice as much of your income on
 a long-phase world.
 
-⚠ Unplayed. Income grows about `t^2.3` and worlds 1–2 pay from behind, so the
-halving may be masked entirely, or may read as the climb restarting — the same
-complaint §14 recorded once. Measure the world 2 → 3 arrival before touching the
-harvest ratios or `firstWisdomAt`.
+⚠ How the world 2 → 3 step reads in play is unrecorded — masked by the worlds
+behind you, or the climb restarting. Settle it before touching the harvest ratios
+or `firstWisdomAt`.
 
 **Lives in flight at a harvest are called off, not carried or prorated.** With
 the world harvested and the next not chosen there is nowhere to be born, so a
@@ -442,11 +447,10 @@ is recognisably cohort 4 the way 4320 is recognisably Pizza Delivery.
 > in 25 s where it wanted 316 s. Later cohorts were deliberately *worse
 > purchases* at base — bought for the ceiling they raise — and at 13 they have
 > stopped being worse by
-> any amount a player can feel. **All of the pacing now rests on the gates and
-> on multipliers the cohorts do not yet have** (§5, *Levels*, gives a row ×64
-> and nothing else does anything: `upgrades.ts`'s `cohorts` bucket is two
-> duration boosts totalling ×1.22 for the whole game). This is the trade the
-> change was made to buy, and it is the open question, not a settled figure.
+> any amount a player can feel. **All of the pacing now rests on the gates** —
+> twelve rungs a row across the two level tiers (*Levels*, below), ×4,096 — and
+> on two yield boosts worth +18% for the whole game. This is the trade the
+> change was made to buy.
 
 **Cohort 12 exists the moment somebody writes `n = 12`.** Its payback is 34
 seconds — and that flatness is now the ladder's problem rather than its
@@ -655,7 +659,7 @@ thirteenth halving and there are twelve, so it bottoms out at 117 ms — a fast
 beat, and zero yield rungs, as cohort 7 already had. Its *rate* is unaffected;
 the floor is income-neutral, so all this changes is whether the row reads as a
 clock or as a flow. Whether the top of the ladder losing its stream on the long
-worlds is a loss or a texture is unplayed.
+worlds is a loss or a texture is undecided.
 
 ⚠ **A `boost` shortening makes the conversion fractional**, and `payout` rounds.
 On cohort 1, whose yield is 2, a 6% shortening past the floor rounds away
@@ -824,31 +828,22 @@ never stall, and the cap that the retune installed is not needed and is gone.
 
 ### Open
 
-- **Nothing above is tuned against a clock.** The ladder is internally consistent;
-  whether cohort 5 arrives at the right minute of the run has not been measured.
-- ⚠ **The depth axis does not currently pay, and this is the live question.**
-  Six rungs of ×2 over `[25, 50, 100, 200, 300, 400]` puts a levelled cohort 1
-  below cohort 8's first copy from about a hundred copies on — see *Where the
-  gates sit*. The gate counts are authored and the ×2 is not; **the cheapest
-  fix is the rung, not the ladder.** Six rungs of ×4 is ×4,096 and restores the
-  crossing, at the cost of *a rung halves the life*, which only cohorts 1 and 2
-  can honour at six rungs anyway.
-- **Whether a payback-ranked buyer ever reaches gate 200.** The hundred copies
-  before it each pay back over days. The bench answers this and nothing else
-  does.
-- **Gate 400 is unreachable** at 121 trillion experience, so the ladder has a
-  terminal rung nobody takes. AdCap's runs to 8,000 and is reached only because
-  angel investors multiply income while leaving cost alone; §18's prestige is
-  parked, so nothing here plays that role yet.
+- **When each cohort arrives in the run** is known from play and not written
+  here.
+- ~~**The depth axis does not pay.**~~ Answered by the all-cohort tier, not by a
+  ×4 rung: *the gate pays twice*, twelve rungs a row, ×4,096.
+- **Whether a player ever reaches gate 200.** The hundred copies before it each
+  pay back over days.
+- **Gate 400 is reachable, and pointless.** Play took cohort 1 to 400 — the
+  121-trillion figure is small against late income — and the rung moved nothing.
+  Depth wants a synergy (a count that feeds other rows), not more direct output.
+  See §19, *Findings from play*.
 - **The clerk multiplier of 175×** is derived from the reveal multiplier and the
   cost decade, and it has been re-checked against this economy: it prices a clerk
   between a quarter and a third of the way up the row's own ladder, whatever that
   row's ramp, which is the right moment to sell your timing.
 - **Cohorts are `cohort_1`…`cohort_8` in code and `Cohort n` in the UI —
-  placeholders, not names.** The four inherited names — Impulse, Steady, Chaos,
-  Zealot — were named for yield shapes that no longer exist and are gone from
-  the data entirely. Naming is now an indexed authoring surface like everything
-  else, the same shape as `Planet 1 / Simple` in §1.
+  placeholders, not names** — see §1.
 - **`clerk`'s own name is unsettled** — see §19.
 
 ### All-cohorts upgrades
@@ -1244,6 +1239,26 @@ undisguised.
   ominous, the answer is a second readout, not a different denominator.**
 
 The per-planet part is only the gate. Excess itself is global.
+
+### Correction is bounded, and the bound is cheap
+
+The income-rate version failed because income cancelled out of its own reading.
+The ratio version fixed the jitter and **kept that flaw one derivative up**: both
+piles are the running total of a compounding income, so they are mostly recent
+earnings, and correcting means out-earning your own history.
+
+At income doubling each minute, five minutes at +1 leaves excess at 0.5 — and
+**one minute at −2 overshoots clean past zero**, because that minute alone is
+larger than the five before it. At the design's `t^2.3`:
+
+> **Clearing any tilt, at any depth, at any economy size, costs about 10% of the
+> run so far.**
+
+*There is no wall* was read as a virtue. **The meter has a maximum badness and it
+is affordable** — which is why excess rarely bites. Any debuff meant to fix this
+has one test: **does it break the proportionality between correction rate and
+current income?** Anything that scales with income will not. §21 holds the one
+candidate that passes, the short-pile skim.
 
 ---
 
@@ -1666,16 +1681,23 @@ harness pays. And a **cohort line** decides *which* cohorts are eligible at all.
 > **A line is permission; riders are capacity.** A cohort with no line rides
 > nothing and is paid nothing extra, however many anchors are down.
 
-Lines are held by the first *n* cohorts of the roster, and the rider cap is
-shared across them in proportion to what each has out — so a new line reaches
-further *and* spreads what you already have, which is the tension it is for.
+**Line `k` strings cohort `k mod 8`.** The first eight go up the ladder in order;
+the ninth goes back to cohort 1, and **every line a cohort holds pays its bonus
+again**. The rider cap is shared across lined cohorts in proportion to what each
+has out — so a new line reaches further *and* spreads what you already have.
+
+**A world caps the lines, not the rig.** Its anchors make a figure, and the figure
+holds one line per family — `1, 3, 6, 10, 14, 18, 22, 24` for 1…8 anchors. Lines
+bought beyond that wait unstrung on a smaller world; a line is only buyable when a
+family and a cohort both exist for it.
 
 "Only riders get the bonus" resolves into one scalar per cohort rather than two
 soul populations:
 
 ```
-multiplier(cohort) = 1 + bonusPerAnchor × placed × min(riders for cohort, souls) / souls
+multiplier(cohort) = 1 + bonusPerAnchor × placed × covered × linesHeld
                    = 1                              if the cohort holds no line
+covered            = min(riders for cohort, souls) / souls
 ```
 
 The **covered share** scales it, which keeps a cohort's payout a single multiply
@@ -1741,9 +1763,10 @@ would have to guess how many cohorts you will have; a curve does not.
 
 ### Upgrades are visible
 
-Every axis above also moves a field of the rig's drawing — `slots` its anchors'
-size, `work` their facets, `press` their ink, `riders` the cage's density and
-levels, `lines` its span, `step` its twist. The `DEFAULT_ANCHOR` and
+Four axes move the rig's drawing — `slots` its anchors' size, `riders` the cage's
+density and levels, `step` its twist, and each **line lights the family its
+cohort claims**. `work` and `press` have no picture: facets, chamfer and ink are
+the anchor's identity, not axes, and were taken back. The `DEFAULT_ANCHOR` and
 `DEFAULT_HARNESS` literals are the **starting** values, not the target: each map
 runs from the default toward a ceiling and never below it, hyperbolically, so an
 axis bought in thousands keeps moving the picture instead of saturating.
@@ -1754,8 +1777,9 @@ equipment, not a world — the deformation is zeroed because deformation reads a
 put down, not how far along a job is. That body is the `harness` record in
 `planet-visuals`, authored in the lab like any other picture in the game.
 
-**An axis that moves no picture is a dead purchase**, and the ceilings that decide
-whether one does are all guesses. So the map is a pure function of the axes rather
+**An axis that moves no picture is a dead purchase** — which `work` and `press`
+now are, pictorially; see §19. The ceilings that decide whether an axis reads are
+all guesses. So the map is a pure function of the axes rather
 than a reading of the live rig, and `?widgets` → *Rig ladder* replays this bucket
 of `upgrades.ts` to draw every rung at once. A rung that looks like the one before
 it is a ceiling set too far off.
@@ -1766,7 +1790,7 @@ it is a ceiling set too far off.
 
 **Three was a placeholder and is now an authored count.** A run walks the worlds of
 one **system**, inward, and the **star is the last world** rather than a different
-kind of object. `worlds(system 1) = 3` is what the current build ships.
+kind of object. `worlds(system 1) = 5` is what the current build ships.
 
 Nothing below is hand-typed. A world is an index, and the one figure that is not
 free to choose is how long the world takes.
@@ -2032,21 +2056,20 @@ every harvest* — worst of all for exactly the polarity the income curve favour
 One measured run found this at the second world and it read as the climb
 restarting.
 
-**The fix is repricing, not new content.** Three upgrades already *gated* on
-`karma_negative` and then *charged* `karma_positive` — the design was already
-calling them service to self and only the price had fallen back to the default
-pile. Two more are plainly the same register:
+**The fix was repricing, not new content.** Three upgrades now charge
+`karma_negative`:
 
-| Upgrade | Now costs | Why |
+| Upgrade | Costs | Why |
 |---|---|---|
-| `refinery:slots_1` | 25,000 karma− | already gated on `karma_negative` |
-| `harness:riders_1` | 150,000 karma− | " |
-| `building:main:carry_1` | 200,000 karma− | " |
+| `building:main:carry_1` | 200,000 karma− | gated on `karma_negative` already |
 | `cohorts:harder_lives_1` | 310,000 karma− | taking more out of the same span |
 | `cohorts:hard_season` | 1,200,000 karma− | the same, doubled |
 
-Roughly 1.7M of negative sink against positive's remainder, so Burden's `K` is
-worth about what Comfort's is and the reading is a three-way trade again.
+`refinery:slots_1` and `harness:riders_1` were repriced here too and have since
+moved to crimson (§9, §12), so the sink is these three: 1.71M.
+
+⚠ **It did not hold.** A one-off sink is spent once, and after it `K` is worth
+nothing again — see §19, *Karma expires*.
 
 > ⚠ **`evenExperienceBonus` stays at 2.0, so Even still pays ×3.** The finding
 > that ×3 dominates was measured while `K` was worth zero on one side. It has to
@@ -2133,7 +2156,7 @@ a world *demands* before it lets you go; a boon is what it leaves you holding
 afterwards.
 
 Shaped like an upgrade's effect, keyed by world so two worlds granting the same
-change both land. **Unauthored on all three worlds.**
+change both land. **Unauthored on all five worlds.**
 
 ### After
 
@@ -2264,7 +2287,7 @@ argument hands off, and it is now askable: it could not be tested before, becaus
 
 ---
 
-## 16. Progression — the twelve beats
+## 16. Progression — the fourteen beats
 
 The frame accretes in an authored order. A pointer advances one beat at a time
 and **never falls**; a later beat whose trigger happens to be satisfied early
@@ -2284,7 +2307,7 @@ noise the player has already felt* rather than introducing a new mechanic.
 **A beat can never stall.** Each beat carries an experience **floor** as a
 fallback trigger, so a player who takes an unanticipated route still advances.
 The exception is `eventOnly` beats, where no experience figure honestly stands in
-for the event — **those four have no floor by design and must not be given one.**
+for the event — **those five have no floor by design and must not be given one.**
 
 ### The ladder
 
@@ -2303,30 +2326,23 @@ for the event — **those four have no floor by design and must not be given one
 | 11 | `anchor` | 1 world finished | *event* | anchoring, harvest income | the anchor field, the split, **the Harness tab**, the Behind band |
 | 12 | `refining` | souls held **and** both karma piles exist | *event* | refining | the Refinery tab (live), the token readings, the refinery screen |
 | 13 | `second_harvest` | 2 worlds finished | *event* | — | **nothing** |
+| 14 | `terminus` | the run would bank a whole wisdom | *event* | — | the end-run verb and the prestige screen |
 
-Thirteen entries, twelve beats plus the terminal one. **The last beat reveals
-nothing** — the log carries it, and everything it could have shown is already
-reachable.
-
-⚠ That beat fires on *two worlds finished*, which was the end of a three-world game
-and is no longer the end of anything. With a system to finish and a run to end
-(§18) it wants re-siting, and its line — like every line in the log — is
-placeholder.
+Fourteen entries. **Beat 13 reveals nothing** — the log carries it. ⚠ It fires on
+*two worlds finished*, which was the end of a three-world game and is no longer
+the end of anything; it wants re-siting or cutting.
 
 **Every beat now fires for its own reason.** None reaches only on its floor.
 
 ### The beats and the two new systems
 
 **Clerks do not get a beat.** The send verb arrives with the cohort table at beat
-4, and the first clerk is a purchase on the rail like any other — the frame does
-not change when you buy one, only the amount of clicking does. What it wants is a
-**milestone** (below), and that milestone's line is unwritten like the rest of the
-log (§1).
+3, and the first clerk is a purchase on the rail like any other — the frame does
+not change when you buy one, only the amount of clicking does. No milestone marks
+it either.
 
-**Prestige has no beat either, and it needs one.** The beat ladder currently ends
-at `second_harvest` revealing nothing, on the argument that everything is already
-reachable. With a system to finish and a run to end that is no longer true, and
-**beat 14 is unwritten.** It is `eventOnly` and it must not be given a floor.
+**Prestige is beat 14, `terminus`**, `eventOnly` with no floor: it measures what
+the run earned (§18), and no experience figure stands in for that.
 
 ⚠ The floors in the table were fitted to the old cohort economy and every one of
 them is now wrong. They are fallbacks, so nothing breaks — but a floor that fires
@@ -2344,14 +2360,14 @@ own** — the price is the whole of the choice.
   you read, not a lever* — the upgrade cannot widen anything, it lets you see it.
 - `the_other_way`: 30,000 xp to unlock, 4,000 karma+ to buy. **This is the beat
   that lets the negative pile exist**, and it is the single most important thing
-  the log has to say. Its current line is a placeholder like the rest (§1).
+  the log has to say.
 
 Both are **priced rather than granted**, because beat 7 asks *how dirty do you
 want to run* and **a choice you are handed is not one.**
 
 ### Milestones
 
-Four **firsts the log narrates that no beat covers**. A beat changes the frame; a
+Five **firsts the log narrates that no beat covers**. A beat changes the frame; a
 milestone only says something happened.
 
 | Milestone | Fires on |
@@ -2360,7 +2376,7 @@ milestone only says something happened.
 | `first_reserve` | any soul held back |
 | `first_token` | any Crimson exists |
 | `deep_excess` | \|excess\| ≥ 0.6 — twice beat 8's threshold |
-| `first_clerk` | any clerk **bought** — cohort 1 is autonomous from its first copy (§5) and must not fire this |
+| `ratio_even` | the refinery's crimson-per-karma ratio reaches 1 (§9) |
 
 ---
 
@@ -2462,21 +2478,13 @@ happened to satisfy it.
 A fourth tab costs the strip nothing: a tab is a fixed width, so the strip is
 simply one tab wider and the run verb beside it keeps what is left.
 
-### Unsettled: which screen the harvest belongs to
+### Settled: the frame hosts the takeovers
 
-**The verb is now on both screens; the room is still the Overview's.** Details
-carries a Harvest at the foot of its world column, the Overview carries one at
-the foot of the selected world's, and both open the same takeover over the
-Overview's body.
-
-That is a defensible end state rather than a half-move — the door is wherever
-you are looking at the world, and the room is one place. But it was reached by
-putting the verb where each column wanted it, not by deciding, so the question
-stands: **the takeover's host is still unpicked.** The argument for the
-Overview is that harvesting is about *where you are and where you go next*; for
-Details, that the decision is about *this world and your souls on it*. Both are
-real. The flag that opens it belongs to neither screen, which is what keeps the
-choice cheap.
+**Neither screen owns the harvest.** Both takeovers are screens of the frame
+itself, beside the tabs, and each returns you to the tab you opened it from.
+Details and the Overview both carry a Harvest verb at the foot of their world
+column; the door is wherever you are looking at the world, and the room is one
+place. The flag lives on navigation, not on a screen.
 
 ### One layout rule worth stating as design
 
@@ -2526,18 +2534,25 @@ literally rather than bolting a meta-layer above it.
 ### Wisdom is the residue, and it is the only thing prestige makes
 
 ```
-wisdom gained = √(crimson produced across the whole run / W)
+wisdom gained = ⌊√(crimson produced / W  +  lifetime experience / X)⌋
+W = 10¹²      X = 4 × 10¹³
 ```
 
-**`crimson produced` is a quantity the refinery already computes** — a
-lifetime, never-decremented total, alongside but distinct from the karma moved
-that levels it (§9 v6). Reading crimson rather than karma is what lets the
-level's earned conversion ratio compound into the outer wheel: two runs that
-move identical karma but level to different ratios leave different wisdom.
+**Crimson is the main axis.** `crimson produced` is a lifetime, never-decremented
+total the refinery keeps, distinct from the karma moved that levels it (§9).
+Reading crimson rather than karma is what lets the level's earned ratio compound
+into the outer wheel: two runs that move identical karma but level to different
+ratios leave different wisdom.
 
-**`W = 10⁸` is what shipped**, as `balance.prestige.firstWisdomAt` — figured
-against karma moved before the v6 split. It is now denominated in crimson and
-wants recalibrating once a run has been played to redenominate against.
+**Experience is the second, weaker axis**, so a run that grew wide without
+refining still banks something. Both sum *inside* the root, so there is one climb
+and the unit always widens. At coverage near 0.5 and ratio near 1 the two run
+about level, and `X = 4W` makes experience worth ~12% more wisdom — a real term
+that does not displace crimson.
+
+The verb opens at the first whole wisdom, and the *n*th lands at `n²·W`.
+
+⚠ Both constants were set without a recorded run to fit against.
 
 **The square root is what makes this fractal rather than merely repeatable.**
 Doubling a run's output gives about 1.41× the wisdom, so each turn of the larger
@@ -2545,7 +2560,8 @@ wheel is worth roughly a constant amount of *progress* instead of a constant amo
 of currency. It is the same shape as the merge slider one index down: you give up
 everything specific and you keep a rate.
 
-**Held, each wisdom is +2% to all cohort yield, permanently.** Spent, it buys
+**Held, each wisdom is +2% to all cohort yield, permanently** — and +1% to the
+press, which rides it at half strength. Spent, it buys
 **structure** — a further cohort index, a further system, the things that change
 what a run *is* — and **the spend costs you the multiplier.** That trade is the
 whole of the wisdom layer and it is deliberately the angel-investor shape: the
@@ -2631,7 +2647,7 @@ is no top, only a rate that gets bad. Indigo's buyer is the deep end of the
 knowledge market.
 
 **A market has two sides, and that is the sink the negative pile never had.**
-Nothing costs `karma_negative` or `red_negative` (§3). **Selling the pile you are
+Three one-offs are all that cost `karma_negative` (§3). **Selling the pile you are
 long** is the natural sink, and the rate you get for it should depend on how long
 you are — which is the excess reading (§8), already computed, currently doing
 nothing but gating a door.
@@ -2640,8 +2656,8 @@ nothing but gating a door.
 > upgrade available to that mechanic. Excess currently only ever says *no*. As a
 > spread it would say *how much*.
 
-**Do not author any of this until the cohort ladder is measured.** A market needs
-an income curve to price against and §5's is generated but unplayed.
+A market needs an income curve to price against; the one play has produced is
+not yet written into §5.
 
 ### What survives a run
 
@@ -2687,8 +2703,8 @@ explaining anything.
 
 The test the framing has to pass: **a sentence written for a finished world should
 still read true one index up, about a finished system.** If it does, the recursion
-is in the fiction and not just in the arithmetic. None of the current log lines are
-authored well enough to run that test against — see §1.
+is in the fiction and not just in the arithmetic. `terminus` and the arrival line
+(*It has all turned over again…*) are the first lines to run it against.
 
 ### Open
 
@@ -2703,23 +2719,38 @@ authored well enough to run that test against — see §1.
   worsen, without a market screen ever existing.
 ## 19. Open design questions
 
+### Karma expires — the standing problem
+
+There are a handful of authored one-off karma purchases, and then karma's only
+consumer, forever, is the refinery. So:
+
+> **Once the upgrade table is bought, more karma buys nothing, extremity has no
+> upside at any detent, and Even wins by default.**
+
+The world's demand (§14) was meant to give `K` a direction and does not carry
+enough weight in play to do it. §6's `extremityMultiplier: 2` makes tilting a
+real trade *for as long as karma has a buyer*; it does not create one. Commerce
+(§18) — selling the pile you are long, at a rate priced off excess — is the
+shape the doc has held for the answer. **No excess debuff touches this**, which
+is why §21's proposals are held behind it.
+
 ### Unsettled by decision
 
 | Question | Where it bites |
 |---|---|
-| **Which screen hosts the harvest** | §17 — the verb is now on **both** columns; the takeover is still the Overview's body and its host is still unpicked |
+| **Karma as weight** — held karma drags experience, the refinery sheds it, prices incur on both poles | §21 — proposed 2026-09-23 as the answer to *karma expires*. Breaks every karma-paid reward and leaves the aim dial without a job. Undecided |
+| **`work` and `press` have no picture** | §12 — pulled from the rig's drawing as the anchor's identity; against §12's own *an axis that moves no picture is a dead purchase* |
 | **Where the end-run verb sits** | §17, §18 — the bottom strip beside the tabs today; §18 argued for the Overview's axis and the strip shipped without the argument being settled |
 | **Even's experience bonus: ×1.5, ×2, or ×3** | §14 — ×3 is live; the "×3 dominates" reading was taken while `K` was worth zero and must be re-measured. Now also the only lock a world's demand cannot move |
-| **What the per-world correction cost actually is** | §14 — the demand moves clearing a tilt from once-a-run to once-a-world. It was measured at ~10% of the run so far, once. Five times is a different number and gates any short-pile skim |
-| **Whether world 5 is passable under both pressures** | §13, §14 — `excessGate` tightens to 0.03 while the demand asks for a deeper tilt. One retune, and it has not been run |
-| **`D = 2`, and whether it should differ per world** | §14 — authorable per world and authored nowhere; every world takes the default |
-| **Whether the Burden/Comfort sink asymmetry is right** | §3, §8 — five upgrades now price in `karma_negative`; whether that is the *shape* of the answer or just the stopgap before commerce is still open |
+| **What the per-world correction cost actually is** | §8, §14 — ~10% of the run so far, once; the demand asks for it once a world. Gates any short-pile skim (§21) |
+| **Whether world 5 is passable under both pressures** | §13, §14 — `excessGate` tightens to 0.03 while the demand asks for a deeper tilt |
+| **`D = 2`, and whether the demand stays** | §14 — authorable per world, authored nowhere. Too weak to matter in play |
+| **Whether the Burden/Comfort sink asymmetry is right** | §3 — three one-offs price in `karma_negative`, all past beat 7; the stopgap before commerce |
 | **Whether commerce is a system or a framing** | §18 — the rates worsening may be enough without a market screen |
-| **Wisdom's structure shelf vs knowledge's permanent shelf** | §18 — both permanent, both bought; the distinction is real and uncomfortable |
-| **A karma-to-red ratio** | §9 — the refinery ran 4.6× ahead of the economy at level 29, so this is now needed rather than merely absent. Held until worlds 4–5 are played |
+| **Wisdom's structure shelf vs knowledge's permanent shelf** | §18 — both permanent, both bought; the distinction is real and uncomfortable. Neither is built |
 | **The click** | §4 — 700/click against 150k/s is 0.5% of income. `carry` is linear and capped against income compounding ×5 per index; it needs a different shape (a share of *income*) or an explicit decision to let the hand go vestigial |
 | **Continuous vs square-wave phase bias** | §6 — now load-bearing: the square wave is what makes the one-phase / one-cycle line a rule rather than a gradient |
-| **`BASE_LIFE`, and whether the world 3 step reads** | §5, §13 — `1/16` holds today's economy and lands cohort 8 on an age; the halving on arrival at world 3 is unplayed and may read as the climb restarting |
+| **`BASE_LIFE`, and whether the world 3 step reads** | §5, §13 — `1/16` holds today's economy and lands cohort 8 on an age; how the halving on arrival at world 3 reads is unrecorded |
 | **Whether a halving should be allowed to make a long cohort timeable** | §6 — a row becomes timeable `n − 5` rungs in, so levelling erodes the smooth end of the ladder. Feature or cap, undecided |
 | **Clerk handling for cycle-long cohorts** | §5, §6 — their clerk sells throughput and no timing. Cheaper clerks or arriving clerked both fix it and both break `clerk(n) = reveal(n+1)` |
 | **Whether the life forfeited at departure wants recovering** | §5, §14 — halted, not prorated, and bounded at one life a cohort. An age-long life on world 5 is 8 minutes, which is where it would start to be felt |
@@ -2729,9 +2760,9 @@ authored well enough to run that test against — see §1.
 | **Per-cohort aiming** | §6 — parked, and further away now that cohorts have no aim figures. `LeanMeter` is kept in the tree, unwired, against this coming back |
 | **`clerk`'s own name** | §5, §20 — the mechanic shipped, the word did not; ledger, mechanical and managerial candidates all tried and set aside |
 | **Whether anchoring should cost anything to begin** | §12 — it is free, and the cost is entirely the souls and presses it consumes once open. Whether a world should charge for the offer is unasked |
-| **Which cohorts hold the lines** | §12 — the first *n* of the roster, and riders split among them by active count. Both are the simplest rule, neither is argued |
+| **Which cohorts hold the lines** | §12 — round the ladder from cohort 1, repeats stacking the bonus; riders split by active count. Simplest rules, neither argued |
 | **The worlds' identity, and the cohorts'** | §1 — the largest fiction hole, now with an index to hang on |
-| **The entire log** | §1 — placeholder throughout; the register is settled and no line is |
+| **The log's lines** | §1 — every beat has one; the register is settled and some lines describe moved mechanics |
 | **Whether `reaimPhases` should be a share of the world** | §6, §13 — a full swing is two phases, a quarter of world 1 and a twenty-fourth of world 5. Resolving this toward a share is what would let §6 price at `\|Δ\|` outright instead of halving it |
 | **Every world decomposition** | §13 — phase duration, ages and cycles are now free within a fixed total and have had one pass |
 
@@ -2741,10 +2772,10 @@ authored well enough to run that test against — see §1.
 |---|---|
 | **Even's experience bonus: ×1.5, ×2, ×3** | still open — §14 is untouched by the rewrite and ×3 is still live |
 | **A sink for Indigo and wisdom** | Indigo buys the deep end of the knowledge market; wisdom is no longer bought at all (§18) |
-| **What wisdom *is*** | the prestige residue, `√(karma moved)` (§18) |
+| **What wisdom *is*** | the prestige residue, `√(crimson/W + experience/X)` (§18) |
 | **`zealot`'s ρ = ∞** | gone — every cohort yields experience, so payback is defined everywhere |
 | **The cap at 200 a cohort** | gone — income compounds by construction, so counts no longer stall |
-| **Six rungs and not ten** | back to **six**, at AdCap's counts. The emission-rate constraint is handled by a 60 ms floor rather than by a shorter ladder, but six rungs reach it on cohorts 1 and 2 only — and ×64 is too little multiplier to keep a low row worth owning. Reopened as the ×2 question in §5, *Open* |
+| **Six rungs and not ten** | **six**, at AdCap's counts, paid twice — per cohort and all-cohort — so twelve rungs a row, ×4,096 (§5) |
 | **Per-cohort `resistance` / `polarity_bias` / `polarity_multiplier`** | cut; duration and the manual batch carry cohort identity (§6) |
 
 ### Resolved by the post-ladder rebalance
@@ -2759,9 +2790,9 @@ rebalance is the answer to all of it at once.
 | **Whether the harvest payout repays a deep merge** | askable at last — `mergeHalving` is a share tied to the toll, so a full merge is reachable on every world (§13) |
 | **Whether excess reading flat near ±1 lands as ominous or dead** | **terminal** — at ±2 the short pile was exactly zero, so the refinery starved and the wisdom base stopped accruing. Clamped (§6) |
 | **The entire generated cohort ladder** | runs, and is fun. Verified against formula at 150k xp/s |
-| **Whether a 4 / 8 / 16-minute system is too short** | still unplayed, but there are now five worlds and 124 minutes to sit in |
+| **Whether a 4 / 8 / 16-minute system is too short** | five worlds now, 124 minutes of floor |
 | **Worlds 4 and 5** | authored. They cost almost nothing once no row was denominated in souls |
-| **`riders_2`'s +2,000** | still wrong — ~80% of the purchase buys nobody at current headcount. Same denomination error, but it wants the click decision first |
+| **`riders_1`'s +2,000** | flagged as ~80% buying nobody at the headcount of the time; lines now stack and cycle, which changes the count it is read against |
 
 ### Doc-vs-data drift found and resolved into this file
 
@@ -2782,13 +2813,15 @@ an intent of ten and fifty minutes. Either `perWorker` drops back to 0.02 or the
 durations gain a zero. **Retune `perWorker`, `clickMs`, the anchor durations and
 the slot counts together** — no one of them is meaningful alone.
 
-### Placeholder figures — nobody has tuned these
+### Placeholder figures — authored without a recorded fit
+
+"Placeholder" means no recorded run was fitted against, not that it is unplayed.
+Anything play has already settled belongs back in its section.
 
 - **Every refinery figure** — `coveragePerWorker`, interval, both
-  experience-ladder terms, `ratioBase`, `levelHalving`, and all eight upgrades.
-  The saturation and ratio-split shapes (v6) are new and entirely unplayed;
-  whether coverage plateauing at ~56% and ratio crossing even at level 28 read
-  right is a sim question, not a desk one.
+  experience-ladder terms, `ratioBase`, `levelHalving`, and all seven upgrades.
+  Whether coverage plateauing at ~56% and ratio crossing even at level 28 read
+  right is unrecorded.
 - **All four token prices** — Ochre, Indigo, inversion base and growth. Not tuned
   against the refinery's placeholders either.
 - ~~**`priceFactor`**, now a single number and the pacing knob on every level in
@@ -2803,13 +2836,12 @@ the slot counts together** — no one of them is meaningful alone.
   cost decade of 7 it reads 175×, a quarter to a third of the way up the row's
   own ladder whatever that row's ramp. Both framings it used to be argued from
   are retired: the tier price needed a rung to have one, and the flat 38 copies
-  needed one ramp for everybody. What is still unmeasured is the **wall clock**:
-  nobody has sat through the gap between rows. See §5, *Entry*.
-- **`W` and the +2% per wisdom** — `firstWisdomAt` was fitted against karma moved
-  at one coverage and has not been re-measured now that it reads crimson
-  produced through the v6 ratio split. `P` is still unwritten because nothing
-  spends wisdom yet.
-- **Every beat floor in §16**, all nine fitted to an economy that no longer
+  needed one ramp for everybody. The **wall clock** between rows is unrecorded.
+  See §5, *Entry*.
+- **`W`, `X` and the +2% per wisdom** — set at 10¹² and 4 × 10¹³ without a
+  recorded run behind them. `P` is still unwritten because nothing spends wisdom
+  yet.
+- **Every beat floor in §16**, all eight fitted to an economy that no longer
   exists. **Re-fit them after this pass is measured, not during it** — they were
   fitted to the pre-ladder economy and are all wrong in the same direction.
 - **Every harvest ratio** — the seconds-of-income figures, never measured. The
@@ -2820,46 +2852,80 @@ the slot counts together** — no one of them is meaningful alone.
   nothing more.
 - **The whole click ladder**, whose gates were set against the old cohort costs.
 - **`harder_lives_1` and `hard_season`**, still much smaller than a single
-  level rung — and the bulk of the `karma_negative` sink (§14), so they are
-  load-bearing for the alignment trade as well as for throughput. They are on
-  the yield axis now and must stay there; see §5.
+  level rung — and the whole of the `karma_negative` sink but `carry_1` (§14).
+  They are on the yield axis now and must stay there; see §5.
 - **`shortPileFloor`**, chosen so the cliff's one honest use survives at 95%.
-- **Worlds 4 and 5's pictures**, which are existing specimens at a new seed and
-  have never been through the widget lab.
 
-### Unplayed — no one has watched these run
+### Findings from play
 
-- **The opening, beats 1–4**, on the current gates — and now on an **instant
-  press**, which removes the throttle every one of those gates was paced behind.
-  Beats 1–4 and the second world's unstaffed anchoring both come at the player's
-  click rate; §4 marks the hazard.
-- **The whole anchoring job.** Nothing about it has been played, and it is now a
-  choice rather than a phase — so what is unplayed includes *whether anyone would
-  take the offer*, which is the question the whole rework turns on.
-- **The Harness tab**, its line purchases, and whether the rig's drawing visibly
-  changes enough per axis to be worth the coupling.
-- **The whole Refinery screen.**
-- **Whether the second world at its current length is the right second world.**
-- **Whether holding now reads as worth it** — §15 makes departure income an axis,
-  and nobody has yet harvested one world twice to feel the difference.
-- **Whether the idle count on the split lever reads as a cost or as a bug.**
-- **Whether a takeover with the tabs collapsed reads as focus or as being
-  trapped** — the header stays and `Not yet` is the only door (§17). The old
-  arrangement kept the tabs lit as a second way out and nobody has played
-  without them.
-- **Whether `riders_1` reads as a purchase**, given nothing rides before it.
-- **Worlds 3, 4 and 5.** No run has ever finished the third world, which is where
-  the rebalance's whole argument gets tested.
-- **Whether manual cohorts are a floor of ledgers or a chore**, and how many is
-  too many before the first clerk.
-- **Whether a life spanning several phases reads as steadiness or as mush**, which
-  is the whole of §6's replacement for the cut aim figures.
-- **§18's first row.** No run has ever ended. The minimum shipped — beat 14, the
-  root, the +2%, the reset — but the figure it pays on is calibrated and not
-  played, and the rest of §18 (knowledge, commerce, the structure shelf) is still
-  argument only. Beat 14 has no floor and must never be given one.
-- **Whether a 4 / 8 / 16 / 32 / 64-minute system is too short**, which is the
-  opposite risk to the one §13 fixed and the only way to find out is to sit in one.
+The author's full play-through, recorded 2026-09-23. Impressions, not timed
+measurements.
+
+**What works**
+
+- **Cohort pacing** feels balanced — too fast, if anything, once the high rows
+  snowball (§5).
+- **The world 3 income step** is barely felt, visible only in the sweep bars
+  (§5, §13).
+- **The opening has a real decision** — keep pressing, or micromanage the manual
+  sends of freshly unlocked rows (§4, §5).
+- **The refinery's ratio climb reads as progress**, past `ratio_even` — slow
+  below it, a rush above it, which follows from its tie to karma income (§9).
+- **Lines round the ladder** progress correctly; their *presentation* doesn't
+  explain them (§12).
+- `work` and `press` without a picture is fine for now — the harness is a meta
+  layer (§12).
+
+**What doesn't**
+
+- **Karma has no purpose.** Even is locked at nearly every harvest because ×3
+  experience is the fastest progression; the dial sits centred except to correct
+  (§6, §14).
+- **Excess is a chore**, quick to clear unless left flooding for a long while
+  (§8).
+- **The demand's purpose is unclear** — a bonus to a currency nothing needs (§14).
+- **The press is vestigial past the opening**, `carry_1` included. Missing: more
+  click upgrades, and a golden-cookie equivalent — a temporary boost that makes
+  pressing profitable again (§4).
+- **Manual timing is a microgame.** Lives shorten too fast for it to matter, and
+  the extended info mode makes the timing trivial. Long cohorts spiking excess was
+  interesting, and short-lived (§5, §6).
+- **Short and long cohorts feel like different speeds**, not different kinds of
+  row — §6's cohort identity does not land (§6).
+- **Depth is only for fun.** Cohort 1 reached **400** — gate 400 is reachable —
+  and moved nothing. High counts want a synergy (Cookie Clicker's grandmas,
+  cursors), not more direct output (§5).
+- **The grades are completion purchases.** At billions of crimson, max Ochre →
+  max Indigo is a formality; inversion is never worth it (§10).
+- **The split's idle count** is a small tax that does little; the refinery, with
+  no split upgrades, suffers it most (§11).
+- **Anchoring** gets taken on most worlds, reads as a slightly cumbersome
+  minigame, and the bonus isn't evident. `perWorker` could be slower, and some
+  harness upgrades appear before the Harness tab (§12).
+- **Later worlds feel too slow to be worth it** (§13).
+- **Harvesting early can leave nowhere to reach** until the discovery beat — and
+  with two worlds known, world 3 can be skipped for 4. Legal today, and it felt
+  wrong (§13, §16).
+- **Wisdom goes stale.** A second run is only faster; raising `W` slowed it
+  without changing that (§18).
+- **Re-buying the level tiers every run** is click-spam — affordable almost at
+  once. Candidate: knowledge that permanently raises cohort tiers (§5, §18).
+- **The log is placeholder and hidden** — never opened, and nothing asks you to
+  (§1).
+- **Beats need readjusting**, with gaps to fill; the author is recording them
+  (§16).
+
+**Direction from the author**
+
+- Knowledge stays in the plan, and should reach **across lifetimes** — a variable
+  like max refinery workers, which feels short and stale within one run (§18).
+- The end-run verb stays in the bottom strip; opening it from the header's legacy
+  cell would bring back header buttons (§18).
+- Names wait until progression is settled (§1).
+
+**Not yet answered:** holding vs merging (§15), whether the worlds behind you
+matter, the takeover with tabs collapsed (§17), and when the first prestige opened
+and what it paid (§18).
 
 ---
 
@@ -2930,3 +2996,157 @@ what you have: bought with experience inside a run, at a rate that worsens, and
 spent inside it. They are different objects at different indices and **knowledge
 never becomes wisdom** — §18 explains why that conversion would break the end of
 every run.
+
+---
+
+## 21. Held proposals
+
+None is built and none is decided. The first answers §19's *karma expires*; the
+rest are spliced from the v6.2 addendum and wait on it — they tax or reshape
+karma, and a tax on a currency nobody wants is decoration.
+
+### Karma as weight
+
+Proposed 2026-09-23. **Karma stops being a currency and becomes a burden: what
+you hold slows you, and the refinery is how you put it down.**
+
+§3's piles only grow, and xp and karma grow together at a fixed 1 : 2, so there is
+no state in which a strong run carries little karma. This makes that state the
+goal: 2B xp/s on 100k held karma is a run that refines well.
+
+**Weight is read in seconds, never in amounts.**
+
+```
+backlog  = (P + N) ÷ karma income        seconds of your own karma, cycle-mean
+drag     = 1 ÷ (1 + backlog / B₀)        multiplies experience
+```
+
+Income is the bias-excluded cycle mean §9 already computes, so the reading does
+not swing with the wave. Both poles weigh — service to others is carried too, and
+the game does not say which is heavier. A grace allowance under which `drag` is 1
+is an option, not a requirement.
+
+**The refinery has to draw on the stock.** Coverage (§9) draws a share of
+*income* that never reaches 1, so the pile grows forever: under compounding income
+an uncleared backlog is about a third of the run so far, and grows with the clock
+whatever you buy. A stock draw settles instead:
+
+```
+draw     = min(P, N) × reach / τ₀        per second, from both piles
+crimson  = draw × ratio
+```
+
+At equilibrium the matched backlog sits at `τ₀ / reach` seconds, and every refinery
+upgrade visibly lowers it. This is v4's residence draw brought back for a reason
+v4 did not have — the backlog **is** the reading now, so a stock-shaped number is
+the point rather than jitter. `coverage`'s saturation goes: a draw on a stock
+cannot exceed the stock. **Pairing survives untouched** — the unpaired remainder
+never enters (§9), and the level, `ratio` and wisdom's crimson axis are unchanged.
+
+**Excess gets teeth for free.** The refinery cannot touch the unpaired remainder,
+so a tilt is weight nothing but the aim dial can shed. §8's correction is still
+cheap; what changes is that *being* tilted now costs you every second you stay.
+
+**Prices incur rather than spend.** An upgrade `incurs 60 s` of karma, on **both
+poles** — excess-neutral, scale-free, a cost you work off rather than a balance
+you draw down. What you incur becomes crimson later, so a karma price is deferred
+crimson rather than a loss.
+
+**What it fixes**
+
+- **Refinery staffing matters**: clearing weight is what lets experience grow, so
+  the split, worker slots and knowledge's *max refinery workers* all bite (§11,
+  §18).
+- **Karma has a job**: feedstock and burden, the §1 premise — *it only makes you
+  carry it* — as a mechanic.
+
+**What it breaks — every karma reward becomes a penalty**
+
+- **The harvest's `K`** (§14) pays karma into the piles. It would have to pay
+  crimson, or pay *relief* — a finished world that lifts weight off you.
+- **Even's ×3** already wins, and would win harder: it is the one lock paying no
+  karma. The alignment trade needs rebuilding with the harvest.
+- **The demand's `D`** (§14) multiplies a penalty. Replaced by *the world pulls
+  its wanted pole off you* — a share of that pile each phase, a sink with a
+  direction. `matchShare` retires.
+- **The extremity bonus** (§6) becomes a pure cost: more karma, a smaller short
+  pile, less pairing. **The dial needs a new job** — today it would only correct
+  excess. Open.
+
+**Open**
+
+- `B₀`, `τ₀`, the grace allowance, and the incurred seconds per upgrade.
+- **Does the drag reach the press?** Exempting it makes the hand the one thing
+  weight cannot slow — a reason to press under a heavy backlog (§4).
+- **Harvest income from worlds behind you** — weight, or exempt?
+- **The gap between worlds**: income is zero there, so `backlog` is undefined.
+  Freeze the last reading.
+- **Never touch `duration` or the wave** (§7): the drag is a yield multiplier and
+  nothing else.
+
+### The short-pile skim
+
+Karma arriving in the pile you are **short** of is multiplied by
+`skim = 1 − k × |excess|`. At `k = 0.8` and excess 0.9 you keep 28% of what you
+aim, so §8's hundred-second correction becomes about six minutes — hard to start
+turning, then it snowballs free. **A hump, not a wall.** It is the only candidate
+that passes §8's test, because it slows correction without scaling with income.
+
+- **Retune `excessGate` in the same pass.** 0.12 → 0.03 was authored against free
+  correction; world 5 may stop being passable.
+- ⚠ **It hits the refinery twice** — `capacity = coverage × shortPileIncome`, and
+  the skim cuts `shortPileIncome` on top of the detent's share cut.
+
+### Phase-shape debuffs
+
+Excess reshaping the wave rather than taxing income. **Burden makes the wave
+hostile; Comfort makes it inert** — both attack timing, both revert as excess
+clears.
+
+- **Burden** skews the duty cycle toward dense. Whether that is a brake or a
+  spiral depends on whether negative karma is worth having — §19 again.
+- **Comfort** collapses the wave's *amplitude*, both phases toward ×1. Flattening
+  only the light phase would self-heal and make Comfort the safer pole, which
+  moralises the choice §1 says the game never does.
+- **Conserve the cycle, never the phase** — skew within a fixed cycle, or world
+  length starts depending on play (§7). The authoring surface would become
+  `cycle_duration` and `lightShare`.
+- **It breaks §9's cycle mean**, which assumes equal halves. Weight the mean by
+  the duty cycle per lane, in the same pass.
+
+### World preference as duty-cycle skew
+
+One authored `lightShare(p)` per world. A dense-heavy world changes what a long
+life averages to and how volatile a short one is — §6's cohort identity — so it
+buys **world identity** with a single fraction, whether or not karma ever finds a
+buyer. The cheapest of the four.
+
+### The phase-gated dump
+
+A verb live **only** in the phase paying against your tilt: shed a capped share of
+the pile you are long, at a loss, at a climbing never-resetting price like
+inversion. A karma sink without commerce, and a wave-timed decision after the
+clerks have taken the others.
+
+> **A lever, not a chore:** an action you *must* take every phase fights *many
+> hands, then fewer, then none*. One only *available* in one phase and only
+> *worth taking* when excess is deep is a lever.
+
+### An upgrade tree
+
+**A tree adds choice, not sink** — exclusive forks mean fewer purchases, not
+more. So it does not fix karma expiring; it fixes *every purchase is
+click-when-affordable*.
+
+- **Split the rail, don't replace it.** Generated purchases (copies, levels,
+  clerks) stay on the rail; the authored one-offs move to the tree.
+- **First version: the existing chips with edges drawn.** Count the forks that
+  fall out. Three or four and the tree is real; if they have to be invented, it
+  isn't. The hand (strength vs `carry`) and the harness (capacity vs granularity
+  vs payout) fork; the refinery's fork is fake, since `efficiency` and `reach`
+  are one channel.
+- **Polarity-priced branches** make the tree a record of which pole you ran; a
+  **node priced from both piles** makes balance buy something.
+- **Respec priced like inversion** — climbing, never resetting.
+- **In-run first, as a fifth tab.** It breaks §17's *the rail belongs to the
+  screen under it*, which then needs an explicit exception.

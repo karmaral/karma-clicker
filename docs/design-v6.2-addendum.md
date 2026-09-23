@@ -1,5 +1,9 @@
 # Karma Clicker — Design addendum **v6.2**
 
+> **Spliced into `design.md` v6.4 (2026-09-23)** — §A was already live, §B → §8,
+> §F → §19, §C–§E and §G → §21, §H fixed in place. Kept for the argument; the
+> design lives in `design.md`.
+
 **2026-09-08** · splices into `design.md` v6.1 · does not supersede it
 
 > **What this is.** One session's findings on excess, the aim dial and the
