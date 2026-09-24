@@ -17,7 +17,7 @@ export interface HarvestSource {
   duration: number;
 }
 
-/** The two multipliers a world earns over its stay, both locked on the way out. */
+/** The multiplier a world earns over its stay, locked on the way out. */
 export interface HarvestBonuses {
   /**
    * What the anchors left standing on the world are worth — so anchoring a world
@@ -25,26 +25,13 @@ export interface HarvestBonuses {
    * you spend there. Multiplies everything. 1 is unanchored.
    */
   anchorBonus?: number;
-  /** What serving the world's pole was worth. Multiplies karma alone. */
-  demandBonus?: number;
 }
 
-/**
- * What serving a world's demand pays, as a continuous curve rather than three
- * cases. Full service pays `factor`, an even split pays 1, full opposition pays
- * its inverse — mean-preserving in log space, which is the bias pair's own
- * idiom. See `docs/design.md` §14.
- *
- * The share is banked as it is earned, so cleaning up at the end to pass the
- * gate costs nothing it already paid for.
- */
-export function resolveDemandBonus(demand: PlanetDemand | undefined, matchShare: number) {
-  if (!demand?.wants) return 1;
+/** The share of its wanted pile a world pulls per phase. 0 for a world that wants nothing. */
+export function resolveDemandPull(demand: PlanetDemand | undefined) {
+  if (!demand?.wants) return 0;
 
-  const factor = demand.factor ?? balance.harvest.demand;
-  const share = Math.max(0, Math.min(1, matchShare));
-
-  return factor ** (2 * share - 1);
+  return Math.max(0, Math.min(1, demand.pull ?? balance.harvest.demandPull));
 }
 
 /**
@@ -60,7 +47,7 @@ export function resolveHarvestYields(
   declared: Partial<Record<YieldType, number>>,
   alignment: Polarity,
   rates: HarvestRates,
-  { anchorBonus = 1, demandBonus = 1 }: HarvestBonuses = {},
+  { anchorBonus = 1 }: HarvestBonuses = {},
 ): Partial<Record<ResourceType, number>> {
   const isEven = alignment === 0;
   const paid: Partial<Record<ResourceType, number>> = {};
@@ -71,7 +58,7 @@ export function resolveHarvestYields(
     if (type === 'karma') {
       if (isEven) return;
 
-      paid[alignment > 0 ? 'karma_positive' : 'karma_negative'] = amount * demandBonus;
+      paid[alignment > 0 ? 'karma_positive' : 'karma_negative'] = amount;
       return;
     }
 

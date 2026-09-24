@@ -99,6 +99,7 @@ const GLOBAL_FIELDS: FieldSpec[] = [
   { field: 'wave.biasWith', label: 'with the wave', range: fixed(0, 4, 0.05) },
   { field: 'wave.biasAgainst', label: 'against it', range: fixed(0, 4, 0.05) },
   { field: 'wave.excessSpread', label: 'excess spread', range: fixed(0, 1, 0.05) },
+  { field: 'harvest.demandPull', label: 'demand pull / phase', range: fixed(0, 0.5, 0.005) },
   { field: 'harvest.evenExperienceBonus', label: 'even xp bonus', range: fixed(0, 3, 0.05) },
   { field: 'harvest.mergeHalving', label: 'merge halving', range: fixed(0, 1, 0.01) },
   { field: 'harvest.maxMergeSpeed', label: 'max speed', range: fixed(1, 32, 0.5) },

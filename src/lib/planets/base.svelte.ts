@@ -5,7 +5,7 @@ import { getWaveBias } from '$lib/wave';
 import { weight } from '$lib/weight.svelte';
 import { FIRST_HARVEST_CONDITIONS } from '$lib/labels';
 import balance from '$data/balance';
-import { resolveDemandBonus, resolveHarvestDuration, resolveHarvestYields } from './harvest';
+import { resolveDemandPull, resolveHarvestDuration, resolveHarvestYields } from './harvest';
 import type {
   FirstHarvestCondition, HarvestRates, PlanetData, Polarity, ResourceType,
 } from '$types';
@@ -37,14 +37,6 @@ export interface PlanetSnapshot extends Departure {
   placedMs: number;
   bankedMs: number;
   isAnchorJobActive: boolean;
-  /**
-   * The demand's running tally, and what it settled at. Both sums travel rather
-   * than the share alone — a world is saved mid-stay far more often than it is
-   * saved at the harvest, and a ratio cannot be added to.
-   */
-  demandedKarma: number;
-  earnedKarma: number;
-  demandBonus: number;
 }
 
 /** The wave's marker steps once per this many ms of world time — a second hand. */
@@ -63,15 +55,6 @@ export default class Planet {
   #rates = $state<HarvestRates>({});
   #emitter = $state<ResourceEmitter>();
   #anchorBonusAtDeparture = $state(1);
-  /**
-   * Karma earned on this world, and how much of it went where the world asked.
-   * Accumulated over the whole stay because the harvest's own reading cannot
-   * carry a demand: `excessGate` forces it near even by construction, so the
-   * door and the demand would be fighting over one number. See §14.
-   */
-  #demandedKarma = $state(0);
-  #earnedKarma = $state(0);
-  #demandBonusAtDeparture = $state(1);
   /**
    * Milliseconds of the anchoring job done, across every anchor. One accumulator
    * rather than one per anchor: they fill in order, which is what "next anchor
@@ -115,37 +98,37 @@ export default class Planet {
   }
 
   /**
-   * Every karma payout made while standing here, split as the aim and the wave
-   * left it. Both piles count towards the total: the demand asks what share of
-   * what you earned went its way, not how much of it there was.
+   * The world takes its wanted pole off you, a share per phase, compounded over
+   * `ms` so the pull is the same however the loop slices time. Nothing is paid
+   * for it: weight lifted is the whole of what serving a world is worth.
    */
-  recordKarma(positive: number, negative: number) {
-    const earned = positive + negative;
-    if (this.#isHarvested || !(earned > 0)) return;
+  pull(ms: number) {
+    const pole = this.pulledPole;
+    if (ms <= 0 || this.#isHarvested || !pole) return;
 
-    this.#earnedKarma += earned;
+    const share = 1 - (1 - this.pullShare) ** (ms / this.#phaseMs);
 
+    ResourceManager.remove(pole, ResourceManager.getAmount(pole) * share);
+  }
+
+  /** The pile the world pulls, or none for a world that wants nothing. */
+  get pulledPole(): ResourceType | undefined {
     const wants = this.#data.demand?.wants;
-    if (!wants) return;
+    if (!wants || !this.pullShare) return undefined;
 
-    this.#demandedKarma += wants > 0 ? positive : negative;
+    return wants > 0 ? 'karma_positive' : 'karma_negative';
   }
 
-  /**
-   * What the world asked for, met so far. Half with nothing earned and half with
-   * nothing asked — both are the neutral reading, and both pay ×1.
-   */
-  get matchShare() {
-    if (!this.#data.demand?.wants || !(this.#earnedKarma > 0)) return 0.5;
+  /** Karma/s the world is lifting off you right now. */
+  get pullPerSecond() {
+    const pole = this.pulledPole;
+    if (!pole) return 0;
 
-    return this.#demandedKarma / this.#earnedKarma;
+    return ResourceManager.getAmount(pole) * this.pullShare / (this.#phaseMs / 1000);
   }
 
-  /** What the demand is paying right now. Locked at departure like the anchors. */
-  get demandBonus() { return resolveDemandBonus(this.#data.demand, this.matchShare); }
-
+  get pullShare() { return resolveDemandPull(this.#data.demand); }
   get demand() { return this.#data.demand; }
-  get demandBonusAtDeparture() { return this.#demandBonusAtDeparture; }
 
   /** Every condition the planet imposes that is not met yet. Empty means go. */
   #unmet = $derived.by(() => {
@@ -192,9 +175,6 @@ export default class Planet {
     this.#alignment = alignment;
     this.#rates = rates;
     this.#anchorBonusAtDeparture = Math.max(1, anchorBonus);
-    // The whole stay, not the instant. Locked for the same reason the anchors
-    // are: what the world paid for is what you did while you were on it.
-    this.#demandBonusAtDeparture = this.demandBonus;
 
     this.#armHarvest();
   }
@@ -226,9 +206,6 @@ export default class Planet {
       placedMs: this.#placedMs,
       bankedMs: this.#bankedMs,
       isAnchorJobActive: this.#isAnchorJobActive,
-      demandedKarma: this.#demandedKarma,
-      earnedKarma: this.#earnedKarma,
-      demandBonus: this.#demandBonusAtDeparture,
     };
   }
 
@@ -244,9 +221,6 @@ export default class Planet {
     this.#placedMs = state.placedMs;
     this.#bankedMs = state.bankedMs;
     this.#isAnchorJobActive = state.isAnchorJobActive;
-    this.#demandedKarma = state.demandedKarma;
-    this.#earnedKarma = state.earnedKarma;
-    this.#demandBonusAtDeparture = state.demandBonus;
 
     if (this.#isHarvested) this.#armHarvest();
   }
@@ -269,7 +243,7 @@ export default class Planet {
       this.#data.harvest?.yields ?? {},
       this.#alignment,
       this.#rates,
-      { anchorBonus: this.#anchorBonusAtDeparture, demandBonus: this.#demandBonusAtDeparture },
+      { anchorBonus: this.#anchorBonusAtDeparture },
     );
 
     if (paid.experience) paid.experience *= weight.drag;

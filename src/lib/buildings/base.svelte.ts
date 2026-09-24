@@ -278,10 +278,6 @@ export default class Building {
     if (negative > 0) {
       ResourceManager.add('karma_negative', negative);
     }
-
-    // The world keeps its own tally of what it was fed, which is what its demand
-    // is paid against — the piles cannot answer that, since they outlive it.
-    PlanetManager.getActive()?.recordKarma(positive, negative);
   }
 
   /**

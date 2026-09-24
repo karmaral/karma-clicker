@@ -199,22 +199,16 @@ export interface PlanetAnchoring {
 }
 
 /**
- * The pole a world pays for. The first thing in the game that asks for a number
- * other than zero — every other reading wants the piles paired, which is where
- * you already are if you never touch the dial. See `docs/design.md` §14.
- *
- * Read off a running share of the karma earned on the world, not off the
- * alignment locked on the way out: the gate forces that reading near even, so a
- * world's demand and its door would be fighting over one number.
+ * The pole a world takes off you. While you stand on it, the world pulls a share
+ * of its wanted pile each phase — a sink with a direction, so running long on
+ * what it wants is weight it lifts, and running the other way is weight you
+ * keep. See `docs/design.md` §21, *Karma as weight*.
  */
 export interface PlanetDemand {
-  /** Which pile the world wants fed. Even is not a demand — leave it unsaid. */
+  /** Which pile the world pulls. Even is not a demand — leave it unsaid. */
   wants: Polarity;
-  /**
-   * What full service is worth on the harvest's karma; full opposition pays its
-   * inverse, and an even split pays 1. Falls back to `balance.harvest.demand`.
-   */
-  factor?: number;
+  /** Share of that pile pulled per phase. Falls back to `balance.harvest.demandPull`. */
+  pull?: number;
 }
 
 /**

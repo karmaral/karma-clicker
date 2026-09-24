@@ -95,9 +95,9 @@ class Aim {
    * on the world behind you reads against a clock that has just restarted at
    * zero and would hang at full depth until the new world caught up.
    *
-   * It is also what makes a world's demand start neutral. A hard tilt carried
-   * across would begin filling the next world's `matchShare` — against a pole it
-   * alternates — before the screen had said a word about it. See §14.
+   * It is also what makes each world's pull start from neutral. A hard tilt
+   * carried across would begin feeding or starving the next world's wanted pole
+   * — which alternates — before the screen had said a word about it.
    */
   reset() {
     this.#detent = 0;

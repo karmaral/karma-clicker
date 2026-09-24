@@ -116,13 +116,12 @@
   );
 
   /**
-   * What the world asked for, settled. Its own line and not part of the track:
-   * the track is the reading the door takes, and this is the stay behind you —
-   * banked as it was earned, so cleaning up to pass the gate cannot spend it.
+   * What the world takes off you while you stay. Its own line and not part of
+   * the track: the track is the reading the door takes, and this is a pull on
+   * one pile that moves it.
    */
   const wants = $derived(getDemandLabel(planet.demand));
-  const served = $derived(Math.round(planet.matchShare * 100));
-  const paying = $derived(Math.round(planet.demandBonus * 100) / 100);
+  const pullPercent = $derived(Math.round(planet.pullShare * 100));
 </script>
 
 <div class="alignment">
@@ -207,7 +206,7 @@
 
   {#if wants}
     <p class="note demand">
-      Wanted {wants} · {served}% served · karma <span class="num">×{paying}</span>
+      Takes {wants} · <span class="num">{pullPercent}%</span> a phase · <span class="num">{f(planet.pullPerSecond)}</span>/s
     </p>
   {/if}
 </div>

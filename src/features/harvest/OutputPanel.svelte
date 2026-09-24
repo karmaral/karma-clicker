@@ -38,12 +38,9 @@
   const alignment = $derived(getFirstHarvestAlignment());
 
   const paid = $derived(
-    resolveHarvestYields(harvest?.yields ?? {}, alignment, rates, {
-      // What the stay already earned. The anchors are read at departure by
-      // `Harness` and do not reach this projection, so neither figure is a
-      // promise — both are what leaving right now would lock.
-      demandBonus: planet.demandBonus,
-    }),
+    // The anchors are read at departure by `Harness` and do not reach this
+    // projection, so it is not a promise — it is what leaving right now would lock.
+    resolveHarvestYields(harvest?.yields ?? {}, alignment, rates),
   );
 
   /**
@@ -73,14 +70,9 @@
 
   /**
    * How the yields above are reached, stated with this world's numbers: seconds
-   * of income at departure, then the one bonus the alignment applies — the demand
-   * on karma, or even's on experience. Mirrors `resolveHarvestYields`.
-   *
-   * A demand bonus under `NOTICEABLE` is left out: ×1.01 is a term nobody can
-   * see in the figure it multiplies.
+   * of income at departure, then even's bonus on experience where it applies.
+   * Mirrors `resolveHarvestYields`.
    */
-  const NOTICEABLE = 0.05;
-
   const formula = $derived.by(() => {
     // Declared in seconds; `formatSpan` reads ms.
     // Even pays no karma, so its term would describe a figure that is not there.
@@ -92,11 +84,8 @@
       ? `${formatSpan(declared[0][1] * 1000)} of income at departure`
       : declared.map(([type, seconds]) => `${formatSpan(seconds * 1000)} of ${type} income`).join(' · ');
 
-    const isDemandVisible = Math.abs(planet.demandBonus - 1) >= NOTICEABLE;
-
     const bonus = alignment === 0
-      ? `experience ×${f(1 + balance.harvest.evenExperienceBonus)} even`
-      : isDemandVisible && `karma ×${Math.round(planet.demandBonus * 100) / 100} demand`;
+      && `experience ×${f(1 + balance.harvest.evenExperienceBonus)} even`;
 
     return [base, bonus].filter(Boolean).join(' · ');
   });

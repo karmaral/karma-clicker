@@ -46,6 +46,7 @@ class PlanetManager {
     this.#lastAt = now;
 
     planet.advance(elapsed);
+    planet.pull(elapsed);
   }
 
   unlock(target: string) {

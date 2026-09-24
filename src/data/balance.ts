@@ -150,10 +150,11 @@ export default {
 
   aim: {
     /**
-     * The whole reward for committing to a side: Even pays ×1, a hard detent
-     * pays this. No per-cohort figures any more — see `docs/design.md` §6.
+     * What a hard detent pays over Even. ×1 while karma is weight: more of it
+     * is only more to carry, so a bonus here would be a cost. The dial's new job
+     * is open — see `docs/design.md` §21, *Karma as weight*.
      */
-    extremityMultiplier: 2,
+    extremityMultiplier: 1,
     /**
      * What re-aiming costs, and the **unit** it is paid in. A move buys
      * `reaimPhases × ceil(|Δdetent|/2)` of them, so the shortest step costs one
@@ -195,13 +196,11 @@ export default {
     mergeHalving: 0.25,
     maxMergeSpeed: 8,
     /**
-     * What serving a world's pole is worth, when the world does not say. Nothing
-     * is added to the payout — the same karma is redistributed across the poles,
-     * which is `wave`'s bias pair one level up. Bounded on purpose: a third
-     * unbounded multiplier on a figure that already compounds across five worlds
-     * is how a payout runs away.
+     * The share of its wanted pile a world takes off you each phase, when the
+     * world does not say. A share of the pile, not of income, so it is weight
+     * lifted at any scale. Placeholder, untuned.
      */
-    demand: 2,
+    demandPull: 0.05,
   },
 
   /**

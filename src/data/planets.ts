@@ -11,9 +11,10 @@ import type { PlanetData } from '$lib/types';
  * `cycles_per_age` holds at 4 everywhere so the wave reads the same on every
  * world; `phase_duration` doubles once, and `ages` carries the rest.
  *
- * `demand` alternates − / + / − / + / − across the system. The swing is forced
- * economically and never by a lock: a player who wants to eat the penalty and
- * run one pole forever still can, which is the toll's own rule one level up.
+ * `demand` alternates − / + / − / + / − across the system: each world pulls its
+ * pole off you. The swing is forced economically and never by a lock: a player
+ * who wants to carry the weight and run one pole forever still can, which is
+ * the toll's own rule one level up.
  */
 const data: Record<string, PlanetData> = {
   'first': {

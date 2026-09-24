@@ -9,7 +9,7 @@
   import { PlanetManager } from '$lib/managers';
   import { getDemandLabel } from '$lib/labels';
   import balance from '$data/balance';
-  import { formatRounded } from '$lib/utils';
+  import { f, formatRounded } from '$lib/utils';
   import AimControl from './AimControl.svelte';
 
   const owed = $derived(aim.phasesOwed);
@@ -28,19 +28,15 @@
   const span = $derived(aim.draftPhases);
 
   /**
-   * The world's standing offer, and what it is paying so far. This is the one
-   * place in the game that names a target other than zero, and it belongs in the
-   * aside of the control that answers it — every other reading wants the piles
-   * paired, which is where you already are if you never touch the dial. §14.
+   * What the world takes off you, and how fast. The one place in the game that
+   * names a pole other than zero, and it belongs in the aside of the control
+   * that answers it: aim toward what the world pulls and it lifts your weight.
    */
   const demand = $derived.by(() => {
     const wants = getDemandLabel(planet?.demand);
     if (!planet || !wants) return;
 
-    const served = Math.round(planet.matchShare * 100);
-    const paying = Math.round(planet.demandBonus * 100) / 100;
-
-    return `Wants ${wants} — ${served}% served, harvest karma ×${paying}`;
+    return `Takes ${wants} — ${f(planet.pullPerSecond)} karma/s lifted off you`;
   });
 
   const note = $derived(
