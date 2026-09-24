@@ -124,7 +124,7 @@
     {/each}
   </div>
 
-  {#if showChain || now.yieldScale !== 1 || now.heldBack > 0}
+  {#if showChain || now.yieldScale !== 1 || cohort.experienceScale !== 1 || now.heldBack > 0}
     <hr class="rule" />
 
     {#if showChain}
@@ -161,6 +161,15 @@
       <div class="line">
         <span class="label">harness</span>
         <span class="num">×{f(now.yieldScale, 2)}</span>
+      </div>
+    {/if}
+
+    {#if cohort.experienceScale !== 1}
+      <div class="line">
+        <span class="label">weight</span>
+        <span class="num">
+          ×{f(cohort.experienceScale, 2)} <span class="dim">experience only</span>
+        </span>
       </div>
     {/if}
 

@@ -17,6 +17,7 @@ import { harness, type HarnessSnapshot } from '$lib/harness.svelte';
 import { reserve, type ReserveSnapshot } from '$lib/reserve.svelte';
 import { aim, type AimSnapshot } from '$lib/aim';
 import { tokens } from '$lib/tokens.svelte';
+import { weight, type WeightSnapshot } from '$lib/weight.svelte';
 import type { BuildingSnapshot } from '$lib/buildings/base.svelte';
 import type { PlanetManagerSnapshot } from '$lib/managers/planet-manager.svelte';
 import type { UpgradeSnapshot } from '$lib/managers/upgrade-manager.svelte';
@@ -27,7 +28,7 @@ import type { ResourceSnapshot } from '$lib/resources/base.svelte';
  * `migrate` rather than thrown away — see `migrate.ts` for how far back that
  * reaches and what each step fills in.
  */
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 
 export interface SaveState {
   version: number;
@@ -42,6 +43,8 @@ export interface SaveState {
   refinery: RefinerySnapshot;
   /** Cohort lines are bought, so nothing rederives them — unlike every other axis. */
   harness: HarnessSnapshot;
+  /** The last backlog reading, which the gap between worlds cannot rederive. */
+  weight: WeightSnapshot;
   inversions: number;
 }
 
@@ -66,6 +69,7 @@ export function capture(): SaveState {
     aim: aim.snapshot(),
     refinery: refinery.snapshot(),
     harness: harness.snapshot(),
+    weight: weight.snapshot(),
     inversions: tokens.inversions,
   };
 }
@@ -111,6 +115,7 @@ export function apply(state: SaveState) {
   // unlock verb replaying under it.
   harness.restore(state.harness);
   tokens.restore(state.inversions);
+  weight.restore(state.weight);
 
   BuildingManager.startEmitters();
 }

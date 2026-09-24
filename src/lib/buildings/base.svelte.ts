@@ -387,6 +387,9 @@ export default class Building {
    */
   get yieldScale() { return 1; }
 
+  /** On top of `yieldScale`, for experience alone. 1 here; a subclass that carries weight narrows it. */
+  get experienceScale() { return 1; }
+
   /**
    * What one emission actually pays out — the same expression `#generateResources`
    * spends, so a readout cannot drift from the ledger. `production` is the base
@@ -402,7 +405,9 @@ export default class Building {
   payout(type: YieldType, count = this.#count, extra: Modifier[] = []) {
     const production = extra.length ? this.productionWith(extra) : this.#production;
 
-    return Math.round((production[type] ?? 0) * this.activeAt(count) * this.yieldScale);
+    const scale = type === 'experience' ? this.yieldScale * this.experienceScale : this.yieldScale;
+
+    return Math.round((production[type] ?? 0) * this.activeAt(count) * scale);
   }
 
   perSecond(type: YieldType, count = this.#count, extra: Modifier[] = []) {

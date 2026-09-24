@@ -2,6 +2,7 @@ import { ResourceManager } from '$lib/managers';
 import { ResourceEmitter } from '$lib/emission';
 import { getExcess } from '$lib/excess';
 import { getWaveBias } from '$lib/wave';
+import { weight } from '$lib/weight.svelte';
 import { FIRST_HARVEST_CONDITIONS } from '$lib/labels';
 import balance from '$data/balance';
 import { resolveDemandBonus, resolveHarvestDuration, resolveHarvestYields } from './harvest';
@@ -262,13 +263,18 @@ export default class Planet {
     });
   }
 
+  /** Experience under the weight you carry now — a world behind you is still your progression. */
   #harvestYields = $derived.by(() => {
-    return resolveHarvestYields(
+    const paid = resolveHarvestYields(
       this.#data.harvest?.yields ?? {},
       this.#alignment,
       this.#rates,
       { anchorBonus: this.#anchorBonusAtDeparture, demandBonus: this.#demandBonusAtDeparture },
     );
+
+    if (paid.experience) paid.experience *= weight.drag;
+
+    return paid;
   });
 
   #harvestDuration = $derived.by(() => {

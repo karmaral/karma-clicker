@@ -1,6 +1,7 @@
 import { progression } from '$lib/progression';
 import { harness } from '$lib/harness.svelte';
 import { refinery } from '$lib/refinery.svelte';
+import { weight } from '$lib/weight.svelte';
 import { PlanetManager, UpgradeManager } from '$lib/managers';
 
 /**
@@ -39,6 +40,8 @@ export function pulse() {
   refinery.tick();
   // Self-throttled, so a direct `pulse()` elsewhere costs nothing extra.
   refinery.sample();
+  // After the refinery's pulse, so the backlog reads what it just cleared.
+  weight.tick();
   // Before the triggers, so a beat gated on what it unlocked sees it this tick.
   UpgradeManager.acquireUnpriced();
   // And after it, so a cohort unlocked on this very tick still catches the

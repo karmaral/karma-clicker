@@ -3,6 +3,7 @@ import { PlanetManager } from '$lib/managers';
 import { reserve } from '$lib/reserve.svelte';
 import { harness } from '$lib/harness.svelte';
 import { prestige } from '$lib/prestige.svelte';
+import { weight } from '$lib/weight.svelte';
 
 /**
  * A building whose count is souls: the only thing that can be reserved or
@@ -54,6 +55,9 @@ export default class Cohort extends Building {
 
     return harness.multiplierFor(this.id, this.active) * prestige.yieldMultiplier;
   }
+
+  /** The karma you carry slows the souls. The hand is not a soul, so the press stays free of it. */
+  get experienceScale() { return weight.drag; }
 
   get anchoring() { return this.#anchoring; }
   get refining() { return this.#refining; }

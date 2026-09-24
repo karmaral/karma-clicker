@@ -9,6 +9,7 @@ import { harness } from '$lib/harness.svelte';
 // Same rule as `harness` above, and the cycle is the same one: `aim` reads the
 // active world every time it resolves, and this reaches it only inside `reach`.
 import { aim } from '$lib/aim';
+import { weight } from '$lib/weight.svelte';
 import { clock } from '$lib/clock';
 import data from '$data/planets';
 
@@ -101,9 +102,11 @@ class PlanetManager {
     const alignment = getFirstHarvestAlignment();
 
     // Pre-merge, and phase-averaged: merging must not destroy the thing you are
-    // being paid for, and the wave must not decide what the world is worth.
+    // being paid for, and the wave must not decide what the world is worth. The
+    // weight is divided back out for the same reason as the bias: the harvest
+    // takes the drag live, so a heavy moment on the way out is not locked in.
     const rates = {
-      experience: BuildingManager.countExperiencePerSecond(),
+      experience: BuildingManager.countExperiencePerSecond() / weight.drag,
       karma: BuildingManager.countKarmaPerSecondAveraged(),
     };
 

@@ -110,12 +110,22 @@ function toSeven(state: Raw): Raw {
   return { ...state, version: 7 };
 }
 
+/**
+ * v7 → v8. Held karma weighs, and the reading is frozen between worlds, so the
+ * save carries the last one. Zero is what the first tick with income overwrites;
+ * loaded in the gap, it reads as no weight until the next world pays.
+ */
+function toEight(state: Raw): Raw {
+  return { ...state, version: 8, weight: { income: 0, backlog: 0 } };
+}
+
 /** Keyed by the version each step raises *from*. */
 const STEPS: Record<number, (state: Raw) => Raw> = {
   3: toFour,
   4: toFive,
   5: toSix,
   6: toSeven,
+  7: toEight,
 };
 
 /**

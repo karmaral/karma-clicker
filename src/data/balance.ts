@@ -63,6 +63,17 @@ export default {
   },
 
   /**
+   * What held karma costs — see `docs/design.md` §21, *Karma as weight*. Read in
+   * seconds of your own karma income, never in amounts, so it survives any
+   * ladder change. `backlogHalving` is the backlog at which experience halves;
+   * the first `grace` seconds are free. Placeholders, untuned.
+   */
+  weight: {
+    backlogHalving: 300,
+    grace: 0,
+  },
+
+  /**
    * Capacity is a *saturating* share of what the cohorts produce, not a share
    * of what is held — see `docs/design.md` §9. `reach = coveragePerWorker ×
    * workers × efficiency` is bought and uncapped; `coverage = reach / (1 +
