@@ -47,17 +47,3 @@ export function getHeldKarmaIncome() {
     + harvestRateFor(harvest, 'karma_positive')
     + harvestRateFor(harvest, 'karma_negative');
 }
-
-/**
- * What the refinery's coverage is a share of: cohort karma, before the aim
- * split and the wave bias, times the *shorter* of the two shares the dial
- * would send it to. See `docs/design.md` §9 — this is exact, not an
- * approximation, because the wave's bias averages to 1.0 over a cycle.
- * Harvest income is left out on purpose: it never passed through the dial.
- */
-export function getShortPileIncome() {
-  const raw = BuildingManager.countKarmaEarnedPerSecond();
-  const { positiveShare, karmaYieldFactor } = aim.resolve();
-
-  return raw * karmaYieldFactor * Math.min(positiveShare, 1 - positiveShare);
-}

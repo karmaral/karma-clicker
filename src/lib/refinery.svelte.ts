@@ -4,12 +4,11 @@
  * remainder — the excess — can never leave the karma layer. Polarity still
  * survives the step; what no longer survives it is the imbalance.
  *
- * Capacity is a *saturating share of what is produced*, not a share of what is
- * held — see `docs/design.md` §9. Upgrades push `reach`, uncapped; `coverage`
- * is a view over it that approaches 1.0 and never reaches it, so no worker
- * count or upgrade total can push the refinery past what exists to clear. The
- * backlog always grows, by construction — that is not a bug, it is what keeps
- * the interval free to move for feel without ever starving a thin pile.
+ * Capacity is a *draw on the stock* — see `docs/design.md` §21, *Karma as
+ * weight*. Upgrades push `reach`, uncapped, and each second the refinery takes
+ * `reach / drawSeconds` of the shorter pile. Held karma is what slows you now,
+ * so the refinery is how you put it down: the matched backlog settles at
+ * `settlesAt` seconds, and every purchase lowers it.
  *
  * The level moves a second, independent axis: crimson per karma, not
  * throughput. It starts below 1 — the refinery is lossy at first — and rises
@@ -17,8 +16,8 @@
  * without ever feeding back into `reach`.
  *
  * Two different numbers wear the name "rate": `perSecond`/`batch` are a
- * *forecast* — coverage times the current short-pile income, so they move the
- * instant a cohort or the aim dial does. `clearedPerSecond` is *measured* — a
+ * *forecast* — a share of the current short pile, so they move with every
+ * payout and every pulse. `clearedPerSecond` is *measured* — a
  * trailing window over `#refined`, the same lifetime counter levelling reads —
  * so it moves on a human cadence and only when karma actually changed hands. A
  * HUD reads the second; the lab and DevPanel want the first.
@@ -27,7 +26,6 @@
 import { ResourceEmitter, type Listener } from '$lib/emission';
 import { ModifierSet } from '$lib/modifiers';
 import { BuildingManager, ResourceManager } from '$lib/managers';
-import { getShortPileIncome } from '$lib/income';
 import { reserve } from '$lib/reserve.svelte';
 import { clock } from '$lib/clock';
 import balance from '$data/balance';
@@ -119,9 +117,9 @@ class Refinery {
    */
   #precision = $derived(this.#modifiers.apply(0, 'step'));
 
-  /** Bought only — see `docs/design.md` §9. Uncapped; `coverage` is a saturating view over it. */
+  /** Bought only, uncapped. The share of the short pile drawn per `drawSeconds`. */
   #reach = $derived(
-    balance.refinery.coveragePerWorker * this.#workers * this.#efficiency,
+    balance.refinery.reachPerWorker * this.#workers * this.#efficiency,
   );
 
   /** Crimson per karma. Earned by running, not bought — starts lossy, never capped. */
@@ -135,14 +133,18 @@ class Refinery {
   /** Wide enough to span `PULSES_PER_WINDOW` pulses at the current interval. */
   #rateWindow = $derived(Math.max(MIN_WINDOW_MS, this.#interval * PULSES_PER_WINDOW));
 
-  /** The share of short-pile income the refinery can clear. Approaches 1.0, never reaches it. */
-  #coverage = $derived(this.#reach / (1 + this.#reach));
+  /** What pairing can reach — the shorter pile. The longer one's surplus is untouchable. */
+  #shortPile = $derived(
+    Math.min(...PILES.map(([karma]) => ResourceManager.getAmount(karma))),
+  );
 
-  /** Cohort karma, bias and aim split excluded — see `getShortPileIncome`. */
-  #shortPileIncome = $derived(getShortPileIncome());
+  /** Karma/s per lane: a share of the short pile, so a staffed refinery settles rather than chases. */
+  #capacity = $derived(this.#shortPile * this.#reach / balance.refinery.drawSeconds);
 
-  /** Karma/s per lane the refinery can clear at the current coverage. */
-  #capacity = $derived(this.#coverage * this.#shortPileIncome);
+  /** Seconds of income the matched backlog comes to rest at. Infinite while unstaffed. */
+  #settlesAt = $derived(
+    this.#reach > 0 ? balance.refinery.drawSeconds / this.#reach : Infinity,
+  );
 
   /** Per pile, per pulse — a forecast, not a cap on what a starved pile can give up. */
   #batch = $derived(this.#capacity * (this.#interval / 1000));
@@ -197,9 +199,10 @@ class Refinery {
    * stall. The clock pulses either way; only this says which one it was.
    *
    * `pulls` is how many draws this one covers — over 1 only once the interval is
-   * short enough to stream, where the emitter batches the clock. Capacity is
-   * flat, not a share of the pile, so `pulls` draws are simply `pulls` batches —
-   * still capped by what the shorter pile actually holds.
+   * short enough to stream, where the emitter batches the clock. `pulls` draws
+   * are taken as `pulls` batches off the pile as it stood — a linear step of an
+   * exponential draw, exact while `reach / drawSeconds` per pulse stays small —
+   * and still capped by what the shorter pile actually holds.
    *
    * Karma drawn and crimson paid are no longer the same figure — `ratio` sits
    * between them. Exp and `#refined` read the karma side only; feeding them the
@@ -351,11 +354,10 @@ class Refinery {
   /** Stopped for want of a worker — see `tick`. The clock is not running at all. */
   get isHalted() { return this.#emitter.isHalted; }
 
-  /** The share of short-pile income the refinery can clear. Approaches 1.0, never reaches it. */
-  get coverage() { return this.#coverage; }
+  get reach() { return this.#reach; }
 
-  /** What coverage is a share of — cohort karma, bias and aim split excluded. */
-  get shortPileIncome() { return this.#shortPileIncome; }
+  /** The matched backlog, in seconds of income, that the draw comes to rest at. */
+  get settlesAt() { return this.#settlesAt; }
 
   /**
    * Per pile, what the *next* draw would take — a forecast, not a measurement.
@@ -379,8 +381,8 @@ class Refinery {
    * what a header reading one crimson figure wants.
    *
    * Forecast, not measured, and deliberately the same basis the refinery screen
-   * reads: `#capacity` is coverage times short-pile income, both smooth, so it
-   * only moves when a cohort or an upgrade does. The sawtooth the class comment
+   * reads: `#capacity` is a share of the short pile, which moves with every
+   * payout but smoothly. The sawtooth the class comment
    * warns a HUD about is `#batch`'s — a per-pulse figure that collapses the
    * instant a pulse lands — not this one's. `clearedPerSecond` is the honest
    * measurement, but a trailing window over a lumpy counter reads as a number

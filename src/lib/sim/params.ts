@@ -83,7 +83,10 @@ const GLOBAL_FIELDS: FieldSpec[] = [
   // arrival table is the readout for it — see `balance.cohorts`.
   { field: 'cohorts.revealFactor', label: 'reveal / clerk', range: fixed(1, 200, 1) },
   { field: 'excess.evenBand', label: 'even band', range: fixed(0, 0.5, 0.005) },
-  { field: 'refinery.coveragePerWorker', label: 'coverage / worker', range: fixed(0, 0.01, 0.00005) },
+  { field: 'weight.backlogHalving', label: 'backlog halving s', range: fixed(10, 3600, 10) },
+  { field: 'weight.grace', label: 'backlog grace s', range: fixed(0, 3600, 10) },
+  { field: 'refinery.reachPerWorker', label: 'reach / worker', range: fixed(0, 0.01, 0.00005) },
+  { field: 'refinery.drawSeconds', label: 'draw s', range: fixed(1, 600, 1) },
   { field: 'refinery.interval', label: 'interval ms', range: fixed(100, 30_000, 100) },
   { field: 'refinery.expBase', label: 'exp to lvl 2', range: scaled(20) },
   { field: 'refinery.expGrowth', label: 'exp growth', range: fixed(1, 3, 0.01) },

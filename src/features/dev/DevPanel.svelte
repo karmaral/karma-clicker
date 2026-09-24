@@ -275,7 +275,7 @@
         <span class="id">
           slots {refinery.workers}/{refinery.slots}
           · lvl {refinery.level} ({f(refinery.exp)}/{f(refinery.expToNext)})
-          · {f(refinery.coverage * 100)}% coverage
+          · settles {f(refinery.settlesAt)}s
           · ×{f(refinery.ratio)} ratio
           · {f(refinery.perSecond)}/s each way (forecast)
           · {f(refinery.clearedPerSecond)}/s both (measured)

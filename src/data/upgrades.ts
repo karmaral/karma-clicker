@@ -54,10 +54,9 @@ const data: Record<string, UpgradeData[]> = {
   ],
   /**
    * Slots cap the souls; efficiency and reach both push `reach`, uncapped —
-   * `coveragePerWorker × workers × efficiency` — which `coverage = reach / (1 +
-   * reach)` then reads as a saturating share. Multiplying coverage by the
-   * interval to get a pulse's draw cancels the interval straight back out, so
-   * a duration modifier here would do nothing. `interval` stays fixed as pulse
+   * `reachPerWorker × workers × efficiency` — the share of the short pile drawn
+   * per `drawSeconds`. A pulse's draw is a rate times the interval, which
+   * cancels straight back out, so a duration modifier here would do nothing. `interval` stays fixed as pulse
    * granularity; `reach_*` stacks on the same channel `efficiency_*` does. The
    * level is a separate, unbought axis — see `refinery.svelte.ts` — so nothing
    * here touches it. Slots start with a base — see `balance.refinery` — so the

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { progression } from '$lib/progression';
   import RefiningStatus from './RefiningStatus.svelte';
-  import Coverage from './Coverage.svelte';
+  import Draw from './Draw.svelte';
   import IntakeBar from './IntakeBar.svelte';
   import SplitControl from './SplitControl.svelte';
   import TokenTable from './TokenTable.svelte';
@@ -9,13 +9,13 @@
 
 {#if progression.isRevealed('refinery.screen')}
   <div class="refinery view-layout">
-    <!-- Refining and Coverage are one argument in two steps — what it makes,
-         then what share of the flow that is — so they sit together. Intake is a
+    <!-- Refining and Draw are one argument in two steps — what it makes,
+         then where it settles the weight — so they sit together. Intake is a
          *stock* rather than a rate, and the heaviest graphic on the screen, so it
          anchors the column's base instead of splitting the two rate panels. -->
     <div class="engine">
       <RefiningStatus />
-      <Coverage />
+      <Draw />
       <IntakeBar />
     </div>
 

@@ -1,16 +1,14 @@
 <script lang="ts">
   /**
-   * The clock, and what it refines. The headline is the *forecast* rate —
-   * coverage times short-pile income, across both poles — so it moves only on a
-   * real event (an upgrade, a tilt, a cohort) and never with the pile, which is
-   * the one property a headline needs.
+   * The clock, and what it refines. The headline is the *forecast* rate — a
+   * share of the short pile, across both poles — so it falls as the weight
+   * comes off, which is the refinery working rather than failing.
    *
-   * Not coverage: a share answers "is this good" but is not a reward, and the
-   * Coverage panel below owns that reading outright — it was being said twice.
+   * Not where it settles: the Draw panel below owns that reading outright.
    *
    * Karma refined is the headline and Crimson is the line under it, because the
    * headline is what the *engine* did and the yield is what it paid. The two
-   * figures come apart on `ratio` now — the level's own axis, not coverage's —
+   * figures come apart on `ratio` now — the level's own axis, not the draw's —
    * so the headline stays a straight karma-cleared reading and Crimson is
    * where the level's work actually shows.
    *
@@ -98,7 +96,7 @@
     {:else}
       <span class="badge"><Badge kind="both" /></span>
       <Figure value={f(karma)} size="xxl" />
-      <span class="unit">karma/s<br>refined at this coverage</span>
+      <span class="unit">karma/s<br>refined at this draw</span>
     {/if}
   </div>
 

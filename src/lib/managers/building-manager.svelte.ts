@@ -179,9 +179,9 @@ class BuildingManager {
 
   /**
    * Karma earned before the aim split and the wave bias — neither the dial nor
-   * the phase have touched it yet. The refinery's coverage reads this: the aim
+   * the phase have touched it yet. The backlog's income reads this: the aim
    * split and the phase average out over a run, so folding them back in would
-   * only reintroduce the jitter coverage is built to avoid.
+   * only make the weight swing with the wave.
    */
   countKarmaEarnedPerSecond() {
     return this.#cohorts()

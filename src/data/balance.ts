@@ -74,19 +74,19 @@ export default {
   },
 
   /**
-   * Capacity is a *saturating* share of what the cohorts produce, not a share
-   * of what is held — see `docs/design.md` §9. `reach = coveragePerWorker ×
-   * workers × efficiency` is bought and uncapped; `coverage = reach / (1 +
-   * reach)` approaches 1.0 without ever crossing it, so no worker count or
-   * upgrade total can push the refinery past what exists to clear. Multiplying
-   * coverage by `interval` gives the karma one pulse draws — the interval
-   * cancels back out of throughput, so it is pulse granularity, not a lever.
+   * Capacity is a draw on the *stock*, not a share of income — see
+   * `docs/design.md` §21, *Karma as weight*. `reach = reachPerWorker × workers ×
+   * efficiency` is bought and uncapped, and each second the refinery draws
+   * `reach / drawSeconds` of the shorter pile. A draw on a stock cannot exceed
+   * it, so nothing needs saturating; the matched backlog settles at
+   * `drawSeconds / reach` seconds, and every purchase lowers it. The interval
+   * is pulse granularity, not a lever.
    *
    * The level moves a separate axis: crimson per karma, not throughput.
    * `ratioBase` is deliberately below 1 — the refinery starts lossy, and
-   * `levelHalving` levels are how long it takes to break even. Placeholder
-   * figures, calibrated so the live build reads ~12% coverage at 16 workers,
-   * x3 efficiency, and crosses ratio 1.0 at level 28.
+   * `levelHalving` levels are how long it takes to break even. `drawSeconds` is
+   * a placeholder: 16 workers at ×3 efficiency settle at 300 s. The level
+   * figures cross ratio 1.0 at level 28.
    *
    * `slots` is a base, not a placeholder to fill by upgrade — the refinery
    * must be able to do its one job the moment it is revealed, so the capacity
@@ -94,7 +94,8 @@ export default {
    */
   refinery: {
     slots: 4,
-    coveragePerWorker: 0.00125,
+    reachPerWorker: 0.00125,
+    drawSeconds: 18,
     interval: 2000,
     /** Karma to reach level 2, and how much steeper each rung gets. */
     expBase: 5_000,
