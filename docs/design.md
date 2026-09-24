@@ -4,7 +4,8 @@
 
 > **v6.5** — §21's *karma as weight* is built on `dev-next`, unsettled. §6, §9
 >  and §14 carry ⚠ pointers where the build now departs from them; §21 holds
->  what was built and the first sim, which found unpaired karma fatal.
+>  what was built and the sim: unpaired harvest karma was fatal, so `K` now
+>  pays half into each pile.
 
 > **v6.4** — a sync pass, no design moved. The v6.2 addendum is spliced: its
 >  correction-cost finding into §8, *karma expires* into §19, and its held
@@ -3038,7 +3039,9 @@ refinery is how you put it down.**
 - **`read_the_wave` and `the_other_way` are unpriced**, arriving at their xp
   gate — they open core systems, not choices. `str_3`/`str_4` still spend.
 - **The demand is the pull**, 5% of the wanted pile a phase. **Extremity is ×1.**
-- **Harvest `K` is unchanged** and counts as weight, in the piles and in income.
+- **Harvest `K` pays half into each pile** and counts as weight, in the piles
+  and in income. Even still takes ×3 experience and no karma, so the lock now
+  trades crimson feedstock for experience.
 - `drawSeconds` 3, `backlogHalving` 900, grace 0 — one sim pass, below.
 
 **First sim, 6 h, `cheapest`, detent Even, 25% refining** — against `a05b94e`:
@@ -3048,19 +3051,24 @@ refinery is how you put it down.**
 | Before | 216 m | 3 | 5.0 × 10¹¹ |
 | Stock draw at 18 s, no drag | 112 m | 2 | — |
 | As built, no pull | 126 m | 3 | 6.7 × 10⁹ |
-| As built | never | 4, then stalls | — |
+| `K` to one pile | never | 4, then stalls | — |
+| As built, `K` split | 170 m | 4 | ~1.3 × 10¹⁰ |
 
 - **The stock draw alone halves the run to terminus.** It pays far more crimson
   than coverage did; wisdom's `W` is now mis-set.
 - **Paired weight is survivable.** Without the pull, drag climbs back from ×0.54
   to ×0.95 as the refinery settles the backlog near 38 s.
-- ⚠ **Unpaired streams are fatal to a player who never re-aims.** An aligned
-  harvest pays one pile forever, and the pull empties one pile a phase; both
-  are excess, which only the dial can shed. As built, once every world is
-  behind you, `N` reaches 0, pairing stops and the backlog climbs unbounded —
-  drag ×0.05 at 6 h. **Blocks settling this proposal:** split `K` across both
-  poles, make excess weigh less than paired karma, or give the dial its new
-  job as the unpaired sink.
+- **Unpaired streams were fatal once every world was behind you.** With `K`
+  paid to one pile, `N` reached 0, pairing stopped and drag fell to ×0.05 by
+  6 h — no cohort was earning, so no dial could correct it. Splitting `K`
+  fixed it: after the last harvest the piles hold level, drag sits near ×0.95
+  and crimson keeps climbing.
+- **After the last world the run is a cash-out.** The worlds behind you feed
+  the refinery, and wisdom's square root makes when to end the run a choice.
+  Whether that stretch should be short by design or a real phase is open.
+- **The dial's new job is still open:** shed unpaired karma **from the stock**
+  while you stand on a world, as a lever rather than a chore. It must not
+  make the harvest gate's correction free.
 - ⚠ **Experience runs ~75× below the old curve** at 1.65 h even when it
   survives, and the harness, lines and level ladder are priced against the old
   curve.

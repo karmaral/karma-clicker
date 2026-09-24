@@ -35,9 +35,11 @@ export function resolveDemandPull(demand: PlanetDemand | undefined) {
 }
 
 /**
- * The locked alignment picks karma's pile. Even can pick neither, so it takes
- * the experience bonus instead of the karma — on top it would be strictly best
- * and the reading would stop being a choice.
+ * A tilted lock pays karma into **both** piles, half each: a world behind you
+ * feeds the refinery rather than an imbalance only the dial could shed — and
+ * once every world is behind you, no dial is earning to shed it. Even takes the
+ * experience bonus instead of the karma, so the lock trades crimson feedstock
+ * for experience.
  *
  * `declared` is **seconds of production**, so one delivery is worth that many
  * seconds of the income you left with. Nothing here is an absolute, which is
@@ -58,7 +60,8 @@ export function resolveHarvestYields(
     if (type === 'karma') {
       if (isEven) return;
 
-      paid[alignment > 0 ? 'karma_positive' : 'karma_negative'] = amount;
+      paid.karma_positive = amount / 2;
+      paid.karma_negative = amount / 2;
       return;
     }
 
