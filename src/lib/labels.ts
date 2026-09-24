@@ -279,6 +279,7 @@ const STAT_NOUNS: Partial<Record<ModifierStat, string>> = {
   anchors: 'anchors placeable',
   work: 'placing speed',
   press: 'per press',
+  balance: 'balancing rate',
 };
 
 /** `karma_positive` → `positive karma` — the order every other reading already takes. */

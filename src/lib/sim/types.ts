@@ -19,6 +19,8 @@ export interface SimConfig {
   reserveFraction: number;
   /** The anchoring lever. Only bites while a world is going down. */
   anchorFraction: number;
+  /** Of the refinery's souls, the share balancing. Inert until the upgrade lands. */
+  balanceFraction: number;
   detent: Detent;
   sampleSeconds: number;
   /** What `generous` adds on top of the floor. */

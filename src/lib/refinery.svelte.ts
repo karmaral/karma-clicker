@@ -15,6 +15,11 @@
  * as the level does, so it keeps climbing after the upgrade table runs dry
  * without ever feeding back into `reach`.
  *
+ * The balancer is a second split of the staffed souls: they move karma from the
+ * long pile to the short one, 1 : 1, so the unpaired remainder becomes something
+ * the draw can reach — see `docs/design.md` §21, *The balancer*. It stops at a
+ * band around the world's gate; the dial finishes.
+ *
  * Two different numbers wear the name "rate": `perSecond`/`batch` are a
  * *forecast* — a share of the current short pile, so they move with every
  * payout and every pulse. `clearedPerSecond` is *measured* — a
@@ -25,7 +30,7 @@
 
 import { ResourceEmitter, type Listener } from '$lib/emission';
 import { ModifierSet } from '$lib/modifiers';
-import { BuildingManager, ResourceManager } from '$lib/managers';
+import { BuildingManager, PlanetManager, ResourceManager } from '$lib/managers';
 import { reserve } from '$lib/reserve.svelte';
 import { clock } from '$lib/clock';
 import balance from '$data/balance';
@@ -36,6 +41,7 @@ export interface RefinerySnapshot {
   exp: number;
   refined: number;
   produced: number;
+  balancing: number;
 }
 
 /** Under this the emitter would re-queue inside its own payout. */
@@ -107,6 +113,19 @@ class Refinery {
    */
   #workers = $derived(Math.min(BuildingManager.countRefining(), this.#slots));
 
+  /** Opened by an upgrade's `unlock` verb, which replays on load — so not saved. */
+  #isBalancerUnlocked = $state(false);
+
+  /** The share of the workers balancing rather than drawing. Inert until unlocked. */
+  #balancing = $state(0);
+
+  #balancers = $derived(
+    this.#isBalancerUnlocked ? Math.round(this.#workers * this.#balancing) : 0,
+  );
+
+  /** The workers left drawing — the only ones `reach` reads. */
+  #drawers = $derived(this.#workers - this.#balancers);
+
   /** What one worker at efficiency x1 is worth — a channel on the same stack as reach upgrades. */
   #efficiency = $derived(this.#modifiers.apply(1, 'yield'));
 
@@ -119,7 +138,49 @@ class Refinery {
 
   /** Bought only, uncapped. The share of the short pile drawn per `drawSeconds`. */
   #reach = $derived(
-    balance.refinery.reachPerWorker * this.#workers * this.#efficiency,
+    balance.refinery.reachPerWorker * this.#drawers * this.#efficiency,
+  );
+
+  /** The share of half the gap moved per `drawSeconds` — the draw's shape, so it converges. */
+  #balanceReach = $derived(
+    balance.refinery.reachPerWorker * this.#balancers * this.#efficiency
+      * this.#modifiers.apply(1, 'balance'),
+  );
+
+  /**
+   * The excess it stops at: a share of the gate of the world you have yet to
+   * leave, so the dial finishes. None between worlds — it balances to 0.
+   */
+  #band = $derived.by(() => {
+    const planet = PlanetManager.getActive();
+    const gate = planet && !planet.isHarvested ? planet.data.firstHarvest.excessGate : undefined;
+
+    return gate ? balance.refinery.bandFactor * gate : 0;
+  });
+
+  /** The long pile, and half of what it holds over the short one. */
+  #imbalance = $derived.by(() => {
+    const [[long], [short]] = [...PILES].sort(
+      ([a], [b]) => ResourceManager.getAmount(b) - ResourceManager.getAmount(a),
+    );
+    const longAmount = ResourceManager.getAmount(long);
+    const shortAmount = ResourceManager.getAmount(short);
+    const outside = longAmount - shortAmount - this.#band * (longAmount + shortAmount);
+
+    return {
+      long,
+      short,
+      halfGap: (longAmount - shortAmount) / 2,
+      /** What may move before the band stops it. */
+      movable: Math.max(0, outside / 2),
+    };
+  });
+
+  /** Karma/s moved long → short: a share of half the gap, so it converges. 0 inside the band. */
+  #balancedPerSecond = $derived(
+    this.#imbalance.movable > 0
+      ? this.#imbalance.halfGap * this.#balanceReach / balance.refinery.drawSeconds
+      : 0,
   );
 
   /** Crimson per karma. Earned by running, not bought — starts lossy, never capped. */
@@ -156,7 +217,28 @@ class Refinery {
   #clearedPerSecond = $derived(this.#rateAt(this.#samples.length - 1));
 
   constructor() {
-    this.#emitter = new ResourceEmitter((pulls) => this.#refine(pulls), () => this.#interval);
+    this.#emitter = new ResourceEmitter((pulls) => this.#pulse(pulls), () => this.#interval);
+  }
+
+  /** Balance first, so what it moves is drawable on the same pulse. */
+  #pulse(pulls: number) {
+    this.#balance(pulls);
+
+    return this.#refine(pulls);
+  }
+
+  /**
+   * Long pile to short, 1 : 1 — nothing is destroyed, so it clears no weight
+   * itself; it makes the remainder pairable. `incur` on the short side, so a
+   * transfer never counts toward a lifetime-gated unlock.
+   */
+  #balance(pulls: number) {
+    const { long, short, movable } = this.#imbalance;
+    const moved = Math.min(movable, this.#balancedPerSecond * (this.#interval / 1000) * pulls);
+    if (moved <= 0) return;
+
+    ResourceManager.remove(long, moved);
+    ResourceManager.incur(short, moved);
   }
 
   /** Autonomy from the beat on. Whether a cycle is actually running is `tick`'s. */
@@ -296,6 +378,9 @@ class Refinery {
       // one below rather than let it read a setting it can no longer be set to.
       if (modifier.stat === 'step') {
         reserve.snapTo('refining', this.step);
+        // Same snap as `reserve.snapTo` — the balancing split shares the ladder.
+        const slots = Math.floor(this.#balancing / this.step + 1e-9);
+        this.#balancing = Number((slots * this.step).toFixed(6));
       }
     }
   }
@@ -308,22 +393,46 @@ class Refinery {
     this.#emitter.removeListener(identifier, fn);
   }
 
-  /** Nothing here rederives — a save stores all four raw. */
-  restore({ level, exp, refined, produced }: RefinerySnapshot) {
+  /** An upgrade's `unlock` verb lands here. */
+  unlockBalancer() {
+    this.#isBalancerUnlocked = true;
+  }
+
+  setBalancing(share: number) {
+    this.#balancing = Math.max(0, Math.min(1, share));
+  }
+
+  /** Nothing here rederives — a save stores all five raw. */
+  restore({ level, exp, refined, produced, balancing }: RefinerySnapshot) {
     this.#level = level;
     this.#exp = exp;
     this.#refined = refined;
     this.#produced = produced;
+    this.#balancing = balancing;
   }
 
   snapshot(): RefinerySnapshot {
     return {
-      level: this.#level, exp: this.#exp, refined: this.#refined, produced: this.#produced,
+      level: this.#level,
+      exp: this.#exp,
+      refined: this.#refined,
+      produced: this.#produced,
+      balancing: this.#balancing,
     };
   }
 
   get slots() { return this.#slots; }
   get workers() { return this.#workers; }
+  get drawers() { return this.#drawers; }
+  get balancers() { return this.#balancers; }
+  get balancing() { return this.#balancing; }
+  get isBalancerUnlocked() { return this.#isBalancerUnlocked; }
+
+  /** The excess the balancer stops at; 0 between worlds. */
+  get band() { return this.#band; }
+
+  /** Karma/s moved long → short — a forecast, like `perSecond`. */
+  get balancedPerSecond() { return this.#balancedPerSecond; }
 
   /** The finest the refining split can be set to. Coarse until upgrades buy it down. */
   get step() {

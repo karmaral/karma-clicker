@@ -82,10 +82,25 @@ const data: Record<string, UpgradeData[]> = {
       costs: { red_positive: 6000 },
     },
     {
+      // Around the second harvest — after world 1 has taught the swing through
+      // the dial. Both crimsons: it serves neither pole. See `docs/design.md`
+      // §21, *The balancer*. Placeholder figures.
+      id: 'balancer',
+      effect: 'unlock',
+      unlocks_at: { red_positive: 1500 },
+      costs: { red_positive: 1000, red_negative: 1000 },
+    },
+    {
       id: 'slots_1',
       effect: { op: 'flat', value: 12, stat: 'slots' },
       unlocks_at: { red_positive: 16_000 },
       costs: { red_positive: 12_000 },
+    },
+    {
+      id: 'balance_1',
+      effect: { op: 'mult', value: 2, stat: 'balance' },
+      unlocks_at: { red_positive: 20_000 },
+      costs: { red_positive: 15_000, red_negative: 15_000 },
     },
     {
       id: 'efficiency_2',

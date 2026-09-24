@@ -43,6 +43,7 @@ export const DEFAULT_CONFIG: SimConfig = {
   clicksPerSecond: 4,
   reserveFraction: 0.25,
   anchorFraction: 0.25,
+  balanceFraction: 0.25,
   detent: 0,
   sampleSeconds: 30,
   generousMargin: 0.15,
@@ -317,6 +318,7 @@ export async function run(
     if (!reserveSet && progression.isLive('details.split')) {
       reserve.set('anchoring', config.anchorFraction);
       reserve.set('refining', config.reserveFraction);
+      refinery.setBalancing(config.balanceFraction);
       reserveSet = true;
     }
 

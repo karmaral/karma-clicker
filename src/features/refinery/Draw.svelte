@@ -14,12 +14,12 @@
   import { spotlight } from '$lib/spotlight.svelte';
   import { f, formatSpan } from '$lib/utils';
 
-  const isIdle = $derived(refinery.workers <= 0);
+  const isIdle = $derived(refinery.drawers <= 0);
 </script>
 
 <Section label="Draw" highlighted={spotlight.isLit('refinery')}>
   {#snippet aside()}
-    {f(refinery.workers)} souls staffing it · {f(refinery.slots)} slots
+    {f(refinery.drawers)} souls drawing · {f(refinery.slots)} slots
   {/snippet}
 
   {#if isIdle}

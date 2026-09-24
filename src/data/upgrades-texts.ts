@@ -25,9 +25,18 @@ const data: Record<string, Record<string, ItemTextData>> = {
       title: 'Longer reach',
       description: 'Twice the reach — the gap narrows.',
     },
+    'balancer': {
+      title: 'Even the scales',
+      description: 'Some of the refinery\'s souls carry karma from the heavier pile to the lighter, so it can be paired.',
+      effect: 'the balancing split',
+    },
     'slots_1': {
       title: 'The floor below',
       description: 'Twelve more slots.',
+    },
+    'balance_1': {
+      title: 'Quicker hands',
+      description: 'The balancers carry twice as fast.',
     },
     'efficiency_2': {
       title: 'Steadier still',

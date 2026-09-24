@@ -112,6 +112,13 @@ export default {
      * Same rungs to start with; the two are free to diverge.
      */
     splitSteps: [0.25, 0.15, 0.1, 0.05, 0.025],
+    /**
+     * The balancer stops at `bandFactor × excessGate` of the world you are on,
+     * so the dial finishes what it starts — see `docs/design.md` §21, *The
+     * balancer*. Between worlds there is no gate and it balances to 0. Its rate
+     * rides `reachPerWorker`. Placeholder, untuned.
+     */
+    bandFactor: 2,
   },
 
   /**

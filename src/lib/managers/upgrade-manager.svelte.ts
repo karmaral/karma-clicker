@@ -231,12 +231,13 @@ class UpgradeManager {
     const { kind, entity } = parseScope(target);
 
     // The scopes with a singleton behind them. A verb usually needs an entity to
-    // act on, so these are modifiers — with one exception: the harness's `unlock`
-    // opens cohort lines, which are then *bought* rather than granted, so the
-    // verb has the singleton itself to act on and nothing else.
+    // act on, so these are modifiers — with two exceptions, each an `unlock` with
+    // the singleton itself to act on: the harness's opens cohort lines, which are
+    // then *bought* rather than granted, and the refinery's opens the balancer.
     if (kind === 'refinery' || kind === 'harness') {
       if (typeof effect === 'string') {
         if (kind === 'harness' && effect === 'unlock') harness.unlockLines();
+        if (kind === 'refinery' && effect === 'unlock') refinery.unlockBalancer();
 
         return;
       }

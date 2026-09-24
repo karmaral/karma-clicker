@@ -31,12 +31,13 @@ export type ModifierOp = 'flat' | 'boost' | 'mult' | 'pow' | 'final';
  *
  * `anchors` is how many of a world's anchor slots you can fill, `work` is
  * job-ms placed per real ms per worker, and `press` is what one press pays into
- * the job. Cohort lines are **not** here: a line is bought repeatedly at a
+ * the job. `balance` multiplies the refinery's balancer rate and nothing else.
+ * Cohort lines are **not** here: a line is bought repeatedly at a
  * climbing price, so it is a counter on `Harness` rather than a modifier.
  */
 export type ModifierStat =
   | 'yield' | 'duration' | 'slots' | 'riders' | 'step' | 'carry'
-  | 'anchors' | 'work' | 'press';
+  | 'anchors' | 'work' | 'press' | 'balance';
 
 export interface Modifier {
   id: string;

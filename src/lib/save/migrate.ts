@@ -119,6 +119,16 @@ function toEight(state: Raw): Raw {
   return { ...state, version: 8, weight: { income: 0, backlog: 0 } };
 }
 
+/**
+ * v8 → v9. The refinery splits its souls between drawing and balancing. Zero
+ * is where the lever starts; no v8 run could have set it.
+ */
+function toNine(state: Raw): Raw {
+  const refinery = (state.refinery ?? {}) as Raw;
+
+  return { ...state, version: 9, refinery: { ...refinery, balancing: 0 } };
+}
+
 /** Keyed by the version each step raises *from*. */
 const STEPS: Record<number, (state: Raw) => Raw> = {
   3: toFour,
@@ -126,6 +136,7 @@ const STEPS: Record<number, (state: Raw) => Raw> = {
   5: toSix,
   6: toSeven,
   7: toEight,
+  8: toNine,
 };
 
 /**

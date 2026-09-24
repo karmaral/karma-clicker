@@ -4,6 +4,7 @@
   import Draw from './Draw.svelte';
   import IntakeBar from './IntakeBar.svelte';
   import SplitControl from './SplitControl.svelte';
+  import BalanceSplit from './BalanceSplit.svelte';
   import TokenTable from './TokenTable.svelte';
 </script>
 
@@ -22,6 +23,7 @@
     <div class="grades">
       <TokenTable />
       <SplitControl job="refining" />
+      <BalanceSplit />
     </div>
   </div>
 {/if}
