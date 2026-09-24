@@ -66,10 +66,11 @@ export default {
    * What held karma costs — see `docs/design.md` §21, *Karma as weight*. Read in
    * seconds of your own karma income, never in amounts, so it survives any
    * ladder change. `backlogHalving` is the backlog at which experience halves;
-   * the first `grace` seconds are free. Placeholders, untuned.
+   * the first `grace` seconds are free. First sim pass: at 900 a paired run
+   * settles near ×0.95; at 300 the refinery's settle point alone cost ×0.4.
    */
   weight: {
-    backlogHalving: 300,
+    backlogHalving: 900,
     grace: 0,
   },
 
@@ -85,8 +86,8 @@ export default {
    * The level moves a separate axis: crimson per karma, not throughput.
    * `ratioBase` is deliberately below 1 — the refinery starts lossy, and
    * `levelHalving` levels are how long it takes to break even. `drawSeconds` is
-   * a placeholder: 16 workers at ×3 efficiency settle at 300 s. The level
-   * figures cross ratio 1.0 at level 28.
+   * a first sim pass: the default run settles at ~38 s from the refining beat.
+   * The level figures cross ratio 1.0 at level 28.
    *
    * `slots` is a base, not a placeholder to fill by upgrade — the refinery
    * must be able to do its one job the moment it is revealed, so the capacity
@@ -95,7 +96,7 @@ export default {
   refinery: {
     slots: 4,
     reachPerWorker: 0.00125,
-    drawSeconds: 18,
+    drawSeconds: 3,
     interval: 2000,
     /** Karma to reach level 2, and how much steeper each rung gets. */
     expBase: 5_000,
