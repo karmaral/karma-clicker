@@ -3170,6 +3170,13 @@ feedstock.** The name is a working name.
   crimson later. `draw` reads the drawing souls only.
 - **On the refinery's clock, not the wave's.** It runs between worlds and after
   the last one; since `K` split, the endgame rarely needs it.
+- **It stops short of the gate.** It works only while `|excess| > bandFactor ×
+  excessGate` of the active world — 2× to start, so 0.24 → 0.06 across the
+  worlds. **The balancer takes the bulk; the dial finishes.** With no active
+  world there is no band, and it balances to 0. A share of the gate, so it
+  holds at any scale and through any upgrade; its rate is left free for feel.
+  The cost: up to the band's worth of held karma sits unpaired and weighs —
+  the pressure that keeps re-aiming worth doing.
 - **Unlocked by purchase, not by the refining beat.** A refinery upgrade priced
   in crimson, gated around the second harvest — after world 1 has taught the
   swing through the dial, and after an imbalance has visibly weighed. Later
@@ -3177,9 +3184,8 @@ feedstock.** The name is a working name.
 
 **Open**
 
-- ⚠ **The harvest gate.** A staffed balancer holds excess at 0, so `excessGate`
-  becomes a staffing cost rather than a correction. Either that is the intent,
-  or its rate is tuned so reaching 0.03 still takes longer than re-aiming (§8).
+- **`bandFactor`** — whether the stretch left to the dial costs about what §8's
+  correction does today. Sim figure.
 - The unlock's price and gate, and the rate per soul — sim figures.
 - **Where weight reads.** Built as a *Weight* figure beside the Excess reading in
   the Karma cell. The meter reads the piles' *difference*; weight reads their
