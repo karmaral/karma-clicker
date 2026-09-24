@@ -20,7 +20,7 @@
   import { f } from '$lib/utils';
   import balance from '$data/balance';
   import type Planet from '$lib/planets/base.svelte';
-  import type { HarvestRates, Polarity, ResourceType } from '$types';
+  import type { HarvestRates, Polarity, ResourceType, YieldType } from '$types';
 
   interface Props {
     /** The world being left, for its declared yields and what its demand settled at. */
@@ -79,6 +79,15 @@
 
   const caret = $derived(mark(reading));
 
+  /** Karma lands half in each pile, so the pair is one matched badge, not two. */
+  function badgesOf(paid: Partial<Record<ResourceType, number>>) {
+    const types = (Object.keys(paid) as YieldType[])
+      .filter((type) => type !== 'karma_negative')
+      .map((type) => (type === 'karma_positive' ? 'karma' : type));
+
+    return types.sort(byRateOrder).map(badgeFor);
+  }
+
   /**
    * What each side would pay, as the multiplier on experience and the karma it
    * places. Read off `resolveHarvestYields` rather than restated, so the three
@@ -94,7 +103,7 @@
         polarity,
         // Two places, or a bonus that divides badly prints its whole tail.
         multiplier: declared > 0 ? Math.round((experience / declared) * 100) / 100 : 1,
-        badges: (Object.keys(paid) as ResourceType[]).sort(byRateOrder).map(badgeFor),
+        badges: badgesOf(paid),
       };
     }),
   );
@@ -206,7 +215,8 @@
 
   {#if wants}
     <p class="note demand">
-      Takes {wants} · <span class="num">{pullPercent}%</span> a phase · <span class="num">{f(planet.pullPerSecond)}</span>/s
+      Takes {wants} · <span class="num">{pullPercent}%</span> a phase ·
+      {#if planet.pulledPole}<span class="badge"><Badge kind={badgeFor(planet.pulledPole)} /></span>{/if}<span class="num">{f(planet.pullPerSecond)}</span>/s
     </p>
   {/if}
 </div>
@@ -424,6 +434,13 @@
      the figure is the thing the stay actually bought. */
   .note.demand {
     margin-top: calc(var(--sp-1) * -1);
+  }
+
+  /* The pile it drains, badged on the figure so the rate names its own pole. */
+  .note.demand .badge {
+    display: inline-flex;
+    vertical-align: middle;
+    margin-right: var(--badge-gap);
   }
 
   .note.demand .num {
