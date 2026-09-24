@@ -216,7 +216,10 @@
   {#if wants}
     <p class="note demand">
       Takes {wants} · <span class="num">{pullPercent}%</span> a phase ·
-      {#if planet.pulledPole}<span class="badge"><Badge kind={badgeFor(planet.pulledPole)} /></span>{/if}<span class="num">{f(planet.pullPerSecond)}</span>/s
+      <span class="rate">
+        {#if planet.pulledPole}<span class="badge"><Badge kind={badgeFor(planet.pulledPole)} /></span>{/if}
+        <span><span class="num">{f(planet.pullPerSecond)}</span>/s</span>
+      </span>
     </p>
   {/if}
 </div>
@@ -437,10 +440,18 @@
   }
 
   /* The pile it drains, badged on the figure so the rate names its own pole. */
-  .note.demand .badge {
+  /* `RateFigure`'s arrangement: the figure's baseline is the row's, and the badge
+     centres out of the group — `vertical-align: middle` centred it on the
+     x-height, which sits under the digits' middle. */
+  .note.demand .rate {
     display: inline-flex;
-    vertical-align: middle;
-    margin-right: var(--badge-gap);
+    align-items: baseline;
+    gap: var(--badge-gap);
+  }
+
+  .note.demand .badge {
+    display: flex;
+    align-self: center;
   }
 
   .note.demand .num {
