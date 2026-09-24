@@ -3066,9 +3066,8 @@ refinery is how you put it down.**
 - **After the last world the run is a cash-out.** The worlds behind you feed
   the refinery, and wisdom's square root makes when to end the run a choice.
   Whether that stretch should be short by design or a real phase is open.
-- **The dial's new job is still open:** shed unpaired karma **from the stock**
-  while you stand on a world, as a lever rather than a chore. It must not
-  make the harvest gate's correction free.
+- **The dial's job is serving the pull**: a world empties its wanted pile, so
+  you aim toward it to stay paired. Unpaired stock is the balancer's — below.
 - ⚠ **Experience runs ~75× below the old curve** at 1.65 h even when it
   survives, and the harness, lines and level ladder are priced against the old
   curve.
@@ -3146,6 +3145,45 @@ crimson rather than a loss.
   Freeze the last reading.
 - **Never touch `duration` or the wave** (§7): the drag is a yield multiplier and
   nothing else.
+
+#### The balancer
+
+Specified 2026-09-23, not built. **A load balancer for the piles: refinery souls
+that move karma from the long pile to the short one, so unpaired karma becomes
+feedstock.** The name is a working name.
+
+- **A second split on the refinery screen**, reusing `SplitControl`. It divides
+  the refinery's *staffed* souls between drawing and balancing; the existing
+  split still sets how many souls the refinery gets.
+- **1 : 1, nothing destroyed.** Karma leaves the game only as crimson. Balancing
+  makes pairing possible; it never clears weight itself.
+- **Stock-shaped, like the draw, and self-stopping:**
+
+  ```
+  moved = (L − S) / 2 × reachBalance / drawSeconds    per second, L → S
+  reachBalance = reachPerWorker × balancers × efficiency
+  ```
+
+  Half the gap, so it converges and never overshoots. At `L = S` it does
+  nothing. Direction is automatic — nothing to aim.
+- **Its cost is the souls.** A balancing soul is not drawing: balance now buys
+  crimson later. `draw` reads the drawing souls only.
+- **On the refinery's clock, not the wave's.** It runs between worlds and after
+  the last one; since `K` split, the endgame rarely needs it.
+- **Unlocked by purchase, not by the refining beat.** A refinery upgrade priced
+  in crimson, gated around the second harvest — after world 1 has taught the
+  swing through the dial, and after an imbalance has visibly weighed. Later
+  rungs raise its rate on its own stat.
+
+**Open**
+
+- ⚠ **The harvest gate.** A staffed balancer holds excess at 0, so `excessGate`
+  becomes a staffing cost rather than a correction. Either that is the intent,
+  or its rate is tuned so reaching 0.03 still takes longer than re-aiming (§8).
+- The unlock's price and gate, and the rate per soul — sim figures.
+- **Where weight reads.** Built as a *Weight* figure beside the Excess reading in
+  the Karma cell. The meter reads the piles' *difference*; weight reads their
+  *size* — two quantities, so they stay two figures, side by side.
 
 ### The short-pile skim
 
