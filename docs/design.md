@@ -3148,7 +3148,8 @@ crimson rather than a loss.
 
 #### The balancer
 
-Specified 2026-09-23, not built. **A load balancer for the piles: refinery souls
+Specified and built 2026-09-23 (`refinery.svelte.ts`, `BalanceSplit.svelte`;
+unlock `balancer`, rate rung `balance_1`). **A load balancer for the piles: refinery souls
 that move karma from the long pile to the short one, so unpaired karma becomes
 feedstock.** The name is a working name.
 
@@ -3186,7 +3187,14 @@ feedstock.** The name is a working name.
 
 - **`bandFactor`** — whether the stretch left to the dial costs about what §8's
   correction does today. Sim figure.
-- The unlock's price and gate, and the rate per soul — sim figures.
+- The unlock's price and gate, and the rate per soul — sim figures. Placeholders:
+  gate 1_500 crimson+, price 1_000 of each; rate rides `reachPerWorker`.
+- ⚠ **First sim (4 h, Even, 25% balancing): it passes worlds faster and ends
+  the run poorer.** World 4 at 45 min against 87 with it off; the gap arrives at
+  70 min with P = N as specified, but on harvest income alone the run never
+  reaches `terminus` — off, it does at 96 min. Leaving sooner locks smaller
+  harvests. The endgame question again (§19), not a balancer figure. Single
+  runs swing hard on the bot's purchases, so no figure is read off this.
 - **Where weight reads.** Built as a *Weight* figure beside the Excess reading in
   the Karma cell. The meter reads the piles' *difference*; weight reads their
   *size* — two quantities, so they stay two figures, side by side.
