@@ -1,6 +1,10 @@
 # Karma Clicker — Design
 
-**v6.4** · 2026-09-23 · supersedes CONTEXT v3
+**v6.5** · 2026-09-23 · supersedes CONTEXT v3
+
+> **v6.5** — §21's *karma as weight* is built on `dev-next`, unsettled. §6, §9
+>  and §14 carry ⚠ pointers where the build now departs from them; §21 holds
+>  what was built and the first sim, which found unpaired karma fatal.
 
 > **v6.4** — a sync pass, no design moved. The v6.2 addendum is spliced: its
 >  correction-cost finding into §8, *karma expires* into §19, and its held
@@ -891,6 +895,9 @@ extremity        = |detent| / 2
 karmaYieldFactor = (1 + extremity × (extremityMultiplier − 1)) × (1 − reaimPenalty)
 ```
 
+⚠ **1 on `dev-next` since 2026-09-23** — under karma as weight a bonus here is
+a cost, and the dial's new job is open (§21). The reasoning below is for 2.
+
 `extremityMultiplier: 2`, global. **Extremity is the whole reward for
 committing:** at Even you take ×1, at a hard detent ×2, and the middle detents sit
 at ×1.5. Running a side pays; the game never says which side.
@@ -1279,6 +1286,10 @@ as it could. That shape was neutral on excess by construction, and then *worse*
 than neutral: once the shorter pile emptied, the surviving lane ground the
 surplus away on its own. **The refinery was quietly cleaning up after the
 player**, which is the whole reason excess never read as dangerous.
+
+⚠ **Superseded on `dev-next`, 2026-09-23:** capacity now draws on the stock,
+`min(P, N) × reach / drawSeconds`, and coverage is retired — see §21, *Karma as
+weight*. The argument below is kept until that proposal is settled.
 
 **Capacity is a saturating share of what you produce, not a share of what you
 are holding.** A fixed batch is a fixed figure against an economy with no
@@ -2084,6 +2095,10 @@ because it is strong.
 
 > **A world declares a polarity it wants. Serving it multiplies `K`; opposing it
 > divides `K` by the same figure.**
+
+⚠ **Superseded on `dev-next`, 2026-09-23:** the world pulls `demandPull` (5%) of
+its wanted pile per phase instead, and `D`, `matchShare` and the tally are
+retired — see §21, *Karma as weight*.
 
 ```
 K × D^(2 · matchShare − 1)
@@ -3007,8 +3022,48 @@ karma, and a tax on a currency nobody wants is decoration.
 
 ### Karma as weight
 
-Proposed 2026-09-23. **Karma stops being a currency and becomes a burden: what
-you hold slows you, and the refinery is how you put it down.**
+Proposed 2026-09-23, **built on `dev-next` the same day, not settled.** **Karma
+stops being a currency and becomes a burden: what you hold slows you, and the
+refinery is how you put it down.**
+
+**As built** — where it departs from the argument below:
+
+- **Drag reaches cohort and harvest experience, never the press.** Inert until
+  the `refining` beat: weight arrives with the tool to shed it.
+- **The departure snapshot divides the drag back out**, as it does the bias, so
+  a heavy moment is not locked into a world's harvest.
+- **An incurred price adds `incurs × income ÷ 2` to each pole**, into the pile
+  but not the lifetime total, so a price opens no karma gate. `carry_1`,
+  `harder_lives_1` and `hard_season` incur 60 / 120 / 300 s.
+- **`read_the_wave` and `the_other_way` are unpriced**, arriving at their xp
+  gate — they open core systems, not choices. `str_3`/`str_4` still spend.
+- **The demand is the pull**, 5% of the wanted pile a phase. **Extremity is ×1.**
+- **Harvest `K` is unchanged** and counts as weight, in the piles and in income.
+- `drawSeconds` 3, `backlogHalving` 900, grace 0 — one sim pass, below.
+
+**First sim, 6 h, `cheapest`, detent Even, 25% refining** — against `a05b94e`:
+
+| | terminus | worlds harvested | xp at 1.65 h |
+|---|---|---|---|
+| Before | 216 m | 3 | 5.0 × 10¹¹ |
+| Stock draw at 18 s, no drag | 112 m | 2 | — |
+| As built, no pull | 126 m | 3 | 6.7 × 10⁹ |
+| As built | never | 4, then stalls | — |
+
+- **The stock draw alone halves the run to terminus.** It pays far more crimson
+  than coverage did; wisdom's `W` is now mis-set.
+- **Paired weight is survivable.** Without the pull, drag climbs back from ×0.54
+  to ×0.95 as the refinery settles the backlog near 38 s.
+- ⚠ **Unpaired streams are fatal to a player who never re-aims.** An aligned
+  harvest pays one pile forever, and the pull empties one pile a phase; both
+  are excess, which only the dial can shed. As built, once every world is
+  behind you, `N` reaches 0, pairing stops and the backlog climbs unbounded —
+  drag ×0.05 at 6 h. **Blocks settling this proposal:** split `K` across both
+  poles, make excess weigh less than paired karma, or give the dial its new
+  job as the unpaired sink.
+- ⚠ **Experience runs ~75× below the old curve** at 1.65 h even when it
+  survives, and the harness, lines and level ladder are priced against the old
+  curve.
 
 §3's piles only grow, and xp and karma grow together at a fixed 1 : 2, so there is
 no state in which a strong run carries little karma. This makes that state the

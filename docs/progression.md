@@ -106,6 +106,14 @@ makes this possible; keeping it that way is worth more than any single check the
 probe has caught. It found the halo's growth curve, the swell's mask, and the
 rider rate, all before anything was drawn.
 
+**The balance bench runs headless too.** The sim's `run()` needs no DOM, only a
+client (not SSR) build of runes. A `vite build` in lib mode, `target: 'node20'`,
+of a two-line entry that applies overrides and imports `$lib/sim/run`, then run
+under node with `window`, `matchMedia` and `devicePixelRatio` stubbed. The entry
+has to sit inside a tree so `vite-tsconfig-paths` resolves `$lib`; a detached
+`git worktree` with `node_modules` junctioned in keeps the author's tree clean and
+lets a baseline commit run beside the head. A 6 h run takes about a minute.
+
 What it cannot reach is anything inside a shader, because a shader is a string.
 A fragment reading a `uniform` its material never supplied typechecks, builds,
 probes clean and draws a solid quad — which is exactly what happened to the
@@ -5447,7 +5455,28 @@ The reset is free. It is not a decision anyone made, so charging phases for it
 would be charging for arriving — and there is nothing to charge against anyway,
 since the new world has lived none.
 
+## Karma as weight, built before it was settled
+
+Built on `dev-next` 2026-09-23 so it could be measured rather than argued;
+`design.md` §21 holds what shipped and the table. What the first sim taught:
+
+- **The stock draw is a crimson buff before it is anything else.** At the
+  proposal's own figures, with the drag switched off, terminus came in 104
+  minutes sooner. A share of a stock outruns a saturating share of income once
+  the backlog is large, which is the regime every run lives in.
+- **`drawSeconds` sets a drag floor even for a perfect player**: the matched
+  backlog settles at `drawSeconds / reach`, and the first figure (18) put that
+  near 450 s, a ×0.4 floor. That is why it moved to 3.
+- **Every one-pile stream becomes permanent weight.** The harvest pays the
+  aligned pile, and the pull takes the wanted pile — both are excess, and the
+  refinery cannot touch excess. The sim holds its dial still, so it shows the
+  failure a real player could avoid by re-aiming. But once every world is behind
+  you, re-aiming stops helping, because no cohort is earning. That case needs a
+  design answer, not a better player.
+
 ## A world wants a pole, and the demand is banked as it is earned
+
+⚠ Retired on `dev-next` 2026-09-23 for the pull — see *Karma as weight* above.
 
 A measured run harvested Burden by accident, then had to hard-aim positive to
 clear it, then harvested Comfort, then had to swing back. That was the first time
