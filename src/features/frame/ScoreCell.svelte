@@ -4,6 +4,7 @@
    * the total is the figure, so the rows below never add up to anything — they
    * say where it comes from.
    */
+  import type { Snippet } from 'svelte';
   import { Cell, Rate, Reading, Value } from '$ui';
   import { READING_LABELS } from '$lib/labels';
 
@@ -19,12 +20,14 @@
     /** Absent until the beat that reveals rates at all. */
     rates?: Source[];
     caption?: string;
+    /** Passed through to the end of the cell's label row. */
+    header?: Snippet;
   }
 
-  let { amount, rates, caption }: Props = $props();
+  let { amount, rates, caption, header }: Props = $props();
 </script>
 
-<Cell label="Experience" {caption} banded>
+<Cell label="Experience" {caption} {header} banded>
   <!-- Captioned like every other figure in the band, and for the band's sake as
        much as its own: bottom-aligned cells only share a baseline if they all
        reserve the caption line. `Total` against the rates beside it, which are

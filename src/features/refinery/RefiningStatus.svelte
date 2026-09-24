@@ -58,10 +58,8 @@
   /** Unstaffed is stopped now, not pulsing at nothing — see `Refinery.tick`. */
   const isIdle = $derived(refinery.workers <= 0);
 
-  /** A countdown under a quarter second is not a countdown — see `ResourceEmitter`. */
   const clockLabel = $derived.by(() => {
     if (isIdle) return 'idle';
-    if (refinery.isStreaming) return 'streaming';
 
     return `${nextIn.toFixed(1)}s next`;
   });
@@ -101,7 +99,8 @@
   </div>
 
   <div class="clock">
-    <SweepBar {subscribe} streaming={refinery.isStreaming} width="100%" height="10px" />
+    <!-- Ripens toward crimson, which is what the landing pays. -->
+    <SweepBar {subscribe} tint="--res-red" width="100%" height="10px" />
     <span class="next">{clockLabel}</span>
   </div>
 

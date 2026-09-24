@@ -240,7 +240,7 @@
    * to the row but the button is the topmost thing in it, so the gap you see is
    * measured from the button and the distance has to clear the bleed first.
    */
-  const PURCHASE_BLEED = 11;
+  const PURCHASE_BLEED = 14;
 
   const PANEL_OFFSET = ROW_GAP + ARROW_REACH + PURCHASE_BLEED;
 
@@ -397,32 +397,30 @@
 
     <span class="description">{texts[cohort.id]?.description ?? ''}</span>
 
-    <!-- A life too short to time is not a fast time, it is a rate — so the
-         figure gives way to the word rather than counting down to two decimals
-         nobody can read.
-
-         And a life is a length in phases, so it reads in the wave's words: the
-         row and the strip above it are the same clock, and whether this cohort
-         fits inside a phase is the thing worth knowing about it.
-
-         The countdown beside it is the same line the strip reads — a length,
-         then what is left of the one running. It stands where the bar used to,
-         which is the whole trade: the bar is the row now. -->
-    <span class="duration">
-      {#if cohort.isStreaming}
-        <span>continuous</span>
-      {:else}
-        <span>{lifeLabel(cohort.duration)}</span>
-        {#if cohort.isInProgress}
-          <span class="left">· {remainingLabel} left</span>
-        {/if}
-      {/if}
-      {#if canSend}
-        <span class="send" class:sending={cohort.isInProgress}>Send</span>
-      {/if}
-    </span>
-
   </div>
+
+  <!-- A life too short to time is not a fast time, it is a rate — so the
+       figure gives way to the word rather than counting down to two decimals
+       nobody can read.
+
+       And a life is a length in phases, so it reads in the wave's words: the
+       row and the strip above it are the same clock, and whether this cohort
+       fits inside a phase is the thing worth knowing about it.
+
+       Pinned to the wash's far end: the wash is this clock drawn, so the figures
+       ride on it, and the row keeps to one line. -->
+  <span class="duration">
+    {#if cohort.isStreaming}
+      <span>continuous</span>
+    {:else}
+      <span class="life">{lifeLabel(cohort.duration)}</span>
+      <!-- The slot stays when idle, so the length doesn't jump to the edge. -->
+      <span class="left">{#if cohort.isInProgress}· {remainingLabel} left{/if}</span>
+    {/if}
+    {#if canSend}
+      <span class="send" class:sending={cohort.isInProgress}>Send</span>
+    {/if}
+  </span>
 
   <!-- The roster, and — while the derivation is up — how much of it is actually
        incarnating. The roster rests here because this cell is the one beside the
@@ -485,9 +483,8 @@
 
     /* Where the wash begins: the one figure here that is authored and not laid
        out. The ident is shrink-to-fit inside a `1fr` track, so nothing in the
-       grid knows where its copy runs out — this is eyeballed against the two
-       lines it holds, the name with its unlock run and the life with its
-       countdown. */
+       grid knows where its copy runs out — this is eyeballed against the name
+       with its unlock run. */
     --wash-start: 16rem;
 
     position: relative;
@@ -537,7 +534,7 @@
      on it never changes width — see the effect above. */
   .wash {
     position: absolute;
-    inset-block: var(--sp-2);
+    inset-block: 6px;
     left: calc(var(--pad-inline) + var(--wash-start));
     right: calc(var(--pad-inline) + var(--purchase-width));
     overflow: hidden;
@@ -679,28 +676,46 @@
     font-size: var(--fs-sm);
   }
 
-  /* `nowrap` because the containing block is `.ident`, which is shrink-to-fit —
-     so a short cohort name used to set the width this line had to wrap inside,
-     and the life broke across two rows. It overflows into the track's own slack
-     instead, which is what the wider ident column is for. */
+  /* Every cell placed by hand, because the clock shares the count's track: left
+     to auto-placement, the count would be bumped to a row of its own. */
+  .ident { grid-area: 1 / 1; }
+  .count { grid-area: 1 / 2; }
+  .purchase-container { grid-area: 1 / 3; }
+
+  /* Across the count's track and the slack of the buy cell's, packed against
+     the buy cell — the wash's own far end. Relative for the paint order, as
+     `.count`'s. */
   .duration {
-    position: absolute;
-    bottom: -17px;
-    left: 0;
+    grid-area: 1 / 2 / 2 / -1;
+    justify-self: end;
+    margin-right: calc(var(--purchase-width) + var(--sp-3));
+    position: relative;
     display: flex;
-    align-items: center;
+    align-items: baseline;
     color: var(--ink-500);
-    gap: var(--sp-2);
+    gap: var(--sp-1);
     font-weight: 500;
     white-space: nowrap;
   }
 
   /* What the wash across the row says, in figures — the length is the life this
      cohort always lives, this is the one it is living. Quieter than the length
-     beside it: the length is the property, the countdown is only the moment. */
+     beside it: the length is the property, the countdown is only the moment.
+
+     A fixed slot, so a countdown changing width can't walk the length beside
+     it — ranged left, so it follows its length rather than drifting off it. */
   .left {
+    display: inline-block;
+    min-width: 10ch;
     color: var(--ink-300);
     font-variant-numeric: tabular-nums;
+  }
+
+  /* A fixed slot too, ranged left, so the lengths start on one edge down the
+     table instead of hanging off countdowns of different widths. */
+  .life {
+    display: inline-block;
+    min-width: 8.5ch;
   }
 
   /* No clock until the clerk is bought — this is the row's clock in the
@@ -723,19 +738,28 @@
     text-decoration: none;
   }
 
+  /* One line, so even padding, and the name, count and clock share a baseline. */
   .row.compact {
-    --pad-top: 11px;
-    --pad-bottom: 20px;
+    --pad-top: 14px;
+    --pad-bottom: 14px;
 
     & .description { display: none; }
+
+    & .ident { align-self: baseline; }
 
     & .count {
       font-size: var(--fs-sm);
       line-height: 1;
-      align-self: end;
+      align-self: baseline;
     }
 
-    & .duration { font-size: 10.5px; }
+    /* On the children, not the box: the box's margin is in the buy cell's `ch`,
+       which would shrink with a smaller font and walk the clock into the cell. */
+    & .duration {
+      align-self: baseline;
+    }
+
+    & .duration > span { font-size: 10.5px; }
 
   }
 

@@ -235,11 +235,18 @@
      in-flow screen is handed the body's whole height instead of hugging its own
      content; every box below repeats the trick, which is what lets a verb at the
      foot of a column reach for `margin-top: auto`. Content taller than the body
-     still sizes the row and scrolls, so nothing is clipped. */
+     still sizes the row and scrolls, so nothing is clipped.
+
+     Clipped on the block axis all the same, for the screens that are *not*
+     in flow: a hidden screen keeps its natural height (see `Screen`), and an
+     absolute box taller than this one still counts toward the body's scroll —
+     so the tallest screen you had left set the scroll of the one you are on.
+     `clip` and not `hidden`, so this box never becomes a scroller itself. */
   .screens {
     display: grid;
     position: relative;
     min-width: 0;
+    overflow-y: clip;
   }
 
   /* The rail reads the screens' height, never sets it — see Rail.svelte. */

@@ -6,16 +6,12 @@
    */
   import { Section } from '$ui';
   import { aim, type Detent } from '$lib/aim';
-  import { PlanetManager } from '$lib/managers';
-  import { getDemandLabel } from '$lib/labels';
   import balance from '$data/balance';
-  import { f, formatRounded } from '$lib/utils';
+  import { formatRounded } from '$lib/utils';
   import AimControl from './AimControl.svelte';
 
   const owed = $derived(aim.phasesOwed);
   const draft = $derived(aim.draft);
-
-  const planet = $derived(PlanetManager.getActive());
 
   /** What the verb will cost, not what is currently owed — nothing is owed yet. */
   const price = $derived(Math.round(balance.aim.reaimPenalty * 100));
@@ -26,24 +22,6 @@
    * where the choice between them is made.
    */
   const span = $derived(aim.draftPhases);
-
-  /**
-   * What the world takes off you, and how fast. The one place in the game that
-   * names a pole other than zero, and it belongs in the aside of the control
-   * that answers it: aim toward what the world pulls and it lifts your weight.
-   */
-  const demand = $derived.by(() => {
-    const wants = getDemandLabel(planet?.demand);
-    if (!planet || !wants) return;
-
-    return `Takes ${wants} — ${f(planet.pullPerSecond)} karma/s lifted off you`;
-  });
-
-  const note = $derived(
-    owed > 0
-      ? `Settling in — ${formatRounded(owed, 1)} phases left, karma down ${Math.round(aim.reaimPenalty * 100)}%`
-      : demand ?? 'Dense phases pay for negative, light for positive',
-  );
 </script>
 
 <Section 
@@ -64,8 +42,10 @@
           {span === 1 ? 'phase' : 'phases'}
         </button>
       </span>
+    {:else if owed > 0}
+      Settling in — {formatRounded(owed, 1)} phases left, karma down {price}%
     {:else}
-      {note}
+      Dense phases pay for negative, light for positive
     {/if}
   {/snippet}
 
@@ -73,8 +53,11 @@
 </Section>
 
 <style>
-  :global(.aim-control) {
+  /* The table above ends on its own padding, so this one's would double it.
+     Element-qualified to outrank `Section`'s own. */
+  :global(section.section.aim-control) {
     margin-top: auto;
+    padding-top: var(--sp-2);
   }
   .pending {
     display: flex;

@@ -11,6 +11,7 @@
   import { HarvestVerb } from '$features/harvest';
   import AheadRequirements from './AheadRequirements.svelte';
   import ReachVerb from './ReachVerb.svelte';
+  import DemandNote from '../details/DemandNote.svelte';
 
   interface Props {
     id: string;
@@ -42,7 +43,7 @@
   const isAhead = $derived(!isHere && Boolean(planet) && !planet.isHarvested);
 
   /** Nothing for a world ahead: it has lived no ages yet. */
-  function getStatus() {
+  const status = $derived.by(() => {
     if (!planet || isAhead) return '';
 
     if (planet.isHarvested) {
@@ -50,14 +51,13 @@
     }
 
     return `${getAgesLabel(planet.agesLived)} · ${getPhaseLabel(planet.phase, planet.phasesPerAge)}`;
-  }
+  });
 </script>
 
+<!-- No aside: the world's readings sit under its portrait, where the column
+     has room for them. -->
 {#if planet}
   <Section label={name} labelTone="active">
-    {#snippet aside()}
-      {getStatus()}
-    {/snippet}
 
     <div class="portrait" bind:clientWidth={portraitWidth}>
       {#if portraitWidth > 0}
@@ -76,7 +76,13 @@
       <p class="description">{description}</p>
     {/if}
 
-    
+    <!-- Only the world you are on pulls, so only it says what it wants. -->
+    {#if status || isHere}
+      <div class="stats">
+        {#if status}<p>{status}</p>{/if}
+        {#if isHere}<p><DemandNote {planet} /></p>{/if}
+      </div>
+    {/if}
 
     {#if progression.isRevealed('overview.ahead') && isAhead}
         <AheadRequirements {planet} />
@@ -109,6 +115,23 @@
     font-size: var(--fs-sm);
     color: var(--ink-500);
   }
+  .stats {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+    font-size: var(--fs-sm);
+    color: var(--ink-500);
+  }
+
+  .stats p {
+    margin: 0;
+  }
+
+  /* A world that wants nothing renders an empty line; it gives its gap back. */
+  .stats p:empty {
+    display: none;
+  }
+
   .action {
     margin-top: auto;
   }

@@ -21,6 +21,8 @@
     pace?: number[];
     clickActionVerb?: string;
     clickActionSub?: string;
+    /** The verb drawn on the stage. Off once a header can say it instead. */
+    hasCaption?: boolean;
     onclickaction?: () => void;
     /** A running count of landed yields. See `PlanetView`. */
     yields?: number;
@@ -52,6 +54,7 @@
     pace,
     clickActionVerb = 'Incarnate',
     clickActionSub,
+    hasCaption = true,
     onclickaction,
     yields = 0,
     yieldValue = 0,
@@ -74,7 +77,12 @@
    */
   const SWARM_FRAME = 3.2;
 
-  const STAGE_RATIO = 355 / 406;
+  /**
+   * Cut down from 355 to make room for the demand line under the wave. The
+   * framing shrinks with it, so the world keeps its size and only the sky is lost.
+   */
+  const STAGE_RATIO = 327 / 406;
+  const FRAME = SWARM_FRAME * (327 / 355);
 
   let width = $state(0);
   const widthPx = $derived(Math.round(Math.min(width, STAGE_WIDTH)));
@@ -87,7 +95,7 @@
       {visual}
       {widthPx}
       {heightPx}
-      frame={SWARM_FRAME}
+      frame={FRAME}
       backgroundToken="--surface"
       swarm={DEFAULT_SWARM}
       {cohorts}
@@ -115,12 +123,14 @@
     />
   {/if}
 
-  <div class="caption">
-    <span class={['verb', { lit: spotlight.isLit('building', 'main') }]}>{clickActionVerb}</span>
-    {#if clickActionSub}
-      <span class="sub num">{clickActionSub}</span>
-    {/if}
-  </div>
+  {#if hasCaption}
+    <div class="caption">
+      <span class={['verb', { lit: spotlight.isLit('building', 'main') }]}>{clickActionVerb}</span>
+      {#if clickActionSub}
+        <span class="sub num">{clickActionSub}</span>
+      {/if}
+    </div>
+  {/if}
 </div>
 
 <style>

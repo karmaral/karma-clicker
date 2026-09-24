@@ -536,7 +536,9 @@
         held: { lean: visual.lean, tilt: heldTilt, turn: heldTurn, spin: spinAngle },
         share: ridden,
         standing: strung,
-        anchoring: placements[placing],
+        // Only while the job is on — a ghost waiting on an offer nobody took is
+        // not where the press pays. `facesSite` is the game's "is the job on".
+        anchoring: facesSite ? placements[placing] : undefined,
       }));
 
       const from = getCursorWorld();

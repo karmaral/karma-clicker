@@ -88,7 +88,8 @@
     align-items: baseline;
     justify-content: space-between;
     gap: var(--sp-4);
-    padding-bottom: var(--sp-2);
+    /* A touch over the step, for air under the label. */
+    padding-bottom: calc(var(--sp-2) + 3px);
     border-bottom: var(--rule-row);
     min-width: 0;
   }

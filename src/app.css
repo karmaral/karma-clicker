@@ -87,6 +87,11 @@
   --red-neg-fill:var(--res-red);
   --red-neg-edge:inset 0 0 0 1px #5c1815;
 
+  /* Karma's bar hatch in crimson, built from the badge pairs the way karma's is:
+     the stripe is the fill's partner, the field the other. */
+  --hatch-red-pos-bar:repeating-linear-gradient(-45deg, #d98b82 1px, #d98b82 7px, var(--res-red) 7px, var(--res-red) 9px);
+  --hatch-red-neg-bar:repeating-linear-gradient(45deg, #5c1815 1px, #5c1815 7px, var(--res-red) 7px, var(--res-red) 9px);
+
   /* Unrouted Crimson sits between the two sides rather than beside them: each of
      these is the midpoint of the corresponding pair above. Any value nearer one
      side would read as that side badged wrong. */
@@ -140,7 +145,7 @@
      next figure over. A token because two components set it from opposite sides
      — `Value` nudges back off its own row gap to reach it, and `ScoreCell`'s
      stacked pair pays the whole distance itself. */
-  --gap-rate:4px;
+  --gap-rate:7px;
 
   /* The excess meter's track. A token because two components have to agree on
      it and cannot see each other: the meter draws it, and the aside naming it
@@ -297,6 +302,8 @@ button {
 kbd {
   display: inline-block;
   padding: 1px 4px;
+  /* Padding and border handed back, so a key never grows the line it sits in. */
+  margin-block: -2px -3px;
   border: 1px solid var(--line-200);
   border-bottom-width: 2px;
   border-radius: 2px;
@@ -328,6 +335,13 @@ kbd small {
   padding: var(--sp-5) var(--sp-4);
   padding-top: var(--sp-1);
   gap: var(--sp-4);
+}
+
+/* A column's last section is pegged to the screen's foot, and the screen's own
+   padding is already the gap there — its own would stack on top. Outranks
+   `Section`'s scoped padding by one class. */
+.view-layout > * > .section:last-child {
+  padding-bottom: 0;
 }
 
 /* The cell *is* the button. Every table that sells something ends in one of

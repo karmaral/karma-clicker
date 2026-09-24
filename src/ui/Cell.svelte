@@ -95,7 +95,7 @@
     display: grid;
     grid-template-rows: subgrid;
     grid-row: span 2;
-    row-gap: var(--sp-1);
+    row-gap: var(--sp-2);
   }
 
   .labelrow {

@@ -2,7 +2,6 @@
   import { BuildingManager, PlanetManager } from '$lib/managers';
   import { progression } from '$lib/progression';
   import { f, formatSpan } from '$lib/utils';
-  import { getAgesLabel } from '$lib/labels';
   import { pulse } from '$lib/loop';
   import { clock } from '$lib/clock';
   import { parseScope } from '$data/upgrades';
@@ -24,6 +23,7 @@
   import AimSection from './AimSection.svelte';
   import AnchorPanel from './AnchorPanel.svelte';
   import AnchorVerb from './AnchorVerb.svelte';
+  import DemandNote from './DemandNote.svelte';
   import WaveStrip from './WaveStrip.svelte';
   import { extended } from './extended.svelte';
   import type { Phase, PurchaseMode } from './types';
@@ -294,6 +294,7 @@
         pace={pacePerCohort}
         {clickActionVerb}
         {clickActionSub}
+        hasCaption={!isFramed}
         {onclickaction}
         {yields}
         yieldValue={isAnchoring ? 0 : clickYield}
@@ -317,9 +318,13 @@
         {settleAt}
         {draftAt}
         {yieldAt}
+        agesLived={planet.agesLived}
         phaseMs={planet.phaseDuration}
         remainingMs={planet.phaseRemaining}
       />
+
+      <!-- Under the clock it drains on, so every rate sits at a column's foot. -->
+      <DemandNote {planet} isSpread />
     {/if}
   {/snippet}
 
@@ -330,13 +335,17 @@
     <!-- The header rides in with the frame — the prelude column stays the
          same borderless, labelless block it always was. -->
     {#if isFramed}
-      <!-- The age count is the world's, so it heads the world as Overview's does;
-           the phase stays on the wave it is a reading of. -->
       <Section label={planetName || 'Planet'} className="planet-head">
+        <!-- The press's verb heads the stage it is pressed on, off the swarm.
+             The prelude has no header, so there it stays on the stage. -->
         {#snippet aside()}
-          {#if planet}{getAgesLabel(planet.agesLived)}{/if}
+          {#if progression.isRevealed('details.disc') && planet}
+            <span class="press">
+              <span class={['press-verb', { lit: spotlight.isLit('building', 'main') }]}>{clickActionVerb}</span>
+              · <span class="num">{clickActionSub}</span>
+            </span>
+          {/if}
         {/snippet}
-
         <!-- The anchor rides the viewport's own corner: the offer is made by
              the world you are looking at, so it is drawn on it. -->
         <div class="staged">
@@ -434,6 +443,18 @@
     display: flex;
     flex-direction: column;
     margin-top: auto;
+  }
+
+  .press-verb {
+    font-weight: 600;
+    color: var(--ink-900);
+  }
+
+  /* The press has no row to tint, so the spotlight is a chip around its verb. */
+  .press-verb.lit {
+    background-color: var(--surface-alt);
+    margin-inline: -4px;
+    padding-inline: 4px;
   }
 
   .cohort {

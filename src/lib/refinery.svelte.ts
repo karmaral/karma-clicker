@@ -87,6 +87,9 @@ class Refinery {
   /** Per pile, what the last pulse actually paid in crimson — `lastPaired × ratio`. */
   #lastProduced = $state(0);
 
+  /** Karma the balancer has moved this session. Unsaved: it only keys the intake bar's flash. */
+  #moved = $state(0);
+
   /**
    * Timestamped samples of `#refined`, for a *measured* rate rather than the
    * forecast `#batch` is. Ring capped at `HISTORY`; `sample()` throttles itself
@@ -239,6 +242,7 @@ class Refinery {
 
     ResourceManager.remove(long, moved);
     ResourceManager.incur(short, moved);
+    this.#moved += moved;
   }
 
   /** Autonomy from the beat on. Whether a cycle is actually running is `tick`'s. */
@@ -433,6 +437,7 @@ class Refinery {
 
   /** Karma/s moved long → short — a forecast, like `perSecond`. */
   get balancedPerSecond() { return this.#balancedPerSecond; }
+  get moved() { return this.#moved; }
 
   /** The finest the refining split can be set to. Coarse until upgrades buy it down. */
   get step() {
@@ -456,9 +461,6 @@ class Refinery {
 
   /** When the queued batch lands. */
   get nextAt() { return this.#emitter.nextAt; }
-
-  /** Pulsing faster than a pulse reads. See `ResourceEmitter`. */
-  get isStreaming() { return this.#emitter.isStreaming; }
 
   /** Stopped for want of a worker — see `tick`. The clock is not running at all. */
   get isHalted() { return this.#emitter.isHalted; }

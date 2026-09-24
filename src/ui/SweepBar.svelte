@@ -23,11 +23,13 @@
      * mount: a reactive value here would re-seed the bar on every tick.
      */
     resume?: { duration: number; remaining: number };
+    /** A colour token the fill ripens toward as it sweeps — what the landing pays. */
+    tint?: string;
     width?: string;
     height?: string;
   }
 
-  let { subscribe, streaming = false, resume, width = '12rem', height = '3px' }: Props = $props();
+  let { subscribe, streaming = false, resume, tint, width = '12rem', height = '3px' }: Props = $props();
 
   let bar = $state<HTMLSpanElement>();
 
@@ -53,10 +55,21 @@
 
       const from = Math.max(0, Math.min(1, 1 - remaining / duration));
 
-      bar.animate(
-        [{ transform: `scaleX(${from})` }, { transform: 'scaleX(1)' }],
-        { duration: remaining, easing: 'linear' },
-      );
+      const start: Keyframe = { transform: `scaleX(${from})` };
+      const end: Keyframe = { transform: 'scaleX(1)' };
+
+      // Resolved here rather than passed as `var()`s, which keyframes can't
+      // interpolate. A resumed sweep starts as far along the ramp as the bar.
+      if (tint) {
+        const style = getComputedStyle(bar);
+        const base = style.getPropertyValue('--ink-400').trim();
+        const ripe = style.getPropertyValue(tint).trim();
+
+        start.backgroundColor = `color-mix(in oklab, ${base}, ${ripe} ${from * 100}%)`;
+        end.backgroundColor = ripe;
+      }
+
+      bar.animate([start, end], { duration: remaining, easing: 'linear' });
     };
 
     const sweep = (detail?: Record<string, unknown>) => {

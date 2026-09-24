@@ -174,6 +174,19 @@
   /** With the refinery, because that is when the weight starts to bite. */
   const showWeight = $derived(progression.runs('refining'));
 
+  /** A cost reads faster than a multiplier. */
+  const xpCost = $derived(Math.round((1 - weight.drag) * 100));
+
+  /** One sheet, two triggers — a content element can only live in one popper. */
+  let weightTooltipElem: HTMLElement | undefined = $state();
+  let xpTooltipElem: HTMLElement | undefined = $state();
+  const WEIGHT_TOOLTIP: Partial<TippyProps> = {
+    placement: 'bottom-start',
+    delay: [300, 0],
+    offset: [0, 10],
+    interactive: false,
+  };
+
   const planet = $derived(PlanetManager.getActive());
 
   const excessGate = $derived(planet?.data.firstHarvest.excessGate);
@@ -189,22 +202,44 @@
     rates={showRates 
       ? (showWorldRates ? experienceRates : [experienceRates[1]])
       : undefined}
-  />
+  >
+    <!-- The cost, at the end of the row whose rates it discounts: souls' and
+         worlds' alike. -->
+    {#snippet header()}
+      {#if showWeight}
+        <span class="weight lifted" {@attach tooltip({ content: xpTooltipElem, options: WEIGHT_TOOLTIP })}>
+          <span><strong>−{xpCost}%</strong> from karma weight</span>
+        </span>
+      {/if}
+    {/snippet}
+  </ScoreCell>
 
   {#each visible as screen (screen)}
     <Cell label={getSectionLabel(screen)} banded>
-      <!-- The excess block's title, hoisted onto the cell's own label line and set
-           as an aside: it names a block inside Karma, not a cell beside it. Once
-           the scale is revealed it is width-matched to the track below, so it
-           starts exactly where the track does.
+      <!-- Weight and the excess block's title, both hoisted onto the cell's own
+           label line as asides: each names a reading about the piles, not a cell
+           beside them. Weight ends where Excess begins; its line says the reading
+           and the tooltip says what it is measured in and what moves it.
 
-           The title and nothing else: the block below prints the figure — between
-           its own two end words once it is a meter — so a reading up here would
-           be the same number twice in one cell. -->
+           Once the scale is revealed the Excess title is width-matched to the
+           track below, so it starts exactly where the track does. The title and
+           nothing else: the block below prints the figure — between its own two
+           end words once it is a meter — so a reading up here would be the same
+           number twice in one cell. -->
       {#snippet header()}
-        {#if screen === 'details' && showExcess}
-          <span class={['excess-title', { tracked: showScale }]}>
-            <Label text="Excess" muted />
+        {#if screen === 'details' && (showWeight || showExcess)}
+          <span class={['asides', { lifted: showWeight }]}>
+            {#if showWeight}
+              <span class="weight" {@attach tooltip({ content: weightTooltipElem, options: WEIGHT_TOOLTIP })}>
+                <Label text={READING_LABELS.weight} muted />
+                <span><strong class="span">{formatSpan(weight.backlog * 1000)}</strong> of income piled up</span>
+              </span>
+            {/if}
+            {#if showExcess}
+              <span class={['excess-title', { tracked: showScale }]}>
+                <Label text="Excess" muted />
+              </span>
+            {/if}
           </span>
         {/if}
       {/snippet}
@@ -221,13 +256,6 @@
           {#if progression.isRevealed('reading.posKarma')}
             <Reading label={READING_LABELS.karmaPositive}>
               <Value kind="pos" value={f(posAmount)} rate={showRates ? posKarmaRate : undefined} />
-            </Reading>
-          {/if}
-          {#if showWeight}
-            <!-- What the two piles cost you: the backlog in seconds of your own
-                 income, and what it leaves your souls' experience at. -->
-            <Reading label={READING_LABELS.weight}>
-              <Value kind="both" value={`${formatSpan(weight.backlog * 1000)} · xp ×${f(weight.drag, 2)}`} size="lg" />
             </Reading>
           {/if}
           {#if showExcess}
@@ -305,11 +333,34 @@
   {/if}
 </HeaderBand>
 
-<!-- Placeholder copy — the sheet's shape, not its words yet. Rendered outside
-     the band so it is never a grid item of it. -->
+<!-- Sheets render outside the band so they are never grid items of it. -->
+{#snippet weightSheet()}
+  <div class="sheet">
+    <div class="title">{READING_LABELS.weight}</div>
+    <p>
+      Both karma piles, measured in how long your income takes to earn them. The
+      more piles up, the slower your souls and worlds learn — your own clicks are
+      untouched.
+    </p>
+    <p class="note">
+      {#if Number.isFinite(refinery.settlesAt)}
+        The refinery draws it down, and settles it at {formatSpan(refinery.settlesAt * 1000)} as staffed.
+      {:else}
+        The refinery draws it down — unstaffed, nothing does.
+      {/if}
+    </p>
+  </div>
+{/snippet}
+
+{#if showWeight}
+  <Tooltip bind:contentElem={weightTooltipElem}>{@render weightSheet()}</Tooltip>
+  <Tooltip bind:contentElem={xpTooltipElem}>{@render weightSheet()}</Tooltip>
+{/if}
+
+<!-- Placeholder copy — the sheet's shape, not its words yet. -->
 {#if showLegacy}
   <Tooltip bind:contentElem={legacyTooltipElem}>
-    <div class="legacy-tooltip">
+    <div class="sheet">
       <div class="title">Legacy</div>
       <p>Wisdom carried out of runs already ended. Placeholder — what it buys, and why it survived, goes here.</p>
       <p class="note">Placeholder: where this legacy came from, run by run.</p>
@@ -318,25 +369,21 @@
 {/if}
 
 <style>
-  /* Three named columns, not a packed row. Left-packed, the four figures sat at
-     intervals set by their own magnitudes — every one of them moved whenever any
-     of them grew a digit, and the pair's shared badge read as just another mark
-     in the run. Spreading them out alone did not fix it: the eye had no account
-     of *why* a figure sat where it sat, so the width between them read as
-     leftover room. Each column naming its grade is what earns the spacing, and
-     it is what claims both halves of the pair as one reading.
-
-     max-content floors rather than 0: below the column's own floor the slots
-     crowd up against each other and then overflow, which is legible. Allowed to
-     shrink to nothing they slide *under* one another instead, and a figure
-     half-covered by the next one reads as a different number. */
+  /* Packed left, each figure named by its grade. Split over the cell's slack,
+     the gaps grew with the window and read as leftover room. Only crimson
+     reserves a slot — an estimate, set by eye — because only
+     it ticks; reserved everywhere, a short figure trailed the same dead room.
+     Ochre and Indigo move only when a rarer figure grows a digit. */
   .tokens {
-    display: grid;
-    grid-template-columns: auto minmax(max-content, 1fr) minmax(max-content, 1fr);
+    display: flex;
     align-items: last baseline;
     gap: var(--sp-4);
     flex: 1;
     min-width: 0;
+  }
+
+  .tokens > :global(.reading:has(.rate)) {
+    min-width: 160px;
   }
 
   /* Aligned on the *last* baseline, not on the boxes' bottoms: the two sides and
@@ -350,6 +397,52 @@
     gap: var(--sp-4);
     flex: 1;
     min-width: 0;
+  }
+
+  /* The label row's end: weight, then the Excess title. The gap is the excess
+     block's seam — its padding plus its rule — so Excess keeps its column. */
+  .asides {
+    display: flex;
+    align-items: baseline;
+    justify-content: end;
+    gap: calc(var(--sp-4) * 2 + 1px);
+  }
+
+  /* The weight line's 1.5 line box drops its baseline, and EXCESS with it,
+     3.5px below the cell label's (probed). Lifted without shrinking the row. */
+  .lifted {
+    translate: 0 -3.5px;
+  }
+
+  .asides .excess-title {
+    margin-left: 0;
+  }
+
+  /* In sentence case: a reading, not a second name. The figures come forward a
+     step. Hover opens the explanation. Right-aligned in either cell. */
+  .weight {
+    display: flex;
+    align-items: baseline;
+    justify-content: end;
+    gap: 5px;
+    font-size: var(--fs-xs);
+    color: var(--ink-300);
+    white-space: nowrap;
+    cursor: help;
+  }
+
+  .weight strong {
+    font-weight: 600;
+    color: var(--ink-700);
+  }
+
+  /* The widest span `formatSpan` prints under an hour, "59m 59s", so the line
+     holds still as the figure ticks. Right-aligned into the words it reads with. */
+  .weight .span {
+    display: inline-block;
+    min-width: 7ch;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
   }
 
   /* A block within the cell. The two bars are quantities and this is state, so
@@ -373,28 +466,28 @@
     --meter-figure: var(--fs-xl);
   }
 
-  /* Matches Tooltip's own title/description register — the sheet is a snippet
-     here only so the placeholder can grow a breakdown without a props rewrite. */
-  .legacy-tooltip {
+  /* Matches Tooltip's own title/description register — a snippet rather than
+     props, so a sheet can grow a breakdown without a props rewrite. */
+  .sheet {
     display: flex;
     flex-direction: column;
     gap: var(--sp-2);
   }
 
-  .legacy-tooltip .title {
+  .sheet .title {
     font-weight: 600;
     font-size: var(--fs-sm);
     color: var(--ink-900);
   }
 
-  .legacy-tooltip p {
+  .sheet p {
     margin: 0;
     font-size: var(--fs-sm);
     line-height: 1.4;
     color: var(--ink-600);
   }
 
-  .legacy-tooltip .note {
+  .sheet .note {
     color: var(--ink-300);
   }
 

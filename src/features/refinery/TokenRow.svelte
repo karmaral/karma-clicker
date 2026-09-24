@@ -43,8 +43,8 @@
 
 <div class={['row', { locked: isLocked }]} role="group">
   <div class="ident">
-    <span class="name">{GRADE_LABELS[grade]}</span>
-    <span class="source">{GRADE_SOURCES[grade]}</span>
+    <!-- Where it comes from stays on as the tooltip. -->
+    <span class="name" title={GRADE_SOURCES[grade]}>{GRADE_LABELS[grade]}</span>
   </div>
 
   <span class="held">
@@ -107,10 +107,8 @@
     & .held :global(.fig) { color: var(--ink-300); }
   }
 
-  /* Baselined against `.held` (see below) rather than centred — the description
-     hangs absolute beneath it, so nothing here needs flow room for it. */
+  /* Baselined against `.held` (see below) rather than centred. */
   .ident {
-    position: relative;
     align-self: baseline;
     min-width: 0;
   }
@@ -120,19 +118,6 @@
     font-weight: 600;
     line-height: 1.2;
     color: var(--ink-900);
-  }
-
-  /* Out of flow: the row's own height no longer has to fit it, only the taller
-     `padding-block` above does. */
-  .source {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    padding-top: var(--sp-1);
-    font-size: var(--fs-sm);
-    color: var(--ink-500);
-    line-height: 1.3;
   }
 
   /* Left, against the badge — the badge leads the figure, so ranging the column

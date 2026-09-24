@@ -8,6 +8,7 @@
   import { Badge, Label, Section } from '$ui';
   import { ResourceManager } from '$lib/managers';
   import { getUnpairedKarma } from '$lib/excess';
+  import { refinery } from '$lib/refinery.svelte';
   import { f } from '$lib/utils';
 
   const negative = $derived(ResourceManager.getAmount('karma_negative'));
@@ -25,19 +26,32 @@
   const share = (amount: number) => (total > 0 ? `${(amount / total) * 100}%` : '0%');
 </script>
 
+<!-- The excess, in its own pile's hatch washed back. Each balancer move flashes
+     it toward the pile it is being moved to. -->
+{#snippet tail()}
+  <span class={['span tail', isComfort ? 'comfort' : 'burden']} style:width={share(leftover)}>
+    {#key refinery.moved}
+      {#if refinery.moved > 0}<span class="flash"></span>{/if}
+    {/key}
+  </span>
+{/snippet}
+
 <Section label="Intake">
 
   <div class="bar">
-    {#if leftover > 0 && !isComfort}
-      <span class="span tail" style:width={share(leftover)}></span>
-    {/if}
+    {#if leftover > 0 && !isComfort}{@render tail()}{/if}
 
-    <span class="span neg" style:width={share(matched)}></span>
-    <span class="span pos" style:width={share(matched)}></span>
+    <!-- Keyed on lifetime refined, which only a pulse moves: each draw off the
+         matched span flashes it the crimson it became. -->
+    {#each ['neg', 'pos'] as side (side)}
+      <span class="span {side}" style:width={share(matched)}>
+        {#key refinery.refined}
+          {#if refinery.refined > 0}<span class="flash"></span>{/if}
+        {/key}
+      </span>
+    {/each}
 
-    {#if leftover > 0 && isComfort}
-      <span class="span tail" style:width={share(leftover)}></span>
-    {/if}
+    {#if leftover > 0 && isComfort}{@render tail()}{/if}
   </div>
 
   <div class="poles">
@@ -81,21 +95,53 @@
   }
 
   .span.neg {
-    background: var(--hatch-neg);
+    background: var(--hatch-neg-bar);
     justify-content: flex-end;
     border-right: var(--rule-strong);
   }
 
   .span.pos {
-    background: var(--hatch-pos);
+    background: var(--hatch-pos-bar);
     box-shadow: var(--hatch-pos-edge);
   }
 
-  /* The unpaired remainder. Same ground as the track — it is what is left over. */
+  /* The same stripe turned crimson, each half as the pile it pays. */
+  .flash {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    animation: flash 600ms ease-out;
+    pointer-events: none;
+  }
+
+  .span.neg .flash { background: var(--hatch-red-neg-bar); }
+  .span.pos .flash { background: var(--hatch-red-pos-bar); }
+
+  @keyframes flash {
+    from { opacity: 1; }
+    to   { opacity: 0; }
+  }
+
+  /* The unpaired remainder: its pile's hatch, washed back so it reads as held
+     but out of reach. */
   .span.tail {
     background: var(--line-100);
     box-shadow: var(--hatch-pos-edge);
   }
+
+  .span.tail::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: .35;
+  }
+
+  .span.tail.burden::before { background: var(--hatch-neg-bar); }
+  .span.tail.comfort::before { background: var(--hatch-pos-bar); }
+
+  /* Toward the pile the balancer is filling. */
+  .span.tail.burden .flash { background: var(--hatch-pos-bar); }
+  .span.tail.comfort .flash { background: var(--hatch-neg-bar); }
 
   /* Grid, not space-between, so the centre pole sits dead centre whatever the
      side figures' widths. */

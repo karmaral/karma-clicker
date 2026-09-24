@@ -2,8 +2,8 @@
   /**
    * The wave, docked to the viewport rather than boxed in its own `Section`. Well
    * under `DensityWave`'s height. The head above it is the age's clock — what
-   * each half of the wobble pays, which phase you are in, and how long it runs.
-   * The age count is the section's, in its aside. Every *other* phase's closing time is still one hover away.
+   * each half of the wobble pays, how many ages and which phase, and how long it
+   * runs. Every *other* phase's closing time is still one hover away.
    *
    * `H` is a fixed pixel height, not derived from the viewBox `W`: with
    * `preserveAspectRatio="none"` the two are independent, so the strip stays the
@@ -17,7 +17,7 @@
    */
   import { Badge, Label, Tooltip, createPixelGrid, tooltip } from '$ui';
   import { f, formatSpan } from '$lib/utils';
-  import { getPhaseLabel } from '$lib/labels';
+  import { getAgesLabel, getPhaseLabel } from '$lib/labels';
   import { getWaveBias } from '$lib/wave';
   import { buildWavePath, H as WAVE_H, markerY as markerYAt } from './wave-math';
   import type { Phase } from './types';
@@ -39,6 +39,8 @@
      * read — see `extended`, and `DetailsScreen`, which normalises it.
      */
     yieldAt?: number;
+    /** Whole ages lived, for the clock's count. */
+    agesLived: number;
     /** The wave is a clock: every phase is the same length. Ms. */
     phaseMs: number;
     /** And how much of the one you are in is left. Ms. */
@@ -46,7 +48,7 @@
   }
 
   let {
-    phases, current, position, settleAt, draftAt, yieldAt, phaseMs, remainingMs,
+    phases, current, position, settleAt, draftAt, yieldAt, agesLived, phaseMs, remainingMs,
   }: Props = $props();
 
   const H = 40;
@@ -131,7 +133,7 @@
     </div>
 
     <div class="clock">
-      <span>{getPhaseLabel(current, phases.length)}</span>
+      <span>{getAgesLabel(agesLived)} · {getPhaseLabel(current, phases.length)}</span>
       <span>{formatSpan(phaseMs)} phase · {formatSpan(remainingMs)} left</span>
     </div>
   </div>
@@ -270,9 +272,10 @@
 {/each}
 
 <style>
+  /* Last baseline, so the clock's foot reads level with the figures row. */
   .head {
     display: flex;
-    align-items: flex-start;
+    align-items: last baseline;
     justify-content: space-between;
     gap: var(--sp-3);
     font-size: var(--fs-sm);
@@ -296,8 +299,8 @@
     white-space: nowrap;
   }
 
-  /* The age's clock: which phase, then how long a phase runs and how much of
-     this one is left. `nowrap` because every part of it is a figure. */
+  /* The age's clock: ages and which phase, then how long a phase runs and how
+     much of this one is left. `nowrap` because every part of it is a figure. */
   .clock {
     display: flex;
     flex-direction: column;

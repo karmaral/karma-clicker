@@ -298,12 +298,14 @@ const data: Record<string, UpgradeData[]> = {
     {
       // Not a `mult` like the rest of the ladder — it multiplies by something the
       // world is doing, which is what makes the press keep up instead of being
-      // outgrown. Gated past `riders_1`: with nobody up there it buys nothing.
+      // outgrown. Gated past `riders_1`, in crimson: with nobody up there it
+      // buys nothing, and crimson cannot exist before the harness is on screen.
+      // Karma can — since harvests pay both piles, a karma gate opened it early.
       // Priced per rider, so it moved down as the rider caps moved up: 0.2% a
       // soul lands on the same +40% / +400% the 1% figure bought before.
       id: 'carry_1',
       effect: { op: 'flat', value: 0.002, stat: 'carry' },
-      unlocks_at: { karma_negative: 60_000 },
+      unlocks_at: { red_positive: 12_000 },
       incurs: 60,
     },
   ],

@@ -5,7 +5,7 @@
   interface Props {
     /** The committed aim — what the cohorts are actually doing. */
     value: number;
-    /** Pointed at but not paid for. The bar follows this; `value` keeps a ghost. */
+    /** Pointed at but not paid for. The tack follows this; `value` keeps a ghost. */
     draft?: number;
     onaim?: (value: number) => void;
   }
@@ -92,115 +92,124 @@
   onpointercancel={onpointerup}
   {onclickcapture}
 >
+  <!-- The badges are the ticks: one row, and you aim at what you get rather
+       than at a tick captioned with it. The pointed one sits in the tack; the
+       aim still being run keeps a faded one, so a draft reads as *here, going
+       there* rather than as two dials. -->
   <div class="track" data-cursor-grab data-cursor-dragging={dragging}>
     <span class="rule"></span>
     {#each DETENTS as detent, i (detent)}
-      <span class="tick" style:left={at(i)}></span>
-    {/each}
-    <!-- The aim still being run, while the solid bar is off being chosen. One
-         hairline, so the pair reads as *here, going there* rather than as two
-         dials. Gone the moment there is nothing pending. -->
-    {#if draft !== undefined}
-      <span class="bar held" style:left={at(DETENTS.indexOf(value as Detent))}></span>
-    {/if}
-    <span class="bar" style:left={at(DETENTS.indexOf(pointed as Detent))}></span>
-  </div>
-
-  <div class="marks">
-    {#each DETENTS as detent, i (detent)}
       <button
         type="button"
-        class={['mark', { first: i === 0, last: i === LAST, on: detent === pointed }]}
+        class={[
+          'mark',
+          {
+            first: i === 0,
+            last: i === LAST,
+            on: detent === pointed,
+            held: draft !== undefined && detent === value,
+          },
+        ]}
         style:left={at(i)}
         aria-label={aim.detentLabel(detent)}
         aria-pressed={detent === pointed}
         onclick={() => onaim?.(detent)}
       >
-        {#each MARKS[detent] as kind, n (n)}
-          <Badge {kind} />
-        {/each}
+        <span class="glyphs">
+          {#each MARKS[detent] as kind, n (n)}
+            <Badge {kind} />
+          {/each}
+        </span>
       </button>
     {/each}
   </div>
 </div>
 
 <style>
+  /* A little air under the cradle: the section above it gives up its own
+     bottom padding at the column's foot. */
   .strip {
-    display: flex;
-    flex-direction: column;
-    gap: var(--sp-2);
+    padding-bottom: var(--sp-2);
     user-select: none;
     touch-action: pan-y;
   }
 
+  /* The badges' height, and room under them for the cradle — and the same
+     again above, as air under the head's rule. */
   .track {
+    --reach: 4px;
+    --tack: calc(var(--glyph-size) * 2 + 2px + var(--reach) * 2);
+
     position: relative;
-    height: 22px;
+    margin-top: var(--reach);
+    height: calc(var(--glyph-size) + var(--reach));
     min-width: 0;
   }
 
+  /* Through the badges' centres; each mark's own ground breaks it. */
   .rule {
     position: absolute;
-    top: 50%;
+    top: calc(var(--glyph-size) / 2);
     left: 0;
     right: 0;
     height: 1px;
     background: var(--line-300);
   }
 
-  .tick {
-    position: absolute;
-    top: 50%;
-    width: 1px;
-    height: 7px;
-    margin-top: -3px;
-    background: var(--line-300);
-    transform: translateX(-50%);
-  }
-
-  .bar {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: var(--ink-900);
-    transform: translateX(-50%);
-    transition: left var(--t-fast);
-  }
-
-  /* Holds still, so it does not read as a second thing being moved. */
-  .bar.held {
-    width: 1px;
-    background: var(--ink-300);
-    transition: none;
-  }
-
-  .marks {
-    position: relative;
-    height: var(--glyph-size);
-    min-width: 0;
-  }
-
+  /* Every mark is the tack's width, one badge or two: the rule breaks evenly
+     at each, and the cradle is the mark's own box, so it can never sit off
+     centre or overhang an end. */
   .mark {
     position: absolute;
     top: 0;
     display: flex;
-    align-items: center;
-    gap: 2px;
-    height: 100%;
+    justify-content: center;
+    width: var(--tack);
+    height: var(--glyph-size);
     padding: 0;
     border: none;
-    background: none;
-    opacity: .45;
+    background: var(--surface);
     transform: translateX(-50%);
-    transition: opacity var(--t-fast);
   }
 
-  /* The ends align inward off their tick, so a hard aim never spills the track. */
+  /* The ends align inward off their point, so a hard aim never spills the track. */
   .mark.first { transform: none; }
   .mark.last  { transform: translateX(-100%); }
 
-  .mark.on {
+  /* Faded on the glyphs, not the button: the button's ground is what breaks the
+     rule, and a translucent one would let it through. */
+  .glyphs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    opacity: .45;
+    transition: opacity var(--t-fast);
+  }
+
+  .mark.on .glyphs {
     opacity: 1;
+  }
+
+  /* The tack: a cradle under the pointed badges, the sides only begun — they
+     sit in it rather than being boxed in. */
+  .mark.on::after,
+  .mark.held::after {
+    --arm: 12px;
+    --stroke: 1px;
+    --ink: var(--ink-900);
+
+    content: '';
+    position: absolute;
+    inset: 0 0 calc(var(--reach) * -1);
+    background:
+      linear-gradient(var(--ink), var(--ink)) bottom / 100% var(--stroke),
+      linear-gradient(var(--ink), var(--ink)) bottom left / var(--stroke) var(--arm),
+      linear-gradient(var(--ink), var(--ink)) bottom right / var(--stroke) var(--arm);
+    background-repeat: no-repeat;
+  }
+
+  /* Faded like its glyphs, so it does not read as a second thing being moved. */
+  .mark.held:not(.on)::after {
+    opacity: .45;
   }
 </style>

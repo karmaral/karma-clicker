@@ -17,6 +17,7 @@
   import { FIRST_HARVEST_ALIGNMENT_LABELS, getDemandLabel } from '$lib/labels';
   import { resolveHarvestYields } from '$lib/planets/harvest';
   import { badgeFor, byRateOrder } from '../details/badge';
+  import DemandNote from '../details/DemandNote.svelte';
   import { f } from '$lib/utils';
   import balance from '$data/balance';
   import type Planet from '$lib/planets/base.svelte';
@@ -130,7 +131,6 @@
    * one pile that moves it.
    */
   const wants = $derived(getDemandLabel(planet.demand));
-  const pullPercent = $derived(Math.round(planet.pullShare * 100));
 </script>
 
 <div class="alignment">
@@ -214,13 +214,7 @@
   </p>
 
   {#if wants}
-    <p class="note demand">
-      Takes {wants} · <span class="num">{pullPercent}%</span> a phase ·
-      <span class="rate">
-        {#if planet.pulledPole}<span class="badge"><Badge kind={badgeFor(planet.pulledPole)} /></span>{/if}
-        <span><span class="num">{f(planet.pullPerSecond)}</span>/s</span>
-      </span>
-    </p>
+    <p class="note demand"><DemandNote {planet} /></p>
   {/if}
 </div>
 
@@ -437,25 +431,5 @@
      the figure is the thing the stay actually bought. */
   .note.demand {
     margin-top: calc(var(--sp-1) * -1);
-  }
-
-  /* The pile it drains, badged on the figure so the rate names its own pole. */
-  /* `RateFigure`'s arrangement: the figure's baseline is the row's, and the badge
-     centres out of the group — `vertical-align: middle` centred it on the
-     x-height, which sits under the digits' middle. */
-  .note.demand .rate {
-    display: inline-flex;
-    align-items: baseline;
-    gap: var(--badge-gap);
-  }
-
-  .note.demand .badge {
-    display: flex;
-    align-self: center;
-  }
-
-  .note.demand .num {
-    color: var(--ink-900);
-    font-weight: 600;
   }
 </style>
