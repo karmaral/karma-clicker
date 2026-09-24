@@ -12,6 +12,7 @@ import { BuildingManager, PlanetManager, ResourceManager, UpgradeManager } from 
 import { beats, progression } from '$lib/progression';
 import { pulse } from '$lib/loop';
 import { refinery } from '$lib/refinery.svelte';
+import { weight } from '$lib/weight.svelte';
 import { harness } from '$lib/harness.svelte';
 import { reserve } from '$lib/reserve.svelte';
 import { aim } from '$lib/aim';
@@ -285,6 +286,9 @@ export async function run(
       excess: getExcess(),
       karmaPerSecond: BuildingManager.countKarmaPerSecond(),
       experiencePerSecond: BuildingManager.countExperiencePerSecond(),
+      backlog: weight.backlog,
+      drag: weight.drag,
+      settlesAt: refinery.settlesAt,
       amounts,
       totals,
       counts,

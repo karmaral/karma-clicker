@@ -68,6 +68,10 @@ export interface Sample {
   excess: number | undefined;
   karmaPerSecond: number;
   experiencePerSecond: number;
+  /** Seconds of karma income carried, what it leaves experience at, and where the refinery settles it. */
+  backlog: number;
+  drag: number;
+  settlesAt: number;
   amounts: Partial<Record<ResourceType, number>>;
   totals: Partial<Record<ResourceType, number>>;
   counts: Record<string, number>;

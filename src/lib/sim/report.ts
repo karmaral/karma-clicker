@@ -53,7 +53,7 @@ export function timelineCsv(results: SimResult[]) {
 
   const headers = [
     'run', 'atSeconds', 'beat', 'souls', 'reserved', 'anchors', 'excess',
-    'karmaPerSecond', 'experiencePerSecond',
+    'karmaPerSecond', 'experiencePerSecond', 'backlog', 'drag', 'settlesAt',
     ...resources.map((type) => `have.${type}`),
     ...resources.map((type) => `earned.${type}`),
     ...cohorts.map((id) => `count.${id}`),
@@ -64,6 +64,7 @@ export function timelineCsv(results: SimResult[]) {
       result.label, seconds(sample.atMs), sample.beat, sample.souls, sample.reserved,
       sample.anchorsPlaced,
       num(sample.excess), num(sample.karmaPerSecond), num(sample.experiencePerSecond),
+      num(sample.backlog), num(sample.drag), num(sample.settlesAt),
       ...resources.map((type) => num(sample.amounts[type])),
       ...resources.map((type) => num(sample.totals[type])),
       ...cohorts.map((id) => sample.counts[id] ?? 0),

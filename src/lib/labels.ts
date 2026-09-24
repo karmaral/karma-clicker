@@ -66,6 +66,7 @@ export const READING_LABELS = {
   wisdom: 'Wisdom',
   karmaNegative: 'Negative',
   karmaPositive: 'Positive',
+  weight: 'Weight',
   red: 'Crimson',
   yellow: GRADE_LABELS.yellow,
   blue: GRADE_LABELS.blue,

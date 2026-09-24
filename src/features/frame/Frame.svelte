@@ -21,8 +21,9 @@
   import { nav } from '$lib/nav.svelte';
   import { EXCESS_SIDES, READING_LABELS } from '$lib/labels';
   import { sumHarvestRates } from '$lib/planets/harvest';
-  import { f, formatRate } from '$lib/utils';
+  import { f, formatRate, formatSpan } from '$lib/utils';
   import { refinery } from '$lib/refinery.svelte';
+  import { weight } from '$lib/weight.svelte';
   import type { ResourceType } from '$types';
   import ScoreCell from './ScoreCell.svelte';
 
@@ -170,6 +171,9 @@
   const showExcess = $derived(reading !== undefined && progression.isRevealed('reading.excess'));
   const showScale = $derived(showExcess && progression.isRevealed('reading.excessScale'));
 
+  /** With the refinery, because that is when the weight starts to bite. */
+  const showWeight = $derived(progression.runs('refining'));
+
   const planet = $derived(PlanetManager.getActive());
 
   const excessGate = $derived(planet?.data.firstHarvest.excessGate);
@@ -217,6 +221,13 @@
           {#if progression.isRevealed('reading.posKarma')}
             <Reading label={READING_LABELS.karmaPositive}>
               <Value kind="pos" value={f(posAmount)} rate={showRates ? posKarmaRate : undefined} />
+            </Reading>
+          {/if}
+          {#if showWeight}
+            <!-- What the two piles cost you: the backlog in seconds of your own
+                 income, and what it leaves your souls' experience at. -->
+            <Reading label={READING_LABELS.weight}>
+              <Value kind="both" value={`${formatSpan(weight.backlog * 1000)} · xp ×${f(weight.drag, 2)}`} size="lg" />
             </Reading>
           {/if}
           {#if showExcess}
