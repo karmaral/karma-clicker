@@ -5,12 +5,15 @@ import texts from '$data/upgrades-texts';
 import { effectsOf, modifierFor } from '$lib/upgrade-effects';
 import { refinery } from '$lib/refinery.svelte';
 import { harness } from '$lib/harness.svelte';
+import { weight } from '$lib/weight.svelte';
 import {
   ResourceManager,
   BuildingManager,
   PlanetManager,
   NotificationManager,
 } from '$lib/managers';
+
+const INCURRED_POLES: ResourceType[] = ['karma_positive', 'karma_negative'];
 
 const upgradeMap: Record<string, Record<string, UpgradeData>> = {};
 Object.keys(data).forEach((name) => {
@@ -74,7 +77,7 @@ class UpgradeManager {
   acquireUnpriced() {
     Object.entries(upgradeMap).forEach(([target, items]) => {
       Object.values(items).forEach((item) => {
-        if (item.costs) return;
+        if (item.costs || item.incurs) return;
         if (this.#upgrades[target].includes(item.id)) return;
         if (this.isLocked(target, item.id)) return;
 
@@ -93,13 +96,22 @@ class UpgradeManager {
     // Every entry, and all of them checked before any is taken — a price in two
     // piles that could half-charge you would be a way to lose crimson for nothing.
     const costs = item.costs ? Object.entries(item.costs) as [ResourceType, number][] : [];
-    if (!costs.length) return;
+    if (!costs.length && !item.incurs) return;
     if (costs.some(([type, cost]) => ResourceManager.getAmount(type) < cost)) return;
 
     costs.forEach(([type, cost]) => ResourceManager.remove(type, cost));
+    // Half to each pole, so the backlog rises by exactly `incurs` seconds and
+    // excess does not move. Never refused: a weight can always be taken on.
+    const incurred = this.incurredOf(item);
+    INCURRED_POLES.forEach((pole) => ResourceManager.incur(pole, incurred));
     this.acquire(target, id);
 
     return true;
+  }
+
+  /** Karma an incurred price adds to *each* pole, at the income you have now. */
+  incurredOf(item: UpgradeData) {
+    return ((item.incurs ?? 0) * weight.income) / INCURRED_POLES.length;
   }
 
   acquire(target: string, id: string) {

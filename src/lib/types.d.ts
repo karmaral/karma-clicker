@@ -85,6 +85,12 @@ export interface UpgradeData {
    * single-entry table is the common case, not the rule.
    */
   costs?: Partial<Record<ResourceType, number>>;
+  /**
+   * Seconds of karma income added to your piles, half to each pole — a price you
+   * carry rather than pay. Excess-neutral, and never counted toward a lifetime
+   * total. See `docs/design.md` §21, *Karma as weight*.
+   */
+  incurs?: number;
 }
 /**
  * `click` is you incarnating by hand — never allocatable, even once it auto-fires.

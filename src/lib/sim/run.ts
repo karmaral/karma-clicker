@@ -146,7 +146,7 @@ export async function run(
   function buyUpgrades() {
     for (const target of Object.keys(upgradeData)) {
       for (const item of upgradeData[target]) {
-        if (!item.costs) continue;
+        if (!item.costs && !item.incurs) continue;
         if (UpgradeManager.isAcquired(target, item.id)) continue;
         if (UpgradeManager.isLocked(target, item.id)) continue;
 

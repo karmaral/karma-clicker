@@ -59,6 +59,18 @@ export default class Resource {
   }
 
   /**
+   * Into the pile but not the tally: karma taken on as a price was never earned,
+   * so it must not open anything gated on what you have earned.
+   */
+  incur(n: number) {
+    const amt = this.#settle(n);
+    this.#amount += amt;
+
+    this.#runCallbacks('change', { amount: this.#amount });
+    this.#runCallbacks('add', { added: amt });
+  }
+
+  /**
    * Never past what is held: `#amount` is whole and every caller caps its ask by
    * it, so truncating an amount at or under the pile cannot overdraw it.
    */

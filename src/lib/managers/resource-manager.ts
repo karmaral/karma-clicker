@@ -37,6 +37,10 @@ class ResourceManager {
     return this.#resources[type]?.add(amount);
   }
 
+  incur(type: ResourceType, amount: number) {
+    return this.#resources[type]?.incur(amount);
+  }
+
   remove(type: ResourceType, amount: number) {
     return this.#resources[type]?.remove(amount);
   }

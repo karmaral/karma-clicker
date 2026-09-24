@@ -6,6 +6,7 @@
   import { iconFor } from './upgrade-icon';
   import { nav } from '$lib/nav.svelte';
   import { spotlight } from '$lib/spotlight.svelte';
+  import { formatCost } from '$lib/utils';
   import CostFigures from './CostFigures.svelte';
   import { catalogue, type Upgrade } from './upgrades.svelte';
 
@@ -63,7 +64,7 @@
            off an unpriced arrival: the dashed border already says it is coming
            rather than for sale, and an empty slot would still hold its gap. -->
       {#snippet price()}
-        <CostFigures entries={upgrade.costEntries} />
+        <CostFigures entries={upgrade.costEntries} incurs={upgrade.incurs} />
       {/snippet}
 
       <Chip
@@ -74,20 +75,25 @@
         onmouseenter={() => spotlight.point(upgrade.target)}
         onmouseleave={() => spotlight.clear()}
         asideContent={cohort ? asidePanel : undefined}
-        trailing={upgrade.costEntries.length ? price : undefined}
+        trailing={upgrade.isPriced ? price : undefined}
       >
         {#snippet tooltipContent()}
           <div class="item-header">
             <span class="title">{upgrade.textData.title}</span>
 
             <span class="cost num">
-              <CostFigures entries={upgrade.costEntries} />
+              <CostFigures entries={upgrade.costEntries} incurs={upgrade.incurs} />
             </span>
           </div>
 
           <div class="item-body">
             <p class="effect">{getEffectLabel(upgrade.effect, upgrade.effectTarget)}</p>
             <p class="description">{upgrade.textData.description}</p>
+            {#if upgrade.incurs}
+              <p class="description">
+                Adds {formatCost(upgrade.incurred)} to each karma pile — {upgrade.incurs}s of your income, carried.
+              </p>
+            {/if}
           </div>
         {/snippet}
       </Chip>

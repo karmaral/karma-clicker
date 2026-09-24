@@ -30,8 +30,8 @@
   <span class="cost">
     {#if upgrade.acquired}
       <span class="dash">—</span>
-    {:else if upgrade.costEntries.length}
-      <CostFigures entries={upgrade.costEntries} />
+    {:else if upgrade.isPriced}
+      <CostFigures entries={upgrade.costEntries} incurs={upgrade.incurs} />
     {:else}
       <span class="arrives">arrives</span>
     {/if}

@@ -3,6 +3,9 @@
    * A price, drawn. Every figure keeps its badge at the badge's own gap, and the
    * figures stand apart at a wider one — without it a two-pile price runs
    * together into one number with two marks after it.
+   *
+   * An incurred price reads as a signed span of karma: `+60s` is a minute of
+   * your income added to your piles, half to each pole, rather than taken away.
    */
   import { Badge } from '$ui';
   import { formatCost } from '$lib/utils';
@@ -12,9 +15,10 @@
 
   interface Props {
     entries: [ResourceType, number][];
+    incurs?: number;
   }
 
-  let { entries }: Props = $props();
+  let { entries, incurs }: Props = $props();
 
   const figures = $derived(readCostFigures(entries));
 </script>
@@ -25,6 +29,13 @@
     <Badge kind={badgeFor(type)} />
   </span>
 {/each}
+
+{#if incurs}
+  <span class="cost">
+    <span class="num">+{incurs}s</span>
+    <Badge kind={badgeFor('karma')} />
+  </span>
+{/if}
 
 <style>
   .cost {

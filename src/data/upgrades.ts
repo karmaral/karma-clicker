@@ -37,19 +37,18 @@ export function parseScope(key: string): UpgradeScope {
 
 const data: Record<string, UpgradeData[]> = {
   /**
-   * Owns no entity, so nothing here carries a verb or a modifier — the price is
-   * the whole of the choice. Both unlock under their beat's floor. Placeholder figures.
+   * Owns no entity, so nothing here carries a verb or a modifier. Unpriced: each
+   * opens a core part of the game, which is not a choice to gate behind a price,
+   * so `acquireUnpriced` grants it at its gate. Both land under their beat's floor.
    */
   'global': [
     {
       id: 'read_the_wave',
       unlocks_at: { experience: 9000 },
-      costs: { karma_positive: 750 },
     },
     {
       id: 'the_other_way',
       unlocks_at: { experience: 30_000 },
-      costs: { karma_positive: 4000 },
     },
   ],
   /**
@@ -290,7 +289,7 @@ const data: Record<string, UpgradeData[]> = {
       id: 'carry_1',
       effect: { op: 'flat', value: 0.002, stat: 'carry' },
       unlocks_at: { karma_negative: 60_000 },
-      costs: { karma_negative: 200_000 },
+      incurs: 60,
     },
   ],
   /**
@@ -410,16 +409,15 @@ const data: Record<string, UpgradeData[]> = {
       id: 'harder_lives_1',
       effect: { op: 'boost', value: 0.06 },
       unlocks_at: { karma_positive: 250_000 },
-      costs: { karma_negative: 310_000 },
+      incurs: 120,
     },
     {
-      // Twice the effect of `harder_lives_1`, so it is priced past it. It used
-      // to cost 2400 against that one's 310k, which was the parking value hiding
-      // a straight inversion rather than a decision.
+      // Twice the effect of `harder_lives_1`, so it is priced past it. Incurred,
+      // in seconds of your income, like `carry_1` — placeholder figures.
       id: 'hard_season',
       effect: { op: 'boost', value: 0.12 },
       unlocks_at: { karma_positive: 900_000 },
-      costs: { karma_negative: 1_200_000 },
+      incurs: 300,
     },
   ],
 };

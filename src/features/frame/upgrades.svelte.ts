@@ -57,6 +57,12 @@ export interface Upgrade {
   cost?: number;
   /** What you currently hold of the first cost's resource — 0 for an unpriced entry. */
   held: number;
+  /** Seconds of karma it adds to your piles. Never short of: a weight can always be taken on. */
+  incurs?: number;
+  /** What `incurs` comes to in each pile, at the income you have now. */
+  incurred: number;
+  /** Anything to show where a price goes — charged, incurred, or both. */
+  isPriced: boolean;
   effect?: UpgradeData['effect'];
   effectTarget?: UpgradeData['effect_target'];
   acquired: boolean;
@@ -91,7 +97,7 @@ function upgradeFor(target: string, id: string): Upgrade | undefined {
   let status: ChipStatus = 'unlocked';
   if (locked) {
     status = 'approaching';
-  } else if (cost === undefined) {
+  } else if (cost === undefined && !item.incurs) {
     status = 'arriving';
   } else if (shortfall <= 0) {
     status = 'affordable';
@@ -116,7 +122,10 @@ function upgradeFor(target: string, id: string): Upgrade | undefined {
     effectTarget: item.effect_target,
     acquired,
     status,
-    distanceToAffordable: cost === undefined ? Infinity : shortfall,
+    incurs: item.incurs,
+    incurred: UpgradeManager.incurredOf(item),
+    isPriced: costEntries.length > 0 || Boolean(item.incurs),
+    distanceToAffordable: cost === undefined && !item.incurs ? Infinity : shortfall,
     textData: { ...text },
   };
 }
