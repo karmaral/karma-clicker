@@ -21,7 +21,7 @@
   import { f, formatSpan } from '$lib/utils';
   import balance from '$data/balance';
   import type Planet from '$lib/planets/base.svelte';
-  import type { HarvestRates, ResourceType } from '$types';
+  import type { HarvestRates, ResourceType, YieldType } from '$types';
 
   interface Props {
     planet: Planet;
@@ -32,6 +32,8 @@
   }
 
   let { planet, mergedShare, rates }: Props = $props();
+
+  const KARMA_PILES: ResourceType[] = ['karma_positive', 'karma_negative'];
 
   const harvest = $derived(planet.data.harvest);
 
@@ -62,11 +64,25 @@
     new Map(sumHarvestRates([{ yields: paid, duration: cycle }]).map((r) => [r.type, r.perSecond])),
   );
 
-  const yields = $derived(
-    (Object.keys(paid) as ResourceType[])
-      .sort(byRateOrder)
-      .map((type) => ({ type, amount: paid[type] ?? 0, rate: perSecond.get(type) })),
-  );
+  /**
+   * Karma always lands half in each pile, so it is one matched figure under the
+   * both badge — per pile, the way matched Crimson reads — not two that agree.
+   */
+  const yields = $derived.by(() => {
+    const listed: { type: YieldType; amount: number; rate?: number }[] = (Object.keys(paid) as ResourceType[])
+      .filter((type) => !KARMA_PILES.includes(type))
+      .map((type) => ({ type, amount: paid[type] ?? 0, rate: perSecond.get(type) }));
+
+    if (paid.karma_positive !== undefined) {
+      listed.push({
+        type: 'karma',
+        amount: paid.karma_positive,
+        rate: perSecond.get('karma_positive'),
+      });
+    }
+
+    return listed.sort((a, b) => byRateOrder(a.type, b.type));
+  });
 
   /**
    * How the yields above are reached, stated with this world's numbers: seconds
