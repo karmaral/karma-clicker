@@ -1,5 +1,6 @@
 import type { ItemTextData } from '$types';
 import { levelTexts } from './cohort-levels';
+import { knowledgeTexts } from './knowledge';
 import { COHORT_COUNT, cohortId, LEVEL_GATES } from './buildings';
 import { roman } from '$lib/utils';
 
@@ -198,4 +199,7 @@ const data: Record<string, Record<string, ItemTextData>> = {
     },
   },
 };
+
+Object.entries(knowledgeTexts).forEach(([scope, items]) => Object.assign(data[scope], items));
+
 export default data;

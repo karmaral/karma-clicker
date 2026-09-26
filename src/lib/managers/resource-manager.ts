@@ -1,4 +1,4 @@
-import { experience, wisdom, negKarma, posKarma, negRed, posRed, yellow, blue } from '$lib/resources';
+import { experience, wisdom, knowledge, negKarma, posKarma, negRed, posRed, yellow, blue } from '$lib/resources';
 import type { ResourceType } from '$types';
 import type Resource from '$lib/resources/base.svelte';
 import type { ResourceSnapshot } from '$lib/resources/base.svelte';
@@ -7,6 +7,7 @@ class ResourceManager {
   #resources: Record<string, Resource> = {
     'experience': experience,
     'wisdom': wisdom,
+    'knowledge': knowledge,
     'karma_negative': negKarma,
     'karma_positive': posKarma,
     'red_negative': negRed,

@@ -26,6 +26,8 @@
     note?: string;
     onpurchasemode?: (mode: PurchaseMode) => void;
     onpurchase?: (id: string, quantity: number) => void;
+    /** Knowledge's every-row buy. Omitted until it is held, and the verb with it. */
+    onpurchaseall?: () => void;
   }
 
   let {
@@ -37,6 +39,7 @@
     note,
     onpurchasemode,
     onpurchase,
+    onpurchaseall,
   }: Props = $props();
 
   /**
@@ -119,6 +122,9 @@
        `CohortRow`'s hold and `PurchaseButton`'s tap. -->
   {#snippet aside()}
     <span class="hint"><kbd>RMB <small>(hold)</small></kbd> for details · <kbd>RMB</kbd> a price to cycle quantity</span>
+    {#if onpurchaseall}
+      <button type="button" class="all" onclick={onpurchaseall}>Buy ×{purchaseMode} on every row</button>
+    {/if}
   {/snippet}
 
   <div class="table" style:--cohort-cols={columns}>
@@ -179,6 +185,19 @@
 
 <style>
   .hint { font-size: var(--fs-xs); }
+
+  .all {
+    margin-left: var(--sp-3);
+    padding: 0;
+    background: none;
+    border: none;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    color: var(--ink-900);
+    white-space: nowrap;
+  }
+
+  .all:hover { color: var(--res-xp); }
 
   .table {
     display: flex;

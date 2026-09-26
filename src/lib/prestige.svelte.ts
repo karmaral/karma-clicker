@@ -88,10 +88,13 @@ class Prestige {
   /**
    * Writes the legacy, then reloads. False without reloading if the write
    * failed — a run whose residue could not be stored must not be spent.
+   *
+   * `kept` is pushed in, not read: `UpgradeManager` reaches `progression`, which
+   * imports this.
    */
-  end(beat: number) {
+  end(beat: number, kept: string[]) {
     if (!this.#isOpen) return false;
-    if (!setLegacy({ wisdom: this.#held + this.#gained, beat })) return false;
+    if (!setLegacy({ wisdom: this.#held + this.#gained, beat, kept })) return false;
 
     location.reload();
 

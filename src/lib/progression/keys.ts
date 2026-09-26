@@ -65,6 +65,9 @@ export type RevealKey =
   // false — see `harvest.screen` above. One key, and the screen has no internal
   // guard. The *tab* it lives under is `nav.refinery`.
   | 'refinery.screen'
+  // Not a tab: a split configured once, and its shelves open in a window from
+  // it. A fifth tab had nothing else to hold.
+  | 'refinery.knowledge'
 
   // A takeover, and by the test above: ending a run is a door, not somewhere
   // you configure anything. Nothing simulates behind it, so it has no
@@ -82,7 +85,8 @@ export type SystemKey =
   | 'harvest'
   | 'anchoring'
   | 'refining'
-  | 'finishedPlanets';
+  | 'finishedPlanets'
+  | 'knowledge';
 
 /** Lets validate() enforce that a system runs before its panel is drawn. */
 export const SYSTEM_SURFACES: Record<SystemKey, RevealKey[]> = {
@@ -99,6 +103,7 @@ export const SYSTEM_SURFACES: Record<SystemKey, RevealKey[]> = {
   // `overview.harvest` is deliberately absent: the ledger is drawn empty from
   // beat 8 and only fills at beat 10, so it precedes the system it reports on.
   finishedPlanets: ['overview.behind'],
+  knowledge: ['refinery.knowledge'],
 };
 
 const ORDER: Record<RevealState, number> = { absent: 0, inert: 1, live: 2 };

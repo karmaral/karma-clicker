@@ -3,6 +3,7 @@ import { ResourceEmitter } from '$lib/emission';
 import { getExcess } from '$lib/excess';
 import { getWaveBias } from '$lib/wave';
 import { weight } from '$lib/weight.svelte';
+import { knowledge } from '$lib/knowledge.svelte';
 import { FIRST_HARVEST_CONDITIONS } from '$lib/labels';
 import balance from '$data/balance';
 import { resolveDemandPull, resolveHarvestDuration, resolveHarvestYields } from './harvest';
@@ -234,6 +235,7 @@ export default class Planet {
 
     Object.keys(yields).forEach((type: ResourceType) => {
       ResourceManager.add(type, yields[type]);
+      if (type === 'experience') knowledge.divert(yields[type]);
     });
   }
 

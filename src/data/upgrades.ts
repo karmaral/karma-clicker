@@ -1,5 +1,6 @@
 import type { ResourceType, UpgradeData, UpgradeScope } from '$types';
 import { levelUpgrades } from './cohort-levels';
+import { knowledgeUpgrades } from './knowledge';
 import buildingData, { cohortId, COHORT_COUNT, COST_DECADE, LEVEL_GATES } from './buildings';
 import balance from './balance';
 
@@ -438,4 +439,8 @@ const data: Record<string, UpgradeData[]> = {
     },
   ],
 };
+
+// The shelves join the buckets their effects route through.
+Object.entries(knowledgeUpgrades).forEach(([scope, items]) => data[scope].push(...items));
+
 export default data;

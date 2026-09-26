@@ -2,6 +2,7 @@
 export type ResourceType =
 | 'experience'
 | 'wisdom'
+| 'knowledge'
 | 'karma_negative'
 | 'karma_positive'
 | 'red_negative'
@@ -92,6 +93,11 @@ export interface UpgradeData {
    * total. See `docs/design.md` §21, *Karma as weight*.
    */
   incurs?: number;
+  /**
+   * Which knowledge shelf it sits on — see `docs/design.md` §18. `run` goes with
+   * the run; `kept` crosses prestige in the legacy. Absent on everything else.
+   */
+  shelf?: 'run' | 'kept';
 }
 /**
  * `click` is you incarnating by hand — never allocatable, even once it auto-fires.

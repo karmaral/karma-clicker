@@ -3,6 +3,7 @@ import { harness } from '$lib/harness.svelte';
 import { refinery } from '$lib/refinery.svelte';
 import { weight } from '$lib/weight.svelte';
 import { PlanetManager, UpgradeManager } from '$lib/managers';
+import { aim } from '$lib/aim';
 
 /**
  * Somewhere for progression to be evaluated. Buildings still schedule their own
@@ -32,6 +33,8 @@ export function pulse() {
   // Aim reads the planet directly now — both the wave pull and the re-aim
   // penalty want this tick's phase, not the last one.
   PlanetManager.tick();
+  // Knowledge's auto-aim, on this tick's phase.
+  if (UpgradeManager.isAcquired('global', 'auto_aim')) aim.follow(PlanetManager.getActive()?.isDense);
   // Reads `clock` deltas rather than the interval, so a direct call after a
   // discrete event costs nothing and a simulated run fast-forwards it.
   harness.tick();

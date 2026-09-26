@@ -6,6 +6,7 @@
    */
   import { Section } from '$ui';
   import { aim, type Detent } from '$lib/aim';
+  import { UpgradeManager } from '$lib/managers';
   import balance from '$data/balance';
   import { formatRounded } from '$lib/utils';
   import AimControl from './AimControl.svelte';
@@ -22,6 +23,9 @@
    * where the choice between them is made.
    */
   const span = $derived(aim.draftPhases);
+
+  /** Knowledge's auto-aim, bought this run. */
+  const canFollow = $derived(Boolean(UpgradeManager.isAcquired('global', 'auto_aim')));
 </script>
 
 <Section 
@@ -44,8 +48,13 @@
       </span>
     {:else if owed > 0}
       Settling in — {formatRounded(owed, 1)} phases left, karma down {price}%
-    {:else}
+    {:else if !canFollow}
       Dense phases pay for negative, light for positive
+    {/if}
+    {#if canFollow && draft === undefined}
+      <button type="button" class="verb quiet" onclick={() => aim.setFollowing(!aim.isFollowing)}>
+        {aim.isFollowing ? 'Following the wave · stop' : 'Follow the wave'}
+      </button>
     {/if}
   {/snippet}
 

@@ -38,10 +38,14 @@
     { label: 'Cohorts unlocked', value: f(BuildingManager.cohorts.length) },
     { label: 'Refinery level', value: f(refinery.level) },
     { label: 'Upgrades held', value: f(UpgradeManager.acquiredLog.length) },
+    // Held knowledge is lost; only what it bought on the kept shelf crosses.
+    ...(ResourceManager.getTotal('knowledge') > 0
+      ? [{ label: 'Knowledge held', value: f(ResourceManager.getAmount('knowledge')) }]
+      : []),
   ]);
 
   function end() {
-    if (!prestige.end(progression.beat)) refused = true;
+    if (!prestige.end(progression.beat, UpgradeManager.keptKeys())) refused = true;
   }
 </script>
 

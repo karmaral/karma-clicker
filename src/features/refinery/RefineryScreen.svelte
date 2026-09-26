@@ -6,6 +6,7 @@
   import SplitControl from './SplitControl.svelte';
   import BalanceSplit from './BalanceSplit.svelte';
   import TokenTable from './TokenTable.svelte';
+  import KnowledgeSplit from './KnowledgeSplit.svelte';
 </script>
 
 {#if progression.isRevealed('refinery.screen')}
@@ -24,6 +25,7 @@
       <TokenTable />
       <SplitControl job="refining" />
       <BalanceSplit />
+      <KnowledgeSplit />
     </div>
   </div>
 {/if}

@@ -238,4 +238,31 @@ export default {
 
     yieldPerWisdom: 0.02,
   },
+
+  /**
+   * What a run learns — see `docs/design.md` §18. A share of experience income
+   * is diverted, and each knowledge costs `P·(1 + 2K)` experience at `K` held,
+   * so from empty `K ≈ √(spent/P)`. Held, not bought: spending restores the rate.
+   */
+  knowledge: {
+    /**
+     * `P`. ⚠ Unmeasured: a 10% split of 150k xp/s held ten minutes diverts 9M,
+     * which is ≈30 knowledge. The shelf prices below are sized against that.
+     */
+    price: 10_000,
+    /** The split's granularity. Fixed; nothing buys it finer yet. */
+    step: 0.05,
+    /** ⚠ Placeholder prices, in knowledge. */
+    costs: {
+      max: 5,
+      allRows: 12,
+      autoAim: 20,
+      /** Per rung, three rungs to each of the kept rows — wide, not tall. */
+      slots: [8, 20, 45],
+      tierFloor: [10, 25, 55],
+    },
+    /** What one kept slots rung adds to each singleton. */
+    refinerySlots: 4,
+    harnessSlots: 6,
+  },
 };

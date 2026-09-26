@@ -23,6 +23,7 @@
   import { sumHarvestRates } from '$lib/planets/harvest';
   import { f, formatRate, formatSpan } from '$lib/utils';
   import { refinery } from '$lib/refinery.svelte';
+  import { knowledge } from '$lib/knowledge.svelte';
   import { weight } from '$lib/weight.svelte';
   import type { ResourceType } from '$types';
   import ScoreCell from './ScoreCell.svelte';
@@ -147,8 +148,9 @@
 
   const showWorldRates = $derived(PlanetManager.behind.length !== 0);
   /** The two payers, kept apart: souls still incarnating, and the worlds behind you. */
-  const cohortRate = $derived(BuildingManager.countExperiencePerSecond());
-  const worldsRate = $derived(harvestRateFor('experience'));
+  // Net of the knowledge split: what is left to grow on is the income that matters here.
+  const cohortRate = $derived(BuildingManager.countExperiencePerSecond() * knowledge.kept);
+  const worldsRate = $derived(harvestRateFor('experience') * knowledge.kept);
 
   /* Every rate in the band goes through `formatRate`, not `f`: each of these
      rides beside a figure that already spends the cell's width, and six digits

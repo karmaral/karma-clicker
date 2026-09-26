@@ -46,6 +46,11 @@
      lighter than the ladder, so it keeps its hue as the field and rings it in
      the same step run *downward* rather than being lightened again. */
   --res-wisdom-edge:#52223c;
+  /* Knowledge is bought with experience, so it wears experience's hue: the
+     field paled from xp's, ringed in xp's own edge. The diamond, not the disc,
+     is what parts the two at 9px. Derived, so retuning xp retunes both. */
+  --res-knowledge:color-mix(in oklab, var(--res-xp-fill) 45%, #ffffff);
+  --res-knowledge-edge:var(--res-xp-edge);
 
   --status-gain:#2f7d4f;
   --status-loss:#9e2b25;

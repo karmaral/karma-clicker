@@ -20,3 +20,19 @@ export function resolveQuantity(cohort: Building, mode: PurchaseMode) {
 export function resolvePurchasable(cohort: Building, mode: PurchaseMode) {
   return Math.max(1, resolveQuantity(cohort, mode));
 }
+
+/**
+ * Knowledge's *every row at once*: the mode, applied down the ladder cheapest
+ * row first, so the rows a pile can cover are the ones it covers. Each row is
+ * priced after the one before it has spent.
+ */
+export function purchaseAll(cohorts: Building[], mode: PurchaseMode) {
+  const priceOf = (cohort: Building) => cohort.getCost(resolvePurchasable(cohort, mode)) ?? Infinity;
+
+  [...cohorts]
+    .sort((a, b) => priceOf(a) - priceOf(b))
+    .forEach((cohort) => {
+      const quantity = resolveQuantity(cohort, mode);
+      if (quantity > 0) BuildingManager.purchase(cohort.id, quantity);
+    });
+}

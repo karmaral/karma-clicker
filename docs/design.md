@@ -201,14 +201,14 @@ index up.
 
 | Resource | Polarised | Created by | Spent on |
 |---|---|---|---|
-| `experience` | no | press, cohorts, harvest income | cohort copies, clerks, `str_1`/`str_2`, `efficiency_1`, `split_1`, **knowledge** (unbuilt) |
+| `experience` | no | press, cohorts, harvest income | cohort copies, clerks, `str_1`/`str_2`, `efficiency_1`, `split_1`, **knowledge** (the split) |
 | `karma_positive` | yes | cohorts aimed positive, harvest income | `read_the_wave`, `the_other_way`, `str_3`, `str_4` |
 | `karma_negative` | yes | cohorts aimed negative, harvest income | `carry_1`, `harder_lives_1`, `hard_season` — 1.71M in all |
 | `red_positive` (Crimson) | yes | the refinery | `reach_1`, `slots_1`, eight harness upgrades, lines, Ochre |
 | `red_negative` (Crimson) | yes | the refinery | eight harness upgrades, lines, Ochre |
-| `yellow` (Ochre) | no | pairing Crimson from both piles | Indigo, three refinery upgrades, three harness upgrades |
-| `blue` (Indigo) | no | Ochre | `reach_4`; the deep end of the knowledge market (§18) |
-| `knowledge` | no | **unbuilt** — buying it with experience, at a worsening rate | in-run unlocks, and the permanent shelf (§18) |
+| `yellow` (Ochre) | no | pairing Crimson from both piles | Indigo, three refinery upgrades, three harness upgrades; *direction:* the system's scope (§10) |
+| `blue` (Indigo) | no | Ochre | `reach_4`; *direction:* the residue — what survives a run (§10, §18) |
+| `knowledge` | no | a split of experience income, at a worsening rate — from the second run | the in-run shelf and the kept shelf (§18) |
 | `wisdom` | no | **prestige only** — `√(crimson/W + experience/X)` | held it multiplies; spent it buys structure and stops multiplying (§18) |
 
 **The press pays no karma.** Karma comes from cohorts and finished worlds only.
@@ -1494,6 +1494,28 @@ curve.
 **Indigo opens on holding any Ochre.** No authored figure, because the ladder
 teaches itself: the rung above appears once the one below exists.
 
+### Direction: a grade is a scope, not a size
+
+Today Ochre and Indigo are lesser currency, more of it. The direction is that
+each grade reaches one index further — the same wheel at every scale, in the
+tokens:
+
+| Grade | Scope | Buys |
+|---|---|---|
+| Crimson | **this world** | unlocks: the world's harness, refinery, lines |
+| Ochre | **this system** | upgrades that act on every world at once |
+| Indigo | **past the run** | the residue — what survives prestige (§18) |
+
+**Ochre is not Crimson in disguise because of where it comes from**: it needs
+both piles, so a one-sided run cannot reach the system scope. Its price is
+already a statement about balance; the scope gives that statement a place to
+land.
+
+⚠ **Nothing is per-world today.** Every upgrade is bought once per run and
+applies everywhere, so this asks Crimson's purchases to become per-world. A
+side effect worth wanting: re-buying on each world gives Crimson a repeatable
+sink, which no grade has today.
+
 ### Inversion is the one price that climbs
 
 ```
@@ -1526,8 +1548,8 @@ side at a loss, which is a different admission.
 - **Wisdom has left this section**, and this is no longer a promise: the token row
   and its price are deleted, and wisdom is the prestige residue (§18), earned by
   ending a run and never bought.
-- **Indigo's buyer is the deep end of the knowledge market** (§18) and that market
-  is unauthored.
+- **Which Ochre purchases are system-scoped.** The scope ladder above names the
+  scope, not the rows.
 - **The flat grade prices are the discrete version of an idea §18 argues should be
   a rate.** The defence above — *a ladder, not a shop* — is a good argument for
   keeping conversion legible and a poor one for keeping it fixed. Commerce
@@ -2591,11 +2613,22 @@ different indices and they are not two names for one thing.
 
 ```
 knowledge bought = √(experience spent / P)
-P rises with the knowledge already held
+P rises with the knowledge held — not bought
 ```
 
+As built: each knowledge costs `P·(1 + 2K)` experience at `K` held, integrated
+per tick, so from empty `K + K² = spent/P` — the root above, tick-size
+invariant. `P = 10,000` (`balance.knowledge.price`). The diverted share still
+counts toward lifetime experience, so the split costs neither a reveal nor
+wisdom's xp term.
+
+⚠ `P` has no recorded run: a 10% split of 150k xp/s for ten minutes buys ≈30.
+
 Earned inside a run by spending experience, at a rate that gets worse the more you
-hold. **The second million buys less than the first did, and there is no ceiling
+hold. **Held, not bought:** spending knowledge restores the rate, so the price
+itself argues against hoarding. **Earned by a split, not a button** — a share of
+experience income diverted, so the decision is growth now against knowledge
+later, and it is made once rather than clicked. **The second million buys less than the first did, and there is no ceiling
 and no threshold to sit below.**
 
 That square root is the point, and it is the answer to the trap this design nearly
@@ -2605,13 +2638,38 @@ price producing a discrete unit, which is a shop, not an economy. So is
 higher denomination — it is a worse exchange rate**, and that is what stops the
 whole upper economy from being a set of thresholds to cross.
 
-Knowledge is spent on **two shelves**:
+Knowledge is spent on **two shelves**, and **every item sits on exactly one** — no
+item carries both a this-run and a forever price. Two lifetimes per item doubles
+the list the moment it grows.
 
-- **The in-run shelf** buys power now and goes when the run goes.
-- **The permanent shelf** is dearer and is still there next time.
+| | **In-run shelf** | **Permanent shelf** |
+|---|---|---|
+| Sells | **foresight and this-run bonuses** — see what is coming (random events, unwritten), answer it, lean on it | **caps and floors** — max refinery workers, starting cohort tier, slots |
+| Lifetime | gone at prestige | kept |
+| Feels like | reading this run | shaping the next one |
 
 That is the merge slider again, in a third place: what you spend on the run you
 lose with the run, what you spend on permanence keeps paying from behind you.
+
+**Seeded rows** (`data/knowledge.ts`, placeholder prices):
+
+| In-run | Kept |
+|---|---|
+| **Max** — the buy mode, gated; a first run never has it | **refinery slots** +4, three rungs |
+| **Every row** — the buy mode down the whole ladder, cheapest first | **harness slots** +6, three rungs |
+| **Auto-aim** — ±1 with the phase, never hard, owes no penalty | **tier floor** — a cohort's first *n* levels from one soul, three rungs |
+
+**The split and both shelves open after the first prestige**, free. The split
+is a section of the refinery, with the pile's only reading; the shelves open
+in a window from it and never sit in the rail. The kept shelf crosses in the legacy as ids.
+
+**Caps and floors are the line against wisdom.** Wisdom scales rates; knowledge
+raises limits. Neither multiplies what the other does. Both answer standing
+play notes (§19): *max refinery workers feels short and stale*, and *re-buying
+the level tiers every run is click-spam*.
+
+**Held knowledge resets at prestige.** Permanence lives in what was bought, never
+in the pile — carried knowledge would be wisdom under a second name.
 
 ### Knowledge does not convert to wisdom, and this is load-bearing
 
@@ -2659,8 +2717,8 @@ holes:
 shop*. As **exchange rates that worsen with what you hold**, the interesting play
 becomes *when to convert* rather than *whether you have reached the number* — and
 §3's dead ends at the top of the ladder mostly stop being dead ends, because there
-is no top, only a rate that gets bad. Indigo's buyer is the deep end of the
-knowledge market.
+is no top, only a rate that gets bad. Indigo's buyer is the residue (below), not
+this market.
 
 **A market has two sides, and that is the sink the negative pile never had.**
 Three one-offs are all that cost `karma_negative` (§3). **Selling the pile you are
@@ -2675,6 +2733,24 @@ nothing but gating a door.
 A market needs an income curve to price against; the one play has produced is
 not yet written into §5.
 
+### Indigo buys the residue
+
+**Each Indigo purchase moves one specific thing from *Resets* to *Survives*** —
+one cohort's count or tier, one world's clerks or staffing, a share of one pile,
+what a collapsed system emits. Three permanent stores, three jobs:
+
+- **wisdom** — what you *are*: a multiplier
+- **knowledge** — what you *learned*: caps and floors
+- **Indigo** — what you *kept*: the run's own things, inherited
+
+**Specific, or it goes stale.** *This* cohort, *that* world, so the next run starts
+somewhere different rather than just sooner — the answer to *wisdom goes stale*
+(§19). A generic *keep 10% of everything* brings the staleness back.
+
+**Spent before prestige, lost if held**, like knowledge; holding it would be a
+conversion into wisdom by another route. **Slots, not a budget:** a fixed number
+of inheritances, Indigo choosing what fills them, or the reset erodes.
+
 ### What survives a run
 
 | Survives | Resets |
@@ -2684,14 +2760,15 @@ not yet written into §5.
 | **collapsed systems**, still emitting | the worlds of the current system |
 | **the inversion counter** (§10 already never resets) | tokens, and unspent knowledge |
 | **boons** | the click ladder |
+| **Indigo's inheritances** (above) | unspent Indigo |
 
 **Collapsed systems emitting across runs is the thing that makes a second run more
 than the first run faster.** It is §15's mechanism at the outer index and it needs
 no new machinery.
 
-**What ships today is the first row alone.** Wisdom survives; everything else in
-the left column is ambition. No knowledge, no shelves, no commerce — those make
-the fifth run interesting, not the second.
+**What ships today is the first two rows.** Wisdom and the kept knowledge shelf
+survive; everything else in the left column is ambition. No commerce, no
+inheritances.
 
 **Prestige is chosen, not forced**, and this is settled. The crawl into the outer
 worlds is structural — income grows about `t^2.3` and only the outer wheel ends it
@@ -2725,12 +2802,12 @@ is in the fiction and not just in the arithmetic. `terminus` and the arrival lin
 ### Open
 
 - **The overlap between wisdom's structural purchases and knowledge's permanent
-  shelf.** Both are permanent, both are bought. The distinction held here is that
-  **wisdom buys what exists and knowledge buys facts about your run** — scale
-  against texture. It is a real distinction and it is not yet a comfortable one.
-- **`P`.** `W` and the +2% per wisdom are now authored in `balance.ts` as
-  `prestige.firstWisdomAt` and `prestige.yieldPerWisdom`; `P` is what is left.
-- **What the in-run knowledge shelf actually sells**, which is unwritten.
+  shelf** — narrowed, not closed: wisdom scales, knowledge raises caps and floors,
+  Indigo inherits. Whether wisdom's *structure* purchases stay distinct from caps
+  is the remainder.
+- **`P`'s figure** — authored, unmeasured.
+- **Foresight rows.** They lean on random events, which are unwritten.
+- **How many inheritance slots**, and what Indigo pays per slot.
 - **Whether commerce is a system or a framing.** It may be enough that the rates
   worsen, without a market screen ever existing.
 ## 19. Open design questions
@@ -2763,7 +2840,7 @@ is why §21's proposals are held behind it.
 | **`D = 2`, and whether the demand stays** | §14 — authorable per world, authored nowhere. Too weak to matter in play |
 | **Whether the Burden/Comfort sink asymmetry is right** | §3 — three one-offs price in `karma_negative`, all past beat 7; the stopgap before commerce |
 | **Whether commerce is a system or a framing** | §18 — the rates worsening may be enough without a market screen |
-| **Wisdom's structure shelf vs knowledge's permanent shelf** | §18 — both permanent, both bought; the distinction is real and uncomfortable. Neither is built |
+| **Wisdom's structure shelf vs knowledge's permanent shelf** | §18 — narrowed: wisdom scales, knowledge raises caps and floors, Indigo inherits. Knowledge's is built; wisdom's structure shelf is not |
 | **The click** | §4 — 700/click against 150k/s is 0.5% of income. `carry` is linear and capped against income compounding ×5 per index; it needs a different shape (a share of *income*) or an explicit decision to let the hand go vestigial |
 | **Continuous vs square-wave phase bias** | §6 — now load-bearing: the square wave is what makes the one-phase / one-cycle line a rule rather than a gradient |
 | **`BASE_LIFE`, and whether the world 3 step reads** | §5, §13 — `1/16` holds today's economy and lands cohort 8 on an age; how the halving on arrival at world 3 reads is unrecorded |
@@ -2787,7 +2864,7 @@ is why §21's proposals are held behind it.
 | Was | Now |
 |---|---|
 | **Even's experience bonus: ×1.5, ×2, ×3** | still open — §14 is untouched by the rewrite and ×3 is still live |
-| **A sink for Indigo and wisdom** | Indigo buys the deep end of the knowledge market; wisdom is no longer bought at all (§18) |
+| **A sink for Indigo and wisdom** | Indigo buys the residue — what survives a run; wisdom is no longer bought at all (§18) |
 | **What wisdom *is*** | the prestige residue, `√(crimson/W + experience/X)` (§18) |
 | **`zealot`'s ρ = ∞** | gone — every cohort yields experience, so payback is defined everywhere |
 | **The cap at 200 a cohort** | gone — income compounds by construction, so counts no longer stall |
@@ -3020,6 +3097,8 @@ every run.
 None is built and none is decided. The first answers §19's *karma expires*; the
 rest are spliced from the v6.2 addendum and wait on it — they tax or reshape
 karma, and a tax on a currency nobody wants is decoration.
+
+Raw axes to upgrade, unplaced, live in [upgrade-surfaces.md](upgrade-surfaces.md).
 
 ### Karma as weight
 

@@ -35,6 +35,11 @@ export function getKarmaIncomeByPolarity() {
   };
 }
 
+/** Experience earned a second, before the knowledge split takes its share. */
+export function getExperienceIncome() {
+  return BuildingManager.countExperiencePerSecond() + harvestRateFor(sumBehindRates(), 'experience');
+}
+
 /**
  * Both piles' income, cycle-mean: cohort karma with the wave's bias left out,
  * plus the worlds behind. What `weight` reads a backlog in seconds of.

@@ -33,6 +33,8 @@ export interface AimSnapshot {
   detent: Detent;
   reaimedAtPhase: number | undefined;
   reaimSpan: number;
+  /** Knowledge's auto-aim. Absent before v10 reads as off. */
+  isFollowing?: boolean;
 }
 
 /**
@@ -61,9 +63,14 @@ class Aim {
    */
   #draft = $state<Detent | undefined>(undefined);
 
+  /** Riding the wave — knowledge's auto-aim. A manual commit takes the dial back. */
+  #isFollowing = $state(false);
+
   /** Commits. Dragging a slider through this is what the draft exists to stop. */
   set(detent: Detent) {
     if (detent === this.#detent) return;
+
+    this.#isFollowing = false;
 
     // Priced before the move, off the distance. A re-aim mid-penalty replaces
     // what is owed rather than adding to it — one decision, one bill.
@@ -86,6 +93,22 @@ class Aim {
 
   cancel() {
     this.#draft = undefined;
+  }
+
+  setFollowing(isFollowing: boolean) {
+    this.#isFollowing = isFollowing;
+    if (isFollowing) this.#draft = undefined;
+  }
+
+  /**
+   * Polled off the loop. Light pays positive and dense pays negative, so the
+   * dial takes the phase's side at ±1 — never hard. Free: the move owes no
+   * penalty, and one already owed keeps running out on its own clock.
+   */
+  follow(isDense: boolean | undefined) {
+    if (!this.#isFollowing || isDense === undefined) return;
+
+    this.#detent = isDense ? -1 : 1;
   }
 
   /**
@@ -155,10 +178,11 @@ class Aim {
   }
 
   /** Past `set`, which would stamp the mark with *now* and re-owe the penalty. */
-  restore({ detent, reaimedAtPhase, reaimSpan }: AimSnapshot) {
+  restore({ detent, reaimedAtPhase, reaimSpan, isFollowing = false }: AimSnapshot) {
     this.#detent = detent;
     this.#reaimedAtPhase = reaimedAtPhase;
     this.#reaimSpan = reaimSpan;
+    this.#isFollowing = isFollowing;
     this.#draft = undefined;
   }
 
@@ -167,10 +191,12 @@ class Aim {
       detent: this.#detent,
       reaimedAtPhase: this.#reaimedAtPhase,
       reaimSpan: this.#reaimSpan,
+      isFollowing: this.#isFollowing,
     };
   }
 
   get detent() { return this.#detent; }
+  get isFollowing() { return this.#isFollowing; }
   get draft() { return this.#draft; }
   get isPending() { return this.#draft !== undefined; }
   get reaimPenalty() { return this.#reaimPenalty; }

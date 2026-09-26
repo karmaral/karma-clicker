@@ -36,6 +36,11 @@ class UpgradeManager {
   /** Acquisition order, flat across every bucket — what "newest first" reads. */
   #acquiredLog: string[] = $state([]);
 
+  /** Kept knowledge rungs held — every cohort's first this-many levels need only one soul. */
+  #tierFloor = $derived(
+    this.#upgrades['cohorts']?.filter((id) => id.startsWith('tier_floor_')).length ?? 0,
+  );
+
   isLocked(target: string, id: string) {
     if (!Boolean(target in this.#upgrades)) return;
 
@@ -61,6 +66,10 @@ class UpgradeManager {
       if (!tgt) return true;
 
       const held = unlock_type === 'count' ? tgt.count : tgt.total;
+
+      // Held, not reached: a merge to one soul keeps the floor, a merge to none does not.
+      const rung = Number(id.match(/^level_(\d+)$/)?.[1]);
+      if (rung <= this.#tierFloor && tgt.count >= 1) return false;
 
       return held < unlocks_at;
     }
@@ -191,6 +200,9 @@ class UpgradeManager {
    * it would grant a second time. Skipping `acquire` is the whole reason this is
    * not a loop over `acquire()`; skipping the notification is the other half.
    *
+   * Except on a singleton: the refinery's and harness's `unlock` only set a flag,
+   * so replaying is idempotent — and the refinery saves no flag of its own.
+   *
    * Synchronous, unlike `#handleEffect`: the `await tick()` there paces toasts,
    * and there are none here.
    */
@@ -201,18 +213,44 @@ class UpgradeManager {
     this.#acquiredLog = [...acquiredLog];
 
     Object.entries(this.#upgrades).forEach(([target, ids]) => {
-      ids.forEach((id) => {
-        const item = upgradeMap[target]?.[id];
-        if (!item?.effect) return;
+      ids.forEach((id) => this.#replay(target, id));
+    });
+  }
 
-        const effects = effectsOf(item);
+  #replay(target: string, id: string) {
+    const item = upgradeMap[target]?.[id];
+    if (!item?.effect) return;
 
-        effects.forEach((effect, index) => {
-          if (typeof effect === 'string') return;
+    const effects = effectsOf(item);
+    const { kind } = parseScope(target);
+    const isSingleton = kind === 'refinery' || kind === 'harness';
 
-          this.#processEffect(target, item, effect, index);
-        });
-      });
+    effects.forEach((effect, index) => {
+      if (typeof effect === 'string' && !isSingleton) return;
+
+      this.#processEffect(target, item, effect, index);
+    });
+  }
+
+  /** The kept shelf, as `target/id` — what the legacy carries into the next run. */
+  keptKeys() {
+    return Object.entries(this.#upgrades).flatMap(([target, ids]) => ids
+      .filter((id) => upgradeMap[target]?.[id]?.shelf === 'kept')
+      .map((id) => `${target}/${id}`));
+  }
+
+  /**
+   * The kept shelf, laid onto a fresh run. Silent like `restore` — nothing was
+   * bought this run, so nothing is announced.
+   */
+  inherit(keys: string[]) {
+    keys.forEach((key) => {
+      const [target, id] = key.split('/');
+      if (!upgradeMap[target]?.[id] || this.#upgrades[target].includes(id)) return;
+
+      this.#upgrades[target].push(id);
+      this.#acquiredLog.push(key);
+      this.#replay(target, id);
     });
   }
 

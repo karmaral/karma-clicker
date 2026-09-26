@@ -14,7 +14,13 @@
   let { upgrade, onclick }: Props = $props();
 
   // No authored line passed: the window has the width for the figures themselves.
-  const reading = $derived(getUpgradeReading(upgrade.target, upgrade.effect, upgrade.effectTarget));
+  // Except on a shelf, where most rows are verbs with no figure to derive.
+  const reading = $derived(getUpgradeReading(
+    upgrade.target,
+    upgrade.effect,
+    upgrade.effectTarget,
+    upgrade.shelf ? upgrade.textData.effect : undefined,
+  ));
   const scope = $derived(reading.scope);
   const effect = $derived(reading.effect);
 </script>

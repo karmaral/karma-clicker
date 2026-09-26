@@ -3,6 +3,7 @@ import { ResourceManager, PlanetManager } from '$lib/managers';
 import { ResourceEmitter, EMITTER_EVENTS } from '$lib/emission';
 import { ModifierSet } from '$lib/modifiers';
 import { aim, type ResolvedAim } from '$lib/aim';
+import { knowledge } from '$lib/knowledge.svelte';
 import { REFERENCE_PHASE } from '$data/buildings';
 import balance from '$data/balance';
 
@@ -230,6 +231,7 @@ export default class Building {
       }
 
       ResourceManager.add(type as ResourceType, value);
+      if (type === 'experience') knowledge.divert(value);
     });
   }
 
@@ -433,7 +435,11 @@ export default class Building {
    * are owned. It falls with a merge, and what it gates re-locks with it. Every
    * question about the run to the next gate is asked of this; nothing prints it.
    */
-  get #gatesPassed() { return this.#gates.filter((gate) => this.#count >= gate).length; }
+  get #gatesPassed() {
+    // A knowledge tier floor holds rungs the count has not reached, and a held
+    // rung is not the next one to walk to.
+    return Math.max(this.#gates.filter((gate) => this.#count >= gate).length, this.tier);
+  }
 
   /**
    * Levels bought — you are the tier you paid for, not the tier you walked past.

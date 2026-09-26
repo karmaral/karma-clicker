@@ -1,5 +1,5 @@
 /**
- * What a finished run leaves the next one. Three numbers crossing one reload —
+ * What a finished run leaves the next one. A few figures crossing one reload —
  * the reload being the reset, for the reason `storage.ts` gives.
  *
  * Its own version, not `SAVE_VERSION`: a legacy holds nothing a save holds, so
@@ -11,21 +11,25 @@
  */
 
 const LEGACY_KEY = 'karma-clicker:legacy';
-const LEGACY_VERSION = 1;
+const LEGACY_VERSION = 2;
 
 export interface Legacy {
   version: number;
   wisdom: number;
   beat: number;
+  /** The kept knowledge shelf, as `target/id`. Added in v2. */
+  kept: string[];
 }
 
-function isLegacy(value: unknown): value is Legacy {
-  const legacy = value as Legacy | null;
+/** v1 carried no shelf, so it reads as an empty one rather than a lost legacy. */
+function toLegacy(value: unknown): Legacy | undefined {
+  const legacy = value as Partial<Legacy> | null;
+  if (!legacy || typeof legacy.wisdom !== 'number' || typeof legacy.beat !== 'number') return;
 
-  return !!legacy
-    && legacy.version === LEGACY_VERSION
-    && typeof legacy.wisdom === 'number'
-    && typeof legacy.beat === 'number';
+  if (legacy.version === 1) return { ...legacy, version: LEGACY_VERSION, kept: [] } as Legacy;
+  if (legacy.version !== LEGACY_VERSION || !Array.isArray(legacy.kept)) return;
+
+  return legacy as Legacy;
 }
 
 /** Written immediately before the reload. False means the run should not end. */
@@ -50,9 +54,7 @@ export function takeLegacy(): Legacy | undefined {
     localStorage.removeItem(LEGACY_KEY);
     if (!raw) return;
 
-    const parsed = JSON.parse(raw);
-
-    return isLegacy(parsed) ? parsed : undefined;
+    return toLegacy(JSON.parse(raw));
   } catch {
     return;
   }

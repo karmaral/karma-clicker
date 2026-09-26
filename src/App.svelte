@@ -3,7 +3,7 @@
   import { Toaster, toast } from 'svelte-sonner';
   import { Card, Label, Rail, Value } from '$ui';
   import {
-    PlanetManager, BuildingManager, NotificationManager, ResourceManager,
+    PlanetManager, BuildingManager, NotificationManager, ResourceManager, UpgradeManager,
   } from '$lib/managers';
   import planetTexts from '$data/planets-texts';
   import { progression, validate } from '$lib/progression';
@@ -20,7 +20,7 @@
   import { DetailsScreen } from '$features/details';
   import { OverviewScreen } from '$features/overview';
   import { HarnessScreen } from '$features/harness';
-  import { RefineryScreen } from '$features/refinery';
+  import { RefineryScreen, Shelves } from '$features/refinery';
   import { FirstHarvestScreen } from '$features/harvest';
   import { PrestigeScreen } from '$features/prestige';
   import DevPanel from '$features/dev/DevPanel.svelte';
@@ -44,6 +44,7 @@
     // beat behind you into the log on frame one.
     if (legacy) {
       ResourceManager.add('wisdom', legacy.wisdom);
+      UpgradeManager.inherit(legacy.kept);
       progression.jumpTo(legacy.beat);
       log.add(logTexts.prestige.legacy(legacy.wisdom));
     }
@@ -193,8 +194,10 @@
   <DevPanel />
 {/if}
 
-{#if catalogue.isOpen}
+{#if catalogue.dialog === 'all'}
   <AllUpgrades />
+{:else if catalogue.dialog === 'shelves'}
+  <Shelves />
 {/if}
 
 <Toaster position="bottom-center" />

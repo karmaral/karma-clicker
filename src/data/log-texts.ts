@@ -21,6 +21,7 @@ const data = {
     'refining': 'The two piles can be made into something. The reserved souls do the making.',
     'second_harvest': 'Two worlds turn without you, out of phase. There is nowhere you need to be.',
     'terminus': 'The whole of it can be ended, the way a world can. Only what you understood would cross.',
+    'knowledge': 'The refinery can turn some of what you earn into learning. What you learn is spent on this run, or kept for the next.',
   } as Record<string, string>,
 
   moments: {

@@ -5615,6 +5615,48 @@ six and rows 3 through 7 all reach four, so the whole spread is three multiplier
 steps wide. It is *cohort 1 against the rest*, which is the Lemonade Stand's
 role and worth naming as that rather than as a spectrum.
 
+## Knowledge, and a scope per grade
+
+A brainstorm, written into §10 and §18 as direction. Nothing is built.
+
+**Ochre and Indigo were lesser currency, more of it.** Assigning each a verb
+(build / steady / remember) failed: Ochre buying upgrades is Crimson in disguise,
+and *steady* had nothing to steady until events exist. **A scope per grade held**
+— world, system, past the run — because it is the game's own recursion, and
+because Ochre's both-piles price is already the constraint a disguise lacks.
+
+**Indigo as a better knowledge rate was rejected as empty.** Buying the residue
+gave it a job neither wisdom nor knowledge has: *kept*, against *are* and
+*learned*.
+
+**Knowledge items carry one lifetime each.** A this-run and a forever price on
+every item was proposed and cut on the author's word: it doubles the list the
+moment it grows.
+
+**`P` reads held, not bought**, so spending restores the rate and the price argues
+against hoarding without a second rule.
+
+### Built (2026-09-25)
+
+Scoped with the author in one pass:
+
+- **Both shelves after the first prestige.** The kept shelf means nothing
+  before a reset, and one reveal is simpler than two.
+- **Max is gated, not left free**, so run 1 loses it — the author's call.
+  *Every row* sits beside it as a second item.
+- **Auto-aim owes no penalty but never goes hard.** Free is the item's whole
+  value; ±1 keeps the hard detents a manual decision.
+- **"Slots" is two rows**, refinery and harness — same `slots` stat, two
+  singletons.
+- **Price integrated, not sampled.** `P·(1 + 2K)` per knowledge solves in closed
+  form, so the rate does not depend on tick size.
+- **The diverted share still counts as earned experience.** Otherwise the split
+  would delay reveals and cut wisdom — a knowledge-to-wisdom leak by subtraction.
+- **No tab, no header cell.** A Knowledge tab was built and pulled the same
+  day: it held one slider and a pile, and the header had no width for the pile.
+  The split moved into the refinery beside the balancer — still experience,
+  not a soul job — and the shelves into a window like *all upgrades*.
+
 ## Naming
 
 `detail` (the design docs' "close-up") shows the planet's proper noun, so code

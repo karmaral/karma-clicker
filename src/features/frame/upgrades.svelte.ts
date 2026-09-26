@@ -11,6 +11,7 @@ import type { ChipStatus } from '$ui';
 import { pulse } from '$lib/loop';
 import { SCREENS, type ScreenName } from '$lib/labels';
 import { nav } from '$lib/nav.svelte';
+import { progression } from '$lib/progression';
 import data, { parseScope } from '$data/upgrades';
 import texts from '$data/upgrades-texts';
 
@@ -65,6 +66,8 @@ export interface Upgrade {
   isPriced: boolean;
   effect?: UpgradeData['effect'];
   effectTarget?: UpgradeData['effect_target'];
+  /** A knowledge shelf item — bought from the refinery's shelves window, never the rail. */
+  shelf?: UpgradeData['shelf'];
   acquired: boolean;
   status: ChipStatus;
   /** Sorts nearest-to-affordable first. Infinity for anything with no price. */
@@ -113,7 +116,9 @@ function upgradeFor(target: string, id: string): Upgrade | undefined {
     kind,
     entity,
     modifiers: modifiersFor(item),
-    screen: SCREEN_BY_KIND[kind],
+    // The shelves open from the refinery, so its tab carries their count.
+    screen: item.shelf ? 'refinery' : SCREEN_BY_KIND[kind],
+    shelf: item.shelf,
     costs: item.costs,
     costEntries,
     cost,
@@ -170,7 +175,13 @@ const keyOf = (upgrade: Upgrade) => `${upgrade.target}/${upgrade.id}`;
 
 const notAcquired = $derived(all.filter((u) => !u.acquired));
 const available = $derived(notAcquired.filter((u) => u.status !== 'approaching').sort(byDistance));
-const locked = $derived(notAcquired.filter((u) => u.status === 'approaching').sort(byDistance));
+/** A shelf is not a promise before its window exists — a first run never sees one. */
+const locked = $derived(
+  notAcquired
+    .filter((u) => u.status === 'approaching')
+    .filter((u) => !u.shelf || progression.isRevealed('refinery.knowledge'))
+    .sort(byDistance),
+);
 
 /**
  * What is in the rail, as a set and nothing more. A joined string rather than
@@ -236,6 +247,7 @@ function onScreen(screen: ScreenName) {
   const at = ranking;
 
   return available
+    .filter((u) => !u.shelf)
     .filter((u) => !u.screen || u.screen === screen || nav.state(u.screen) === 'absent')
     .sort((a, b) => (at.get(keyOf(a)) ?? 0) - (at.get(keyOf(b)) ?? 0));
 }
@@ -268,7 +280,8 @@ const acquired = $derived.by(() => {
     .reverse();
 });
 
-let isOpen = $state(false);
+/** Which window is up: every upgrade, or the knowledge shelves. One at a time. */
+let dialog = $state<'all' | 'shelves'>();
 
 function buy(upgrade: Upgrade) {
   UpgradeManager.purchase(upgrade.target, upgrade.id);
@@ -276,7 +289,8 @@ function buy(upgrade: Upgrade) {
 }
 
 export const catalogue = {
-  get isOpen() { return isOpen; },
+  get dialog() { return dialog; },
+  get isOpen() { return Boolean(dialog); },
   get available() { return available; },
   get locked() { return locked; },
   get acquired() { return acquired; },
@@ -284,7 +298,13 @@ export const catalogue = {
 
   onScreen,
 
-  open() { isOpen = true; },
-  close() { isOpen = false; },
+  /** One knowledge shelf, bought and not, in authored order. */
+  shelf(name: NonNullable<Upgrade['shelf']>) {
+    return all.filter((u) => u.shelf === name);
+  },
+
+  open() { dialog = 'all'; },
+  openShelves() { dialog = 'shelves'; },
+  close() { dialog = undefined; },
   buy,
 };

@@ -411,7 +411,8 @@
        ride on it, and the row keeps to one line. -->
   <span class="duration">
     {#if cohort.isStreaming}
-      <span>continuous</span>
+      <!-- In the countdown's slot and tone: a stream has no length, only a clock that never runs out. -->
+      <span class="left">continuous</span>
     {:else}
       <span class="life">{lifeLabel(cohort.duration)}</span>
       <!-- The slot stays when idle, so the length doesn't jump to the edge. -->
@@ -703,10 +704,11 @@
      beside it: the length is the property, the countdown is only the moment.
 
      A fixed slot, so a countdown changing width can't walk the length beside
-     it — ranged left, so it follows its length rather than drifting off it. */
+     it — ranged right, so it ends on the edge "continuous" does. */
   .left {
     display: inline-block;
-    min-width: 10ch;
+    min-width: 8ch;
+    text-align: right;
     color: var(--ink-300);
     font-variant-numeric: tabular-nums;
   }

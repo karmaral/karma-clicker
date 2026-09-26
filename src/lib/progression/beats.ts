@@ -197,4 +197,15 @@ export const beats: Beat[] = [
     when: (ctx) => ctx.leavesLegacy,
     reveals: { 'prestige.screen': 'live' },
   },
+
+  // A run has ended, so there is a next one to shape. Wisdom is only ever
+  // earned by ending a run, so holding any is the whole event. The legacy's
+  // `jumpTo(terminus)` lands one beat short, and this fires on the first poll.
+  {
+    id: 'knowledge',
+    eventOnly: true,
+    when: (ctx) => ctx.total('wisdom') >= 1,
+    runs: ['knowledge'],
+    reveals: { 'refinery.knowledge': 'live' },
+  },
 ];

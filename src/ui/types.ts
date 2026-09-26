@@ -6,6 +6,7 @@
 export type BadgeKind =
   | 'xp'
   | 'wisdom'
+  | 'knowledge'
   | 'red'
   | 'red-pos'
   | 'red-neg'

@@ -31,6 +31,10 @@
     background: var(--res-wisdom);
     box-shadow: inset 0 0 0 1px var(--res-wisdom-edge);
   }
+  .badge.knowledge {
+    background: var(--res-knowledge);
+    box-shadow: inset 0 0 0 1px var(--res-knowledge-edge);
+  }
 
   /* Unrouted Crimson takes the polarised badge's corner as well as its hue, so
      the three read as one resource before they read as three marks. Field and

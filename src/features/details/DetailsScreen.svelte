@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { BuildingManager, PlanetManager } from '$lib/managers';
+  import { BuildingManager, PlanetManager, UpgradeManager } from '$lib/managers';
   import { progression } from '$lib/progression';
   import { f, formatSpan } from '$lib/utils';
   import { pulse } from '$lib/loop';
@@ -26,9 +26,15 @@
   import DemandNote from './DemandNote.svelte';
   import WaveStrip from './WaveStrip.svelte';
   import { extended } from './extended.svelte';
+  import { purchaseAll } from './purchase';
   import type { Phase, PurchaseMode } from './types';
 
   let purchaseMode: PurchaseMode = $state('1');
+
+  /** Max and every-row are knowledge's to sell — see `data/knowledge.ts`. */
+  const hasMax = $derived(Boolean(UpgradeManager.isAcquired('global', 'max')));
+  const hasAllRows = $derived(Boolean(UpgradeManager.isAcquired('global', 'all_rows')));
+  const purchaseModes = $derived<PurchaseMode[]>(hasMax ? ['1', '10', 'Next', 'Max'] : ['1', '10', 'Next']);
 
   const CLICK = 'main';
 
@@ -265,6 +271,11 @@
     pulse();
   }
 
+  function buyAll() {
+    purchaseAll(cohorts, purchaseMode);
+    pulse();
+  }
+
   let clickActionVerb: string = $derived.by(() => {
     return isAnchoring ? 'Anchor the harness' : 'Incarnate';
   });
@@ -376,9 +387,11 @@
         <CohortTable
           {cohorts}
           {purchaseMode}
+          {purchaseModes}
           showRates={progression.isRevealed('details.status')}
           onpurchasemode={(m) => (purchaseMode = m)}
           onpurchase={purchase}
+          onpurchaseall={hasAllRows ? buyAll : undefined}
         />
       {/if}
 

@@ -129,6 +129,14 @@ function toNine(state: Raw): Raw {
   return { ...state, version: 9, refinery: { ...refinery, balancing: 0 } };
 }
 
+/**
+ * v9 → v10. Knowledge diverts a share of experience. Zero is where the lever
+ * starts, and the pile is absent from a v9 save, which `restore` leaves at 0.
+ */
+function toTen(state: Raw): Raw {
+  return { ...state, version: 10, knowledge: { share: 0 } };
+}
+
 /** Keyed by the version each step raises *from*. */
 const STEPS: Record<number, (state: Raw) => Raw> = {
   3: toFour,
@@ -137,6 +145,7 @@ const STEPS: Record<number, (state: Raw) => Raw> = {
   6: toSeven,
   7: toEight,
   8: toNine,
+  9: toTen,
 };
 
 /**

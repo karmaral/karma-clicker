@@ -18,6 +18,7 @@ import { reserve, type ReserveSnapshot } from '$lib/reserve.svelte';
 import { aim, type AimSnapshot } from '$lib/aim';
 import { tokens } from '$lib/tokens.svelte';
 import { weight, type WeightSnapshot } from '$lib/weight.svelte';
+import { knowledge, type KnowledgeSnapshot } from '$lib/knowledge.svelte';
 import type { BuildingSnapshot } from '$lib/buildings/base.svelte';
 import type { PlanetManagerSnapshot } from '$lib/managers/planet-manager.svelte';
 import type { UpgradeSnapshot } from '$lib/managers/upgrade-manager.svelte';
@@ -28,7 +29,7 @@ import type { ResourceSnapshot } from '$lib/resources/base.svelte';
  * `migrate` rather than thrown away — see `migrate.ts` for how far back that
  * reaches and what each step fills in.
  */
-export const SAVE_VERSION = 9;
+export const SAVE_VERSION = 10;
 
 export interface SaveState {
   version: number;
@@ -45,6 +46,8 @@ export interface SaveState {
   harness: HarnessSnapshot;
   /** The last backlog reading, which the gap between worlds cannot rederive. */
   weight: WeightSnapshot;
+  /** The split's share. The pile itself is a resource. */
+  knowledge: KnowledgeSnapshot;
   inversions: number;
 }
 
@@ -70,6 +73,7 @@ export function capture(): SaveState {
     refinery: refinery.snapshot(),
     harness: harness.snapshot(),
     weight: weight.snapshot(),
+    knowledge: knowledge.snapshot(),
     inversions: tokens.inversions,
   };
 }
@@ -116,6 +120,7 @@ export function apply(state: SaveState) {
   harness.restore(state.harness);
   tokens.restore(state.inversions);
   weight.restore(state.weight);
+  knowledge.restore(state.knowledge);
 
   BuildingManager.startEmitters();
 }

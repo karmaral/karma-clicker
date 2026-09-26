@@ -64,6 +64,7 @@ export const READING_LABELS = {
   /** The score's figure is the standing total; the rates beside it are the flow. */
   total: 'Total',
   wisdom: 'Wisdom',
+  knowledge: 'Knowledge',
   karmaNegative: 'Negative',
   karmaPositive: 'Positive',
   weight: 'Weight',
